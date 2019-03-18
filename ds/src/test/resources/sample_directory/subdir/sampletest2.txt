@@ -1,0 +1,1 @@
+Another short text for testing ZIP Compression

@@ -1,0 +1,45 @@
+image: golang:1.11-stretch
+
+stages:
+  - test
+  - publish
+
+test_scala:
+  stage: test
+  image: "hseeberger/scala-sbt:8u181_2.12.6_1.2.3"
+  variables:
+    SBT_OPTS: "-Dsbt.global.base=sbt-cache/sbtboot -Dsbt.boot.directory=sbt-cache/boot -Dsbt.ivy.home=sbt-cache/ivy"
+  cache:
+    untracked: true
+    paths:
+      - "sbt-cache/ivy/cache"
+      - "sbt-cache/boot"
+      - "sbt-cache/sbtboot"
+      - "sbt-cache/target"
+  artifacts:
+    reports:
+      junit:
+        - ds/target/test-reports/TEST-*.xml
+  script:
+    - sbt clean test
+
+publish_maven_scala:
+  stage: publish
+  image: "hseeberger/scala-sbt:8u181_2.12.6_1.2.3"
+  variables:
+    SBT_OPTS: "-Dsbt.global.base=sbt-cache/sbtboot -Dsbt.boot.directory=sbt-cache/boot -Dsbt.ivy.home=sbt-cache/ivy"
+  cache:
+    untracked: true
+    paths:
+      - "sbt-cache/ivy/cache"
+      - "sbt-cache/boot"
+      - "sbt-cache/sbtboot"
+      - "sbt-cache/target"
+  only:
+    - story/1/initial_structure
+    - master
+    - tags
+  script:
+    - sbt publish
+  dependencies:
+    - test_scala
