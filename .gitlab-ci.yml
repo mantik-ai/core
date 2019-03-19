@@ -4,6 +4,38 @@ stages:
   - test
   - publish
 
+test_go:
+  stage: test
+  image: golang:1.11-stretch
+  script:
+    - export GOPATH=`pwd`/go_path
+    - export GODEBUG=netdns=cgo # Disable GO Resolver
+    - ./executor/coordinator/build.sh
+    - ./executor/coordinator/test.sh
+  cache:
+    key: go_path
+    paths:
+      - go_path/
+  artifacts:
+    paths:
+      - executor/coordinator/target
+    expire_in: 1 week
+
+build_docker_go:
+  stage: publish
+  image: docker:stable-git
+  only:
+    - story/8/executor_move
+    - master
+    - tags
+  services:
+    - docker:dind
+  dependencies:
+    - test_go
+  script:
+    - export ENABLE_PUSH=TRUE
+    - ./executor/coordinator/create_docker_images.sh
+
 test_scala:
   stage: test
   image: "hseeberger/scala-sbt:8u181_2.12.6_1.2.3"
@@ -20,8 +52,13 @@ test_scala:
     reports:
       junit:
         - ds/target/test-reports/TEST-*.xml
+        - executor/api/target/test-reports/TEST-*.xml
+        - executor/app/target/test-reports/TEST-*.xml
+    paths:
+      - executor/app/target/docker
+    expire_in: 1 day
   script:
-    - sbt clean test
+    - sbt clean test docker:stage
 
 publish_maven_scala:
   stage: publish
@@ -43,3 +80,16 @@ publish_maven_scala:
     - sbt publish
   dependencies:
     - test_scala
+
+publish_scala_docker:
+  stage: publish
+  image: docker:stable-git
+  dependencies:
+    - test_scala
+  script:
+    - export ENABLE_PUSH=TRUE
+    - executor/scripts/ci/create_docker_images.sh
+  only:
+    - story/8/executor_move
+    - master
+    - tags

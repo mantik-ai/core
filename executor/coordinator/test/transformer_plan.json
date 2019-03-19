@@ -1,0 +1,29 @@
+{
+  "nodes": {
+    "source": {
+      "address": "localhost:50501"
+    },
+    "sink": {
+      "address": "localhost:50502"
+    },
+    "transformer": {
+      "address": "localhost:50503"
+    }
+  },
+  "flows": [
+    [
+      {
+        "node": "source",
+        "resource": "out"
+      },
+      {
+        "node": "transformer",
+        "resource": "apply"
+      },
+      {
+        "node": "sink",
+        "resource": "in"
+      }
+    ]
+  ]
+}
