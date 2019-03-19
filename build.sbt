@@ -71,9 +71,88 @@ lazy val ds = (project in file("ds"))
   )
   .settings(publishSettings)
 
+lazy val executorApi = (project in file("executor/api"))
+  .settings(
+    name := "executor-api",
+    libraryDependencies ++= Seq(
+      // Akka
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      // Akka http Circe JSON,
+      "de.heikoseeberger" %% "akka-http-circe" % "1.25.2",
+
+      // Circe
+      "io.circe" %% "circe-generic" % "0.9.3",
+      "io.circe" %% "circe-parser" % "0.9.3",
+
+      // SLF4J Api
+      "org.slf4j" % "slf4j-api" % "1.7.25",
+      // ScalaTest
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+    ),
+    scalariformSettings,
+    // Disable parallel test execution
+    parallelExecution in Test := false,
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+  )
+  .settings(publishSettings)
+
+lazy val executorApp = (project in file("executor/app"))
+  .dependsOn(executorApi)
+  .settings(
+    name := "executor-app",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
+
+      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
+
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
+
+      // ScalaTest
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+
+      // Kubernetes Client
+      "io.skuber" %% "skuber" % "2.1.0",
+
+      // Logging
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+    ),
+    // Disable automatic exection of integration tests
+    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l", "io.mantik.executor.testutils.KubernetesIntegrationTest"),
+    // Disable parallel test execution
+    parallelExecution in Test := false,
+    scalariformSettings
+  )
+  .settings(publishSettings)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    buildInfoKeys := Seq[BuildInfoKey](
+      name,
+      version,
+      scalaVersion,
+      BuildInfoKey("gitVersion", gitVersion),
+      BuildInfoKey("buildNum", buildNum))
+    ,
+    buildInfoPackage := "ai.mantik.executor.buildinfo"
+  )
+  .enablePlugins(DockerPlugin, AshScriptPlugin)
+  .settings(
+    mainClass in Compile := Some("io.mantik.executor.Main"),
+    packageName := "executor",
+    dockerExposedPorts := Seq(8080),
+    dockerBaseImage := "openjdk:8u191-jre-alpine3.9",
+    daemonUserUid in Docker := None,
+    daemonUser in Docker := "daemon",
+    version in Docker := "latest"
+  )
+
 
 lazy val root = (project in file("."))
-  .aggregate(ds)
+  .aggregate(ds, executorApi, executorApp)
   .settings(
     publish := {},
     publishLocal := {},
