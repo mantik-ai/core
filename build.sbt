@@ -122,7 +122,7 @@ lazy val executorApp = (project in file("executor/app"))
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
     ),
     // Disable automatic exection of integration tests
-    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l", "io.mantik.executor.testutils.KubernetesIntegrationTest"),
+    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l", "ai.mantik.executor.testutils.KubernetesIntegrationTest"),
     // Disable parallel test execution
     parallelExecution in Test := false,
     scalariformSettings
@@ -141,7 +141,7 @@ lazy val executorApp = (project in file("executor/app"))
   )
   .enablePlugins(DockerPlugin, AshScriptPlugin)
   .settings(
-    mainClass in Compile := Some("io.mantik.executor.Main"),
+    mainClass in Compile := Some("ai.mantik.executor.Main"),
     packageName := "executor",
     dockerExposedPorts := Seq(8080),
     dockerBaseImage := "openjdk:8u191-jre-alpine3.9",
