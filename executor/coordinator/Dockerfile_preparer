@@ -1,0 +1,28 @@
+# Note: multistage build!
+FROM alpine:3.9 as builder
+RUN apk update && apk add --no-cache ca-certificates
+
+ARG input_executable=target/coordinator_linux
+
+RUN adduser -D -g '' preparer
+RUN mkdir /opt/bin
+ADD target/payload_preparer_linux /opt/bin/run
+RUN mkdir /tmp_prepare; chown preparer /tmp_prepare
+RUN mkdir /data; chown preparer /data
+
+# Step 2, converting it into a scratch image
+FROM scratch
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /opt/bin/run /opt/bin/run
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+COPY --chown=preparer --from=builder /tmp_prepare /tmp
+COPY --chown=preparer --from=builder /data /data
+
+USER preparer
+WORKDIR /tmp
+VOLUME /data
+ENTRYPOINT ["/opt/bin/run"]
+
+
