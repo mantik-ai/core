@@ -10,3 +10,4 @@ echo "Starting integration tests..."
 ./test/integration_cancellation_test.sh
 ./test/integration_learn_test.sh
 ./test/integration_transformer_test.sh
+./test/integration_preparer_test.sh

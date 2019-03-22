@@ -27,6 +27,9 @@ $DOCKER_CALL build -t coordinator .
 echo "Starting Smoke Test"
 $DOCKER_CALL run -t --rm coordinator help
 
+echo "Building Helper"
+$DOCKER_CALL build -t payload_preparer -f Dockerfile_preparer .
+
 # Creating Sample Containers
 echo "Building Sample Sink"
 $DOCKER_CALL build --build-arg input_executable=target/executor_sample_sink_linux   -t executor_sample_sink .
@@ -36,6 +39,7 @@ echo "Building Sample Learner"
 $DOCKER_CALL build --build-arg input_executable=target/executor_sample_learner_linux -t executor_sample_learner .
 echo "Building Sample Transformer"
 $DOCKER_CALL build --build-arg input_executable=target/executor_sample_transformer_linux -t executor_sample_transformer .
+
 
 if [ -n "$ENABLE_PUSH" ]; then
     echo "Docker Login..."
@@ -49,6 +53,7 @@ if [ -n "$ENABLE_PUSH" ]; then
     }
 
     handle_image coordinator
+    handle_image payload_preparer
     handle_image executor_sample_sink
     handle_image executor_sample_source
     handle_image executor_sample_learner

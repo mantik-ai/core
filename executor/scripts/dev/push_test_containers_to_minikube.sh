@@ -37,6 +37,7 @@ function transfer_image {
 }
 
 transfer_image coordinator
+transfer_image payload_preparer
 transfer_image executor_sample_source
 transfer_image executor_sample_sink
 transfer_image executor_sample_learner
