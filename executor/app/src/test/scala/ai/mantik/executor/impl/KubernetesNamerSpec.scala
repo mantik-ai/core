@@ -1,6 +1,6 @@
 package ai.mantik.executor.impl
 
-import ai.mantik.executor.testutils.TestBase
+import ai.mantik.testutils.TestBase
 
 class KubernetesNamerSpec extends TestBase {
 

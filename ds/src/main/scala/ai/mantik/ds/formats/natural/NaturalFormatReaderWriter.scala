@@ -17,7 +17,7 @@ import io.circe.syntax._
 import scala.concurrent.{ Future, Promise }
 
 /** Reader/Writer for natural format. */
-class NaturalFormatReaderWriter(desc: NaturalFormatDescription) {
+class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Boolean = true) {
 
   /** Read a Natural Format unpacked Zip Bundle. */
   def readDirectory(directory: Path): Source[RootElement, _] = {
@@ -38,6 +38,15 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription) {
   /** Create a pure decoder for RootElemens. */
   def decoder(): Flow[ByteString, RootElement, _] = {
     val messagePackFramer = MessagePackFramer.make()
+    val context = new MessagePackAdapters.RootElementContext(desc.model)
+
+    if (!withHeader) {
+      val unpacked = messagePackFramer.map { byteString =>
+        val unpacker = MessagePack.newDefaultUnpacker(byteString.toArray)
+        context.read(unpacker)
+      }
+      return unpacked
+    }
 
     val elementsWithoutHeader: Flow[ByteString, ByteString, _] = messagePackFramer.prefixAndTail(1).flatMapConcat {
       case (header, followUp) =>
@@ -50,8 +59,6 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription) {
         }
         followUp
     }
-
-    val context = new MessagePackAdapters.RootElementContext(desc.model)
 
     val unpacked = elementsWithoutHeader.map { byteString =>
       val unpacker = MessagePack.newDefaultUnpacker(byteString.toArray)
@@ -75,15 +82,19 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription) {
 
   /** Generate a pure encoder for RootElemensts. */
   def encoder(): Flow[RootElement, ByteString, _] = {
-    // Header
-    val prefix = MessagePackJsonSupport.toMessagePackBytes(
-      Header(desc.model).asJson
-    )
-
     // Row Writer
     val naturalTabularRowWriter = Flow.fromGraph(new NaturalTabularRowWriter(
       new MessagePackAdapters.RootElementContext(desc.model)
     ))
+
+    if (!withHeader) {
+      return naturalTabularRowWriter
+    }
+
+    // Header
+    val prefix = MessagePackJsonSupport.toMessagePackBytes(
+      Header(desc.model).asJson
+    )
 
     // Prepending header
     val prepended: Flow[RootElement, ByteString, _] = naturalTabularRowWriter.prepend(Source(Vector(prefix)))

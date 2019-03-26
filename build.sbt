@@ -38,7 +38,23 @@ import scala.sys.process._
 val gitVersion = "git describe --always".!!.trim
 val buildNum = Option(System.getProperty("build.number")).getOrElse("local")
 
+// Shared test code
+lazy val testutils = (project in file("testutils"))
+  .settings(
+    name := "testutils",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "org.scalatest" %% "scalatest" % scalaTestVersion,
+      "org.slf4j" % "slf4j-api" % "1.7.25",
+    ),
+    publish := {},
+    publishLocal := {}
+  )
+  
+
 lazy val ds = (project in file("ds"))
+  .dependsOn(testutils % "test")
   .settings(
     name := "ds",
     libraryDependencies ++= Seq(
@@ -60,9 +76,7 @@ lazy val ds = (project in file("ds"))
       "org.msgpack" % "msgpack-core" % "0.8.16",
 
       // SLF4J Api
-      "org.slf4j" % "slf4j-api" % "1.7.25",
-      // ScalaTest
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+      "org.slf4j" % "slf4j-api" % "1.7.25"
     ),
     scalariformSettings,
     // Disable parallel test execution
@@ -71,7 +85,22 @@ lazy val ds = (project in file("ds"))
   )
   .settings(publishSettings)
 
+lazy val repository = (project in file ("repository"))
+  .dependsOn(testutils % "test")
+  .dependsOn(ds)
+  .settings(
+    name := "repository",
+    libraryDependencies ++=Seq(
+      "io.circe" %% "circe-yaml" % "0.8.0",
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test
+    ),
+    scalariformSettings,
+    parallelExecution in Test := false
+  )
+
 lazy val executorApi = (project in file("executor/api"))
+  .dependsOn(testutils % "test")
   .settings(
     name := "executor-api",
     libraryDependencies ++= Seq(
@@ -86,8 +115,6 @@ lazy val executorApi = (project in file("executor/api"))
 
       // SLF4J Api
       "org.slf4j" % "slf4j-api" % "1.7.25",
-      // ScalaTest
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
     ),
     scalariformSettings,
     // Disable parallel test execution
@@ -97,6 +124,7 @@ lazy val executorApi = (project in file("executor/api"))
   .settings(publishSettings)
 
 lazy val executorApp = (project in file("executor/app"))
+  .dependsOn(testutils % "test")
   .dependsOn(executorApi)
   .settings(
     name := "executor-app",
@@ -109,9 +137,6 @@ lazy val executorApp = (project in file("executor/app"))
 
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
-
-      // ScalaTest
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
 
       // Kubernetes Client
       "io.skuber" %% "skuber" % "2.1.0",
@@ -150,9 +175,24 @@ lazy val executorApp = (project in file("executor/app"))
     version in Docker := "latest"
   )
 
+lazy val examples = (project in file("examples"))
+  .dependsOn(testutils % "test")
+  .dependsOn(ds, repository, executorApi)
+  .settings(
+    name := "examples"
+  )
+  .settings(
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % "1.2.3"
+    ),
+    scalariformSettings,
+    publish := {},
+    publishLocal := {}
+  )
+
 
 lazy val root = (project in file("."))
-  .aggregate(ds, executorApi, executorApp)
+  .aggregate(testutils, ds, executorApi, executorApp, examples)
   .settings(
     publish := {},
     publishLocal := {},

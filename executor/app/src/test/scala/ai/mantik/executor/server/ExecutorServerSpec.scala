@@ -7,7 +7,7 @@ import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.executor.integration.HelloWorldSpec
 import ai.mantik.executor.{ Config, Errors, Executor }
 import ai.mantik.executor.model.{ Job, JobState, JobStatus }
-import ai.mantik.executor.testutils.{ AkkaSupport, TestBase }
+import ai.mantik.testutils.{ AkkaSupport, TestBase }
 
 import scala.concurrent.Future
 

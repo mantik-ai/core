@@ -34,13 +34,16 @@ class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
     val namespace = namespaceForIsolationSpace(job.isolationSpace)
     logger.info(s"Creating job ${jobId} in namespace ${namespace}...")
     ops.ensureNamespace(kubernetesClient, namespace).flatMap { namespacedClient =>
+      logger.debug(s"Namespace for job ${job.isolationSpace}/${jobId}: ${namespace} ensured...")
       val converter = new KubernetesJobConverter(config, job, jobId)
 
       // Pods are not reachable by it's name but by their IP Address, however we must first start them to get their IP Address.
       ops.startPodsAndGetIpAdresses(namespacedClient, converter.pods).flatMap { podsWithIpAdresses =>
+        logger.debug(s"Created pods for ${jobId}: ${podsWithIpAdresses.values}")
 
         val configMap = converter.configuration(podsWithIpAdresses)
         namespacedClient.create(configMap).flatMap { configMap =>
+          logger.debug(s"Created ConfigMap for ${jobId}")
           val job = converter.convertCoodinator
           namespacedClient.create(job).map { job =>
             logger.info(s"Created ${podsWithIpAdresses.size} pods, config map and job ${job.name}")

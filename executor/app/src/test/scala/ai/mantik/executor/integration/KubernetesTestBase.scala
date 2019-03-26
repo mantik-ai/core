@@ -3,7 +3,7 @@ package ai.mantik.executor.integration
 import java.time.Clock
 
 import ai.mantik.executor.{Config, Executor}
-import ai.mantik.executor.testutils.{AkkaSupport, TestBase}
+import ai.mantik.testutils.{AkkaSupport, TestBase}
 import org.scalatest.time.{Millis, Span}
 import skuber.{ConfigMap, ListResource, Namespace, Pod}
 import skuber.api.client.KubernetesClient
