@@ -91,14 +91,14 @@ class K8sOperations(clock: Clock, config: Config)(implicit ex: ExecutionContext,
   /** Try `f` multiple times within a given timeout. */
   private def tryMultipleTimes[T](timeout: FiniteDuration, tryAgainWaitDuration: FiniteDuration)(f: => Future[Option[T]]): Future[T] = {
     val result = Promise[T]
-    val finalTimeout = clock.instant().plus(config.defaultTimeout.toMillis, ChronoUnit.MILLIS)
+    val finalTimeout = clock.instant().plus(timeout.toMillis, ChronoUnit.MILLIS)
     def tryAgain(): Unit = {
       f.andThen {
         case Success(None) =>
           if (clock.instant().isAfter(finalTimeout)) {
             result.tryFailure(new TimeoutException(s"Timeout after ${timeout}"))
           } else {
-            actorSystem.scheduler.scheduleOnce(config.defaultRetryInterval)(tryAgain())
+            actorSystem.scheduler.scheduleOnce(tryAgainWaitDuration)(tryAgain())
           }
         case Success(Some(x)) =>
           result.trySuccess(x)

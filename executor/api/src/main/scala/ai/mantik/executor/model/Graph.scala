@@ -46,5 +46,5 @@ object Link {
 @JsonCodec
 case class Graph(
     nodes: Map[String, Node],
-    links: Seq[Link]
+    links: Seq[Link] = Nil
 )

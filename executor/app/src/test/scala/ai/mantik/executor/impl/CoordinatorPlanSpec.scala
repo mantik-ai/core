@@ -1,9 +1,9 @@
 package ai.mantik.executor.impl
 
-import ai.mantik.executor.testutils.TestBase
 import io.circe.parser
 import io.circe.syntax._
 import ai.mantik.executor.model.NodeResourceRef
+import ai.mantik.testutils.TestBase
 
 class CoordinatorPlanSpec extends TestBase {
 

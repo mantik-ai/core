@@ -1,5 +1,7 @@
 package ai.mantik.executor.model
 
+import ai.mantik.testutils.TestBase
+
 class GraphAnalysisSpec extends TestBase {
 
   it should "be possible to describe a simple copy op" in {

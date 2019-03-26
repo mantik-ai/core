@@ -32,7 +32,7 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
     KubernetesJobConverter.JobIdLabel -> jobId,
     KubernetesJobConverter.TrackerIdLabel -> config.podTrackerId
   )
-  private val namer = new KubernetesNamer(jobId)
+  private[impl] val namer = new KubernetesNamer(jobId)
 
   /** Generate the Pod Definitions. */
   lazy val pods: Seq[Pod] = {
@@ -71,7 +71,8 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
       nodes,
       flows = analysis.flows.map { flow =>
         flow.nodes
-      }.toSeq
+      }.toSeq,
+      contentType = job.contentType
     )
   }
 
@@ -137,17 +138,22 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
 
     val containers = node.service match {
       case ct: ContainerService =>
-        val main = Container(
+        List(Container(
           name = "main",
           image = ct.main.image,
           volumeMounts = ct.dataProvider.map { dataProvider =>
             List(Volume.Mount(name = "data", mountPath = "/data"))
           }.getOrElse(Nil)
-        )
-        // TODO: Data Provider as init container?
-        val dataProvider = ct.dataProvider.map { dataProvider =>
+        ))
+      case et: ExistingService =>
+        Nil
+    }
+
+    val initContainers = node.service match {
+      case ct: ContainerService =>
+        ct.dataProvider.map { dataProvider =>
           Container(
-            name = "data_provider",
+            name = "data-provider",
             image = dataProvider.image,
             args = dataProvider.parameters.toList,
             volumeMounts = List(
@@ -155,14 +161,18 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
             )
           )
         }.toList
-        main :: dataProvider
-      case et: ExistingService =>
-        Nil
+      case et: ExistingService => Nil
     }
 
     val spec = Pod.Spec(
       containers = sideCar :: containers,
-      restartPolicy = RestartPolicy.Never
+      initContainers = initContainers,
+      restartPolicy = RestartPolicy.Never,
+      volumes = if (initContainers.isEmpty) Nil else {
+        List(
+          Volume("data", Volume.EmptyDir())
+        )
+      }
     )
     Pod(
       metadata = ObjectMeta(

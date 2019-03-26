@@ -3,6 +3,10 @@ package ai.mantik.ds.natural
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
 import PrimitiveEncoder._
+import akka.stream.scaladsl.{ Sink, Source }
+import akka.util.ByteString
+
+import scala.concurrent.Future
 
 class NaturalBundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
 
@@ -32,6 +36,22 @@ class NaturalBundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupp
   it should "be encodable into gzip and from gzip" in {
     val backAgain = await(sampleBundle.asGzip().runWith(NaturalBundle.fromGzip()))
     backAgain shouldBe sampleBundle
+  }
+
+  it should "be encodable into a stream without header and back" in {
+    val data = collectSource(sampleBundle.encode(withHeader = false))
+    val dataAsSource: Source[ByteString, _] = Source(data.toVector)
+    val sink: Sink[ByteString, Future[NaturalBundle]] = NaturalBundle.fromStreamWithoutHeader(sampleBundle.model)
+    val back = await(dataAsSource.runWith(sink))
+    back shouldBe sampleBundle
+  }
+
+  it should "be encodable into a stream with header and back" in {
+    val data = collectSource(sampleBundle.encode(withHeader = true))
+    val dataAsSource: Source[ByteString, _] = Source(data.toVector)
+    val sink: Sink[ByteString, Future[NaturalBundle]] = NaturalBundle.fromStreamWithHeader()
+    val back = await(dataAsSource.runWith(sink))
+    back shouldBe sampleBundle
   }
 
   it should "be constructable" in {

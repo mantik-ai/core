@@ -78,4 +78,22 @@ class NaturalFormatReaderWriterSpec extends TestBase with GlobalAkkaSupport with
     await(futureDataType) shouldBe sampleBundle.model
     await(futureData) shouldBe sampleBundle.rows
   }
+
+  it should "be possible to skip the encoding of the header" in {
+    val withoutHeader = new NaturalFormatReaderWriter(sampleDesc, withHeader = false)
+    val withHeader = new NaturalFormatReaderWriter(sampleDesc, withHeader = true)
+
+    val source = Source(sampleBundle.rows)
+    val withoutHeaderBytes = await(source.via(withoutHeader.encoder()).toMat(Sink.seq)(Keep.right).run()).reduce(_ ++ _)
+    val withHeaderBytes = await(source.via(withHeader.encoder()).toMat(Sink.seq)(Keep.right).run()).reduce(_ ++ _)
+    withoutHeaderBytes.size shouldBe <(withHeaderBytes.size)
+
+    val futureData: Future[Seq[RootElement]] = source
+      .via(withoutHeader.encoder())
+      .viaMat(withoutHeader.decoder())(Keep.right)
+      .toMat(Sink.seq)(Keep.right)
+      .run()
+
+    await(futureData) shouldBe sampleBundle.rows
+  }
 }

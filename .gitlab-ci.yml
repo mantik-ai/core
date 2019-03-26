@@ -40,7 +40,7 @@ test_scala:
   stage: test
   image: "hseeberger/scala-sbt:8u181_2.12.6_1.2.3"
   variables:
-    SBT_OPTS: "-Dsbt.global.base=sbt-cache/sbtboot -Dsbt.boot.directory=sbt-cache/boot -Dsbt.ivy.home=sbt-cache/ivy"
+    SBT_OPTS: "-Xmx1G -Dsbt.global.base=sbt-cache/sbtboot -Dsbt.boot.directory=sbt-cache/boot -Dsbt.ivy.home=sbt-cache/ivy"
   cache:
     untracked: true
     paths:
@@ -64,7 +64,7 @@ publish_maven_scala:
   stage: publish
   image: "hseeberger/scala-sbt:8u181_2.12.6_1.2.3"
   variables:
-    SBT_OPTS: "-Dsbt.global.base=sbt-cache/sbtboot -Dsbt.boot.directory=sbt-cache/boot -Dsbt.ivy.home=sbt-cache/ivy"
+    SBT_OPTS: "-Xmx1G -Dsbt.global.base=sbt-cache/sbtboot -Dsbt.boot.directory=sbt-cache/boot -Dsbt.ivy.home=sbt-cache/ivy"
   cache:
     untracked: true
     paths:

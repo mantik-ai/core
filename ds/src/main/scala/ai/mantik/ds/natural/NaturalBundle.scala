@@ -48,6 +48,14 @@ case class NaturalBundle(
     source.via(encoder).via(gzipper)
   }
 
+  /** Encode as stream  */
+  def encode(withHeader: Boolean): Source[ByteString, _] = {
+    val source = Source(rows)
+    val description = NaturalFormatDescription(model)
+    val encoder = new NaturalFormatReaderWriter(description, withHeader).encoder()
+    source.via(encoder)
+  }
+
   /** Serializes the bundle into a Gzip Block. */
   def asGzipSync()(implicit materializer: Materializer): ByteString = {
     Await.result(asGzip().runWith(Sink.seq[ByteString]), Duration.Inf).fold(ByteString.empty)(_ ++ _)
@@ -87,6 +95,34 @@ object NaturalBundle {
     val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
     val sink: Sink[ByteString, (Future[DataType], Future[Seq[RootElement]])] =
       Compression.gunzip().viaMat(decoder)(Keep.right).toMat(Sink.seq)(Keep.both)
+    sink.mapMaterializedValue {
+      case (dataTypeFuture, elementsFuture) =>
+        for {
+          dataType <- dataTypeFuture
+          elements <- elementsFuture
+        } yield NaturalBundle(dataType, elements.toVector)
+    }
+  }
+
+  /** Deserializes the bundle from a stream without header. */
+  def fromStreamWithoutHeader(dataType: DataType)(implicit ec: ExecutionContext): Sink[ByteString, Future[NaturalBundle]] = {
+    val readerWriter = new NaturalFormatReaderWriter(NaturalFormatDescription(dataType), withHeader = false)
+    val sink: Sink[ByteString, Future[Seq[RootElement]]] = readerWriter.decoder().toMat(Sink.seq[RootElement])(Keep.right)
+    sink.mapMaterializedValue { elementsFuture =>
+      elementsFuture.map { elements =>
+        NaturalBundle(
+          dataType,
+          elements.toVector
+        )
+      }
+    }
+  }
+
+  /** Deserializes from a Stream including Header. */
+  def fromStreamWithHeader()(implicit ec: ExecutionContext): Sink[ByteString, Future[NaturalBundle]] = {
+    val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
+    val sink: Sink[ByteString, (Future[DataType], Future[Seq[RootElement]])] =
+      decoder.toMat(Sink.seq)(Keep.both)
     sink.mapMaterializedValue {
       case (dataTypeFuture, elementsFuture) =>
         for {

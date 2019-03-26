@@ -1,7 +1,7 @@
 package ai.mantik.executor
 
 import com.typesafe.config.ConfigFactory
-import ai.mantik.executor.testutils.TestBase
+import ai.mantik.testutils.TestBase
 
 class ConfigSpec extends TestBase {
 
