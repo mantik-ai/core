@@ -121,6 +121,7 @@ There are
 * `float32`
 * `float64`
 * `string`
+* `void`
 
 The serialization is done with the default encoding in MsgPack and JSON.
 
@@ -214,12 +215,10 @@ More types will follow, e.g. Lists.
 
 ## Implementation
 
-The Scala implementation resides in `app/components/ds`. A Golang implementation resides in the `bridge` project.
+The Scala implementation resides in `app/components/ds`. A Golang implementation resides in the `go_shared` project.
 
 ## Problems:
 
 - No Random Access Patterns as each element can have a different size.
-- No support for `null` yet.
 - The format is very rigid and has no support for placeholders yet, this is tracked in ticket #45.
-
 

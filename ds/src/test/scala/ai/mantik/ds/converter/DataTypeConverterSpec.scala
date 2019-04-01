@@ -1,7 +1,7 @@
 package ai.mantik.ds.converter
 
 import ai.mantik.ds.converter.DataTypeConverter.IdentityConverter
-import ai.mantik.ds.natural.{ EmbeddedTabularElement, Primitive, TabularRow }
+import ai.mantik.ds.element.{ EmbeddedTabularElement, Primitive, TabularRow }
 import ai.mantik.ds.testutil.TestBase
 import ai.mantik.ds.{ FundamentalType, TabularData }
 

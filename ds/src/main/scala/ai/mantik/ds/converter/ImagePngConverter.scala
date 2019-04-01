@@ -1,6 +1,6 @@
 package ai.mantik.ds.converter
 
-import ai.mantik.ds.natural.{ Element, ImageElement }
+import ai.mantik.ds.element.{ Element, ImageElement }
 import ai.mantik.ds.{ DataType, Image, ImageFormat }
 
 /** Converts images into Image PNG Data. */

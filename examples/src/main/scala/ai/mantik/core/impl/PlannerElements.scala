@@ -4,7 +4,7 @@ import ai.mantik.core.impl.PlannerElements.SourcePlan
 import ai.mantik.core.impl.PlannerImpl.NodeIdGenerator
 import ai.mantik.core.plugins.Plugins
 import ai.mantik.core._
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.model._
 import ai.mantik.repository._
 import ai.mantik.repository.FileRepository.{ FileGetResult, FileStorageResult }
@@ -121,7 +121,7 @@ class PlannerElements(formats: Plugins, isolationSpace: String, contentType: Str
   }
 
   /** Generates the plan for using a data literal. */
-  def literalDataSet(bundle: NaturalBundle, fileStorageResult: FileStorageResult)(implicit nodeIdGenerator: NodeIdGenerator): SourcePlan = {
+  def literalDataSet(bundle: Bundle, fileStorageResult: FileStorageResult)(implicit nodeIdGenerator: NodeIdGenerator): SourcePlan = {
     val push = Plan.PushBundle(bundle, fileStorageResult.fileId)
     val nodeId = nodeIdGenerator.makeId()
     val graph = Graph(

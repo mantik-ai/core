@@ -1,6 +1,6 @@
 package ai.mantik.core
 
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 import ai.mantik.repository.MantikId
 
 /**
@@ -12,7 +12,7 @@ sealed trait Action[T]
 object Action {
 
   /** Fetch a dataset. */
-  case class FetchAction(dataSet: DataSet) extends Action[NaturalBundle]
+  case class FetchAction(dataSet: DataSet) extends Action[Bundle]
 
   /** Algorithm is trained. */
   case class TrainAlgorithmAction(trainableAlgorithm: TrainableAlgorithm, trainData: DataSet, validationData: Option[DataSet]) extends Action[Unit]

@@ -1,6 +1,6 @@
 package ai.mantik.ds.converter
 
-import ai.mantik.ds.natural.{ Primitive, RootElement }
+import ai.mantik.ds.element.{ Primitive, RootElement }
 import ai.mantik.ds.{ DataType, FundamentalType, Image, TabularData }
 import akka.stream.scaladsl.Flow
 import akka.stream.{ Attributes, FlowShape, Inlet, Outlet }

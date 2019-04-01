@@ -1,5 +1,6 @@
-package ai.mantik.ds.natural
+package ai.mantik.ds.element
 
+import ai.mantik.ds.FundamentalType.VoidType
 import ai.mantik.ds.TypeSamples
 import ai.mantik.ds.testutil.TestBase
 

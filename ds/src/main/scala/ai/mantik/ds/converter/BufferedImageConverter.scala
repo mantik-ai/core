@@ -5,7 +5,7 @@ import java.awt.color.ColorSpace
 import java.awt.image._
 
 import ai.mantik.ds.{ FundamentalType, Image, ImageChannel, ImageFormat }
-import ai.mantik.ds.natural
+import ai.mantik.ds.element
 import akka.util.ByteIterator
 import org.slf4j.LoggerFactory
 
@@ -51,7 +51,7 @@ private[converter] class BufferedImageConverter(image: Image) {
     isBlackOnly || isRgbOnly
   }
 
-  def convert(imageData: natural.ImageElement): BufferedImage = {
+  def convert(imageData: element.ImageElement): BufferedImage = {
     val t0 = System.currentTimeMillis()
 
     require(canHandle, "This image can't be handled")
@@ -86,7 +86,7 @@ private[converter] class BufferedImageConverter(image: Image) {
     result
   }
 
-  private def convertGrayScaleUint8(imageData: natural.ImageElement): BufferedImage = {
+  private def convertGrayScaleUint8(imageData: element.ImageElement): BufferedImage = {
     val cs = ColorSpace.getInstance(ColorSpace.CS_GRAY)
     val nBits = Array(8)
     val colorModel = new ComponentColorModel(cs, nBits, false, true, Transparency.OPAQUE, DataBuffer.TYPE_BYTE)
@@ -99,7 +99,7 @@ private[converter] class BufferedImageConverter(image: Image) {
   }
 
   // This doesn't easily work, as we still have to unwrap 3 into 4 bytes
-  private def convertRgbUint8(imageData: natural.ImageElement): BufferedImage = {
+  private def convertRgbUint8(imageData: element.ImageElement): BufferedImage = {
     require(
       imageData.bytes.length == image.width * image.height * 3, "Pixel data length must match"
     )
@@ -142,7 +142,7 @@ private[converter] class BufferedImageConverter(image: Image) {
     result
   }
 
-  private def fillRaster(raster: WritableRaster, imageData: natural.ImageElement): Unit = {
+  private def fillRaster(raster: WritableRaster, imageData: element.ImageElement): Unit = {
     require(image.width >= 0)
     require(image.height >= 0)
     if (isBlackOnly) {
@@ -154,7 +154,7 @@ private[converter] class BufferedImageConverter(image: Image) {
     }
   }
 
-  private def fillRasterGreyscale(raster: WritableRaster, imageData: natural.ImageElement): Unit = {
+  private def fillRasterGreyscale(raster: WritableRaster, imageData: element.ImageElement): Unit = {
     // This is probably so slow as it looks
 
     val it = imageData.bytes.iterator
@@ -169,7 +169,7 @@ private[converter] class BufferedImageConverter(image: Image) {
     }
   }
 
-  private def fillRasterRgb(raster: WritableRaster, imageData: natural.ImageElement): Unit = {
+  private def fillRasterRgb(raster: WritableRaster, imageData: element.ImageElement): Unit = {
     // This is probably so slow as it looks
     val rgbComponentCount = image.components.size
     val referenceOrder = Seq(

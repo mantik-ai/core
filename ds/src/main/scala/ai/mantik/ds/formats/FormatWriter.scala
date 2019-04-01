@@ -1,7 +1,7 @@
 package ai.mantik.ds.formats
 
 import ai.mantik.ds.DataType
-import ai.mantik.ds.natural.RootElement
+import ai.mantik.ds.element.RootElement
 import akka.stream.scaladsl.Sink
 
 import scala.concurrent.Future

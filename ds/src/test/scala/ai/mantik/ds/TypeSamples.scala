@@ -1,7 +1,7 @@
 package ai.mantik.ds
 
 import ai.mantik.ds.FundamentalType._
-import ai.mantik.ds.natural.Primitive
+import ai.mantik.ds.element.Primitive
 
 object TypeSamples {
 
@@ -26,6 +26,7 @@ object TypeSamples {
     Float64 -> Primitive(-1.5),
     Float64 -> Primitive(1.5),
     Float64 -> Primitive(Double.NegativeInfinity),
-    StringType -> Primitive("Hello World")
+    StringType -> Primitive("Hello World"),
+    VoidType -> Primitive.unit
   )
 }

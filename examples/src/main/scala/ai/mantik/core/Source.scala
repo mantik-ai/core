@@ -1,7 +1,7 @@
 package ai.mantik.core
 
 import ai.mantik.core.Action.TrainAlgorithmAction
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 import ai.mantik.repository._
 
 /** Represents the way a core model is derived. */
@@ -22,5 +22,5 @@ object Source {
   case class TrainingStats(action: TrainAlgorithmAction) extends Source
 
   /** A DataSet defined from a natural bundle. */
-  case class Literal(bundle: NaturalBundle) extends Source
+  case class Literal(bundle: Bundle) extends Source
 }

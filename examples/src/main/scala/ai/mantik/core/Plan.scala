@@ -1,7 +1,7 @@
 package ai.mantik.core
 
 import ai.mantik.ds.DataType
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.model.Job
 import ai.mantik.repository.{ MantikArtefact, MantikDefinition }
 
@@ -16,7 +16,7 @@ object Plan {
   case class RunJob(job: Job) extends Plan
 
   /** Push a bundles content to the file repository. */
-  case class PushBundle(bundle: NaturalBundle, fileId: String) extends Plan
+  case class PushBundle(bundle: Bundle, fileId: String) extends Plan
 
   /** Pulls a bundle from the file repository. */
   case class PullBundle(dataType: DataType, fileId: String) extends Plan

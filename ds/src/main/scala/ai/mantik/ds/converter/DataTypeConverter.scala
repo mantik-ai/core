@@ -1,7 +1,7 @@
 package ai.mantik.ds.converter
 
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
-import ai.mantik.ds.natural._
+import ai.mantik.ds.element._
 
 /** A Converter for data types. */
 trait DataTypeConverter {

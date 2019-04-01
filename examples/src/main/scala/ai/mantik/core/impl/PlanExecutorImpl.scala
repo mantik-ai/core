@@ -5,7 +5,7 @@ import java.time.temporal.ChronoUnit
 
 import ai.mantik.core.Plan
 import ai.mantik.ds.DataType
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import ai.mantik.executor.Executor
@@ -42,7 +42,7 @@ class PlanExecutorImpl(fileRepository: FileRepository, repository: Repository, e
       case Plan.PullBundle(dataType: DataType, fileId) =>
         time(s"Bundle Pull ${fileId}") {
           fileRepository.loadFile(fileId).flatMap { source =>
-            val sink = NaturalBundle.fromStreamWithHeader()
+            val sink = Bundle.fromStreamWithHeader()
             source.runWith(sink)
           }
         }

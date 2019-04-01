@@ -1,25 +1,19 @@
-package ai.mantik.ds.natural
+package ai.mantik.ds.element
 
-import ai.mantik.ds.DataType
-import ai.mantik.ds.helper.circe.CirceJson
 import akka.util.ByteString
 
 sealed trait Element
 
 sealed trait RootElement extends Element
 
-/** This is the header which usually is present on the begin of each stream. */
-case class Header(
-    format: DataType
-)
-
-object Header {
-  implicit val codec = CirceJson.makeSimpleCodec[Header]
-}
-
-/** A single tabular row, also a root element. */
+/** A tabular row, a root element. */
 case class TabularRow(
     columns: IndexedSeq[Element]
+) extends RootElement
+
+/** A Single element, for non-tabular data. */
+case class SingleElement(
+    element: Element
 ) extends RootElement
 
 object TabularRow {
@@ -32,6 +26,11 @@ object TabularRow {
  * TODO: Discuss if this is ok.
  */
 case class Primitive[@specialized(Int, Long, Boolean, Float, Double) X](x: X) extends Element
+
+object Primitive {
+  /** The empty value for VoidType. */
+  val unit: Primitive[Unit] = Primitive[Unit](())
+}
 
 /** Single serialized image. */
 case class ImageElement(bytes: ByteString) extends Element

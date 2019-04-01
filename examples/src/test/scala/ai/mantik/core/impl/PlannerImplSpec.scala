@@ -4,7 +4,7 @@ import ai.mantik.core.impl.PlannerImpl.NodeIdGenerator
 import ai.mantik.core.{ Action, DataSet, Plan, Source }
 import ai.mantik.core.plugins.Plugins
 import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.model._
 import ai.mantik.repository.FileRepository.FileStorageResult
 import ai.mantik.repository._
@@ -27,7 +27,9 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
     override def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult] = {
       super.requestFileStorage(temporary).andThen {
         case Success(value) =>
-          storageCalls += StorageCalls(temporary, value)
+          lock.synchronized {
+            storageCalls += StorageCalls(temporary, value)
+          }
       }
     }
   }
@@ -48,7 +50,7 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
     implicit val nodeIdGenerator = new NodeIdGenerator()
   }
 
-  val lit = NaturalBundle.build(
+  val lit = Bundle.build(
     TabularData(
       "x" -> FundamentalType.Int32
     )
@@ -184,11 +186,6 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
       )
     ))
     val files = fileRepo.storageCalls.result()
-    if (files.size != 2) {
-      // Sometimes this fails out of a race condition, but i don't know why
-      println(s"Files: ${files}")
-      println(s"Plan: ${plan}")
-    }
     files.size shouldBe 2
 
     val pushCall = plan.asInstanceOf[Plan.Sequential].plans.head.asInstanceOf[Plan.PushBundle]

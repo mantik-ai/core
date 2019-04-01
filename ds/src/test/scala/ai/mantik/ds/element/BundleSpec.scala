@@ -1,6 +1,6 @@
-package ai.mantik.ds.natural
+package ai.mantik.ds.element
 
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{ FundamentalType, TabularData, TypeSamples }
 import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
 import PrimitiveEncoder._
 import akka.stream.scaladsl.{ Sink, Source }
@@ -8,16 +8,17 @@ import akka.util.ByteString
 
 import scala.concurrent.Future
 
-class NaturalBundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
+class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
 
-  val sampleBundle = NaturalBundle(
+  val sampleBundle = Bundle(
     TabularData(
       "id" -> FundamentalType.Int32,
-      "name" -> FundamentalType.StringType
+      "name" -> FundamentalType.StringType,
+      "void" -> FundamentalType.VoidType
     ),
     Vector(
-      TabularRow(FundamentalType.Int32.wrap(1), FundamentalType.StringType.wrap("Alice")),
-      TabularRow(FundamentalType.Int32.wrap(2), FundamentalType.StringType.wrap("Bob"))
+      TabularRow(FundamentalType.Int32.wrap(1), FundamentalType.StringType.wrap("Alice"), Primitive.unit),
+      TabularRow(FundamentalType.Int32.wrap(2), FundamentalType.StringType.wrap("Bob"), Primitive.unit)
     )
   )
 
@@ -29,19 +30,19 @@ class NaturalBundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupp
 
     sampleFile1.toFile.exists() shouldBe true
 
-    val decodeResult = await(NaturalBundle.fromZipBundle(sampleFile1))
+    val decodeResult = await(Bundle.fromZipBundle(sampleFile1))
     decodeResult shouldBe sampleBundle
   }
 
   it should "be encodable into gzip and from gzip" in {
-    val backAgain = await(sampleBundle.asGzip().runWith(NaturalBundle.fromGzip()))
+    val backAgain = await(sampleBundle.asGzip().runWith(Bundle.fromGzip()))
     backAgain shouldBe sampleBundle
   }
 
   it should "be encodable into a stream without header and back" in {
     val data = collectSource(sampleBundle.encode(withHeader = false))
     val dataAsSource: Source[ByteString, _] = Source(data.toVector)
-    val sink: Sink[ByteString, Future[NaturalBundle]] = NaturalBundle.fromStreamWithoutHeader(sampleBundle.model)
+    val sink: Sink[ByteString, Future[Bundle]] = Bundle.fromStreamWithoutHeader(sampleBundle.model)
     val back = await(dataAsSource.runWith(sink))
     back shouldBe sampleBundle
   }
@@ -49,37 +50,48 @@ class NaturalBundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupp
   it should "be encodable into a stream with header and back" in {
     val data = collectSource(sampleBundle.encode(withHeader = true))
     val dataAsSource: Source[ByteString, _] = Source(data.toVector)
-    val sink: Sink[ByteString, Future[NaturalBundle]] = NaturalBundle.fromStreamWithHeader()
+    val sink: Sink[ByteString, Future[Bundle]] = Bundle.fromStreamWithHeader()
     val back = await(dataAsSource.runWith(sink))
     back shouldBe sampleBundle
   }
 
   it should "be constructable" in {
-    val bundle = NaturalBundle.build(
+    val bundle = Bundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "b" -> FundamentalType.BoolType,
-        "s" -> FundamentalType.StringType
+        "s" -> FundamentalType.StringType,
+        "n" -> FundamentalType.VoidType
       )
     )
-      .row(1, true, "Hello World")
-      .row(2, false, "How are you")
+      .row(1, true, "Hello World", ())
+      .row(2, false, "How are you", ())
       .result
-    val expected = NaturalBundle(
+    val expected = Bundle(
       TabularData(
         "x" -> FundamentalType.Int32,
         "b" -> FundamentalType.BoolType,
-        "s" -> FundamentalType.StringType
+        "s" -> FundamentalType.StringType,
+        "n" -> FundamentalType.VoidType
       ),
       Vector(
         TabularRow(
-          Primitive(1), Primitive(true), Primitive("Hello World")
+          Primitive(1), Primitive(true), Primitive("Hello World"), Primitive.unit
         ),
         TabularRow(
-          Primitive(2), Primitive(false), Primitive("How are you")
+          Primitive(2), Primitive(false), Primitive("How are you"), Primitive.unit
         )
       )
     )
     bundle shouldBe expected
+  }
+
+  it should "work with single element bundles" in {
+    for ((dataType, sample) <- TypeSamples.fundamentalSamples) {
+      val bundle = Bundle.build(dataType, sample)
+      val encoded = collectByteSource(bundle.encode(true))
+      val decoded = await(Source.single(encoded).runWith(Bundle.fromStreamWithHeader()))
+      decoded shouldBe bundle
+    }
   }
 }
