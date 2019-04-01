@@ -1,7 +1,7 @@
 package ai.mantik.core
 
 import ai.mantik.ds.DataType
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 
 /** Represents a DataSet. */
 case class DataSet(
@@ -14,7 +14,7 @@ case class DataSet(
 
 object DataSet {
 
-  def literal(bundle: NaturalBundle): DataSet = {
+  def literal(bundle: Bundle): DataSet = {
     DataSet(
       Source.Literal(bundle),
       bundle.model

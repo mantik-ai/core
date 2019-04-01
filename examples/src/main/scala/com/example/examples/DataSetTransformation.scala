@@ -4,7 +4,7 @@ import java.io.File
 
 import ai.mantik.core.{ Context, DataSet }
 import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 
 object DataSetTransformation {
 
@@ -16,7 +16,7 @@ object DataSetTransformation {
       context.pushLocalMantikFile(sampleFile)
 
       val dataset = DataSet.literal(
-        NaturalBundle.build(
+        Bundle.build(
           TabularData(
             "x" -> FundamentalType.Float64
           )

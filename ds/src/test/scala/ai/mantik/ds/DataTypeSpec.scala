@@ -142,6 +142,7 @@ class DataTypeSpec extends TestBase {
     FundamentalType.BoolType,
     FundamentalType.Float32,
     FundamentalType.Float64,
+    FundamentalType.VoidType,
 
     Image(
       100, 200, components = ListMap(

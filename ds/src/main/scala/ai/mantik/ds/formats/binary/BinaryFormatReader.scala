@@ -6,7 +6,7 @@ import java.nio.file.Path
 import ai.mantik.ds.Errors.{ FormatDefinitionException, FormatNotSupportedException }
 import ai.mantik.ds.TabularData
 import ai.mantik.ds.helper.akka.{ ByteSkipper, SameSizeFramer }
-import ai.mantik.ds.natural.{ Element, RootElement, TabularRow }
+import ai.mantik.ds.element.{ Element, RootElement, TabularRow }
 import akka.stream.scaladsl
 import akka.stream.scaladsl.{ FileIO, Source }
 import akka.util.{ ByteIterator, ByteString }

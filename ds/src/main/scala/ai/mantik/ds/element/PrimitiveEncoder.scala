@@ -1,4 +1,4 @@
-package ai.mantik.ds.natural
+package ai.mantik.ds.element
 
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.FundamentalType._
@@ -94,6 +94,10 @@ object PrimitiveEncoder {
     case s: String if Try(s.toDouble).isSuccess => s.toDouble
   }
 
+  implicit val voidEncoder = makePrimitiveEncoder[VoidType.type, Unit] {
+    case _ => ()
+  }
+
   implicit class PrimitiveExtensions[T <: FundamentalType, ST](t: T)(implicit f: Aux[T, ST]) {
     def wrap(s: ST): Primitive[ST] = {
       f.wrap(s)
@@ -113,6 +117,7 @@ object PrimitiveEncoder {
       case Float32    => float32Encoder
       case Float64    => float64Encoder
       case StringType => stringEncoder
+      case VoidType   => voidEncoder
     }
   }
 }

@@ -3,7 +3,7 @@ package ai.mantik.ds.converter
 import java.awt.image.BufferedImage
 
 import ai.mantik.ds.FundamentalType.{ Float32, Int8, Uint8 }
-import ai.mantik.ds.natural.ImageElement
+import ai.mantik.ds.element.ImageElement
 import ai.mantik.ds.testutil.TestBase
 import ai.mantik.ds.{ Image, ImageChannel, ImageComponent }
 import akka.util.ByteString

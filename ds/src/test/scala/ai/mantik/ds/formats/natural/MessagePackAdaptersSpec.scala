@@ -3,11 +3,11 @@ package ai.mantik.ds.formats.natural
 import ai.mantik.ds.FundamentalType._
 import ai.mantik.ds._
 import ai.mantik.ds.formats.natural.MessagePackAdapters.AnonymousMessagePackAdapter
-import ai.mantik.ds.natural._
+import ai.mantik.ds.element._
 import ai.mantik.ds.testutil.TestBase
 import akka.util.ByteString
 import org.msgpack.core.{ MessageFormat, MessagePack }
-import ai.mantik.ds.natural.PrimitiveEncoder._
+import ai.mantik.ds.element.PrimitiveEncoder._
 
 import scala.collection.immutable.ListMap
 
@@ -112,14 +112,14 @@ class MessagePackAdaptersSpec extends TestBase {
       TabularRow(StringType.wrap("Hello World"), Int32.wrap(123)),
       TabularRow(StringType.wrap("Boom"), Int32.wrap(-2))
     )
-    val context = new MessagePackAdapters.TabularContext(table)
+    val context = MessagePackAdapters.createRootElementContext(table)
     val messagePacker = MessagePack.newDefaultBufferPacker()
     rows.foreach { row => context.write(messagePacker, row) }
     val result = messagePacker.toByteArray
     val messageUnpacker = MessagePack.newDefaultUnpacker(result)
     val backBuilder = Vector.newBuilder[TabularRow]
     for (i <- 0 until 2) {
-      backBuilder += context.read(messageUnpacker)
+      backBuilder += context.read(messageUnpacker).asInstanceOf[TabularRow]
     }
     backBuilder.result() shouldBe rows
   }
@@ -204,5 +204,4 @@ class MessagePackAdaptersSpec extends TestBase {
       testSerializationAndBack(adapter, value)
     }.getMessage should include("element count mismatch")
   }
-
 }

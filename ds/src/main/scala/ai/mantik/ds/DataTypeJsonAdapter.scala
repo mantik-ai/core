@@ -29,7 +29,8 @@ private[ds] object DataTypeJsonAdapter {
       "bool" -> FundamentalType.BoolType,
       "string" -> FundamentalType.StringType,
       "float32" -> FundamentalType.Float32,
-      "float64" -> FundamentalType.Float64
+      "float64" -> FundamentalType.Float64,
+      "void" -> FundamentalType.VoidType
     )
   )
 

@@ -3,7 +3,7 @@ package ai.mantik.ds.formats.natural
 import ai.mantik.ds.Errors.FormatNotSupportedException
 import ai.mantik.ds.FundamentalType._
 import ai.mantik.ds._
-import ai.mantik.ds.natural._
+import ai.mantik.ds.element._
 import akka.util.ByteString
 import org.msgpack.core.{ MessageFormat, MessagePacker, MessageUnpacker }
 
@@ -145,6 +145,13 @@ private[natural] object MessagePackAdapters {
   implicit val float32Adapter = makeFundamentalAdapter[Float32.type, Float](_.packFloat(_), _.unpackFloat())
   implicit val float64Adapter = makeFundamentalAdapter[Float64.type, Double](_.packDouble(_), _.unpackDouble())
 
+  implicit val voidAdapter = makeFundamentalAdapter[VoidType.type, Unit](
+    { (packer, _) => packer.packNil() },
+    { unpacker =>
+      unpacker.unpackNil()
+    }
+  )
+
   /** Adapter for images. */
   implicit object imageAdapter extends MessagePackAdapter[Image] {
 
@@ -167,7 +174,7 @@ private[natural] object MessagePackAdapters {
   def embeddedTabularAdapter(tabularData: TabularData) = new MessagePackAdapter[TabularData] {
     override type ElementType = EmbeddedTabularElement
 
-    val context = new TabularContext(tabularData)
+    private val context = new TabularContext(tabularData)
 
     override def write(messagePacker: MessagePacker, elementType: EmbeddedTabularElement): Unit = {
       messagePacker.packArrayHeader(elementType.rows.length)
@@ -212,11 +219,27 @@ private[natural] object MessagePackAdapters {
     }
   }
 
-  /** Holds the context for writing tabular rows. */
-  class TabularContext(tabularData: TabularData) {
+  /** Writes/Reads root elements to MessagePack. */
+  trait RootElementContext {
+    def write(messagePacker: MessagePacker, rootElement: RootElement): Unit
+
+    def read(messageUnpacker: MessageUnpacker): RootElement
+  }
+
+  /** Creates the root element context. */
+  def createRootElementContext(dataType: DataType): RootElementContext = {
+    dataType match {
+      case t: TabularData => new TabularContext(t)
+      case other          => new SingleElementContext(other)
+    }
+  }
+
+  /** Reads/Writes tabular Rows. */
+  private class TabularContext(tabularData: TabularData) extends RootElementContext {
     val subAdapters = tabularData.columns.values.map(lookupAdapter).toIndexedSeq
 
-    def write(messagePacker: MessagePacker, tabularRow: TabularRow): Unit = {
+    override def write(messagePacker: MessagePacker, rootElement: RootElement): Unit = {
+      val tabularRow = rootElement.asInstanceOf[TabularRow]
       require(tabularRow.columns.size == subAdapters.length)
       messagePacker.packArrayHeader(tabularRow.columns.size)
       tabularRow.columns.zip(subAdapters).foreach {
@@ -225,7 +248,7 @@ private[natural] object MessagePackAdapters {
       }
     }
 
-    def read(messageUnpacker: MessageUnpacker): TabularRow = {
+    override def read(messageUnpacker: MessageUnpacker): TabularRow = {
       val length = messageUnpacker.unpackArrayHeader()
       require(length == subAdapters.length)
       val builder = IndexedSeq.newBuilder[Element]
@@ -239,25 +262,17 @@ private[natural] object MessagePackAdapters {
     }
   }
 
-  /**
-   * Holds the context for writing RootElement Types.
-   * Currently we only support TabularData.
-   */
-  class RootElementContext(dataType: DataType) {
-    private val tabularData = dataType match {
-      case t: TabularData => t
-      case _              => throw new FormatNotSupportedException(s"Only tabular data supported right now")
-    }
-    private val context = new TabularContext(tabularData)
+  /** Reads/Writes single elements. */
+  private class SingleElementContext(dataType: DataType) extends RootElementContext {
+    val subAdapter = lookupAdapter(dataType)
 
-    def write(messagePacker: MessagePacker, rootElement: RootElement): Unit = {
-      rootElement match {
-        case row: TabularRow => context.write(messagePacker, row)
-      }
+    override def write(messagePacker: MessagePacker, rootElement: RootElement): Unit = {
+      val singleElement = rootElement.asInstanceOf[SingleElement]
+      subAdapter.elementWriter(messagePacker, singleElement.element)
     }
 
-    def read(messageUnpacker: MessageUnpacker): RootElement = {
-      context.read(messageUnpacker)
+    override def read(messageUnpacker: MessageUnpacker): RootElement = {
+      SingleElement(subAdapter.read(messageUnpacker))
     }
   }
 
@@ -274,6 +289,7 @@ private[natural] object MessagePackAdapters {
       case StringType     => stringAdapter
       case Float32        => float32Adapter
       case Float64        => float64Adapter
+      case VoidType       => voidAdapter
       case _: Image       => imageAdapter
       case t: TabularData => embeddedTabularAdapter(t)
       case t: Tensor      => tensorAdapter(t)

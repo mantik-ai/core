@@ -6,7 +6,7 @@ import ai.mantik.ds.DataType
 import ai.mantik.ds.Errors.{ EncodingException, FormatDefinitionException }
 import ai.mantik.ds.helper.akka.MessagePackFramer
 import ai.mantik.ds.helper.circe.MessagePackJsonSupport
-import ai.mantik.ds.natural.{ Header, RootElement }
+import ai.mantik.ds.element.RootElement
 import akka.stream._
 import akka.stream.scaladsl.{ FileIO, Flow, Keep, Sink, Source }
 import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
@@ -38,7 +38,7 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
   /** Create a pure decoder for RootElemens. */
   def decoder(): Flow[ByteString, RootElement, _] = {
     val messagePackFramer = MessagePackFramer.make()
-    val context = new MessagePackAdapters.RootElementContext(desc.model)
+    val context = MessagePackAdapters.createRootElementContext(desc.model)
 
     if (!withHeader) {
       val unpacked = messagePackFramer.map { byteString =>
@@ -84,7 +84,7 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
   def encoder(): Flow[RootElement, ByteString, _] = {
     // Row Writer
     val naturalTabularRowWriter = Flow.fromGraph(new NaturalTabularRowWriter(
-      new MessagePackAdapters.RootElementContext(desc.model)
+      MessagePackAdapters.createRootElementContext(desc.model)
     ))
 
     if (!withHeader) {
@@ -122,7 +122,7 @@ object NaturalFormatReaderWriter {
           throw exc
         }
         result.trySuccess(parsedHeader.format)
-        val context = new MessagePackAdapters.RootElementContext(parsedHeader.format)
+        val context = MessagePackAdapters.createRootElementContext(parsedHeader.format)
         followUp.map { byteString =>
           byteString.toArray
           val unpacker = MessagePack.newDefaultUnpacker(byteString.toArray) // TODO: Fix extra allocation

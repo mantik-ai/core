@@ -1,4 +1,4 @@
-package ai.mantik.ds.natural
+package ai.mantik.ds.element
 
 import java.nio.file.Path
 
@@ -12,13 +12,13 @@ import akka.util.ByteString
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext, Future }
 
-/** An in-memory data bundle, used for testing. */
-case class NaturalBundle(
+/** An in-memory data bundle */
+case class Bundle(
     model: DataType,
     rows: Vector[RootElement]
 ) {
   /**
-   * Export the natural bundle into single file ZIP File.
+   * Export the bundle into single file ZIP File.
    * Note: this is intended for testing.
    * @return future which completes when the file is written and with the generated description.
    */
@@ -26,7 +26,7 @@ case class NaturalBundle(
     implicit val ec = materializer.executionContext
     val description = NaturalFormatDescription(
       model = model,
-      file = Some(NaturalBundle.DefaultFileName)
+      file = Some(Bundle.DefaultFileName)
     )
     val sink = FileIO.toPath(zipOutputFile)
     val source = Source(rows)
@@ -62,7 +62,7 @@ case class NaturalBundle(
   }
 }
 
-object NaturalBundle {
+object Bundle {
 
   /** File name for used in toZipBundle operations. */
   val DefaultFileName = "file.dat"
@@ -71,7 +71,7 @@ object NaturalBundle {
    * Import the natural bundle from a single file ZIP File.
    * This is mainly intended for testing.
    */
-  def fromZipBundle(input: Path)(implicit materializer: Materializer): Future[NaturalBundle] = {
+  def fromZipBundle(input: Path)(implicit materializer: Materializer): Future[Bundle] = {
     implicit val ec = materializer.executionContext
     val source = FileIO.fromPath(input)
     val unpacker = ZipUtils.unzipSingleFileStream()
@@ -85,13 +85,13 @@ object NaturalBundle {
     for {
       format <- formatFuture
       data <- dataFuture
-    } yield NaturalBundle(
+    } yield Bundle(
       format, data.toVector
     )
   }
 
   /** Deserializes the bundle from a GZIP Stream */
-  def fromGzip()(implicit ec: ExecutionContext): Sink[ByteString, Future[NaturalBundle]] = {
+  def fromGzip()(implicit ec: ExecutionContext): Sink[ByteString, Future[Bundle]] = {
     val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
     val sink: Sink[ByteString, (Future[DataType], Future[Seq[RootElement]])] =
       Compression.gunzip().viaMat(decoder)(Keep.right).toMat(Sink.seq)(Keep.both)
@@ -100,17 +100,17 @@ object NaturalBundle {
         for {
           dataType <- dataTypeFuture
           elements <- elementsFuture
-        } yield NaturalBundle(dataType, elements.toVector)
+        } yield Bundle(dataType, elements.toVector)
     }
   }
 
   /** Deserializes the bundle from a stream without header. */
-  def fromStreamWithoutHeader(dataType: DataType)(implicit ec: ExecutionContext): Sink[ByteString, Future[NaturalBundle]] = {
+  def fromStreamWithoutHeader(dataType: DataType)(implicit ec: ExecutionContext): Sink[ByteString, Future[Bundle]] = {
     val readerWriter = new NaturalFormatReaderWriter(NaturalFormatDescription(dataType), withHeader = false)
     val sink: Sink[ByteString, Future[Seq[RootElement]]] = readerWriter.decoder().toMat(Sink.seq[RootElement])(Keep.right)
     sink.mapMaterializedValue { elementsFuture =>
       elementsFuture.map { elements =>
-        NaturalBundle(
+        Bundle(
           dataType,
           elements.toVector
         )
@@ -119,7 +119,7 @@ object NaturalBundle {
   }
 
   /** Deserializes from a Stream including Header. */
-  def fromStreamWithHeader()(implicit ec: ExecutionContext): Sink[ByteString, Future[NaturalBundle]] = {
+  def fromStreamWithHeader()(implicit ec: ExecutionContext): Sink[ByteString, Future[Bundle]] = {
     val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
     val sink: Sink[ByteString, (Future[DataType], Future[Seq[RootElement]])] =
       decoder.toMat(Sink.seq)(Keep.both)
@@ -128,12 +128,12 @@ object NaturalBundle {
         for {
           dataType <- dataTypeFuture
           elements <- elementsFuture
-        } yield NaturalBundle(dataType, elements.toVector)
+        } yield Bundle(dataType, elements.toVector)
     }
   }
 
   /** Deserializes the bundle from an in-memory bytestring. (gzipped) */
-  def fromGzipSync(byteString: ByteString)(implicit materializer: Materializer): NaturalBundle = {
+  def fromGzipSync(byteString: ByteString)(implicit materializer: Materializer): Bundle = {
     implicit val ec = materializer.executionContext
     Await.result(Source.single(byteString).toMat(fromGzip())(Keep.right).run(), Duration.Inf)
   }
@@ -148,7 +148,7 @@ object NaturalBundle {
       this
     }
 
-    def result: NaturalBundle = NaturalBundle(
+    def result: Bundle = Bundle(
       tabularData, rowBuilder.result()
     )
 
@@ -174,5 +174,11 @@ object NaturalBundle {
 
   /** Experimental builder for tabular data. */
   def build(tabularData: TabularData): Builder = new Builder(tabularData)
+
+  /** Build a non-tabular value. */
+  def build(nonTabular: DataType, value: Element): Bundle = {
+    require(!nonTabular.isInstanceOf[TabularData], "Builder can only be used for nontabular data")
+    Bundle(nonTabular, Vector(SingleElement(value)))
+  }
 }
 

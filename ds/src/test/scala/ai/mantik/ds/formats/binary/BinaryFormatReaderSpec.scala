@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.NoSuchFileException
 
 import ai.mantik.ds.{FundamentalType, TabularData}
-import ai.mantik.ds.natural.{Primitive, RootElement, TabularRow}
+import ai.mantik.ds.element.{Primitive, RootElement, TabularRow}
 import ai.mantik.ds.testutil.{GlobalAkkaSupport, TempDirSupport, TestBase}
 import org.apache.commons.io.{FileUtils, IOUtils}
 

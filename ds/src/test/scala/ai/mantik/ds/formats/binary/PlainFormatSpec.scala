@@ -2,7 +2,7 @@ package ai.mantik.ds.formats.binary
 
 import java.nio.ByteOrder
 
-import ai.mantik.ds.natural.Primitive
+import ai.mantik.ds.element.Primitive
 import ai.mantik.ds._
 import ai.mantik.ds.testutil.TestBase
 import akka.util.ByteString
@@ -86,7 +86,7 @@ class PlainFormatSpec extends TestBase {
         ImageChannel.Red -> ImageComponent(FundamentalType.Uint8)
       )
     )
-    PlainFormat.plainDecoder(image).get(data.iterator) shouldBe natural.ImageElement(
+    PlainFormat.plainDecoder(image).get(data.iterator) shouldBe element.ImageElement(
       data.take(2 * 3)
     )
   }

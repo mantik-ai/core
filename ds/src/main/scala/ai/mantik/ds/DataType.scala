@@ -69,6 +69,8 @@ object FundamentalType {
 
   case object BoolType extends FundamentalType
 
+  case object VoidType extends FundamentalType
+
   /** Parses a fundamental type from Name. */
   def fromName(name: String): FundamentalType = DataTypeJsonAdapter.fundamentalTypeFromName(name)
 }

@@ -2,7 +2,7 @@ package com.example.examples
 
 import ai.mantik.core.{ Context, DataSet }
 import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.natural.NaturalBundle
+import ai.mantik.ds.element.Bundle
 
 object ShowDataSet {
 
@@ -10,7 +10,7 @@ object ShowDataSet {
     val context: Context = Context.local()
     try {
       val ds = DataSet.literal(
-        NaturalBundle.build(
+        Bundle.build(
           TabularData(
             "x" -> FundamentalType.Int32,
             "y" -> FundamentalType.StringType

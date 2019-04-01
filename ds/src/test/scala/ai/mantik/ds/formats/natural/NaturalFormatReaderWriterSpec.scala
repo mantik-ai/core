@@ -4,16 +4,16 @@ import java.io.File
 
 import ai.mantik.ds.FundamentalType.{ Int32, StringType }
 import ai.mantik.ds.{ DataType, TabularData }
-import ai.mantik.ds.natural.{ NaturalBundle, RootElement, TabularRow }
+import ai.mantik.ds.element.{ Bundle, RootElement, TabularRow }
 import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
 import akka.stream.scaladsl.{ Keep, Sink, Source }
-import ai.mantik.ds.natural.PrimitiveEncoder._
+import ai.mantik.ds.element.PrimitiveEncoder._
 
 import scala.concurrent.Future
 
 class NaturalFormatReaderWriterSpec extends TestBase with GlobalAkkaSupport with TempDirSupport {
 
-  val sampleBundle = NaturalBundle(
+  val sampleBundle = Bundle(
     TabularData(
       "x" -> Int32,
       "y" -> StringType

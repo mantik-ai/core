@@ -3,9 +3,9 @@ package ai.mantik.ds.formats.binary
 import java.nio.ByteOrder
 
 import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageFormat }
-import ai.mantik.ds.natural.{ Element, ImageElement }
+import ai.mantik.ds.element.{ Element, ImageElement }
 import akka.util.ByteIterator
-import ai.mantik.ds.natural.PrimitiveEncoder._
+import ai.mantik.ds.element.PrimitiveEncoder._
 
 /**
  * Some types are "plain" serialized, just written away.
