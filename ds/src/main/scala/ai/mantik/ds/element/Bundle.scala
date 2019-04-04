@@ -2,7 +2,7 @@ package ai.mantik.ds.element
 
 import java.nio.file.Path
 
-import ai.mantik.ds.{ DataType, FundamentalType, Image, TabularData }
+import ai.mantik.ds._
 import ai.mantik.ds.formats.natural.{ NaturalFormatDescription, NaturalFormatReaderWriter }
 import ai.mantik.ds.helper.ZipUtils
 import akka.stream.scaladsl.{ Compression, FileIO, Keep, Sink, Source }
@@ -164,6 +164,9 @@ object Bundle {
           value.asInstanceOf[ImageElement]
         case (value: EmbeddedTabularElement, (columnName, d: TabularData)) =>
           value
+        case (value, (columnName, i: Tensor)) =>
+          require(value.isInstanceOf[TensorElement[_]])
+          value.asInstanceOf[Element]
         case (other, (columnName, dataType)) =>
           throw new IllegalArgumentException(s"Could not encode ${other} as ${dataType}")
       }

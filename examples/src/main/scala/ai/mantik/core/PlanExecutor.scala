@@ -1,6 +1,4 @@
-package ai.mantik.core.impl
-
-import ai.mantik.core.Plan
+package ai.mantik.core
 
 import scala.concurrent.Future
 

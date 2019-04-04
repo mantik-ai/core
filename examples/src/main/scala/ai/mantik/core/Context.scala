@@ -12,7 +12,7 @@ trait Context {
   def loadDataSet(id: MantikId): DataSet
 
   /** Load a Transformation from Mantik. */
-  def loadTransformation(id: MantikId): Transformation
+  def loadTransformation(id: MantikId): Algorithm
 
   /** Load a Trainable Algorithm. */
   def loadTrainableAlgorithm(id: MantikId): TrainableAlgorithm
@@ -28,7 +28,7 @@ trait Context {
   }
 
   /** Push a local mantik file including pazload to the repository */
-  def pushLocalMantikFile(dir: Path): Unit
+  def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): Unit
 
   /** Shutdown the context. */
   def shutdown(): Unit

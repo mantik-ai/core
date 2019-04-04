@@ -127,5 +127,9 @@ class KubernetesJobConverterSpec extends TestBase {
     spec.initContainers.head.image shouldBe "provider"
     spec.initContainers.head.volumeMounts.map(_.name) shouldBe List("data")
     spec.volumes.map(_.name) shouldBe List("data")
+
+    withClue("there must be an fsGroup element") {
+      spec.securityContext.flatMap(_.fsGroup) shouldBe Some(1000)
+    }
   }
 }

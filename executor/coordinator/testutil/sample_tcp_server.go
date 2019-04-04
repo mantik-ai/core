@@ -54,6 +54,7 @@ func TcpPullData(address string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Close()
 	result, err := ioutil.ReadAll(resp)
 	return result, err
 }

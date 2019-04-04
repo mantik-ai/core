@@ -20,6 +20,8 @@ type Settings struct {
 	RpcTimeout time.Duration
 	// Timeout for a whole job
 	JobExecutionTimeout time.Duration
+	// Retrying HTTP Get if 409 is reported
+	HttpGetRetryTime time.Duration
 }
 
 func CreateDefaultSettings() *Settings {
@@ -31,6 +33,7 @@ func CreateDefaultSettings() *Settings {
 		WaitForWebServiceReachable: time.Minute,
 		RpcTimeout:                 time.Minute,
 		JobExecutionTimeout:        24 * time.Hour,
+		HttpGetRetryTime:           1 * time.Second,
 	}
 }
 

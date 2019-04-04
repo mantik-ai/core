@@ -130,10 +130,10 @@ class SimpleTempFileRepository(implicit actorSystem: ActorSystem, materializer: 
     }
   }
 
-  override def requestFileGet(id: String): Future[FileRepository.FileGetResult] = {
+  override def requestFileGet(id: String, optimistic: Boolean): Future[FileRepository.FileGetResult] = {
     fileStatus(id) match {
-      case None                               => Future.failed(new Errors.NotFoundException(s"File ${id} not found"))
-      case Some(file) if file.written.isEmpty => Future.failed(new Errors.NotFoundException(s"File ${id} ha no content yet"))
+      case None => Future.failed(new Errors.NotFoundException(s"File ${id} not found"))
+      case Some(file) if !optimistic && file.written.isEmpty => Future.failed(new Errors.NotFoundException(s"File ${id} ha no content yet"))
       case Some(file) =>
         Future.successful(
           FileRepository.FileGetResult(

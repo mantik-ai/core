@@ -1,20 +1,70 @@
 package com.example.examples
 
-import ai.mantik.core.Context
+import java.io.File
+
+import ai.mantik.core.{ Context, DataSet }
+import ai.mantik.ds.FundamentalType.{ Float64, Int32 }
+import ai.mantik.ds.{ TabularData, Tensor }
+import ai.mantik.ds.element.{ Bundle, TensorElement }
 
 object TrainAlgorithm {
 
   def main(args: Array[String]): Unit = {
-    val context: Context = ???
+    val context: Context = Context.local()
+    try {
+      val sampleFile = new File("../bridge/bridge/sklearn/simple_learn/example/kmeans").toPath
+      context.pushLocalMantikFile(sampleFile)
 
-    val trainingDataSet = context.loadDataSet("train_dataset1")
-    val validationDataSet = context.loadDataSet("validation_dataset")
-    val trainableAlgorithm = context.loadTrainableAlgorithm("trainable_algorithm")
+      def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 
-    val (trained, stats) = trainableAlgorithm.train(trainingDataSet, Some(validationDataSet))
-    context.execute(
-      trained.save("result_algorithm"),
-      stats.save("result_stats")
-    )
+      val learningData: Bundle = Bundle.build(
+        TabularData(
+          "coordinates" -> Tensor(componentType = Float64, shape = List(2))
+        )
+      )
+        .row(makeTensor(1, 1))
+        .row(makeTensor(2, 2))
+        .row(makeTensor(1, 2))
+        .row(makeTensor(2, 2))
+        .row(makeTensor(3, 3))
+        .row(makeTensor(3, 4))
+        .row(makeTensor(4, 3))
+        .row(makeTensor(4, 4))
+        .result
+
+      val kmeans = context.loadTrainableAlgorithm("kmeans")
+
+      val (trained, stats) = kmeans.train(DataSet.literal(learningData))
+
+      context.execute(
+        trained.save("kmeans_trained")
+      )
+
+      val trainedAgain = context.loadTransformation("kmeans_trained")
+
+      val sampleData = Bundle.build(
+        TabularData(
+          "coordinates" -> Tensor(componentType = Float64, shape = List(2))
+        )
+      )
+        .row(makeTensor(1, 1))
+        .row(makeTensor(0, 0))
+        .row(makeTensor(4, 4))
+        .result
+
+      val applied = context.execute(
+        trainedAgain(DataSet.literal(sampleData)).fetch
+      )
+
+      println(applied)
+
+      val statsFetched = context.execute(
+        stats.fetch
+      )
+      println("Stats " + statsFetched)
+
+    } finally {
+      context.shutdown()
+    }
   }
 }

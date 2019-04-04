@@ -4,7 +4,8 @@ import ai.mantik.core
 import ai.mantik.core.Planner
 import ai.mantik.executor.model.{ Graph, Link, Node, NodeResourceRef }
 
-class PlannerGraphOps(graph: Graph) {
+/** Extends the graph with some convenience methods. */
+private[impl] class PlannerGraphOps(graph: Graph) {
 
   /** Add nodes to the graph, returns a lefty error if nodes are already existant. */
   def addNodes(extraNodes: Map[String, Node]): Graph = {
@@ -38,7 +39,7 @@ class PlannerGraphOps(graph: Graph) {
   }
 }
 
-object PlannerGraphOps {
+private[impl] object PlannerGraphOps {
   import scala.language.implicitConversions
   implicit def toGraphOps(graph: Graph): PlannerGraphOps = new PlannerGraphOps(graph)
 }

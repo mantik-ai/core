@@ -8,6 +8,7 @@ import (
 	"io"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestSimpleABStreamingTest(t *testing.T) {
@@ -50,7 +51,7 @@ func TestSimpleABStreamingTest(t *testing.T) {
 
 	contentType := "foo"
 
-	getSource, err := CreateHttpGetSource(ts1.ResourceUrl(), &contentType, getNotify)
+	getSource, err := CreateHttpGetSource(ts1.ResourceUrl(), &contentType, getNotify, time.Second)
 	assert.NoError(t, err)
 	postSink, err := CreateHttpPostSink(fmt.Sprintf("localhost:%d", getSource.Port), ts2.ResourceUrl(), &contentType, postNotify)
 	assert.NoError(t, err)
@@ -112,4 +113,48 @@ func TestTransformation(t *testing.T) {
 	assert.Equal(t, reader.generated.Bytes(), bytes)
 	assert.Equal(t, 1, gotDone)
 	assert.Equal(t, contentType, ts.MimeTypes[0])
+}
+
+func TestGetWaiting409(t *testing.T) {
+	// HTTP GET should try it again, if it receives 409
+	// This is used on learning algorithms which are not yet ready.
+
+	testLength := int64(1000000)
+
+	testBytes := make([]byte, testLength)
+	rand.Read(testBytes)
+
+	ts1 := testutil.CreateSampleSource("foo1", testBytes)
+	defer ts1.Close()
+
+	var gotGetNotify = 0
+	var gotGetDone = false
+	var getDoneOutBytes int64 = 0
+
+	var getNotify StreamNotifyFn = func(reqId int, in int64, out int64, inFailure error, done bool) {
+		gotGetNotify++
+		if done {
+			gotGetDone = true
+			assert.NoError(t, inFailure)
+			getDoneOutBytes = out
+		}
+	}
+
+	contentType := "foo"
+
+	ts1.StatusToReturn = 409
+	time.AfterFunc(time.Millisecond*100, func() {
+		ts1.StatusToReturn = 200
+	})
+
+	getSource, err := CreateHttpGetSource(ts1.ResourceUrl(), &contentType, getNotify, 10*time.Millisecond)
+	defer getSource.Close()
+	assert.NoError(t, err)
+
+	readBytes, err := testutil.TcpPullData(fmt.Sprintf("localhost:%d", getSource.Port))
+	assert.NoError(t, err)
+	assert.Equal(t, testBytes, readBytes)
+	assert.True(t, gotGetDone)
+	assert.Equal(t, testLength, getDoneOutBytes)
+	assert.Equal(t, 1, gotGetNotify)
 }

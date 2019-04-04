@@ -1,7 +1,7 @@
 package ai.mantik.core
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.repository.MantikId
+import ai.mantik.repository.{ MantikDefinition, MantikId }
 
 /**
  * A Action is something which can be executed
@@ -14,9 +14,6 @@ object Action {
   /** Fetch a dataset. */
   case class FetchAction(dataSet: DataSet) extends Action[Bundle]
 
-  /** Algorithm is trained. */
-  case class TrainAlgorithmAction(trainableAlgorithm: TrainableAlgorithm, trainData: DataSet, validationData: Option[DataSet]) extends Action[Unit]
-
   /** Something is going to be saved. */
-  case class SaveAction(item: MantikItem, location: MantikId) extends Action[Unit]
+  case class SaveAction(item: MantikItem, id: MantikId) extends Action[Unit]
 }

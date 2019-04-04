@@ -7,8 +7,8 @@ import akka.actor.{ ActorSystem, Cancellable }
 import com.typesafe.scalalogging.Logger
 import ai.mantik.executor.Errors.{ InternalException, NotFoundException }
 import ai.mantik.executor.impl.tracker.{ JobTracker, KubernetesTracker }
-import ai.mantik.executor.{ Config, Executor }
-import ai.mantik.executor.model.{ Job, JobState, JobStatus }
+import ai.mantik.executor.{ Config, Errors, Executor }
+import ai.mantik.executor.model.{ GraphAnalysis, Job, JobState, JobStatus }
 import skuber.{ ConfigMap, K8SException, LabelSelector, ListResource, Namespace, Pod }
 import skuber.api.client.KubernetesClient
 
@@ -35,7 +35,13 @@ class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
     logger.info(s"Creating job ${jobId} in namespace ${namespace}...")
     ops.ensureNamespace(kubernetesClient, namespace).flatMap { namespacedClient =>
       logger.debug(s"Namespace for job ${job.isolationSpace}/${jobId}: ${namespace} ensured...")
-      val converter = new KubernetesJobConverter(config, job, jobId)
+      val converter = try {
+        new KubernetesJobConverter(config, job, jobId)
+      } catch {
+        case e: GraphAnalysis.AnalyzerException =>
+          logger.warn(s"Graph analysis failed", e)
+          throw new Errors.BadRequestException(s"Graph analysis failed: e: ${e.getMessage}")
+      }
 
       // Pods are not reachable by it's name but by their IP Address, however we must first start them to get their IP Address.
       ops.startPodsAndGetIpAdresses(namespacedClient, converter.pods).flatMap { podsWithIpAdresses =>

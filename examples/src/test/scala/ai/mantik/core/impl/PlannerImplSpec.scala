@@ -1,6 +1,5 @@
 package ai.mantik.core.impl
 
-import ai.mantik.core.impl.PlannerImpl.NodeIdGenerator
 import ai.mantik.core.{ Action, DataSet, Plan, Source }
 import ai.mantik.core.plugins.Plugins
 import ai.mantik.ds.{ FundamentalType, TabularData }
@@ -58,15 +57,13 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
     .row(1)
     .result
 
-  "convertDataSource" should "convert a simple literal source" in new Env {
-    val sourcePlan = await(planner.convertDataSource(
-      DataSet(Source.Literal(lit), lit.model)
+  "manifestDataSet" should "convert a simple literal source" in new Env {
+    val sourcePlan = await(planner.manifestDataSet(
+      DataSet.natural(Source.BundleLiteral(lit), lit.model)
     ))
     val lastStorage = fileRepo.storageCalls.result().head
     lastStorage.temporary shouldBe true
-    sourcePlan.preplan shouldBe Plan.PushBundle(
-      lit, lastStorage.result.fileId
-    )
+    sourcePlan.preplan shouldBe Plan.PushBundle(lit, "1")
     sourcePlan.graph shouldBe Graph(
       Map(
         "1" -> Node(
@@ -75,7 +72,7 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
         )
       )
     )
-    sourcePlan.output shouldBe NodeResourceRef("1", lastStorage.result.resource)
+    sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", lastStorage.result.resource))
   }
 
   it should "convert a load natural source" in new Env {
@@ -83,23 +80,14 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
     // Push in some data, otherwise the file calls will fail
     await(AkkaSource.empty[ByteString].runWith(await(fileRepo.storeFile(file1.fileId, FileRepository.MantikBundleContentType))))
 
-    val ds = DataSet(
+    val ds = DataSet.natural(
       Source.Loaded(
-        MantikArtefact(
-          mantikfile = Mantikfile.pure(
-            DataSetDefinition(
-              name = "foo",
-              version = None,
-              `type` = lit.model,
-              format = "natural"
-            )
-          ),
-          fileId = Some(file1.fileId))
+        file1.fileId
       ),
       lit.model
     )
 
-    val sourcePlan = await(planner.convertDataSource(
+    val sourcePlan = await(planner.manifestDataSet(
       ds
     ))
 
@@ -114,17 +102,40 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
         )
       )
     )
-    sourcePlan.output shouldBe NodeResourceRef("1", file1.resource)
+    sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", file1.resource))
   }
 
   "convert" should "convert a simple save action" in new Env {
     val plan = await(planner.convert(
       Action.SaveAction(
-        DataSet(Source.Literal(lit), lit.model), "item1"
+        DataSet.natural(Source.BundleLiteral(lit), lit.model), "item1"
       )
     ))
     val files = fileRepo.storageCalls.result()
-    files.size shouldBe 2
+    files.size shouldBe 1
+
+    val pushFile = files.head
+    pushFile.temporary shouldBe false
+
+    plan shouldBe Plan.seq(
+      Plan.PushBundle(lit, pushFile.result.fileId),
+      Plan.AddMantikItem(
+        MantikArtefact(
+          Mantikfile.pure(
+            DataSetDefinition(
+              name = None,
+              version = None,
+              format = "natural",
+              `type` = lit.model
+            )
+          ),
+          Some(pushFile.result.fileId),
+          id = MantikId("item1")
+        )
+      )
+    )
+
+    /*
 
     // File handles are generated asynchronously, so they can be picked up randomly
     // We have two file handles:
@@ -166,26 +177,38 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
           MantikArtefact(
             Mantikfile.pure(
               DataSetDefinition(
-                name = "item1",
+                name = None,
                 version = None,
                 format = "natural",
                 `type` = lit.model
               )
             ),
-            Some(storeFile.result.fileId)
+            Some(storeFile.result.fileId),
+            id = MantikId("item1")
           )
         )
       )
     )
+    */
   }
 
   it should "convert a simple fetch operation" in new Env {
     val plan = await(planner.convert(
       Action.FetchAction(
-        DataSet(Source.Literal(lit), lit.model)
+        DataSet.natural(Source.BundleLiteral(lit), lit.model)
       )
     ))
     val files = fileRepo.storageCalls.result()
+    files.size shouldBe 1
+    val file = files.head
+    file.temporary shouldBe true
+
+    plan shouldBe Plan.seq(
+      Plan.PushBundle(lit, file.result.fileId),
+      Plan.PullBundle(lit.model, file.result.fileId)
+    )
+    /*
+
     files.size shouldBe 2
 
     val pushCall = plan.asInstanceOf[Plan.Sequential].plans.head.asInstanceOf[Plan.PushBundle]
@@ -225,5 +248,6 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
         )
       )
     )
+    */
   }
 }

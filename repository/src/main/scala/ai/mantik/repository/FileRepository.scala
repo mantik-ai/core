@@ -11,7 +11,11 @@ trait FileRepository {
   /** Request the storage of a new file. */
   def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult]
 
-  def requestFileGet(id: String): Future[FileRepository.FileGetResult]
+  /**
+   * Request the loading of a file.
+   * @param optimistic if true, the file handle will also be returned, if the file is not yet existant.
+   */
+  def requestFileGet(id: String, optimistic: Boolean = false): Future[FileRepository.FileGetResult]
 
   /** Request storing a file (must be requested at first). */
   def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Unit]]]

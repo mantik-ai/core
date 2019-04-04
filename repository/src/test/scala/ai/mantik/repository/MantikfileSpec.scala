@@ -1,6 +1,6 @@
 package ai.mantik.repository
 
-import ai.mantik.ds.funcational.SimpleFunction
+import ai.mantik.ds.funcational.{FunctionType, SimpleFunction}
 import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.testutils.TestBase
 
@@ -28,11 +28,11 @@ class MantikfileSpec extends TestBase {
     """.stripMargin
 
   it should "parse an easy Mantikfile" in {
-    Mantikfile.fromYaml(sample).right.get.algorithm shouldBe Some(
+    Mantikfile.fromYaml(sample).right.get.definitionAs[AlgorithmDefinition] shouldBe Right(
       AlgorithmDefinition(
         author = Some("John Doe"),
         authorEmail = Some("john.doe@example.com"),
-        name = "super_duper_algorithm",
+        name = Some("super_duper_algorithm"),
         version = Some("0.1"),
         stack = "tensorflow1.6",
         directory = Some("my_dir"),
@@ -42,9 +42,9 @@ class MantikfileSpec extends TestBase {
   }
 
   it should "parse a minimal file" in {
-    Mantikfile.fromYaml(minimalFile).right.get.algorithm shouldBe Some(
+    Mantikfile.fromYaml(minimalFile).right.get.definitionAs[AlgorithmDefinition] shouldBe Right(
       AlgorithmDefinition(
-        name = "My Mini Algorithm",
+        name = Some("My Mini Algorithm"),
         stack = "foobar",
         directory = Some("mydir"),
         `type` = SimpleFunction(FundamentalType.BoolType, FundamentalType.BoolType)
@@ -77,8 +77,8 @@ class MantikfileSpec extends TestBase {
           |  input: int8
           |  output: int8
         """.stripMargin
-      Mantikfile.fromYaml(code).right.get.algorithm.get shouldBe AlgorithmDefinition(
-        name = "Foo",
+      Mantikfile.fromYaml(code).right.get.definitionAs[AlgorithmDefinition].right.get shouldBe AlgorithmDefinition(
+        name = Some("Foo"),
         version = Some("0.1"),
         stack = "bla",
         directory = Some("dir"),
@@ -88,8 +88,8 @@ class MantikfileSpec extends TestBase {
   }
 
   it should "validate names in a second step" in {
-    val mantikFile = Mantikfile.fromYaml(sample).right.get.algorithm.get
-    mantikFile.name shouldBe "super_duper_algorithm"
+    val mantikFile = Mantikfile.fromYaml(sample).right.get.definitionAs[AlgorithmDefinition].right.get
+    mantikFile.name shouldBe Some("super_duper_algorithm")
     mantikFile.violations shouldBe empty
 
     val other =
@@ -101,8 +101,8 @@ class MantikfileSpec extends TestBase {
         |  input: string
         |  output: string
       """.stripMargin
-    val parsed = Mantikfile.fromYaml(other).right.get.algorithm.get
-    parsed.name shouldBe "Illegal Name"
+    val parsed = Mantikfile.fromYaml(other).right.get.definitionAs[AlgorithmDefinition].right.get
+    parsed.name shouldBe Some("Illegal Name")
     parsed.version shouldBe Some("0.1 ILLEGAL")
     parsed.violations should contain theSameElementsAs Seq("Invalid Name", "Invalid Version")
   }
@@ -117,16 +117,15 @@ class MantikfileSpec extends TestBase {
         |authorEmail: me@example.com
         |directory: my_dir
         |format: binary
-        |dataType:
+        |type:
         |  columns:
         |    "x": int32
         |    "y": string
       """.stripMargin
     val mantikfile = Mantikfile.fromYaml(definition).right.get
-    mantikfile.algorithm shouldBe None
-    mantikfile.dataSet shouldBe Some(
+    mantikfile.definitionAs[DataSetDefinition] shouldBe Right(
       DataSetDefinition(
-        name = "dataset1",
+        name = Some("dataset1"),
         version = Some("0.1"),
         author = Some("Superman"),
         authorEmail = Some("me@example.com"),
@@ -136,6 +135,37 @@ class MantikfileSpec extends TestBase {
           "x" -> FundamentalType.Int32,
           "y" -> FundamentalType.StringType
         )
+      )
+    )
+  }
+
+  it should "parse trainable algorithms" in {
+    val definition =
+      """
+        |kind: trainable
+        |stack: foo1
+        |name: train1
+        |type:
+        | input:
+        |   int32
+        | output:
+        |   int64
+        |trainingType: int32
+        |statType: string
+        |directory: foo
+      """.stripMargin
+    val mantikfile = Mantikfile.fromYaml(definition).right.get
+    mantikfile.definitionAs[TrainableAlgorithmDefinition] shouldBe Right(
+      TrainableAlgorithmDefinition(
+        name = Some("train1"),
+        stack = "foo1",
+        `type` = SimpleFunction(
+          FundamentalType.Int32,
+          FundamentalType.Int64
+        ),
+        trainingType = FundamentalType.Int32,
+        statType = FundamentalType.StringType,
+        directory = Some("foo")
       )
     )
   }
@@ -151,9 +181,68 @@ class MantikfileSpec extends TestBase {
         |directory: my_dir
         |format: binary
         |unknown: must still be stored.
-        |dataType: int32
+        |type: int32
       """.stripMargin
     val mantikfile = Mantikfile.fromYaml(definition).right.get
     mantikfile.toYaml should include("must still be stored")
+  }
+
+  it should "generate the trained variant from learnable Algorithms" in {
+    val definition =
+      """
+        |kind: trainable
+        |stack: foo1
+        |name: train1
+        |version: "0.1"
+        |type:
+        | input:
+        |   int32
+        | output:
+        |   int64
+        |trainingType: int32
+        |statType: string
+        |directory: foo
+      """.stripMargin
+    val mantikfile = Mantikfile.fromYaml(definition).right.get.cast[TrainableAlgorithmDefinition].right.get
+
+    val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
+    casted.definition shouldBe AlgorithmDefinition (
+      stack = "foo1",
+      `type` = SimpleFunction(
+        FundamentalType.Int32,
+        FundamentalType.Int64
+      ),
+      directory = Some("foo")
+    )
+  }
+
+  it should "also support overrides for learnable algorithms" in {
+    val definition =
+      """
+        |kind: trainable
+        |stack: foo1
+        |trainedStack: foo2
+        |name: train1
+        |version: "0.1"
+        |type:
+        | input:
+        |   int32
+        | output:
+        |   int64
+        |trainingType: int32
+        |statType: string
+        |directory: foo
+      """.stripMargin
+    val mantikfile = Mantikfile.fromYaml(definition).right.get.cast[TrainableAlgorithmDefinition].right.get
+
+    val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
+    casted.definition shouldBe AlgorithmDefinition (
+      stack = "foo2",
+      `type` = SimpleFunction(
+        FundamentalType.Int32,
+        FundamentalType.Int64
+      ),
+      directory = Some("foo")
+    )
   }
 }

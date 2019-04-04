@@ -2,7 +2,7 @@ package ai.mantik.executor.impl
 
 import ai.mantik.executor.Config
 import ai.mantik.executor.model._
-import skuber.{ ConfigMap, Container, EnvFromSource, ObjectMeta, Pod, RestartPolicy, Volume }
+import skuber.{ ConfigMap, Container, EnvFromSource, ObjectMeta, Pod, PodSecurityContext, RestartPolicy, Volume }
 import io.circe.syntax._
 
 object KubernetesJobConverter {
@@ -168,6 +168,10 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
       containers = sideCar :: containers,
       initContainers = initContainers,
       restartPolicy = RestartPolicy.Never,
+      securityContext = Some(
+        // Important, so that the container can write into the volumes created by the payload unpacker
+        PodSecurityContext(fsGroup = Some(1000))
+      ),
       volumes = if (initContainers.isEmpty) Nil else {
         List(
           Volume("data", Volume.EmptyDir())

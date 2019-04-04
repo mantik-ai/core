@@ -32,3 +32,6 @@ function transfer_image {
 docker pull mdocker.rcxt.de/tf.savedmodel:master
 docker tag  mdocker.rcxt.de/tf.savedmodel:master tf.savedmodel
 transfer_image tf.savedmodel
+
+
+transfer_image bridge.sklearn.simple # Must be built locally

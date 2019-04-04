@@ -20,26 +20,36 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 
-class ContextImpl(repository: Repository, fileRepository: FileRepository, planner: Planner, planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit ec: ExecutionContext, mat: Materializer) extends Context {
+private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepository, planner: Planner, planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit ec: ExecutionContext, mat: Materializer) extends Context {
   val logger = LoggerFactory.getLogger(getClass)
 
   override def loadDataSet(id: MantikId): DataSet = {
     val (artefact, mf) = await(repository.getAs[DataSetDefinition](id))
     DataSet(
-      Source.Loaded(artefact),
-      mf.definition.`type`
+      mantikArtefactSource(artefact),
+      mf
     )
   }
 
-  override def loadTransformation(id: MantikId): Transformation = {
+  override def loadTransformation(id: MantikId): Algorithm = {
     val (artefact, mf) = await(repository.getAs[AlgorithmDefinition](id))
-    Transformation(
-      Source.Loaded(artefact),
-      mf.definition.`type`
+    Algorithm(
+      mantikArtefactSource(artefact),
+      mf
     )
   }
 
-  override def loadTrainableAlgorithm(id: MantikId): TrainableAlgorithm = ???
+  override def loadTrainableAlgorithm(id: MantikId): TrainableAlgorithm = {
+    val (artefact, mf) = await(repository.getAs[TrainableAlgorithmDefinition](id))
+    TrainableAlgorithm(
+      mantikArtefactSource(artefact),
+      mf
+    )
+  }
+
+  private def mantikArtefactSource(mantikArtefact: MantikArtefact): Source = {
+    mantikArtefact.fileId.map(Source.Loaded).getOrElse(Source.Empty)
+  }
 
   override def execute[T](action: Action[T]): T = {
     val plan = await(planner.convert(action))
@@ -51,7 +61,7 @@ class ContextImpl(repository: Repository, fileRepository: FileRepository, planne
     Await.result(future, 60.seconds)
   }
 
-  override def pushLocalMantikFile(dir: Path): Unit = {
+  override def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): Unit = {
     logger.info(s"Pushing local Mantik file...")
     val file = dir.resolve("Mantikfile")
     val fileContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
@@ -59,6 +69,10 @@ class ContextImpl(repository: Repository, fileRepository: FileRepository, planne
     val mantikfile = Mantikfile.fromYaml(fileContent) match {
       case Left(error) => throw new RuntimeException("Could not parse mantik file", error)
       case Right(ok)   => ok
+    }
+    val idToUse = id.getOrElse {
+      val name = mantikfile.definition.name.getOrElse(throw new RuntimeException("Mantikfile has no id and no id is given"))
+      MantikId(name, mantikfile.definition.version)
     }
     val fileId = mantikfile.definition.directory.map { dataDir =>
       // Uploading File Content
@@ -73,7 +87,7 @@ class ContextImpl(repository: Repository, fileRepository: FileRepository, planne
       tempFile.toFile.delete()
       fileStorage.fileId
     }
-    val artefact = MantikArtefact(mantikfile, fileId)
+    val artefact = MantikArtefact(mantikfile, fileId, idToUse)
     await(repository.store(artefact))
     logger.info(s"Storing ${artefact.id} done")
   }
