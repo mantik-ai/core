@@ -7,22 +7,15 @@ import io.circe.yaml.{ parser => YamlParser }
 import scala.reflect.ClassTag
 
 /**
- * A Mantikfile. Contains one Mantik Definition.
+ * A Mantikfile. Contains one Mantik Definition together with it's JSON representation.
  */
 case class Mantikfile[T <: MantikDefinition](
     definition: T,
     json: Json
 ) {
 
-  def algorithm: Option[AlgorithmDefinition] = definition match {
-    case a: AlgorithmDefinition => Some(a)
-    case _                      => None
-  }
-
-  def dataSet: Option[DataSetDefinition] = definition match {
-    case d: DataSetDefinition => Some(d)
-    case _                    => None
-  }
+  /** Returns the definition, if applicable. */
+  def definitionAs[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[io.circe.Error, T] = cast[T].right.map(_.definition)
 
   def cast[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[io.circe.Error, Mantikfile[T]] = {
     definition match {
@@ -41,9 +34,9 @@ case class Mantikfile[T <: MantikDefinition](
 object Mantikfile {
 
   /** Generates a Mantikfile from pure Definition, automatically serializing to JSON. */
-  def pure(definition: MantikDefinition): Mantikfile[MantikDefinition] = {
+  def pure[T <: MantikDefinition](definition: T): Mantikfile[T] = {
     Mantikfile(
-      definition, definition.asJson
+      definition, (definition: MantikDefinition).asJson
     )
   }
 
@@ -68,6 +61,21 @@ object Mantikfile {
     json.as[MantikDefinition].map { v =>
       Mantikfile(v, json)
     }
+  }
+
+  /** Generate the mantikfile for a trained algorithm out of a trainable algorithm definition. */
+  def generateTrainedMantikfile(trainable: Mantikfile[TrainableAlgorithmDefinition]): Either[Error, Mantikfile[AlgorithmDefinition]] = {
+    val trainedStack = trainable.definition.trainedStack.getOrElse(
+      trainable.definition.stack // if no override given, use the same stack
+    )
+    val updatedFile = trainable.json.asObject
+      .get.remove("name")
+      .remove("version")
+      .add("stack", Json.fromString(trainedStack))
+      .add("kind", Json.fromString(MantikDefinition.AlgorithmKind))
+
+    Mantikfile.parseSingleDefinition(Json.fromJsonObject(updatedFile))
+      .flatMap(_.cast[AlgorithmDefinition])
   }
 
 }

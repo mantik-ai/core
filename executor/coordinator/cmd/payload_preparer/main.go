@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"flag"
+	"fmt"
 	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 const RcInvalidArgs = 1
@@ -44,6 +46,12 @@ func main() {
 		println("Empty URL")
 		os.Exit(RcInvalidArgs)
 	}
+
+	// For Debugging file permissions
+	uid := os.Getuid()
+	gid := os.Getgid()
+	fmt.Printf("Current user: %d group: %d\n", uid, gid)
+
 	var parsedMantikfile []byte
 	if len(*mantikfile) > 0 {
 		decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(*mantikfile))
@@ -78,7 +86,11 @@ func main() {
 	var payloadDir string = *dir
 	if len(*payloadSubDir) > 0 {
 		payloadDir = path.Join(*dir, *payloadSubDir)
-		err := os.MkdirAll(payloadDir, 0755)
+		// It is import that the created directory is writeable for the same group, as bridges are allowed to write there
+		// default umask is 0002, which will make it non-group-writeable.
+		oldUmask := syscall.Umask(02)
+		err := os.MkdirAll(payloadDir, os.ModePerm) // note: the bridge container may also write into it and is of same group
+		syscall.Umask(oldUmask)
 		if err != nil {
 			println("Could not create payload sub directory")
 			os.Exit(RcCouldNotCreateDirectory)

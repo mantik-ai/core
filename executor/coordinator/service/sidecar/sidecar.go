@@ -160,7 +160,7 @@ func (s *SideCar) RequestStream(req *protocol.RequestStream, res *protocol.Reque
 	if err != nil {
 		return err
 	}
-	streamer, err := streamer.CreateHttpGetSource(fullUrl, req.ContentType, s.makeStreamNotifyFn(req.Id))
+	streamer, err := streamer.CreateHttpGetSource(fullUrl, req.ContentType, s.makeStreamNotifyFn(req.Id), s.server.Settings.HttpGetRetryTime)
 	if err != nil {
 		res.Error = err.Error()
 		return nil

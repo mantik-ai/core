@@ -3,7 +3,7 @@ package ai.mantik.core.impl
 import java.time.Clock
 import java.time.temporal.ChronoUnit
 
-import ai.mantik.core.Plan
+import ai.mantik.core.{ Plan, PlanExecutor }
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import akka.actor.ActorSystem
@@ -18,7 +18,7 @@ import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
 
 /** Responsible for executing plans. */
-class PlanExecutorImpl(fileRepository: FileRepository, repository: Repository, executor: Executor)(implicit ec: ExecutionContext, actorSystem: ActorSystem, materializer: Materializer) extends PlanExecutor {
+private[impl] class PlanExecutorImpl(fileRepository: FileRepository, repository: Repository, executor: Executor)(implicit ec: ExecutionContext, actorSystem: ActorSystem, materializer: Materializer) extends PlanExecutor {
 
   private val logger = LoggerFactory.getLogger(getClass)
   logger.info(s"Initializing PlanExecutor")

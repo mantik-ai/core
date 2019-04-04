@@ -23,6 +23,7 @@ object Errors {
         msg <- c.downField("error").as[String]
       } yield {
         code match {
+          case 400 => new BadRequestException(msg)
           case 404 => new NotFoundException(msg)
           case 500 => new InternalException(msg)
           case _   => new ExecutorException(msg, code)
@@ -33,6 +34,9 @@ object Errors {
 
   /** A resource was not found. */
   class NotFoundException(msg: String) extends ExecutorException(msg, 404)
+
+  /** The request was not ok */
+  class BadRequestException(msg: String) extends ExecutorException(msg, 400)
 
   /** A strange internal error. */
   class InternalException(msg: String) extends ExecutorException(msg, 500)

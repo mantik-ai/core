@@ -93,7 +93,7 @@ object GraphAnalysis {
 
   class MultiTargetDetected(resource: NodeResourceRef) extends AnalyzerException(resource, s"Multi target ${resource} detected")
 
-  class FlowFromSinkException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Resource ${resource} is of bad type")
+  class FlowFromSinkException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Detected data flow from ${resource}")
 
   class ResourceNotFoundException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Recource not found ${resource}")
 

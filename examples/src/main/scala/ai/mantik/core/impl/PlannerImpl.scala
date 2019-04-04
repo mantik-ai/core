@@ -1,16 +1,13 @@
 package ai.mantik.core.impl
 
 import ai.mantik.core._
-import ai.mantik.core.impl.PlannerElements.SourcePlan
-import ai.mantik.core.impl.PlannerImpl.NodeIdGenerator
 import ai.mantik.core.plugins.Plugins
-import ai.mantik.executor.model._
 import ai.mantik.repository.FileRepository.FileGetResult
 import ai.mantik.repository._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class PlannerImpl(isolationSpace: String, fileRepository: FileRepository, formats: Plugins)(implicit ec: ExecutionContext) extends Planner {
+private[impl] class PlannerImpl(isolationSpace: String, fileRepository: FileRepository, formats: Plugins)(implicit ec: ExecutionContext) extends Planner {
 
   // We are using MsgPack serialized Mantik Bundles.
   val ContentType = "application/x-mantik-bundle"
@@ -24,7 +21,7 @@ class PlannerImpl(isolationSpace: String, fileRepository: FileRepository, format
   }
 
   /** Compress a plan by removing Sequantials of sequentials. */
-  private def compress(plan: Plan): Plan = {
+  def compress(plan: Plan): Plan = {
     def subCompress(plan: Plan): Seq[Plan] = {
       plan match {
         case Plan.Empty => Nil
@@ -40,117 +37,163 @@ class PlannerImpl(isolationSpace: String, fileRepository: FileRepository, format
     }
   }
 
-  private def convertSingleAction[T](action: Action[T])(implicit nodeIdGenerator: NodeIdGenerator): Future[Plan] = {
+  def convertSingleAction[T](action: Action[T])(implicit nodeIdGenerator: NodeIdGenerator): Future[Plan] = {
     action match {
       case s: Action.SaveAction =>
-        val fileStorageFuture = fileRepository.requestFileStorage(temporary = false)
-        val dataSourceFuture = convertDataSource(s.item)
         for {
-          storage <- fileStorageFuture
-          sourcePlan <- dataSourceFuture
+          (preplan, fileStorage) <- translateItemPayloadSourceAsFile(s.item.source, canBeTemporary = false)
         } yield {
-
-          elements.saveAction(
-            s.item,
-            s.location,
-            storage,
-            sourcePlan
+          val artefact = MantikArtefact(
+            s.item.mantikfile,
+            Some(fileStorage.fileId),
+            s.id
           )
-
+          Plan.seq(
+            preplan,
+            Plan.AddMantikItem(artefact)
+          )
         }
       case p: Action.FetchAction =>
-        val fileStorageFuture = fileRepository.requestFileStorage(temporary = true)
-        val dataSourceFuture = convertDataSource(p.dataSet)
         for {
-          storage <- fileStorageFuture
-          sourcePlan <- dataSourceFuture
+          (preplan, fileStorage) <- translateItemPayloadSourceAsFile(p.dataSet.source, canBeTemporary = true)
         } yield {
-
-          elements.fetchAction(
-            p.dataSet, sourcePlan, storage
+          Plan.seq(
+            preplan,
+            Plan.PullBundle(p.dataSet.dataType, fileStorage.fileId)
           )
-
         }
-      case other =>
-        // TODO
-        ???
     }
   }
 
-  /** Converts an item into a graph resource, may generate a pre-plan. */
-  private[impl] def convertDataSource(item: MantikItem)(implicit nodeIdGenerator: NodeIdGenerator): Future[SourcePlan] = {
-    // Here we need the plugin system in place...
-    item match {
-      case ds: DataSet =>
-        convertDataSetSource(ds)
-      case tf: Transformation =>
-        convertTransformationSource(tf)
-      case other =>
-        // TODO
-        ???
-    }
-  }
-
-  private def convertDataSetSource(ds: DataSet)(implicit nodeIdGenerator: NodeIdGenerator): Future[SourcePlan] = {
-    ds.source match {
-      case l: Source.Loaded =>
-        val fileFuture: Future[Option[FileGetResult]] = l.artefact.fileId match {
-          case Some(fileId) => fileRepository.requestFileGet(fileId).map(Some(_))
-          case None         => Future.successful(None)
-        }
-
-        fileFuture.map { file =>
-          elements.loadedDataSet(l.artefact, file)
+  /**
+   * Generate the node, which provides a the data payload of a mantik item.
+   * Note: due to a flaw this will most likely lead to a splitted plan
+   * as we can only load files directly into new nodes.
+   */
+  def translateItemPayloadSource(item: MantikItem)(implicit nodeIdGenerator: NodeIdGenerator): Future[ResourcePlan] = {
+    item.source match {
+      case Source.Empty =>
+        // No Support yet.
+        throw new Planner.NotAvailableException("Empty Source")
+      case loaded: Source.Loaded =>
+        fileRepository.requestFileGet(loaded.fileId).map { fileGet =>
+          elements.loadFileNode(fileGet)
         }
       case l: Source.Literal =>
-        fileRepository.requestFileStorage(temporary = true).map { storage =>
-          elements.literalDataSet(l.bundle, storage)
-        }
-      case applied: Source.AppliedTransformation =>
-        val sourceFuture = convertDataSetSource(applied.dataSet)
-        val transformationSourceFuture = convertTransformationSource(applied.transformation)
+        // Ugly this leads to splitted plan.
         for {
-          sourcePlan <- sourceFuture
-          algorithmPlan <- transformationSourceFuture
+          storage <- fileRepository.requestFileStorage(true)
+          fileGet <- fileRepository.requestFileGet(storage.fileId, optimistic = true)
         } yield {
-          elements.appliedTransformation(sourcePlan, algorithmPlan)
+          val pushing = elements.literalToPushBundle(l, storage.fileId)
+          elements.loadFileNode(fileGet)
+            .prependPlan(
+              pushing
+            )
         }
-      case other =>
-        // TODO
-        ???
+      case a: Source.OperationResult =>
+        translateOperationResult(a.op).map { operationResult =>
+          operationResult.projectOutput(a.projection)
+        }
     }
   }
 
-  private def convertTransformationSource(tf: Transformation)(implicit nodeIdGenerator: NodeIdGenerator): Future[SourcePlan] = {
-    tf.source match {
-      case l: Source.Loaded =>
-        val fileFuture = l.artefact.fileId.map { fileId =>
-          fileRepository.requestFileGet(fileId).map(Some(_))
-        }.getOrElse(Future.successful(None))
-
-        fileFuture.map { file =>
-          elements.loadedAlgorithm(l.artefact, file)
+  /**
+   * Generates a plan, so that a item payload is available as File.
+   * This is necessary if some item is initialized by a file (e.g. algorithms).
+   * @param canBeTemporary if true, the result may also be a temporary file.
+   */
+  def translateItemPayloadSourceAsFile(source: Source, canBeTemporary: Boolean)(implicit nodeIdGenerator: NodeIdGenerator): Future[(Plan, FileGetResult)] = {
+    source match {
+      case Source.Empty =>
+        // use translateItemPayloadSourceAsOptionalFile if you want to support empty files
+        throw new Planner.NotAvailableException("Empty source")
+      case Source.Loaded(fileId) =>
+        // already available as file
+        fileRepository.requestFileGet(fileId).map { fileGet =>
+          (Plan.Empty, fileGet)
         }
-      case other =>
-        // TODO
-        ???
+      case l: Source.Literal =>
+        // We have to go via temporary file
+        for {
+          storage <- fileRepository.requestFileStorage(temporary = canBeTemporary)
+          fileGet <- fileRepository.requestFileGet(storage.fileId, optimistic = true)
+        } yield {
+          val pushing = elements.literalToPushBundle(l, storage.fileId)
+          (pushing, fileGet)
+        }
+      case a: Source.OperationResult =>
+        // Execute the plan and write the result into a file
+        // Which can then be loaded...
+        for {
+          operationResult <- translateOperationResult(a.op)
+          fileStoreRequest <- fileRepository.requestFileStorage(canBeTemporary)
+          fileGetRequest <- fileRepository.requestFileGet(fileStoreRequest.fileId, optimistic = true)
+        } yield {
+          val fileNode = elements.createStoreFileNode(fileStoreRequest)
+          val runner = fileNode.application(operationResult.projectOutput(a.projection))
+          elements.sourcePlanToJob(runner) -> fileGetRequest
+        }
     }
   }
-}
 
-object PlannerImpl {
+  /** Like [[translateItemPayloadSourceAsFile]] but can also return no file, if we use a Mantikfile without data. */
+  def translateItemPayloadSourceAsOptionalFile(source: Source, canBeTemporary: Boolean)(implicit nodeIdGenerator: NodeIdGenerator): Future[(Plan, Option[FileGetResult])] = {
+    source match {
+      case Source.Empty =>
+        Future.successful(Plan.Empty -> None)
+      case other =>
+        translateItemPayloadSourceAsFile(other, canBeTemporary).map {
+          case (preplan, file) =>
+            preplan -> Some(file)
+        }
+    }
+  }
 
-  /** Simple generator for generating Ids in a Graph. */
-  class NodeIdGenerator {
-    object lock
-    private var nextId = 1
-    def makeId(): String = {
-      val id = lock.synchronized {
-        val id = nextId
-        nextId += 1
-        id
-      }
-      id.toString
+  /** Generates the Graph which represents operation results. */
+  def translateOperationResult(op: Operation)(implicit nodeIdGenerator: NodeIdGenerator): Future[ResourcePlan] = {
+    op match {
+      case Operation.Application(algorithm, argument) =>
+        for {
+          argumentSource <- manifestDataSet(argument)
+          algorithmSource <- manifestAlgorithm(algorithm)
+        } yield {
+          algorithmSource.application(argumentSource)
+        }
+      case Operation.Training(trainable, learningData) =>
+        for {
+          argumentSource <- manifestDataSet(learningData)
+          algorithmSource <- manifestTrainableAlgorithm(trainable)
+        } yield {
+          algorithmSource.application(argumentSource)
+        }
+    }
+  }
+
+  /** Manifests an algorithm as a graph, will have one input and one output. */
+  def manifestAlgorithm(algorithm: Algorithm)(implicit nodeIdGenerator: NodeIdGenerator): Future[ResourcePlan] = {
+    translateItemPayloadSourceAsOptionalFile(algorithm.source, true).map {
+      case (preplan, algorithmFile) =>
+        elements.algorithm(algorithm.mantikfile, algorithmFile)
+          .prependPlan(preplan)
+    }
+  }
+
+  /** Manifest a trainable algorithm as a graph, will have one input and two outputs. */
+  def manifestTrainableAlgorithm(trainableAlgorithm: TrainableAlgorithm)(implicit nodeIdGenerator: NodeIdGenerator): Future[ResourcePlan] = {
+    translateItemPayloadSourceAsOptionalFile(trainableAlgorithm.source, true).map {
+      case (preplan, algorithmFile) =>
+        elements.trainableAlgorithm(trainableAlgorithm.mantikfile, algorithmFile)
+          .prependPlan(preplan)
+    }
+  }
+
+  /** Manifest a data set as a graph with one output. */
+  def manifestDataSet(dataSet: DataSet)(implicit nodeIdGenerator: NodeIdGenerator): Future[ResourcePlan] = {
+    translateItemPayloadSourceAsOptionalFile(dataSet.source, true).map {
+      case (preplan, dataSetFile) =>
+        elements.dataSet(dataSet.mantikfile, dataSetFile)
+          .prependPlan(preplan)
     }
   }
 }

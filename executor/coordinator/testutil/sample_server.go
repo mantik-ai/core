@@ -12,13 +12,14 @@ import (
 
 type SampleServer struct {
 	*httptest.Server
-	mux           *http.ServeMux
-	Requests      int
-	RequestData   [][]byte
-	MimeTypes     []string
-	LastError     error
-	resource      string
-	QuitRequested bool
+	mux            *http.ServeMux
+	Requests       int
+	RequestData    [][]byte
+	MimeTypes      []string
+	LastError      error
+	resource       string
+	QuitRequested  bool
+	StatusToReturn int // if not 200, no data will be returned
 }
 
 func (s *SampleServer) ResourceUrl() string {
@@ -38,6 +39,7 @@ func createSampleServer(resource string) *SampleServer {
 	})
 	r.Server = httptest.NewServer(r.mux)
 	r.resource = resource
+	r.StatusToReturn = 200
 	return &r
 }
 
@@ -51,7 +53,11 @@ func CreateSampleSource(resource string, payload []byte) *SampleServer {
 		} else {
 			r.MimeTypes = append(r.MimeTypes, request.Header.Get("Accept"))
 			r.Requests++
-			writer.Write(payload)
+			if r.StatusToReturn == 200 {
+				writer.Write(payload)
+			} else {
+				writer.WriteHeader(r.StatusToReturn)
+			}
 		}
 	}))
 	return r
@@ -64,6 +70,7 @@ func CreateSampleSink(resource string) *SampleServer {
 			writer.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		} else {
+			writer.WriteHeader(r.StatusToReturn)
 			r.Requests++
 			bodyContent, err := ioutil.ReadAll(request.Body)
 			r.MimeTypes = append(r.MimeTypes, request.Header.Get("Content-Type"))
@@ -97,11 +104,13 @@ func CreateSampleTransformation(resource string) *SampleServer {
 				log.Infof("Got error on decoding body %s", err.Error())
 				r.LastError = err
 			}
-
-			_, err = writer.Write(body)
-			if err != nil {
-				log.Infof("Got error on encoding response body %s", err.Error())
-				r.LastError = err
+			writer.WriteHeader(r.StatusToReturn)
+			if r.StatusToReturn == 200 {
+				_, err = writer.Write(body)
+				if err != nil {
+					log.Infof("Got error on encoding response body %s", err.Error())
+					r.LastError = err
+				}
 			}
 			r.Requests++
 			r.MimeTypes = append(r.MimeTypes, request.Header.Get("Content-Type"))
@@ -125,6 +134,7 @@ func CreateLearnLikeServer(inputResource string, learnStateResource string, lear
 			writer.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		} else {
+			writer.WriteHeader(r.StatusToReturn)
 			body, err := ioutil.ReadAll(request.Body)
 			if err != nil {
 				log.Info("Got error on reading learn like server")
@@ -148,14 +158,20 @@ func CreateLearnLikeServer(inputResource string, learnStateResource string, lear
 			writer.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		writer.Write(<-learnState)
+		writer.WriteHeader(r.StatusToReturn)
+		if r.StatusToReturn == 200 {
+			writer.Write(<-learnState)
+		}
 	})
 	r.mux.HandleFunc(ensureBeginningSlash(learnResultResource), func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodGet {
 			writer.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		writer.Write(<-learnResult)
+		writer.WriteHeader(r.StatusToReturn)
+		if r.StatusToReturn == 200 {
+			writer.Write(<-learnResult)
+		}
 	})
 	return r
 }
