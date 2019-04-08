@@ -11,6 +11,7 @@ import scala.collection.JavaConverters._
  *
  * @param sideCar defines the way the side car is started
  * @param coordinator defines the way the coordinator is started
+ * @param payloadPreparer defines the way the payload-Preparer is started
  * @param namespacePrefix prefix to use for namespace creation
  * @param podTrackerId special id, so that the executor knows which pods to track state.
  * @param podPullImageTimeout timeout, after which pods are killed when they can't find their image.
@@ -23,6 +24,7 @@ import scala.collection.JavaConverters._
 case class Config(
     sideCar: Container,
     coordinator: Container,
+    payloadPreparer: Container,
     namespacePrefix: String,
     podTrackerId: String,
     podPullImageTimeout: Duration,
@@ -42,6 +44,7 @@ object Config {
     Config(
       sideCar = parseContainer(c.getConfig("containers.sideCar")),
       coordinator = parseContainer(c.getConfig("containers.coordinator")),
+      payloadPreparer = parseContainer(c.getConfig("containers.payloadPreparer")),
       namespacePrefix = c.getString("kubernetes.behavior.namespacePrefix"),
       podTrackerId = c.getString("app.podTrackerId"),
       podPullImageTimeout = c.getDuration("kubernetes.behavior.podPullImageTimeout"),

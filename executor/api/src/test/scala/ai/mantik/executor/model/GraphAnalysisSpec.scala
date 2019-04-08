@@ -56,9 +56,10 @@ class GraphAnalysisSpec extends TestBase {
               main = Container(
                 image = "mantik:algorithm"
               ),
-              dataProvider = Some(Container(
-                image = "mantik:algorithm_loader",
-                parameters = Seq("mantik-algorithm-id")
+              dataProvider = Some(DataProvider(
+                url = Some("http://example.com/foo.zip"),
+                mantikfile = Some("mantikfile..."),
+                directory = Some("bar")
               ))
             )
           ),

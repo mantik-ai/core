@@ -27,7 +27,7 @@ metadata:
   namespace: mantik
 subsets:
   - addresses:
-      - ip: 192.168.42.230 # IP of Norbert
+      - ip: 192.168.42.135 # IP of Norbert
       # - ip: 192.168.1.28
     ports:
       - port: 8080

@@ -61,7 +61,7 @@ object TrainAlgorithm {
       val statsFetched = context.execute(
         stats.fetch
       )
-      println("Stats " + statsFetched)
+      println("Stats\n" + statsFetched)
 
     } finally {
       context.shutdown()
