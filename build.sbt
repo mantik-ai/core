@@ -175,9 +175,21 @@ lazy val executorApp = (project in file("executor/app"))
     version in Docker := "latest"
   )
 
+lazy val planner = (project in file ("planner"))
+  .dependsOn(testutils % "test")
+  .dependsOn(ds, executorApi, repository)
+  .settings(
+    name := "planner"
+  )
+  .settings(
+    scalariformSettings,
+    publishSettings
+  )
+
+
 lazy val examples = (project in file("examples"))
   .dependsOn(testutils % "test")
-  .dependsOn(ds, repository, executorApi)
+  .dependsOn(ds, repository, planner)
   .settings(
     name := "examples"
   )
