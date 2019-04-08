@@ -111,11 +111,11 @@ class KubernetesJobConverterSpec extends TestBase {
         main = Container(
           image = "runner"
         ),
-        dataProvider = Some(
-          Container(
-            image = "provider"
-          )
-        )
+        dataProvider = Some(DataProvider(
+          url = Some("url1"),
+          mantikfile = Some("mf1"),
+          directory = Some("dir1")
+        ))
       )
     )
     val converted = converter.convertNode("A", node)
@@ -124,7 +124,8 @@ class KubernetesJobConverterSpec extends TestBase {
     spec.containers.map(_.image) should contain theSameElementsAs Seq("runner", config.sideCar.image)
     spec.containers.find(_.name == "main").get.volumeMounts.map(_.name) shouldBe List("data")
     spec.initContainers.size shouldBe 1
-    spec.initContainers.head.image shouldBe "provider"
+    spec.initContainers.head.image shouldBe "payload_preparer"
+    spec.initContainers.head.args shouldBe List("-url", "url1", "-mantikfile", "bWYx", "-pdir", "dir1")
     spec.initContainers.head.volumeMounts.map(_.name) shouldBe List("data")
     spec.volumes.map(_.name) shouldBe List("data")
 

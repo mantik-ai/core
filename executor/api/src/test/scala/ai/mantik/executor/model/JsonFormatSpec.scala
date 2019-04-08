@@ -23,9 +23,10 @@ class JsonFormatSpec extends TestBase {
             main = Container(
               image = "mantik:algorithm"
             ),
-            dataProvider = Some(Container(
-              image = "mantik:algorithm_loader",
-              parameters = Seq("mantik-algorithm-id")
+            dataProvider = Some(DataProvider(
+              url = Some("http://url1"),
+              mantikfile = Some("My Mantikfile"),
+              directory = Some("sub1")
             ))
           )
         ),

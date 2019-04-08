@@ -5,8 +5,10 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.model.Job
 import ai.mantik.repository.MantikArtefact
 
-/** A plan is something which can be executed. They are created by the [[Planner]]
-  * and are executed by the [[PlanExecutor]]. */
+/**
+ * A plan is something which can be executed. They are created by the [[Planner]]
+ * and are executed by the [[PlanExecutor]].
+ */
 sealed trait Plan
 
 object Plan {

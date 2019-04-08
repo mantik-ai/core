@@ -17,16 +17,29 @@ sealed trait NodeService
  * Defines a service, which is using contains for providing it.
  *
  * @param main the main container, whose port will be accessed
- * @param dataProvider an optional data data provider side car
+ * @param dataProvider describes initialisation of the side car.
  * @param port the port where resources can be found from the main container.
  * @param ioAffine flag, that the service is mainly doing IO, which prefers placement near sources/sinks.
  */
 case class ContainerService(
     main: Container,
-    dataProvider: Option[Container] = None,
+    dataProvider: Option[DataProvider] = None,
     port: Int = ExecutorModelDefaults.Port,
     ioAffine: Boolean = false
 ) extends NodeService
+
+/**
+ * Describes how to initialize a container
+ * @param url Zip file URL which is unpacked to /data
+ * @param mantikfile Mantikfile content which is put to /data/Mantikfile
+ * @param directory if set, the content of the zip file is put to /data/directory-name.
+ */
+@JsonCodec
+case class DataProvider(
+    url: Option[String] = None,
+    mantikfile: Option[String] = None,
+    directory: Option[String] = None
+)
 
 /**
  * Defines a reference to an existing service.

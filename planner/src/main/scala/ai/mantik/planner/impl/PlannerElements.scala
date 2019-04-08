@@ -92,8 +92,24 @@ class PlannerElements(formats: Plugins, isolationSpace: String, contentType: Str
     val plugin = formats.pluginForAlgorithm(mantikfile.definition.stack).getOrElse {
       throw new Planner.AlgorithmStackNotSupportedException(mantikfile.definition.stack)
     }
+    val imageName = plugin.transformationContainerImage
+    val applyResource = "apply"
+
+    val node = Node(
+      ContainerService(
+        main = Container(
+          imageName
+        ),
+        dataProvider = Some(
+          createDataProvider(file, mantikfile)
+        )
+      ),
+      Map(
+        applyResource -> ResourceType.Transformer
+      )
+    )
+
     val nodeId = nodeIdGenerator.makeId()
-    val (node, resourceId) = plugin.createClusterTransformation(mantikfile, file.map { f => f.executorClusterUrl -> f.resource })
     val graph = Graph(
       nodes = Map(
         nodeId -> node
@@ -101,30 +117,64 @@ class PlannerElements(formats: Plugins, isolationSpace: String, contentType: Str
     )
     ResourcePlan(
       graph = graph,
-      inputs = Seq(NodeResourceRef(nodeId, resourceId)),
-      outputs = Seq(NodeResourceRef(nodeId, resourceId))
+      inputs = Seq(NodeResourceRef(nodeId, applyResource)),
+      outputs = Seq(NodeResourceRef(nodeId, applyResource))
     )
   }
 
   /** Generates the plan for a trainable algorithm. */
-  def trainableAlgorithm(artefact: Mantikfile[TrainableAlgorithmDefinition], file: Option[FileGetResult])(implicit nodeIdGenerator: NodeIdGenerator): ResourcePlan = {
-    val plugin = formats.pluginForTrainableAlgorithm(artefact.definition.stack).getOrElse {
-      throw new Planner.AlgorithmStackNotSupportedException(artefact.definition.stack)
+  def trainableAlgorithm(mantikfile: Mantikfile[TrainableAlgorithmDefinition], file: Option[FileGetResult])(implicit nodeIdGenerator: NodeIdGenerator): ResourcePlan = {
+    val plugin = formats.pluginForTrainableAlgorithm(mantikfile.definition.stack).getOrElse {
+      throw new Planner.AlgorithmStackNotSupportedException(mantikfile.definition.stack)
     }
+    val image = plugin.trainableContainerImage
+
+    val trainResource = "train"
+    val statsResource = "stats"
+    val resultResource = "result"
+
+    val containerService = ContainerService(
+      main = Container(
+        image
+      ),
+      dataProvider = Some(
+        createDataProvider(file, mantikfile)
+      )
+    )
+
+    val node = Node(
+      containerService,
+      Map(
+        trainResource -> ResourceType.Sink,
+        statsResource -> ResourceType.Source,
+        resultResource -> ResourceType.Source
+      )
+    )
+
     val nodeId = nodeIdGenerator.makeId()
-    val clusterRepresentation = plugin.createClusterLearner(artefact, file.map { f => f.executorClusterUrl -> f.resource })
     val graph = Graph(
       nodes = Map(
-        nodeId -> clusterRepresentation.node
+        nodeId -> node
       )
     )
     ResourcePlan(
       graph = graph,
-      inputs = Seq(NodeResourceRef(nodeId, clusterRepresentation.trainingInput)),
+      inputs = Seq(NodeResourceRef(nodeId, trainResource)),
       outputs = Seq(
-        NodeResourceRef(nodeId, clusterRepresentation.trainedOutput),
-        NodeResourceRef(nodeId, clusterRepresentation.statsOutput)
+        NodeResourceRef(nodeId, resultResource),
+        NodeResourceRef(nodeId, statsResource)
       )
+    )
+  }
+
+  private def createDataProvider(file: Option[FileGetResult], mantikfile: Mantikfile[_ <: MantikDefinition]): DataProvider = {
+    val payloadUrl = file.map { file =>
+      file.executorClusterUrl + file.resource
+    }
+    DataProvider(
+      url = payloadUrl,
+      mantikfile = Some(mantikfile.json.spaces2),
+      directory = mantikfile.definition.directory
     )
   }
 }

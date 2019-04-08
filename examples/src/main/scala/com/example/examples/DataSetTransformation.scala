@@ -29,7 +29,7 @@ object DataSetTransformation {
       val result = context.execute(
         transformation(dataset).fetch
       )
-      println(s"Result\n $result")
+      println(s"Result\n$result")
     } finally {
       context.shutdown()
     }

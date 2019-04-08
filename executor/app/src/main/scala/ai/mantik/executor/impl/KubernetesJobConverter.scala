@@ -1,5 +1,8 @@
 package ai.mantik.executor.impl
 
+import java.nio.charset.StandardCharsets
+import java.util.Base64
+
 import ai.mantik.executor.Config
 import ai.mantik.executor.model._
 import skuber.{ ConfigMap, Container, EnvFromSource, ObjectMeta, Pod, PodSecurityContext, RestartPolicy, Volume }
@@ -149,20 +152,12 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
         Nil
     }
 
-    val initContainers = node.service match {
-      case ct: ContainerService =>
-        ct.dataProvider.map { dataProvider =>
-          Container(
-            name = "data-provider",
-            image = dataProvider.image,
-            args = dataProvider.parameters.toList,
-            volumeMounts = List(
-              Volume.Mount(name = "data", mountPath = "/data")
-            )
-          )
-        }.toList
-      case et: ExistingService => Nil
+    val payloadPreparer = node.service match {
+      case ct: ContainerService => ct.dataProvider.map(createPayloadPreparer)
+      case _                    => None
     }
+
+    val initContainers = payloadPreparer.toList
 
     val spec = Pod.Spec(
       containers = sideCar :: containers,
@@ -186,6 +181,35 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
         )
       ),
       spec = Some(spec)
+    )
+  }
+
+  /** Creates the container definition of the payload_preparer. */
+  private def createPayloadPreparer(dataProvider: DataProvider): Container = {
+    val mantikfileArgument = dataProvider.mantikfile.map { mantikfile =>
+      // The container expects the Mantikfile as base64 argument
+      val base64Encoder = Base64.getEncoder
+      val encodedMantikfile = base64Encoder.encodeToString(
+        mantikfile.getBytes(StandardCharsets.UTF_8)
+      )
+      List("-mantikfile", encodedMantikfile)
+    }.getOrElse(Nil)
+
+    val urlArgument = dataProvider.url.map { url =>
+      List("-url", url)
+    }.getOrElse(Nil)
+
+    val payloadDirArgument = dataProvider.directory.map { dir =>
+      List("-pdir", dir)
+    }.getOrElse(Nil)
+
+    Container(
+      name = "data-provider",
+      image = config.payloadPreparer.image,
+      args = config.payloadPreparer.parameters.toList ++ urlArgument ++ mantikfileArgument ++ payloadDirArgument,
+      volumeMounts = List(
+        Volume.Mount(name = "data", mountPath = "/data")
+      )
     )
   }
 
