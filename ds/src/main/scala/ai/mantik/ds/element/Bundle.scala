@@ -3,6 +3,7 @@ package ai.mantik.ds.element
 import java.nio.file.Path
 
 import ai.mantik.ds._
+import ai.mantik.ds.converter.StringPreviewGenerator
 import ai.mantik.ds.formats.natural.{ NaturalFormatDescription, NaturalFormatReaderWriter }
 import ai.mantik.ds.helper.ZipUtils
 import akka.stream.scaladsl.{ Compression, FileIO, Keep, Sink, Source }
@@ -59,6 +60,19 @@ case class Bundle(
   /** Serializes the bundle into a Gzip Block. */
   def asGzipSync()(implicit materializer: Materializer): ByteString = {
     Await.result(asGzip().runWith(Sink.seq[ByteString]), Duration.Inf).fold(ByteString.empty)(_ ++ _)
+  }
+
+  /** Renders the Bundle. */
+  def render(maxLines: Int = 20): String = {
+    new StringPreviewGenerator(maxLines).render(this)
+  }
+
+  override def toString: String = {
+    try {
+      render()
+    } catch {
+      case e: Exception => "<Error Bundle>"
+    }
   }
 }
 
@@ -140,7 +154,7 @@ object Bundle {
 
   /** Experimental Builder for Natural types. */
   class Builder(tabularData: TabularData) {
-    val rowBuilder = Vector.newBuilder[RootElement]
+    private val rowBuilder = Vector.newBuilder[RootElement]
 
     /** Add a row (just use the pure Scala Types, no Primitives or similar. */
     def row(values: Any*): Builder = {

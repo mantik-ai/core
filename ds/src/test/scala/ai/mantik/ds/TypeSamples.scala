@@ -1,7 +1,10 @@
 package ai.mantik.ds
 
 import ai.mantik.ds.FundamentalType._
-import ai.mantik.ds.element.Primitive
+import ai.mantik.ds.element.{ ImageElement, Primitive }
+import akka.util.ByteString
+
+import scala.collection.immutable.ListMap
 
 object TypeSamples {
 
@@ -28,5 +31,10 @@ object TypeSamples {
     Float64 -> Primitive(Double.NegativeInfinity),
     StringType -> Primitive("Hello World"),
     VoidType -> Primitive.unit
+  )
+
+  val image = (
+    Image(2, 3, ListMap(ImageChannel.Black -> ImageComponent(FundamentalType.Uint8))),
+    ImageElement(ByteString(1, 2, 3, 4, 5, 6))
   )
 }

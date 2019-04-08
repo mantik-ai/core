@@ -1,9 +1,9 @@
 package ai.mantik.ds.element
 
-import ai.mantik.ds.{ FundamentalType, TabularData, TypeSamples }
-import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
+import ai.mantik.ds.{FundamentalType, TabularData, Tensor, TypeSamples}
+import ai.mantik.ds.testutil.{GlobalAkkaSupport, TempDirSupport, TestBase}
 import PrimitiveEncoder._
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 
 import scala.concurrent.Future
@@ -92,6 +92,24 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
       val encoded = collectByteSource(bundle.encode(true))
       val decoded = await(Source.single(encoded).runWith(Bundle.fromStreamWithHeader()))
       decoded shouldBe bundle
+    }
+  }
+
+  "toString" should "render the bundle" in {
+    Bundle.build(FundamentalType.Int32, Primitive(3)).toString shouldBe "3"
+    withClue("It should not crash on illegal values"){
+      val badBundle = Bundle(
+        FundamentalType.Int32,
+        Vector(
+          TabularRow(
+            TensorElement(IndexedSeq(1))
+          )
+        )
+      )
+      badBundle.toString shouldBe "<Error Bundle>"
+      intercept[IllegalArgumentException]{
+        badBundle.render()
+      }
     }
   }
 }

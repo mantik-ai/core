@@ -29,8 +29,7 @@ object ShowDataSet {
         context.loadDataSet(id).fetch
       )
 
-      println(result.model)
-      println(result.rows)
+      println(result)
 
     } finally {
       context.shutdown()

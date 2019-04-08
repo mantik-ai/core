@@ -2,9 +2,11 @@ package ai.mantik.ds.element
 
 import akka.util.ByteString
 
+/** Base trait for all encoded main elements. */
 sealed trait Element
 
-sealed trait RootElement extends Element
+/** Base trait for main-transportation elements, can contain either [[SingleElement]] or [[TabularRow]]. */
+sealed trait RootElement
 
 /** A tabular row, a root element. */
 case class TabularRow(
