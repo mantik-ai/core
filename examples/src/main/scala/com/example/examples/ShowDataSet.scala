@@ -1,8 +1,8 @@
 package com.example.examples
 
-import ai.mantik.core.{ Context, DataSet }
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
+import ai.mantik.planner.{ Context, DataSet }
 
 object ShowDataSet {
 

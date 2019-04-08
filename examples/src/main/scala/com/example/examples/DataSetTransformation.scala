@@ -2,9 +2,9 @@ package com.example.examples
 
 import java.io.File
 
-import ai.mantik.core.{ Context, DataSet }
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
+import ai.mantik.planner.{ Context, DataSet }
 
 object DataSetTransformation {
 
