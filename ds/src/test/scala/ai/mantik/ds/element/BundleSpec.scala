@@ -1,9 +1,9 @@
 package ai.mantik.ds.element
 
-import ai.mantik.ds.{FundamentalType, TabularData, Tensor, TypeSamples}
-import ai.mantik.ds.testutil.{GlobalAkkaSupport, TempDirSupport, TestBase}
+import ai.mantik.ds.{ FundamentalType, TabularData, Tensor, TypeSamples }
+import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
 import PrimitiveEncoder._
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 
 import scala.concurrent.Future
@@ -97,7 +97,7 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
 
   "toString" should "render the bundle" in {
     Bundle.build(FundamentalType.Int32, Primitive(3)).toString shouldBe "3"
-    withClue("It should not crash on illegal values"){
+    withClue("It should not crash on illegal values") {
       val badBundle = Bundle(
         FundamentalType.Int32,
         Vector(
@@ -107,7 +107,7 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
         )
       )
       badBundle.toString shouldBe "<Error Bundle>"
-      intercept[IllegalArgumentException]{
+      intercept[IllegalArgumentException] {
         badBundle.render()
       }
     }

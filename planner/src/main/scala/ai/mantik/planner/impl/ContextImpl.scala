@@ -8,6 +8,7 @@ import ai.mantik.ds.helper.ZipUtils
 import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
+import ai.mantik.planner.impl.exec.PlanExecutorImpl
 import ai.mantik.planner.plugins.Plugins
 import ai.mantik.repository._
 import ai.mantik.repository.impl.{ SimpleInMemoryRepository, SimpleTempFileRepository }
@@ -15,6 +16,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaTypes
 import akka.stream.scaladsl.FileIO
 import akka.stream.{ ActorMaterializer, Materializer }
+import com.typesafe.config.ConfigFactory
 import org.apache.commons.io.FileUtils
 import org.slf4j.LoggerFactory
 
@@ -22,38 +24,38 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 
 private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepository, planner: Planner, planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit ec: ExecutionContext, mat: Materializer) extends Context {
-  val logger = LoggerFactory.getLogger(getClass)
+  private val logger = LoggerFactory.getLogger(getClass)
 
   override def loadDataSet(id: MantikId): DataSet = {
-    val (artefact, mf) = await(repository.getAs[DataSetDefinition](id))
+    val (artifact, mf) = await(repository.getAs[DataSetDefinition](id))
     mantik.planner.DataSet(
-      mantikArtefactSource(artefact),
+      mantikArtifactSource(artifact),
       mf
     )
   }
 
   override def loadTransformation(id: MantikId): Algorithm = {
-    val (artefact, mf) = await(repository.getAs[AlgorithmDefinition](id))
+    val (artifact, mf) = await(repository.getAs[AlgorithmDefinition](id))
     mantik.planner.Algorithm(
-      mantikArtefactSource(artefact),
+      mantikArtifactSource(artifact),
       mf
     )
   }
 
   override def loadTrainableAlgorithm(id: MantikId): TrainableAlgorithm = {
-    val (artefact, mf) = await(repository.getAs[TrainableAlgorithmDefinition](id))
+    val (artifact, mf) = await(repository.getAs[TrainableAlgorithmDefinition](id))
     TrainableAlgorithm(
-      mantikArtefactSource(artefact),
+      mantikArtifactSource(artifact),
       mf
     )
   }
 
-  private def mantikArtefactSource(mantikArtefact: MantikArtefact): Source = {
-    mantikArtefact.fileId.map(Source.Loaded).getOrElse(Source.Empty)
+  private def mantikArtifactSource(mantikArtifact: MantikArtifact): Source = {
+    mantikArtifact.fileId.map(Source.Loaded).getOrElse(Source.Empty)
   }
 
   override def execute[T](action: Action[T]): T = {
-    val plan = await(planner.convert(action))
+    val plan = planner.convert(action)
     val result = await(planExecutor.execute(plan))
     result.asInstanceOf[T]
   }
@@ -88,9 +90,9 @@ private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepo
       tempFile.toFile.delete()
       fileStorage.fileId
     }
-    val artefact = MantikArtefact(mantikfile, fileId, idToUse)
-    await(repository.store(artefact))
-    logger.info(s"Storing ${artefact.id} done")
+    val artifact = MantikArtifact(mantikfile, fileId, idToUse)
+    await(repository.store(artifact))
+    logger.info(s"Storing ${artifact.id} done")
   }
 
   override def shutdown(): Unit = {
@@ -100,19 +102,21 @@ private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepo
 
 object ContextImpl {
   def constructForLocalTesting(): Context = {
-    implicit val actorSystem = ActorSystem()
+    val config = ConfigFactory.load()
+    val executorUrl = config.getString("mantik.core.executorUrl")
+    implicit val actorSystem: ActorSystem = ActorSystem()
     implicit val ec: ExecutionContext = actorSystem.dispatcher
-    implicit val materializer = ActorMaterializer.create(actorSystem)
+    implicit val materializer: Materializer = ActorMaterializer.create(actorSystem)
 
     val repository = new SimpleInMemoryRepository()
-    val fileRepo: FileRepository = new SimpleTempFileRepository()
+    val fileRepo: FileRepository = new SimpleTempFileRepository(config)
     val formatPlugins = Plugins.default
-    val planner = new PlannerImpl("local", fileRepo, formatPlugins)
+    val planner = new PlannerImpl(formatPlugins)
     val shutdownMethod: () => Unit = () => {
       actorSystem.terminate()
     }
-    val executor: Executor = new ExecutorClient("http://localhost:8080")
-    val planExecutor = new PlanExecutorImpl(fileRepo, repository, executor)
+    val executor: Executor = new ExecutorClient(executorUrl)
+    val planExecutor = new PlanExecutorImpl(fileRepo, repository, executor, "local", "application/x-mantik-bundle")
     new ContextImpl(repository, fileRepo, planner, planExecutor, shutdownMethod)
   }
 }

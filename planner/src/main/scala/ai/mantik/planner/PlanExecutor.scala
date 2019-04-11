@@ -11,3 +11,12 @@ trait PlanExecutor {
    */
   def execute(plan: Plan): Future[Any]
 }
+
+object PlanExecutor {
+
+  /** An Exception during plan execution. */
+  class PlanExecutorException(msg: String) extends RuntimeException(msg)
+
+  /** The plan to execute is invalid. */
+  class InvalidPlanException(msg: String) extends PlanExecutorException(msg)
+}

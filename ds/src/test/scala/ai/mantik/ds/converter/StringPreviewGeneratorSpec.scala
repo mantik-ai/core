@@ -7,7 +7,7 @@ import ai.mantik.testutils.TestBase
 
 class StringPreviewGeneratorSpec extends TestBase {
 
-  it should "render fundamentals" in {
+  "render" should "render fundamentals" in {
     for ((typeName, value) <- TypeSamples.fundamentalSamples) {
       val bundle = Bundle(typeName, Vector(SingleElement(value)))
       StringPreviewGenerator().render(bundle) shouldBe value.x.toString
@@ -101,5 +101,16 @@ class StringPreviewGeneratorSpec extends TestBase {
         @|[[1,Hello],[2,World]]|
         @|[]                   |
         @""".stripMargin('@')
+  }
+
+  "renderSingleLine" should "also render tables as single value" in {
+    StringPreviewGenerator().renderSingleLine(simpleBundle) shouldBe """[[1,Hello],[2,World],[3,How are you?]]"""
+  }
+
+  it should "work for all types" in {
+    for ((typeName, value) <- TypeSamples.fundamentalSamples) {
+      val bundle = Bundle(typeName, Vector(SingleElement(value)))
+      StringPreviewGenerator().renderSingleLine(bundle) shouldBe value.x.toString
+    }
   }
 }

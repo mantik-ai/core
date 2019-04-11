@@ -22,7 +22,7 @@ case class TrainableAlgorithm(
 
   def train(trainingData: DataSet): (Algorithm, DataSet) = {
     if (trainingData.dataType != trainingDataType) {
-      throw new RuntimeException(s"Training data is not as expected ${trainingDataType}")
+      throw new RuntimeException(s"Training data is not as expected $trainingDataType")
     }
 
     val op = Operation.Training(this, trainingData)

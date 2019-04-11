@@ -1,12 +1,10 @@
 package ai.mantik.planner
 
-import scala.concurrent.Future
-
 /** A Planner converts an [[Action]] into an executable [[Plan]]. */
 trait Planner {
 
-  /** Convert a set of action into a job. */
-  def convert[T](action: Action[T]): Future[Plan]
+  /** Convert a set of action into a plan. */
+  def convert[T](action: Action[T]): Plan
 }
 
 object Planner {

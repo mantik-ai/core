@@ -15,7 +15,7 @@ case class Algorithm(
 
   def apply(data: DataSet): DataSet = {
     val dataType = functionType.applies(data.dataType) match {
-      case Left(error) => throw new RuntimeException(s"Types do not match ${error}")
+      case Left(error) => throw new RuntimeException(s"Types do not match $error")
       case Right(ok)   => ok
     }
     DataSet.natural(

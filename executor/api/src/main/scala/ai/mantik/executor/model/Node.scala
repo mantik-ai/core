@@ -1,6 +1,8 @@
 package ai.mantik.executor.model
 
+import io.circe.{ Decoder, Encoder, ObjectEncoder }
 import io.circe.generic.JsonCodec
+import io.circe.generic.semiauto
 
 /** Defines how a container is going to be started. */
 @JsonCodec
@@ -73,27 +75,31 @@ object ResourceType {
  *
  * @param service Describes what is needed to access resources on this node.
  * @param resources Describes the resources provided by this node in this graph.
+ *
+ * @tparam T The node Service type (usually [[NodeService]])
  */
-@JsonCodec
-case class Node(
-    service: NodeService,
+case class Node[+T](
+    service: T,
     resources: Map[String, ResourceType]
 )
 
 object Node {
 
+  implicit def encoder[T: Encoder]: ObjectEncoder[Node[T]] = semiauto.deriveEncoder[Node[T]]
+  implicit def decoder[T: Decoder]: Decoder[Node[T]] = semiauto.deriveDecoder[Node[T]]
+
   /** Generates a Default Sink. */
-  def sink(service: NodeService): Node = Node(
+  def sink[T](service: T): Node[T] = Node[T](
     service, resources = Map(ExecutorModelDefaults.SinkResource -> ResourceType.Sink)
   )
 
   /** Generates a Default Source. */
-  def source(service: NodeService): Node = Node(
+  def source[T](service: T): Node[T] = Node[T](
     service, resources = Map(ExecutorModelDefaults.SourceResource -> ResourceType.Source)
   )
 
   /** Generates a Default Transformer. */
-  def transformer(service: NodeService): Node = Node(
+  def transformer[T](service: T): Node[T] = Node[T](
     service, resources = Map(ExecutorModelDefaults.TransformationResource -> ResourceType.Transformer)
   )
 }

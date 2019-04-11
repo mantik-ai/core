@@ -31,6 +31,18 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
     }
   }
 
+  def renderSingleLine(bundle: Bundle): String = {
+    bundle.model match {
+      case table: TabularData =>
+        // wrap in an embedded table
+        val renderFunction = renderEmbeddedTable(table)
+        val rows = bundle.rows.collect { case r: TabularRow => r }
+        renderFunction(EmbeddedTabularElement(rows))
+      case otherwise =>
+        render(bundle) // already single line
+    }
+  }
+
   private def renderTable(table: TabularData, rows: Vector[TabularRow]): String = {
     val cellRenderers = table.columns.map { case (_, dataType) => locateCellRenderer(dataType) }
     val columnNames = table.columns.keys

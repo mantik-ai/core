@@ -27,7 +27,7 @@ trait Context {
     moreActions.foreach(execute(_))
   }
 
-  /** Push a local mantik file including pazload to the repository */
+  /** Push a local mantik file including payload to the repository */
   def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): Unit
 
   /** Shutdown the context. */

@@ -54,6 +54,8 @@ test_scala:
         - ds/target/test-reports/TEST-*.xml
         - executor/api/target/test-reports/TEST-*.xml
         - executor/app/target/test-reports/TEST-*.xml
+        - planner/test-reports/TEST-*.xml
+        - repository/test-reports/TEST-*.xml
     paths:
       - executor/app/target/docker
     expire_in: 1 day

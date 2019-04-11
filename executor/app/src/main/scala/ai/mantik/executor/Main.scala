@@ -17,10 +17,16 @@ object Main extends App {
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = actorSystem.dispatcher
   implicit val clock = Clock.systemUTC()
-  val config = Config()
-  val kubernetesClient = skuber.k8sInit
+  try {
+    val config = Config()
+    val kubernetesClient = skuber.k8sInit
 
-  val executor = new ExecutorImpl(config, kubernetesClient)
-  val server = new ExecutorServer(config, executor)
-  server.start()
+    val executor = new ExecutorImpl(config, kubernetesClient)
+    val server = new ExecutorServer(config, executor)
+    server.start()
+  } catch {
+    case e: Exception =>
+      logger.error("Could not start executor", e)
+      System.exit(1)
+  }
 }

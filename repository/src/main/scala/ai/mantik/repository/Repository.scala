@@ -7,10 +7,10 @@ import scala.reflect.ClassTag
 trait Repository {
 
   /** Retrieves a Mantik artefact. */
-  def get(id: MantikId): Future[MantikArtefact]
+  def get(id: MantikId): Future[MantikArtifact]
 
   /** Retriebes a Mantik artefact and checks the type. */
-  def getAs[T <: MantikDefinition: ClassTag](id: MantikId)(implicit ex: ExecutionContext): Future[(MantikArtefact, Mantikfile[T])] = {
+  def getAs[T <: MantikDefinition: ClassTag](id: MantikId)(implicit ex: ExecutionContext): Future[(MantikArtifact, Mantikfile[T])] = {
     get(id).flatMap { artefact =>
       artefact.mantikfile.cast[T] match {
         case Left(error) => Future.failed(new Errors.WrongTypeException(error.getMessage))
@@ -20,5 +20,5 @@ trait Repository {
   }
 
   /** Stores a Mantik artefact. */
-  def store(mantikArtefact: MantikArtefact): Future[Unit]
+  def store(mantikArtefact: MantikArtifact): Future[Unit]
 }
