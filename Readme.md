@@ -6,7 +6,7 @@ Sub Documentation
 - Datatypes and serialization [DataTypes.md](DataTypes.md)
 - Bridge documentation [Bridges.md](Bridges.md)
 - Mantikfile documentation [Mantikfile.md](Mantikfile.md)
-
+- Executor Documentation [Executor.md](Executor.md)
 
 DS-Library
 ----------
@@ -19,7 +19,6 @@ This library contains the planner component.
 Examples
 --------
 This library contains examples.
-
 
 Executor
 --------

@@ -48,10 +48,10 @@ In general, servers implement 3 different kinds of resources
 Open Points
 -----------
 
-- Most HTTP Implementations (and also the Standard) doesn't like servers resppnding while still receiving
+- Most HTTP Implementations (and also the Standard) doesn't like servers responding while still receiving
   requests. This makes it necessary for a server implementing a Transformer to cache the whole request although
   the Mantik Bundle format would allow replying row per row.
-  A possible solution for that would be web sockets.
+  A possible solution for that would be web sockets. Also see this [Golang Issue](https://github.com/golang/go/issues/15527)
 
 Content Types
 -------------
