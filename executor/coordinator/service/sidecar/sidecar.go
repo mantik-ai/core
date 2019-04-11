@@ -103,7 +103,7 @@ func (s *SideCar) waitWebServiceReachable() {
 }
 
 func (s *SideCar) tryAccessWebService() error {
-	req, err := http.NewRequest(http.MethodHead, s.url.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, s.url.String(), nil)
 	if err != nil {
 		return err
 	}
@@ -112,11 +112,9 @@ func (s *SideCar) tryAccessWebService() error {
 	if err != nil {
 		return err
 	}
-	// All internal server errors are used as "Server not ready" message
-	// Although 503 should be sufficient.
-	// (We could also restrict to 2xx responses, but this would force all bridges
-	//  to return something useful on the root path)
-	if head.StatusCode >= 500 {
+	// Accept 2xx Status as OK.
+	if head.StatusCode < 200 || head.StatusCode >= 300 {
+		log.Infof("Server not yet reachable, status %d", head.StatusCode)
 		err = errors.Errorf("URL %s returned %d", s.url, head.StatusCode)
 		return err
 	}

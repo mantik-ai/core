@@ -9,7 +9,7 @@ import (
 type PeriodicCallback struct {
 	ticker *time.Ticker
 	quit   chan struct{}
-	wg sync.WaitGroup
+	wg     sync.WaitGroup
 }
 
 /* Stops calling a PeriodicCallback. Waits until all callbacks are done. */
