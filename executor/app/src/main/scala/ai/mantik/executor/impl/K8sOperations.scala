@@ -136,7 +136,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
   }
 
   /** Returns all Pods which are managed by this executor and which are in pending state. */
-  def getAllManagedPendingPods(): Future[Map[String, ListResource[Pod]]] = {
+  def getAllManagedPendingPods(): Future[Map[String, List[Pod]]] = {
     errorHandling(rootClient.getNamespaceNames).flatMap { namespaces =>
       val futures = namespaces.map { namespace =>
         getPendingPods(Some(namespace)).map { result =>
@@ -148,7 +148,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
   }
 
   /** Returns pending pods managed by this executor. .*/
-  private def getPendingPods(namespace: Option[String] = None): Future[ListResource[Pod]] = {
+  private def getPendingPods(namespace: Option[String] = None): Future[List[Pod]] = {
     errorHandling {
       namespacedClient(namespace).listWithOptions[ListResource[skuber.Pod]](
         skuber.ListOptions(
@@ -157,12 +157,12 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
           )),
           fieldSelector = Some("status.phase==Pending")
         )
-      )
+      ).map(_.items)
     }
   }
 
   /** Figures out a job by its id. */
-  def getPodsByJobId(namespace: Option[String] = None, jobId: String): Future[ListResource[Pod]] = {
+  def getPodsByJobId(namespace: Option[String] = None, jobId: String): Future[List[Pod]] = {
     errorHandling {
       namespacedClient(namespace).listWithOptions[ListResource[Pod]](
         skuber.ListOptions(
@@ -170,7 +170,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
             LabelSelector.IsEqualRequirement(KubernetesJobConverter.JobIdLabel, jobId)
           ))
         )
-      )
+      ).map(_.items)
     }
   }
 
@@ -193,17 +193,17 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
     }
   }
 
-  def getManagedJobsForAllNamespaces(): Future[Seq[Job]] = {
+  def getManagedNonFinishedJobsForAllNamespaces(): Future[Seq[Job]] = {
     errorHandling(rootClient.getNamespaceNames).flatMap { namespaces =>
       val futures = namespaces.map { namespace =>
-        val jobs = getManagedJobs(Some(namespace))
+        val jobs = getManagedNonFinishedJobs(Some(namespace))
         jobs
       }
       Future.sequence(futures).map(_.flatten)
     }
   }
 
-  def getManagedJobs(namespace: Option[String] = None): Future[ListResource[Job]] = {
+  def getManagedNonFinishedJobs(namespace: Option[String] = None): Future[List[Job]] = {
     errorHandling {
       namespacedClient(namespace).listWithOptions[ListResource[Job]](
         skuber.ListOptions(
@@ -211,7 +211,20 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
             LabelSelector.IsEqualRequirement(KubernetesJobConverter.TrackerIdLabel, config.podTrackerId)
           ))
         )
-      )
+      ).map { jobs =>
+        // Unfortunately there seem no way to filter for non-finished jobs directly, so we filter afterwards.
+        // at least not with Field Selectors (Error: field label "status.succeeded" not supported for batchv1.Job )
+        // This can become a bottleneck
+        
+
+        jobs.items.filter { job =>
+          // Status/Condition/Type seems not acessable, however we can look for failed/successful runs
+          // as we only use jobs with one run.
+          val succeeded = job.status.flatMap(_.succeeded)
+          val failed = job.status.flatMap(_.failed)
+          succeeded.forall(_ == 0) && failed.forall(_ == 0)
+        }
+      }
     }
   }
 

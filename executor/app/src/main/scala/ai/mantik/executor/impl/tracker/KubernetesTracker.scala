@@ -52,7 +52,7 @@ class KubernetesTracker(config: Config, ops: K8sOperations)(implicit ec: Executi
   }
 
   def addAll(): Unit = {
-    ops.getManagedJobsForAllNamespaces().foreach { jobs =>
+    ops.getManagedNonFinishedJobsForAllNamespaces().foreach { jobs =>
       jobs.foreach(subscribe)
     }
   }
