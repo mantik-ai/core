@@ -40,7 +40,24 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
   val files = mutable.Map.empty[String, FileInfo]
   var nextId = 1
 
+  val HelloMessage = "This is a Mantik SimpleTempFileRepository, do not use in production."
+
   val route = concat(
+    path("/") {
+      get(
+        complete(HelloMessage)
+      )
+    },
+    path("files") {
+      get {
+        complete(HelloMessage)
+      }
+    },
+    path("files" / "") {
+      get {
+        complete(HelloMessage)
+      }
+    },
     path("files" / Remaining) { id =>
       post {
         fileStatus(id) match {

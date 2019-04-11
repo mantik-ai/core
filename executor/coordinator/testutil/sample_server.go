@@ -37,6 +37,13 @@ func createSampleServer(resource string) *SampleServer {
 			writer.WriteHeader(200)
 		}
 	})
+	r.mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			writer.WriteHeader(http.StatusMethodNotAllowed)
+		} else {
+			writer.WriteHeader(200)
+		}
+	})
 	r.Server = httptest.NewServer(r.mux)
 	r.resource = resource
 	r.StatusToReturn = 200
