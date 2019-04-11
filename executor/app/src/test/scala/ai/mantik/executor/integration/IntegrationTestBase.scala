@@ -3,7 +3,7 @@ package ai.mantik.executor.integration
 import java.time.Clock
 
 import ai.mantik.executor.{ Config, Executor }
-import ai.mantik.executor.impl.ExecutorImpl
+import ai.mantik.executor.impl.{ ExecutorImpl, K8sOperations }
 
 abstract class IntegrationTestBase extends KubernetesTestBase {
 
@@ -12,7 +12,8 @@ abstract class IntegrationTestBase extends KubernetesTestBase {
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     implicit val clock = Clock.systemUTC()
-    _executor = new ExecutorImpl(config, _kubernetesClient)
+    val k8sOperations = new K8sOperations(config, _kubernetesClient)
+    _executor = new ExecutorImpl(config, k8sOperations)
   }
 
   override protected def afterAll(): Unit = {

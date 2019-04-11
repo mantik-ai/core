@@ -20,6 +20,7 @@ import scala.collection.JavaConverters._
  * @param defaultRetryInterval after which period something is retried again.
  * @param interface interface to listen on
  * @param port port to listen on
+ * @param kubernetesRetryTimes how often something is retried if kubernetes asks for.
  */
 case class Config(
     sideCar: Container,
@@ -32,7 +33,8 @@ case class Config(
     defaultTimeout: FiniteDuration,
     defaultRetryInterval: FiniteDuration,
     interface: String,
-    port: Int
+    port: Int,
+    kubernetesRetryTimes: Int
 )
 
 object Config {
@@ -51,6 +53,7 @@ object Config {
       checkPodInterval = c.getDuration("kubernetes.behavior.checkPodInterval"),
       defaultTimeout = c.getDuration("kubernetes.behavior.defaultTimeout"),
       defaultRetryInterval = c.getDuration("kubernetes.behavior.retryInterval"),
+      kubernetesRetryTimes = c.getInt("kubernetes.behavior.retryTimes"),
       interface = c.getString("app.server.interface"),
       port = c.getInt("app.server.port")
     )

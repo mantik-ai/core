@@ -6,7 +6,7 @@ import ai.mantik.executor.buildinfo.BuildInfo
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.Logger
-import ai.mantik.executor.impl.ExecutorImpl
+import ai.mantik.executor.impl.{ ExecutorImpl, K8sOperations }
 import ai.mantik.executor.server.ExecutorServer
 
 object Main extends App {
@@ -20,8 +20,8 @@ object Main extends App {
   try {
     val config = Config()
     val kubernetesClient = skuber.k8sInit
-
-    val executor = new ExecutorImpl(config, kubernetesClient)
+    val k8sOperations = new K8sOperations(config, kubernetesClient)
+    val executor = new ExecutorImpl(config, k8sOperations)
     val server = new ExecutorServer(config, executor)
     server.start()
   } catch {

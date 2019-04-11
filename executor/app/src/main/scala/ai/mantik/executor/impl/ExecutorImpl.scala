@@ -19,21 +19,20 @@ import skuber.json.batch.format._
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
 
-class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
+class ExecutorImpl(config: Config, ops: K8sOperations)(
     implicit
     ec: ExecutionContext,
     actorSystem: ActorSystem,
     clock: Clock
 ) extends Executor {
   val logger = Logger(getClass)
-  val ops = new K8sOperations(clock, config)
-  val tracker = new KubernetesTracker(config, kubernetesClient, ops)
+  val tracker = new KubernetesTracker(config, ops)
 
   override def schedule(job: Job): Future[String] = {
     val jobId = UUID.randomUUID().toString
     val namespace = namespaceForIsolationSpace(job.isolationSpace)
     logger.info(s"Creating job ${jobId} in namespace ${namespace}...")
-    ops.ensureNamespace(kubernetesClient, namespace).flatMap { namespacedClient =>
+    ops.ensureNamespace(namespace).flatMap { namespacedClient =>
       logger.debug(s"Namespace for job ${job.isolationSpace}/${jobId}: ${namespace} ensured...")
       val converter = try {
         new KubernetesJobConverter(config, job, jobId)
@@ -44,14 +43,14 @@ class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
       }
 
       // Pods are not reachable by it's name but by their IP Address, however we must first start them to get their IP Address.
-      ops.startPodsAndGetIpAdresses(namespacedClient, converter.pods).flatMap { podsWithIpAdresses =>
+      ops.startPodsAndGetIpAdresses(Some(namespace), converter.pods).flatMap { podsWithIpAdresses =>
         logger.debug(s"Created pods for ${jobId}: ${podsWithIpAdresses.values}")
 
         val configMap = converter.configuration(podsWithIpAdresses)
-        namespacedClient.create(configMap).flatMap { configMap =>
+        ops.create(Some(namespace), configMap).flatMap { configMap =>
           logger.debug(s"Created ConfigMap for ${jobId}")
           val job = converter.convertCoodinator
-          namespacedClient.create(job).map { job =>
+          ops.create(Some(namespace), job).map { job =>
             logger.info(s"Created ${podsWithIpAdresses.size} pods, config map and job ${job.name}")
             tracker.subscribe(job)
             jobId
@@ -68,19 +67,10 @@ class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
 
   override def status(isolationSpace: String, id: String): Future[JobStatus] = {
     val namespace = namespaceForIsolationSpace(isolationSpace)
-    val nsClient = kubernetesClient.usingNamespace(namespace)
-    nsClient.listSelected[ListResource[skuber.batch.Job]](
-      LabelSelector(
-        LabelSelector.IsEqualRequirement("jobId", id)
-      )
-    ).map { jobs =>
-        if (jobs.items.isEmpty) {
-          throw new NotFoundException(s"Job ${id} not found in isolationSpace ${isolationSpace}")
-        }
-        if (jobs.items.length > 1) {
-          throw new InternalException(s"Job ${id} found multiple times (${jobs.items.size} in isolation space ${isolationSpace}")
-        }
-        val job = jobs.items.head
+    ops.getJobById(Some(namespace), id).map {
+      case None =>
+        throw new NotFoundException(s"Job ${id} not found in isolationSpace ${isolationSpace}")
+      case Some(job) =>
         job.status.map { status =>
           logger.info(s"Decoding job state ${status}")
           status.active match {
@@ -103,12 +93,12 @@ class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
             state = JobState.Pending
           )
         }
-      }
+    }
   }
 
   override def logs(isolationSpace: String, id: String): Future[String] = {
     val namespace = namespaceForIsolationSpace(isolationSpace)
-    ops.getJobLog(kubernetesClient.usingNamespace(namespace), id)
+    ops.getJobLog(Some(namespace), id)
   }
 
   private val checkPodCancellation = config.checkPodInterval match {
@@ -121,12 +111,12 @@ class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
   private def checkPods(): Unit = {
     logger.debug("Checking Pods")
     val timestamp = clock.instant()
-    checkBrokenImagePods2(timestamp)
+    checkBrokenImagePods(timestamp)
   }
 
-  private def checkBrokenImagePods2(timestamp: Instant): Unit = {
+  private def checkBrokenImagePods(timestamp: Instant): Unit = {
     val borderTime = timestamp.minusSeconds(config.podPullImageTimeout.toSeconds)
-    ops.getAllManagedPendingPods(kubernetesClient).foreach { pendingPods =>
+    ops.getAllManagedPendingPods().foreach { pendingPods =>
       pendingPods.foreach {
         case (namespaceName, pendingPods) =>
           val isMissingImage = pendingPods.filter(pod => isOldImageNotFound(borderTime, pod))
@@ -138,11 +128,10 @@ class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
   }
 
   private def handleBrokenImagePod(pod: Pod): Unit = {
-    val namespacedClient = kubernetesClient.usingNamespace(pod.namespace)
     val maybeJobId = pod.metadata.labels.get(KubernetesJobConverter.JobIdLabel)
     logger.info(s"Detected broken image in ${pod.namespace}/${pod.name}, jobId=${maybeJobId}")
     logger.info(s"Deleting Pod...")
-    namespacedClient.delete[Pod](pod.name)
+    ops.delete[Pod](Some(pod.namespace), pod.name)
     logger.info(s"Cancelling Job...")
     maybeJobId.foreach { jobId =>
       cancelPods(pod.namespace, jobId, "Pod could not find image")
@@ -150,10 +139,9 @@ class ExecutorImpl(config: Config, kubernetesClient: KubernetesClient)(
   }
 
   private def cancelPods(namespace: String, jobId: String, reason: String): Unit = {
-    val namespacedClient = kubernetesClient.usingNamespace(namespace)
-    ops.getPodsByJobId(namespacedClient, jobId).foreach { pods =>
+    ops.getPodsByJobId(Some(namespace), jobId).foreach { pods =>
       pods.foreach { pod =>
-        ops.cancelMantikPod(kubernetesClient, pod, reason)
+        ops.cancelMantikPod(pod, reason)
       }
     }
   }

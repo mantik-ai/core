@@ -12,7 +12,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 /** Tracks the state of Jobs. */
-class KubernetesTracker(config: Config, kubernetesClient: KubernetesClient, ops: K8sOperations)(implicit ec: ExecutionContext, actorSystem: ActorSystem) {
+class KubernetesTracker(config: Config, ops: K8sOperations)(implicit ec: ExecutionContext, actorSystem: ActorSystem) {
   import KubernetesTracker._
 
   private val jobTrackers = mutable.Map.empty[Key, ActorRef]
@@ -21,7 +21,7 @@ class KubernetesTracker(config: Config, kubernetesClient: KubernetesClient, ops:
   val logger = Logger(getClass)
 
   def subscribe(key: Key): Unit = {
-    ops.getJob(kubernetesClient.usingNamespace(key.namespace), key.jobId).foreach {
+    ops.getJob(Some(key.namespace), key.jobId).foreach {
       case None =>
         logger.warn(s"Could not find job ${key}")
       case Some(job) =>
@@ -44,7 +44,7 @@ class KubernetesTracker(config: Config, kubernetesClient: KubernetesClient, ops:
       if (jobTrackers.contains(key)) {
         logger.info(s"Job ${key} already tracked")
       } else {
-        val tracker = actorSystem.actorOf(JobTracker.props(kubernetesClient))
+        val tracker = actorSystem.actorOf(JobTracker.props(ops))
         tracker ! JobTracker.Start(job)
         jobTrackers(key) = tracker
       }
@@ -52,7 +52,7 @@ class KubernetesTracker(config: Config, kubernetesClient: KubernetesClient, ops:
   }
 
   def addAll(): Unit = {
-    ops.getManagedJobsForAllNamespaces(kubernetesClient).foreach { jobs =>
+    ops.getManagedJobsForAllNamespaces().foreach { jobs =>
       jobs.foreach(subscribe)
     }
   }
