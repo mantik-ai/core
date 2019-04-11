@@ -2,10 +2,10 @@ package ai.mantik.executor.integration
 
 import java.time.Clock
 
-import ai.mantik.executor.{Config, Executor}
-import ai.mantik.testutils.{AkkaSupport, TestBase}
-import org.scalatest.time.{Millis, Span}
-import skuber.{ConfigMap, ListResource, Namespace, Pod}
+import ai.mantik.executor.{ Config, Executor }
+import ai.mantik.testutils.{ AkkaSupport, TestBase }
+import org.scalatest.time.{ Millis, Span }
+import skuber.{ ConfigMap, ListResource, Namespace, Pod }
 import skuber.api.client.KubernetesClient
 import skuber.batch.Job
 import skuber.json.format._
@@ -30,6 +30,7 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
     defaultRetryInterval = 1.second,
     interface = "localhost",
     port = 15001,
+    kubernetesRetryTimes = 3
   )
 
   protected var _kubernetesClient: KubernetesClient = _
