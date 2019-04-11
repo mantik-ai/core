@@ -7,6 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.Accept
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import com.typesafe.config.{ConfigFactory, ConfigValue, ConfigValueFactory}
 
 import scala.util.Random
 
@@ -22,8 +23,12 @@ class SimpleTempFileRepositorySpec extends TestBase with AkkaSupport {
     MediaType.custom(MantikBundleContentTypeString, true).asInstanceOf[MediaType.Binary]
   )
 
+  val config = ConfigFactory.load().withValue(
+    "mantik.repository.fileRepository.port", ConfigValueFactory.fromAnyRef(0)
+  )
+
   override def beforeEach: Unit = {
-    repo = new SimpleTempFileRepository()
+    repo = new SimpleTempFileRepository(config)
   }
 
   override def afterEach(): Unit = {

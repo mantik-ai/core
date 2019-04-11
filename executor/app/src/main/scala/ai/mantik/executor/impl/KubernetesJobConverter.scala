@@ -134,7 +134,7 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
     )
   }
 
-  def convertNode(nodeName: String, node: Node): Pod = {
+  def convertNode(nodeName: String, node: Node[NodeService]): Pod = {
     val sideCar = createSidecar(node)
 
     // TODO: IoAffinity!
@@ -213,7 +213,7 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
     )
   }
 
-  private def createSidecar(node: Node): Container = {
+  private def createSidecar(node: Node[NodeService]): Container = {
     // TODO: SideCars listen per default on Port 8503
     // But we have no mechanism to prevent clashers, if the service listens on the same port
 

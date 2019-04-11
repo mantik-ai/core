@@ -17,9 +17,10 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.util.Success
 import ai.mantik.repository.Errors
+import com.typesafe.config.Config
 
 /** Simple local file service, for development, no security at all. */
-class SimpleTempFileRepository(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext, port: Int = 8081) extends FileRepository {
+class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext) extends FileRepository {
   private val logger = LoggerFactory.getLogger(getClass)
 
   val directory = Files.createTempDirectory("mantik_simple_storage")
@@ -27,7 +28,11 @@ class SimpleTempFileRepository(implicit actorSystem: ActorSystem, materializer: 
   // Note: the file service must be enabled in kubernetes.
   // inside the Mantik namespace
 
-  lazy val externalUrl = s"http://mantik-fileservice.mantik.svc.cluster.local:${boundPort}/files/"
+  private val subConfig = config.getConfig("mantik.repository.fileRepository")
+  val port = subConfig.getInt("port")
+  val interface = subConfig.getString("interface")
+  val externalServiceName = subConfig.getString("externalServiceName")
+  val externalUrl = s"http://${externalServiceName}/files/"
 
   case class FileInfo(temporary: Boolean, written: Option[Long] = None, contentType: Option[String] = None)
 
@@ -114,7 +119,7 @@ class SimpleTempFileRepository(implicit actorSystem: ActorSystem, materializer: 
     }
   }
 
-  val bindResult = Await.result(Http().bindAndHandle(route, "0.0.0.0", port), 60.seconds)
+  val bindResult = Await.result(Http().bindAndHandle(route, interface, port), 60.seconds)
   logger.info(s"Listening on ${port}, external ${externalUrl}, do not forget to add it to the cluster")
 
   override def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult] = {

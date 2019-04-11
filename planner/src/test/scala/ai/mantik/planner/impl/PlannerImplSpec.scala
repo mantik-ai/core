@@ -1,55 +1,26 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.executor.model._
 import ai.mantik.planner.plugins.Plugins
-import ai.mantik.planner.{Action, DataSet, Plan, Source}
-import ai.mantik.repository.FileRepository.FileStorageResult
+import ai.mantik.planner._
 import ai.mantik.repository._
-import ai.mantik.repository.impl.SimpleTempFileRepository
-import ai.mantik.testutils.{AkkaSupport, TestBase}
-import akka.stream.scaladsl.{Source => AkkaSource}
-import akka.util.ByteString
+import ai.mantik.testutils.TestBase
+import cats.data.State
 
-import scala.concurrent.Future
-import scala.util.Success
-class PlannerImplSpec extends TestBase with AkkaSupport {
+class PlannerImplSpec extends TestBase {
 
-  /** A File Repo which tracks it's calls. */
-  class ExtendedFileRepo extends SimpleTempFileRepository {
-    case class StorageCalls(
-        temporary: Boolean,
-        result: FileStorageResult
-    )
-    val storageCalls = Seq.newBuilder[StorageCalls]
-    override def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult] = {
-      super.requestFileStorage(temporary).andThen {
-        case Success(value) =>
-          lock.synchronized {
-            storageCalls += StorageCalls(temporary, value)
-          }
-      }
+  private trait Env {
+    val isolationSpace = "test"
+    val planner = new PlannerImpl(TestItems.testPlugins)
+
+    def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
+      f.run(PlanningState()).value
     }
   }
-  // Note in env, because we need to shut it down after each test.
-  private var fileRepo: ExtendedFileRepo = _
 
-  override protected def beforeEach(): Unit = {
-    fileRepo = new ExtendedFileRepo()
-  }
-
-  override protected def afterEach(): Unit = {
-    fileRepo.shutdown()
-  }
-
-  trait Env {
-    val isolationSpace = "test"
-    val planner = new PlannerImpl(isolationSpace, fileRepo, Plugins.default)
-    implicit val nodeIdGenerator = new NodeIdGenerator()
-  }
-
-  val lit = Bundle.build(
+  private val lit = Bundle.build(
     TabularData(
       "x" -> FundamentalType.Int32
     )
@@ -57,197 +28,303 @@ class PlannerImplSpec extends TestBase with AkkaSupport {
     .row(1)
     .result
 
-  "manifestDataSet" should "convert a simple literal source" in new Env {
-    val sourcePlan = await(planner.manifestDataSet(
-      DataSet.natural(Source.BundleLiteral(lit), lit.model)
+  "translateItemPayloadSource" should "not work on missing files" in new Env {
+    intercept[Planner.NotAvailableException]{
+      runWithEmptyState(planner.translateItemPayloadSource(
+        Source.Empty
+      ))
+    }
+  }
+
+  it should "provide a file when there is a file source" in new Env {
+    val (state, source) = runWithEmptyState(planner.translateItemPayloadSource(
+      Source.Loaded("file1")
     ))
-    val lastStorage = fileRepo.storageCalls.result().head
-    lastStorage.temporary shouldBe true
-    sourcePlan.preplan shouldBe Plan.PushBundle(lit, "1")
+    state.files shouldBe List(
+      PlanFile(PlanFileReference(1), fileId = Some("file1"), read = true)
+    )
+    source shouldBe ResourcePlan(
+      graph = Graph(
+        nodes = Map (
+          "1" -> Node (
+            PlanNodeService.File(PlanFileReference(1)),
+            resources = Map (
+              ExecutorModelDefaults.SourceResource -> ResourceType.Source
+            )
+          )
+        )
+      ),
+      outputs = Seq(
+        NodeResourceRef("1", ExecutorModelDefaults.SourceResource)
+      )
+    )
+  }
+
+  it should "convert a literal to a file and provide it as stream if given" in new Env {
+    val (state, source) = runWithEmptyState(planner.translateItemPayloadSource(
+      Source.BundleLiteral(lit)
+    ))
+    state.files shouldBe List(
+      PlanFile(PlanFileReference(1), write = true, read = true, temporary = true)
+    )
+    source shouldBe ResourcePlan(
+      pre = PlanOp.PushBundle(lit, PlanFileReference(1)),
+      graph = Graph(
+        nodes = Map (
+          "1" -> Node (
+            PlanNodeService.File(PlanFileReference(1)),
+            resources = Map (
+              ExecutorModelDefaults.SourceResource -> ResourceType.Source
+            )
+          )
+        )
+      ),
+      outputs = Seq(
+        NodeResourceRef("1", ExecutorModelDefaults.SourceResource)
+      )
+    )
+  }
+
+  it should "project results of operations" in new Env {
+    val (state, source) = runWithEmptyState(planner.translateItemPayloadSource(
+      Source.OperationResult(
+        Operation.Application(
+          Algorithm(Source.Loaded("algo1"), TestItems.algorithm1),
+          DataSet(Source.Loaded("dataset1"), TestItems.dataSet1)
+        )
+      )
+    ))
+    state.files shouldBe List(
+      PlanFile(PlanFileReference(1), read = true, fileId = Some("dataset1")),
+      PlanFile(PlanFileReference(2), read = true, fileId = Some("algo1")),
+    )
+    source shouldBe ResourcePlan(
+      graph = Graph(
+        nodes = Map (
+          "1" -> Node (
+            PlanNodeService.File(PlanFileReference(1)),
+            resources = Map (
+              ExecutorModelDefaults.SourceResource -> ResourceType.Source
+            )
+          ),
+          "2" -> Node (
+            PlanNodeService.DockerContainer("algorithm1_image", data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
+            resources = Map (
+              ExecutorModelDefaults.TransformationResource -> ResourceType.Transformer
+            )
+          )
+        ),
+        links = Link.links(
+          NodeResourceRef("1", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("2", ExecutorModelDefaults.TransformationResource)
+        )
+      ),
+      outputs = Seq(
+        NodeResourceRef("2", ExecutorModelDefaults.TransformationResource)
+      )
+    )
+  }
+
+  "translateItemPayloadSourceAsFile" should "not support empties" in new Env {
+    intercept[Planner.NotAvailableException]{
+      planner.translateItemPayloadSourceAsFile(Source.Empty, canBeTemporary = true)
+    }
+  }
+
+  it should "convert a file load" in new Env {
+    val (state, (op, file)) = runWithEmptyState(planner.translateItemPayloadSourceAsFile(Source.Loaded("file1"), canBeTemporary = true))
+    state.files shouldBe List(
+      PlanFile(PlanFileReference(1), read = true, fileId = Some("file1"))
+    )
+    op shouldBe PlanOp.Empty
+    file shouldBe PlanFileReference(1)
+  }
+
+  it should "convert a algorithm output" in new Env {
+    for {
+      temp <- Seq(false, true)
+    } {
+      val source = Source.OperationResult(
+        Operation.Application(
+          Algorithm(Source.Loaded("algo1"), TestItems.algorithm1),
+          DataSet(Source.Loaded("dataset1"), TestItems.dataSet1)
+        )
+      )
+      val (pureState, pureOp) = runWithEmptyState(planner.translateItemPayloadSource(source))
+      val (state, (op, file)) = runWithEmptyState(planner.translateItemPayloadSourceAsFile(
+        source, canBeTemporary = temp
+      ))
+      state.files shouldBe pureState.files ++ List (
+        PlanFile(PlanFileReference(3), read = true, write = true, temporary = temp)
+      )
+      file shouldBe PlanFileReference(3)
+      val expected = PlanOp.RunGraph(
+        Graph(
+          nodes = Map (
+            // this part is taken over from stream generation
+            "1" -> Node (
+              PlanNodeService.File(PlanFileReference(1)),
+              resources = Map (
+                ExecutorModelDefaults.SourceResource -> ResourceType.Source
+              )
+            ),
+            "2" -> Node (
+              PlanNodeService.DockerContainer("algorithm1_image", data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
+              resources = Map (
+                ExecutorModelDefaults.TransformationResource -> ResourceType.Transformer
+              )
+            ),
+            // this part is used for generating the file
+            "3" -> Node (
+              PlanNodeService.File(PlanFileReference(3)),
+              resources = Map (
+                ExecutorModelDefaults.SinkResource -> ResourceType.Sink
+              )
+            )
+          ),
+          links = Link.links(
+            NodeResourceRef("1", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("2", ExecutorModelDefaults.TransformationResource),
+            NodeResourceRef("2", ExecutorModelDefaults.TransformationResource) -> NodeResourceRef("3", ExecutorModelDefaults.SinkResource)
+          )
+        )
+      )
+      op shouldBe expected
+    }
+  }
+
+  "translateItemPayloadSourceAsOptionalFile" should "support empty" in new Env {
+    val (state, planOp) = runWithEmptyState(planner.translateItemPayloadSourceAsOptionalFile(
+      Source.Empty, canBeTemporary = true
+    ))
+    state shouldBe PlanningState()
+    planOp shouldBe (PlanOp.Empty, None)
+  }
+
+  "manifestDataSet" should "convert a simple literal source" in new Env {
+    val sourcePlan = runWithEmptyState(planner.manifestDataSet(
+      DataSet.natural(Source.BundleLiteral(lit), lit.model)
+    ))._2
+
+    sourcePlan.pre shouldBe PlanOp.PushBundle(lit, PlanFileReference(1))
     sourcePlan.graph shouldBe Graph(
       Map(
         "1" -> Node(
-          ExistingService(lastStorage.result.executorClusterUrl),
-          Map(lastStorage.result.resource -> ResourceType.Source)
+          PlanNodeService.File(PlanFileReference(1)),
+          Map(ExecutorModelDefaults.SourceResource -> ResourceType.Source)
         )
       )
     )
-    sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", lastStorage.result.resource))
+    sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
   }
 
   it should "convert a load natural source" in new Env {
-    val file1 = await(fileRepo.requestFileStorage(false))
-    // Push in some data, otherwise the file calls will fail
-    await(AkkaSource.empty[ByteString].runWith(await(fileRepo.storeFile(file1.fileId, FileRepository.MantikBundleContentType))))
-
     val ds = DataSet.natural(
       Source.Loaded(
-        file1.fileId
+        "file1"
       ),
       lit.model
     )
 
-    val sourcePlan = await(planner.manifestDataSet(
+    val sourcePlan = runWithEmptyState(planner.manifestDataSet(
       ds
-    ))
+    ))._2
 
-    sourcePlan.preplan shouldBe Plan.Empty
+    sourcePlan.pre shouldBe PlanOp.Empty
     sourcePlan.graph shouldBe Graph(
       Map(
         "1" -> Node(
-          ExistingService(file1.executorClusterUrl),
+          PlanNodeService.File(PlanFileReference(1)),
           Map(
-            file1.resource -> ResourceType.Source
+            ExecutorModelDefaults.SourceResource -> ResourceType.Source
           )
         )
       )
     )
-    sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", file1.resource))
+    sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
+  }
+
+  "manifestTrainableAlgorithm" should "manifest a trainable algorithm" in new Env {
+    val (state, sourcePlan) = runWithEmptyState(planner.manifestTrainableAlgorithm(
+      TrainableAlgorithm(Source.Loaded("file1"), TestItems.learning1)
+    ))
+
+    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
+    sourcePlan shouldBe ResourcePlan(
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.DockerContainer("training1_image", data = Some(PlanFileReference(1)), mantikfile = TestItems.learning1), resources = Map(
+              "train" -> ResourceType.Sink,
+              "stats" -> ResourceType.Source,
+              "result" -> ResourceType.Source
+            )
+          )
+        )
+      ),
+      inputs = Seq(NodeResourceRef("1", "train")),
+      outputs = Seq(
+        NodeResourceRef("1", "result"),
+        NodeResourceRef("1", "stats")
+      )
+    )
+  }
+
+  "manifestAlgorithm" should "manifest an algorithm" in new Env {
+    val (state, sourcePlan) = runWithEmptyState(planner.manifestAlgorithm(
+      Algorithm(Source.Loaded("file1"), TestItems.algorithm1)
+    ))
+
+    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
+    sourcePlan shouldBe ResourcePlan(
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.DockerContainer("algorithm1_image", data = Some(PlanFileReference(1)), mantikfile = TestItems.algorithm1), resources = Map(
+              "apply" -> ResourceType.Transformer
+            )
+          )
+        )
+      ),
+      inputs = Seq(NodeResourceRef("1", "apply")),
+      outputs = Seq(NodeResourceRef("1", "apply"))
+    )
   }
 
   "convert" should "convert a simple save action" in new Env {
-    val plan = await(planner.convert(
+    val plan = planner.convert(
       Action.SaveAction(
         DataSet.natural(Source.BundleLiteral(lit), lit.model), "item1"
       )
-    ))
-    val files = fileRepo.storageCalls.result()
-    files.size shouldBe 1
-
-    val pushFile = files.head
-    pushFile.temporary shouldBe false
-
-    plan shouldBe Plan.seq(
-      Plan.PushBundle(lit, pushFile.result.fileId),
-      Plan.AddMantikItem(
-        MantikArtefact(
-          Mantikfile.pure(
-            DataSetDefinition(
-              name = None,
-              version = None,
-              format = "natural",
-              `type` = lit.model
-            )
-          ),
-          Some(pushFile.result.fileId),
-          id = MantikId("item1")
-        )
-      )
     )
 
-    /*
-
-    // File handles are generated asynchronously, so they can be picked up randomly
-    // We have two file handles:
-    // - where the literal is stored at the beginning
-    // - where the literal is stored after moving it.
-
-    val pushCall = plan.asInstanceOf[Plan.Sequential].plans.head.asInstanceOf[Plan.PushBundle]
-    val pushFile = files.find(_.result.fileId == pushCall.fileId).get
-    val storeFile = files.find(_.result.fileId != pushCall.fileId).get
-    pushFile.temporary shouldBe true
-    storeFile.temporary shouldBe false
-
-    plan shouldBe Plan.Sequential(
-      Seq(
-        Plan.PushBundle(lit, pushFile.result.fileId),
-        Plan.RunJob(Job(
-          isolationSpace,
-          Graph(
-            Map(
-              "1" -> Node(
-                ExistingService(pushFile.result.executorClusterUrl),
-                Map(
-                  pushFile.result.resource -> ResourceType.Source
-                )
-              ),
-              "2" -> Node(
-                ExistingService(storeFile.result.executorClusterUrl),
-                Map(
-                  storeFile.result.resource -> ResourceType.Sink
-                )
-              )
-            ),
-            Link.links(
-              NodeResourceRef("1", pushFile.result.resource) -> NodeResourceRef("2", storeFile.result.resource)
-            ),
-          ), contentType = Some(FileRepository.MantikBundleContentType)
-        )),
-        Plan.AddMantikItem(
-          MantikArtefact(
-            Mantikfile.pure(
-              DataSetDefinition(
-                name = None,
-                version = None,
-                format = "natural",
-                `type` = lit.model
-              )
-            ),
-            Some(storeFile.result.fileId),
-            id = MantikId("item1")
+    plan.op shouldBe PlanOp.seq(
+      PlanOp.PushBundle(lit, PlanFileReference(1)),
+      PlanOp.AddMantikItem(
+        MantikId("item1"),
+        Some(PlanFileReference(1)),
+        Mantikfile.pure(
+          DataSetDefinition(
+            name = None,
+            version = None,
+            format = "natural",
+            `type` = lit.model
           )
         )
       )
     )
-    */
   }
 
   it should "convert a simple fetch operation" in new Env {
-    val plan = await(planner.convert(
+    val plan = planner.convert(
       Action.FetchAction(
         DataSet.natural(Source.BundleLiteral(lit), lit.model)
       )
-    ))
-    val files = fileRepo.storageCalls.result()
-    files.size shouldBe 1
-    val file = files.head
-    file.temporary shouldBe true
-
-    plan shouldBe Plan.seq(
-      Plan.PushBundle(lit, file.result.fileId),
-      Plan.PullBundle(lit.model, file.result.fileId)
     )
-    /*
-
-    files.size shouldBe 2
-
-    val pushCall = plan.asInstanceOf[Plan.Sequential].plans.head.asInstanceOf[Plan.PushBundle]
-    val pushFile = files.find(_.result.fileId == pushCall.fileId).get
-    val fetchFile = files.find(_.result.fileId != pushCall.fileId).get
-    pushFile.temporary shouldBe true
-    fetchFile.temporary shouldBe true
-
-    plan shouldBe Plan.Sequential(
-      Seq(
-        Plan.PushBundle(lit, pushFile.result.fileId),
-        Plan.RunJob(Job(
-          isolationSpace,
-          Graph(
-            Map(
-              "1" -> Node(
-                ExistingService(pushFile.result.executorClusterUrl),
-                Map(
-                  pushFile.result.resource -> ResourceType.Source
-                )
-              ),
-              "2" -> Node(
-                ExistingService(fetchFile.result.executorClusterUrl),
-                Map(
-                  fetchFile.result.resource -> ResourceType.Sink
-                )
-              )
-            ),
-            Link.links(
-              NodeResourceRef("1", pushFile.result.resource) -> NodeResourceRef("2", fetchFile.result.resource)
-            )
-          ),
-          contentType = Some(FileRepository.MantikBundleContentType))
-        ),
-        Plan.PullBundle(
-          lit.model, fetchFile.result.fileId
-        )
-      )
+    plan.files shouldBe List(
+      PlanFile(PlanFileReference(1), read = true, write = true, temporary = true)
     )
-    */
+    plan.op shouldBe PlanOp.seq(
+      PlanOp.PushBundle(lit, PlanFileReference(1)),
+      PlanOp.PullBundle(lit.model, PlanFileReference(1))
+    )
   }
 }

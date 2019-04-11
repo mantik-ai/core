@@ -1,13 +1,13 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.executor.model.{ Graph, Link, NodeResourceRef }
-import ai.mantik.planner.Plan
+import ai.mantik.executor.model._
+import ai.mantik.planner.{ Plan, PlanNodeService, PlanOp }
 import PlannerGraphOps._
 
 /**
  * Describes a way a resource is calculated (a containing part of a graph).
  *
- * @param preplan a plan which must be executed before evaluating the graph
+ * @param pre a plan op which must be executed before evaluating the graph
  * @param graph graph to evaluate
  * @param inputs input resources
  * @param outputs output resources
@@ -15,15 +15,15 @@ import PlannerGraphOps._
  * Node: resources may be input and output at the same time.
  */
 private[impl] case class ResourcePlan(
-    preplan: Plan = Plan.Empty,
-    graph: Graph,
+    pre: PlanOp = PlanOp.Empty,
+    graph: Graph[PlanNodeService],
     inputs: Seq[NodeResourceRef] = Nil,
     outputs: Seq[NodeResourceRef] = Nil
 ) {
 
-  def prependPlan(plan: Plan): ResourcePlan = {
+  def prependOp(plan: PlanOp): ResourcePlan = {
     copy(
-      preplan = Plan.combine(plan, preplan)
+      pre = PlanOp.combine(plan, pre)
     )
   }
 
@@ -43,7 +43,7 @@ private[impl] case class ResourcePlan(
         Link(output, input)
     }
     ResourcePlan(
-      preplan = Plan.combine(preplan, argument.preplan),
+      pre = PlanOp.combine(pre, argument.pre),
       graph = graph.mergeWith(argument.graph).addLinks(extraLinks: _*),
       inputs = inputs.drop(argument.outputs.size),
       outputs = outputs

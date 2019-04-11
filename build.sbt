@@ -47,6 +47,7 @@ lazy val testutils = (project in file("testutils"))
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion,
       "org.slf4j" % "slf4j-api" % "1.7.25",
+      "ch.qos.logback" % "logback-classic" % "1.2.3"
     ),
     publish := {},
     publishLocal := {}
@@ -179,7 +180,9 @@ lazy val planner = (project in file ("planner"))
   .dependsOn(testutils % "test")
   .dependsOn(ds, executorApi, repository)
   .settings(
-    name := "planner"
+    name := "planner",
+    libraryDependencies += "org.typelevel" %% "cats-core" % "1.6.0",
+    scalacOptions += "-Ypartial-unification" // Needed for Cats
   )
   .settings(
     scalariformSettings,
@@ -204,7 +207,7 @@ lazy val examples = (project in file("examples"))
 
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, executorApi, executorApp, examples)
+  .aggregate(testutils, ds, executorApi, executorApp, examples, planner)
   .settings(
     publish := {},
     publishLocal := {},

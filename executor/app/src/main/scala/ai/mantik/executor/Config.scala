@@ -37,7 +37,7 @@ case class Config(
 
 object Config {
 
-  def apply(): Config = fromTypesafeConfig(ConfigFactory.defaultApplication())
+  def apply(): Config = fromTypesafeConfig(ConfigFactory.load())
 
   /** Load settings from Config. */
   def fromTypesafeConfig(c: TypesafeConfig): Config = {

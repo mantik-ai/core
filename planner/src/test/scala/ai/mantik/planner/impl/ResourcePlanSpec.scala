@@ -3,22 +3,22 @@ package ai.mantik.planner.impl
 import ai.mantik.ds.FundamentalType.Int32
 import ai.mantik.ds.element.{Bundle, Primitive, SingleElement}
 import ai.mantik.executor.model._
-import ai.mantik.planner.Plan
+import ai.mantik.planner.{PlanFileReference, PlanNodeService, PlanOp}
 import ai.mantik.testutils.TestBase
 
 class ResourcePlanSpec extends TestBase {
 
   // Some fake plans to simplify testing
   val lit = Bundle(Int32, Vector(SingleElement(Primitive(1))))
-  val pusher  = Plan.PushBundle(lit, "file1")
-  val pusher2 = Plan.PushBundle(lit, "file2")
+  val pusher  = PlanOp.PushBundle(lit, PlanFileReference(1))
+  val pusher2 = PlanOp.PushBundle(lit, PlanFileReference(2))
 
   val algorithm = ResourcePlan (
-    preplan = Plan.seq(pusher),
+    pre = PlanOp.seq(pusher),
     graph = Graph (
       Map(
         "1" -> Node(
-          ExistingService("foo"),
+          PlanNodeService.DockerContainer("foo", None, TestItems.algorithm1),
           resources = Map (
             "inout" -> ResourceType.Transformer
           )
@@ -34,11 +34,11 @@ class ResourcePlanSpec extends TestBase {
   )
 
   val multiOutput = ResourcePlan(
-    preplan = Plan.seq(pusher),
+    pre = PlanOp.seq(pusher),
     graph = Graph (
       Map(
         "1" -> Node(
-          ExistingService("learner"),
+          PlanNodeService.DockerContainer("learner", None, TestItems.learning1),
           resources = Map (
             "in1" -> ResourceType.Sink,
             "out1" -> ResourceType.Source,
@@ -57,11 +57,11 @@ class ResourcePlanSpec extends TestBase {
   )
 
   val multiInput = ResourcePlan (
-    preplan = Plan.seq(pusher),
+    pre = PlanOp.seq(pusher),
     graph = Graph (
       Map(
         "1" -> Node(
-          ExistingService("learner"),
+          PlanNodeService.DockerContainer("learner", None, TestItems.learning1),
           resources = Map (
             "in1" -> ResourceType.Sink,
             "in2" -> ResourceType.Sink,
@@ -80,11 +80,11 @@ class ResourcePlanSpec extends TestBase {
   )
 
   val dataset = ResourcePlan (
-    preplan = Plan.seq(pusher2),
+    pre = PlanOp.seq(pusher2),
     graph = Graph (
       Map (
         "2" -> Node(
-          ExistingService("bar"),
+          PlanNodeService.DockerContainer("bar", None, TestItems.dataSet1),
           resources = Map (
             "out" -> ResourceType.Source
           )
@@ -96,15 +96,15 @@ class ResourcePlanSpec extends TestBase {
     )
   )
 
-  "prependPlan" should "prepend a plan" in {
-    algorithm.prependPlan(pusher2) shouldBe algorithm.copy(
-      preplan = Plan.seq(pusher2, pusher)
+  "prependOp" should "prepend a plan" in {
+    algorithm.prependOp(pusher2) shouldBe algorithm.copy(
+      pre = PlanOp.seq(pusher2, pusher)
     )
-    algorithm.copy(preplan = Plan.Empty).prependPlan(pusher2) shouldBe algorithm.copy(
-      preplan = pusher2
+    algorithm.copy(pre = PlanOp.Empty).prependOp(pusher2) shouldBe algorithm.copy(
+      pre = pusher2
     )
-    algorithm.copy(preplan = Plan.seq(pusher, pusher2)).prependPlan(pusher2) shouldBe algorithm.copy(
-      preplan = Plan.seq(pusher2, pusher, pusher2)
+    algorithm.copy(pre = PlanOp.seq(pusher, pusher2)).prependOp(pusher2) shouldBe algorithm.copy(
+      pre = PlanOp.seq(pusher2, pusher, pusher2)
     )
   }
 
@@ -122,17 +122,17 @@ class ResourcePlanSpec extends TestBase {
 
   "application" should "apply an argument to a plan" in {
     algorithm.application(dataset) shouldBe ResourcePlan(
-      preplan = Plan.seq(pusher, pusher2),
+      pre = PlanOp.seq(pusher, pusher2),
       graph = Graph(
         Map (
           "1" -> Node(
-            ExistingService("foo"),
+            PlanNodeService.DockerContainer("foo", None, TestItems.algorithm1),
             resources = Map (
               "inout" -> ResourceType.Transformer
             )
           ),
           "2" -> Node(
-            ExistingService("bar"),
+            PlanNodeService.DockerContainer("bar", None, TestItems.dataSet1),
             resources = Map (
               "out" -> ResourceType.Source
             )
@@ -149,11 +149,11 @@ class ResourcePlanSpec extends TestBase {
 
   it should "work when not all inputs are used" in {
     multiInput.application(dataset) shouldBe ResourcePlan (
-      preplan = Plan.seq(pusher, pusher2),
+      pre = PlanOp.seq(pusher, pusher2),
       graph = Graph(
         Map (
           "1" -> Node(
-            ExistingService("learner"),
+            PlanNodeService.DockerContainer("learner", None, TestItems.learning1),
             resources = Map (
               "in1" -> ResourceType.Sink,
               "in2" -> ResourceType.Sink,
@@ -161,7 +161,7 @@ class ResourcePlanSpec extends TestBase {
             )
           ),
           "2" -> Node(
-            ExistingService("bar"),
+            PlanNodeService.DockerContainer("bar", None, TestItems.dataSet1),
             resources = Map (
               "out" -> ResourceType.Source
             )
@@ -178,11 +178,11 @@ class ResourcePlanSpec extends TestBase {
 
   it should "work when not all outputs are used" in {
     multiOutput.application(dataset) shouldBe ResourcePlan (
-      preplan = Plan.seq(pusher, pusher2),
+      pre = PlanOp.seq(pusher, pusher2),
       graph = Graph(
         Map (
           "1" -> Node(
-            ExistingService("learner"),
+            PlanNodeService.DockerContainer("learner", None, TestItems.learning1),
             resources = Map (
               "in1" -> ResourceType.Sink,
               "out1" -> ResourceType.Source,
@@ -190,7 +190,7 @@ class ResourcePlanSpec extends TestBase {
             )
           ),
           "2" -> Node(
-            ExistingService("bar"),
+            PlanNodeService.DockerContainer("bar", None, TestItems.dataSet1),
             resources = Map (
               "out" -> ResourceType.Source
             )

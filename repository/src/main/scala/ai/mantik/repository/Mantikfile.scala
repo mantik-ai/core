@@ -27,6 +27,9 @@ case class Mantikfile[T <: MantikDefinition](
   /** Returns Yaml code  */
   def toYaml: String = json.asYaml.spaces2
 
+  /** Returns Json code. */
+  def toJson: String = json.spaces2
+
   /** Returns a set of violations. */
   lazy val violations: Seq[String] = definition.violations
 }

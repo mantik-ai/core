@@ -1,6 +1,6 @@
 package ai.mantik.repository
 
-/** Identifies a [[MantikArtefact]]. */
+/** Identifies a [[MantikArtifact]]. */
 case class MantikId(
     name: String,
     version: Option[String] = None

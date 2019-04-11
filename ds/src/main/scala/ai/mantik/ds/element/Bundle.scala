@@ -69,7 +69,7 @@ case class Bundle(
 
   override def toString: String = {
     try {
-      render()
+      new StringPreviewGenerator().renderSingleLine(this)
     } catch {
       case e: Exception => "<Error Bundle>"
     }

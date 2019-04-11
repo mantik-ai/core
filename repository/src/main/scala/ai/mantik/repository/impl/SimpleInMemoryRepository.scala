@@ -1,6 +1,6 @@
 package ai.mantik.repository.impl
 
-import ai.mantik.repository.{ MantikArtefact, MantikId, Repository }
+import ai.mantik.repository.{ MantikArtifact, MantikId, Repository }
 import ai.mantik.repository.Errors
 
 import scala.collection.mutable
@@ -9,9 +9,9 @@ import scala.concurrent.Future
 class SimpleInMemoryRepository extends Repository {
 
   object lock
-  val artefacts = mutable.Map.empty[MantikId, MantikArtefact]
+  val artefacts = mutable.Map.empty[MantikId, MantikArtifact]
 
-  override def get(id: MantikId): Future[MantikArtefact] = {
+  override def get(id: MantikId): Future[MantikArtifact] = {
     lock.synchronized {
       artefacts.get(id) match {
         case Some(a) => Future.successful(a)
@@ -20,7 +20,7 @@ class SimpleInMemoryRepository extends Repository {
     }
   }
 
-  override def store(mantikArtefact: MantikArtefact): Future[Unit] = {
+  override def store(mantikArtefact: MantikArtifact): Future[Unit] = {
     lock.synchronized {
       Future.successful(
         artefacts.put(mantikArtefact.id, mantikArtefact)

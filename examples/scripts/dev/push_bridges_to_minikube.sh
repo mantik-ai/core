@@ -29,8 +29,8 @@ function transfer_image {
     rm $FILENAME
 }
 
-docker pull mdocker.rcxt.de/tf.savedmodel:master
-docker tag  mdocker.rcxt.de/tf.savedmodel:master tf.savedmodel
+$DOCKER_CALL pull mdocker.rcxt.de/tf.savedmodel:master
+$DOCKER_CALL tag  mdocker.rcxt.de/tf.savedmodel:master tf.savedmodel
 transfer_image tf.savedmodel
 
 

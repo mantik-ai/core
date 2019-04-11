@@ -4,9 +4,12 @@ import ai.mantik.executor.model.GraphAnalysis._
 
 import scala.annotation.tailrec
 
-/** Helper for analyzing the graph. */
+/**
+ * Helper for analyzing the graph.
+ * @tparam T the node service type.
+ */
 @throws[AnalyzerException]
-class GraphAnalysis(graph: Graph) {
+class GraphAnalysis[T](graph: Graph[T]) {
 
   graph.links.foreach {
     case Link(from, to) =>

@@ -1,6 +1,8 @@
 package ai.mantik.executor.model
 
+import io.circe.{ Decoder, Encoder, ObjectEncoder }
 import io.circe.generic.JsonCodec
+import io.circe.generic.semiauto
 
 /** References a Resource in the Graph. */
 @JsonCodec
@@ -42,9 +44,16 @@ object Link {
   def links(links: (NodeResourceRef, NodeResourceRef)*): Seq[Link] = links.map { case (from, to) => Link(from, to) }
 }
 
-/** Defines a Dataflow graph. */
-@JsonCodec
-case class Graph(
-    nodes: Map[String, Node],
+/**
+ * Defines a Dataflow graph.
+ * @param T The node data type.
+ */
+case class Graph[+T](
+    nodes: Map[String, Node[T]],
     links: Seq[Link] = Nil
 )
+
+object Graph {
+  implicit def graphEncoder[T: Encoder]: ObjectEncoder[Graph[T]] = semiauto.deriveEncoder[Graph[T]]
+  implicit def graphDecoder[T: Decoder]: Decoder[Graph[T]] = semiauto.deriveDecoder[Graph[T]]
+}
