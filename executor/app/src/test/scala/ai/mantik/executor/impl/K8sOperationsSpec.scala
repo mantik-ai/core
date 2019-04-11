@@ -2,13 +2,16 @@ package ai.mantik.executor.impl
 
 import java.time.Clock
 
-import ai.mantik.executor.integration.{ IntegrationTestBase, KubernetesTestBase }
+import ai.mantik.executor.integration.{IntegrationTestBase, KubernetesTestBase}
 import ai.mantik.executor.testutils.KubernetesIntegrationTest
-import play.api.libs.json.{ JsObject, Json }
+import org.scalatest.enablers.Emptiness
+import play.api.libs.json.{JsObject, Json}
 import skuber.Pod.Phase
 import skuber.api.client.Status
-import skuber.{ Container, K8SException, Pod, RestartPolicy }
+import skuber.batch.Job
+import skuber.{Container, K8SException, ListResource, ObjectMeta, Pod, RestartPolicy}
 import skuber.json.format._
+import skuber.json.batch.format._
 
 import scala.concurrent.Future
 
@@ -19,6 +22,28 @@ class K8sOperationsSpec extends KubernetesTestBase {
     implicit val clock = Clock.systemUTC()
     val k8sOperations = new K8sOperations(config, kubernetesClient)
   }
+
+  // A pod which will hang around
+  val longRunningPod = Pod.Spec(
+      containers = List(
+        Container(
+          name = KubernetesJobConverter.SidecarContainerName,
+          image = config.sideCar.image,
+          args = config.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
+        )
+      ),
+      restartPolicy = RestartPolicy.Never
+    )
+
+  val shortRunningPod = Pod.Spec (
+    containers = List (
+      Container (
+        name = "main",
+        image = "hello-world"
+      )
+    ),
+    restartPolicy = RestartPolicy.Never
+  )
 
   "ensureNamespace" should "work" in new Env {
     val myNamespace = config.namespacePrefix + "-ensure"
@@ -89,6 +114,69 @@ class K8sOperationsSpec extends KubernetesTestBase {
       val podAgain = await(namespaced.getOption[Pod](pod.name))
       podAgain.get.status.get.phase.get shouldBe Phase.Failed
     }
+  }
+
+  "getManagedNonFinishedJobs" should "return managed jobs" in new Env {
+    val ns = config.namespacePrefix + "managed"
+    await(k8sOperations.ensureNamespace(ns))
+    await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
+
+    val job1 = Job (
+      metadata = ObjectMeta(
+        name = "job1",
+        labels = Map(KubernetesJobConverter.TrackerIdLabel -> config.podTrackerId)
+      ),
+      spec = Some(Job.Spec(backoffLimit = Some(1)))
+    ).withTemplate(
+      Pod.Template.Spec(
+        spec = Some(longRunningPod)
+      )
+    )
+    val job2 = Job (
+      metadata = ObjectMeta(
+        name = "job2",
+        labels = Map(KubernetesJobConverter.TrackerIdLabel -> "other_id")
+      ),
+      spec = Some(Job.Spec(backoffLimit = Some(1)))
+    ).withTemplate(
+      Pod.Template.Spec(
+        spec = Some(longRunningPod)
+      )
+    )
+    await(k8sOperations.create(Some(ns), job2))
+    await(k8sOperations.create(Some(ns), job1))
+    eventually {
+      await(k8sOperations.getManagedNonFinishedJobs(Some(ns))).map(_.name) shouldBe List("job1")
+    }
+    eventually {
+      await(k8sOperations.getManagedNonFinishedJobsForAllNamespaces()).filter(_.namespace == ns).map(_.name) shouldBe List("job1")
+    }
+  }
+
+  it should "not return finished jobs" in new Env {
+    val ns = config.namespacePrefix + "managed2"
+    await(k8sOperations.ensureNamespace(ns))
+    await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
+
+    val job1 = Job (
+      metadata = ObjectMeta(
+        name = "job1",
+        labels = Map(
+          KubernetesJobConverter.JobIdLabel -> "job1",
+          KubernetesJobConverter.TrackerIdLabel -> config.podTrackerId
+        )
+      ),
+      spec = Some(Job.Spec(backoffLimit = Some(1)))
+    ).withTemplate(
+      Pod.Template.Spec(
+        spec = Some(shortRunningPod)
+      )
+    )
+    await(k8sOperations.create(Some(ns), job1))
+    eventually {
+      await(k8sOperations.getJobById(Some(ns), "job1")).get.status.get.succeeded.get shouldBe > (0)
+    }
+    await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
   }
 
   "errorHandling" should "execute a regular function" in new Env {

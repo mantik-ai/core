@@ -1,23 +1,20 @@
 package ai.mantik.executor.impl
 
-import java.time.{ Clock, Instant }
+import java.time.{Clock, Instant}
 import java.util.UUID
 
-import akka.actor.{ ActorSystem, Cancellable }
+import ai.mantik.executor.Errors.NotFoundException
+import ai.mantik.executor.impl.tracker.KubernetesTracker
+import ai.mantik.executor.model.{GraphAnalysis, Job, JobState, JobStatus}
+import ai.mantik.executor.{Config, Errors, Executor}
+import akka.actor.{ActorSystem, Cancellable}
 import com.typesafe.scalalogging.Logger
-import ai.mantik.executor.Errors.{ InternalException, NotFoundException }
-import ai.mantik.executor.impl.tracker.{ JobTracker, KubernetesTracker }
-import ai.mantik.executor.{ Config, Errors, Executor }
-import ai.mantik.executor.model.{ GraphAnalysis, Job, JobState, JobStatus }
-import skuber.{ ConfigMap, K8SException, LabelSelector, ListResource, Namespace, Pod }
-import skuber.api.client.KubernetesClient
-
-import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
-import skuber.json.format._
+import skuber.Pod
 import skuber.json.batch.format._
+import skuber.json.format._
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class ExecutorImpl(config: Config, ops: K8sOperations)(
     implicit
