@@ -212,19 +212,18 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
           ))
         )
       ).map { jobs =>
-        // Unfortunately there seem no way to filter for non-finished jobs directly, so we filter afterwards.
-        // at least not with Field Selectors (Error: field label "status.succeeded" not supported for batchv1.Job )
-        // This can become a bottleneck
-        
+          // Unfortunately there seem no way to filter for non-finished jobs directly, so we filter afterwards.
+          // at least not with Field Selectors (Error: field label "status.succeeded" not supported for batchv1.Job )
+          // This can become a bottleneck
 
-        jobs.items.filter { job =>
-          // Status/Condition/Type seems not acessable, however we can look for failed/successful runs
-          // as we only use jobs with one run.
-          val succeeded = job.status.flatMap(_.succeeded)
-          val failed = job.status.flatMap(_.failed)
-          succeeded.forall(_ == 0) && failed.forall(_ == 0)
+          jobs.items.filter { job =>
+            // Status/Condition/Type seems not acessable, however we can look for failed/successful runs
+            // as we only use jobs with one run.
+            val succeeded = job.status.flatMap(_.succeeded)
+            val failed = job.status.flatMap(_.failed)
+            succeeded.forall(_ == 0) && failed.forall(_ == 0)
+          }
         }
-      }
     }
   }
 

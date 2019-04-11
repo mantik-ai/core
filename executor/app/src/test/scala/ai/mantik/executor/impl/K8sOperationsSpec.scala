@@ -2,14 +2,14 @@ package ai.mantik.executor.impl
 
 import java.time.Clock
 
-import ai.mantik.executor.integration.{IntegrationTestBase, KubernetesTestBase}
+import ai.mantik.executor.integration.{ IntegrationTestBase, KubernetesTestBase }
 import ai.mantik.executor.testutils.KubernetesIntegrationTest
 import org.scalatest.enablers.Emptiness
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{ JsObject, Json }
 import skuber.Pod.Phase
 import skuber.api.client.Status
 import skuber.batch.Job
-import skuber.{Container, K8SException, ListResource, ObjectMeta, Pod, RestartPolicy}
+import skuber.{ Container, K8SException, ListResource, ObjectMeta, Pod, RestartPolicy }
 import skuber.json.format._
 import skuber.json.batch.format._
 
@@ -25,19 +25,19 @@ class K8sOperationsSpec extends KubernetesTestBase {
 
   // A pod which will hang around
   val longRunningPod = Pod.Spec(
-      containers = List(
-        Container(
-          name = KubernetesJobConverter.SidecarContainerName,
-          image = config.sideCar.image,
-          args = config.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
-        )
-      ),
-      restartPolicy = RestartPolicy.Never
-    )
+    containers = List(
+      Container(
+        name = KubernetesJobConverter.SidecarContainerName,
+        image = config.sideCar.image,
+        args = config.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
+      )
+    ),
+    restartPolicy = RestartPolicy.Never
+  )
 
-  val shortRunningPod = Pod.Spec (
-    containers = List (
-      Container (
+  val shortRunningPod = Pod.Spec(
+    containers = List(
+      Container(
         name = "main",
         image = "hello-world"
       )
@@ -121,28 +121,28 @@ class K8sOperationsSpec extends KubernetesTestBase {
     await(k8sOperations.ensureNamespace(ns))
     await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
 
-    val job1 = Job (
+    val job1 = Job(
       metadata = ObjectMeta(
         name = "job1",
         labels = Map(KubernetesJobConverter.TrackerIdLabel -> config.podTrackerId)
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))
     ).withTemplate(
-      Pod.Template.Spec(
-        spec = Some(longRunningPod)
+        Pod.Template.Spec(
+          spec = Some(longRunningPod)
+        )
       )
-    )
-    val job2 = Job (
+    val job2 = Job(
       metadata = ObjectMeta(
         name = "job2",
         labels = Map(KubernetesJobConverter.TrackerIdLabel -> "other_id")
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))
     ).withTemplate(
-      Pod.Template.Spec(
-        spec = Some(longRunningPod)
+        Pod.Template.Spec(
+          spec = Some(longRunningPod)
+        )
       )
-    )
     await(k8sOperations.create(Some(ns), job2))
     await(k8sOperations.create(Some(ns), job1))
     eventually {
@@ -158,7 +158,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
     await(k8sOperations.ensureNamespace(ns))
     await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
 
-    val job1 = Job (
+    val job1 = Job(
       metadata = ObjectMeta(
         name = "job1",
         labels = Map(
@@ -168,13 +168,13 @@ class K8sOperationsSpec extends KubernetesTestBase {
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))
     ).withTemplate(
-      Pod.Template.Spec(
-        spec = Some(shortRunningPod)
+        Pod.Template.Spec(
+          spec = Some(shortRunningPod)
+        )
       )
-    )
     await(k8sOperations.create(Some(ns), job1))
     eventually {
-      await(k8sOperations.getJobById(Some(ns), "job1")).get.status.get.succeeded.get shouldBe > (0)
+      await(k8sOperations.getJobById(Some(ns), "job1")).get.status.get.succeeded.get shouldBe >(0)
     }
     await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
   }
