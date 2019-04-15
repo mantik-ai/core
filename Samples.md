@@ -19,4 +19,12 @@ Environment
   `SONATYPE_MANTIK_PASSWORD`: Your password for mdocker.rcxt.de
 
   The environment variables need to be present during executor run.
-    
+
+
+Running in Microk8s
+-------------------    
+
+- You need to call Executor with a `SKUBER_URL=http://localhost:8080` environment variable
+- If the containers can't talk to each other, please have a look at `microk8s.inspect`.
+  If it complaints, that you should run `sudo iptables -P FORWARD ACCEPT`, do so.
+  

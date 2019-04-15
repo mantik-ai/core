@@ -2,8 +2,9 @@ package ai.mantik.executor.integration
 
 import ai.mantik.executor.impl.KubernetesJobConverter
 import ai.mantik.executor.model._
-import ai.mantik.executor.model.docker.Container
+import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.executor.testutils.KubernetesIntegrationTest
+import com.typesafe.config.ConfigFactory
 import skuber.{ LabelSelector, ListResource, Pod }
 import skuber.json.format._
 
@@ -38,22 +39,24 @@ class HelloWorldSpec extends IntegrationTestBase {
 }
 
 object HelloWorldSpec {
+  val dockerConfig = DockerConfig.parseFromConfig(ConfigFactory.load().getConfig("docker"))
+
   val job = Job(
     "helloworld",
     graph = Graph(
       nodes = Map(
         "A" -> Node.source(
           ContainerService(
-            main = Container(
+            main = dockerConfig.resolveContainer(Container(
               image = "executor_sample_source"
-            )
+            ))
           )
         ),
         "B" -> Node.sink(
           ContainerService(
-            main = Container(
+            main = dockerConfig.resolveContainer(Container(
               image = "executor_sample_sink"
-            )
+            ))
           )
         )
       ),
