@@ -1,15 +1,17 @@
 package ai.mantik.executor.impl
 
+import java.net.InetAddress
 import java.time.{ Clock, Instant }
 import java.util.UUID
 
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.impl.tracker.KubernetesTracker
-import ai.mantik.executor.model.{ GraphAnalysis, Job, JobState, JobStatus }
+import ai.mantik.executor.model.{ GraphAnalysis, Job, JobState, JobStatus, PublishServiceRequest, PublishServiceResponse }
 import ai.mantik.executor.{ Config, Errors, Executor }
 import akka.actor.{ ActorSystem, Cancellable }
+import com.google.common.net.InetAddresses
 import com.typesafe.scalalogging.Logger
-import skuber.Pod
+import skuber.{ Endpoints, ObjectMeta, Pod, Service }
 import skuber.json.batch.format._
 import skuber.json.format._
 
@@ -90,6 +92,72 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
             state = JobState.Pending
           )
         }
+    }
+  }
+
+  override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
+    // IP Adresses need an endpoint, while DNS names can be done via ExternalName
+    // (See https://kubernetes.io/docs/concepts/services-networking/service/#externalname )
+
+    val isIpAddress = InetAddresses.isInetAddress(publishServiceRequest.externalName)
+
+    if (!isIpAddress && publishServiceRequest.externalPort != publishServiceRequest.port) {
+      return Future.failed(new Errors.BadRequestException("Can't bind a service name with a different port number to kubernetes"))
+    }
+
+    val namespace = namespaceForIsolationSpace(publishServiceRequest.isolationSpace)
+
+    val service = Service(
+      metadata = ObjectMeta(
+        name = publishServiceRequest.serviceName,
+        namespace = namespace
+      ),
+      spec = Some(Service.Spec(
+        ports = List(
+          Service.Port(
+            port = publishServiceRequest.port,
+            name = s"port${publishServiceRequest.port}" // create unique name
+          )
+        ),
+        _type = if (isIpAddress) Service.Type.ClusterIP else Service.Type.ExternalName,
+        externalName = if (isIpAddress) "" else publishServiceRequest.externalName
+      ))
+    )
+
+    val endpoints = if (isIpAddress) Some(Endpoints(
+      metadata = ObjectMeta(
+        name = publishServiceRequest.serviceName,
+        namespace = namespace
+      ),
+      subsets = List(
+        Endpoints.Subset(
+          addresses = List(
+            Endpoints.Address(
+              ip = publishServiceRequest.externalName
+            )
+          ),
+          notReadyAddresses = None,
+          ports = List(
+            Endpoints.Port(
+              port = publishServiceRequest.externalPort,
+              name = Some(s"port${publishServiceRequest.port}")
+            )
+          )
+        )
+      )
+    ))
+    else None
+
+    for {
+      _ <- ops.ensureNamespace(namespace)
+      service <- ops.createOrReplace(Some(namespace), service)
+      _ <- endpoints.map(ops.createOrReplace(Some(namespace), _)).getOrElse(Future.successful(()))
+    } yield {
+      logger.info(s"Ensured service ${namespace}/${publishServiceRequest.serviceName}")
+      val name = s"${service.name}.${service.namespace}.svc.cluster.local:${publishServiceRequest.port}"
+      PublishServiceResponse(
+        name
+      )
     }
   }
 

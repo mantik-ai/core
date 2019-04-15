@@ -146,6 +146,9 @@ lazy val executorApp = (project in file("executor/app"))
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+      
+      // Guava
+      "com.google.guava" % "guava" % "27.1-jre",
     ),
     // Disable automatic exection of integration tests
     testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l", "ai.mantik.executor.testutils.KubernetesIntegrationTest"),

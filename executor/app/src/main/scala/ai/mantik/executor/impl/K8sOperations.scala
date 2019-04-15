@@ -69,6 +69,21 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
     }
   }
 
+  /** Creates or replaces  */
+  def createOrReplace[O <: ObjectResource](namespace: Option[String], obj: O)(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[O] = {
+    val client = namespacedClient(namespace)
+    errorHandling(client.create(obj)).recoverWith {
+      case e: K8SException if e.status.code.contains(409) =>
+        // We could also try to use the Patch API, but this is very tricky to do it in a generic way
+        logger.info(s"${obj.kind} ${obj.name} already exists, deleting...")
+        for {
+          _ <- errorHandling(client.delete[O](obj.name))
+          _ = logger.info(s"Recreating ${obj.kind} ${obj.name}")
+          r <- errorHandling(client.create(obj))
+        } yield r
+    }
+  }
+
   /** Delete an object in Kubernetes. */
   def delete[O <: ObjectResource](namespace: Option[String], name: String, gracePeriodSeconds: Int = -1)(implicit rd: ResourceDefinition[O]): Future[Unit] = {
     errorHandling {

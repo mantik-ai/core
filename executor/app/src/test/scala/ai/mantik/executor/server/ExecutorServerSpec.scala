@@ -6,7 +6,7 @@ import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.executor.integration.HelloWorldSpec
 import ai.mantik.executor.{ Config, Errors, Executor }
-import ai.mantik.executor.model.{ Job, JobState, JobStatus }
+import ai.mantik.executor.model.{ Job, JobState, JobStatus, PublishServiceRequest, PublishServiceResponse }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 
 import scala.concurrent.Future
@@ -18,13 +18,29 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
     port = 15001
   )
 
+  private val publishCall = PublishServiceRequest(
+    "ns1",
+    "service1",
+    1234,
+    "192.168.1.1",
+    4456
+  )
+
   trait Env {
+    var receivedPublishRequest: PublishServiceRequest = _
+
     lazy val executorMock = new Executor {
+
       override def schedule(job: Job): Future[String] = Future.successful("1234")
 
       override def status(isolationSpace: String, id: String): Future[JobStatus] = Future.successful(JobStatus(JobState.Running))
 
       override def logs(isolationSpace: String, id: String): Future[String] = Future.successful("Logs")
+
+      override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
+        receivedPublishRequest = publishServiceRequest
+        Future.successful(PublishServiceResponse("foo:1234"))
+      }
     }
     lazy val server = new ExecutorServer(config, executorMock)
     lazy val client = new ExecutorClient("http://localhost:15001")
@@ -54,6 +70,8 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       await(client.logs("123", "345")) shouldBe "Logs"
       await(client.schedule(HelloWorldSpec.job)) shouldBe "1234"
       await(client.status("space", "1234")) shouldBe JobStatus(JobState.Running)
+      await(client.publishService(publishCall)).name shouldBe "foo:1234"
+      receivedPublishRequest shouldBe publishCall
     }
   }
 
@@ -72,6 +90,10 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       override def logs(isolationSpace: String, id: String): Future[String] = {
         Future.failed(notFound)
       }
+
+      override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
+        Future.failed(internal)
+      }
     }
 
     server.start()
@@ -85,6 +107,9 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       // also internal error, even if exception is not registerd
       intercept[Errors.InternalException] {
         await(client.status("space", "1234")) shouldBe JobStatus(JobState.Running)
+      }
+      intercept[Errors.InternalException] {
+        await(client.publishService(publishCall))
       }
     }
   }

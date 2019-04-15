@@ -5,16 +5,18 @@ import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.{ PlanFileReference, PlanNodeService }
 import ai.mantik.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.testutils.TestBase
+import akka.http.scaladsl.model.Uri
 
 class JobGraphConverterSpec extends TestBase {
 
   val files = ExecutionOpenFiles(
+    remoteFileServiceUri = Uri("http://file-service:1234"),
     readFiles = Map(
-      PlanFileReference(0) -> FileGetResult("file0", "url0", "resource0", None),
-      PlanFileReference(1) -> FileGetResult("file1", "url1", "resource1", None)
+      PlanFileReference(0) -> FileGetResult("file0", "files/file0", "resource0", None),
+      PlanFileReference(1) -> FileGetResult("file1", "files/file1", "resource1", None)
     ),
     writeFiles = Map(
-      PlanFileReference(2) -> FileStorageResult("file2", "url2", "resource2")
+      PlanFileReference(2) -> FileStorageResult("file2", "files/file2", "resource2")
     )
   )
 
@@ -52,16 +54,16 @@ class JobGraphConverterSpec extends TestBase {
       graph = Graph(
         nodes = Map(
           "0" -> Node(
-            ExistingService("url0"),
+            ExistingService("http://file-service:1234"),
             Map(
-              "resource0" -> ResourceType.Source
+              "files/file0" -> ResourceType.Source
             )
           ),
           "1" -> Node(
             ContainerService(
               Container("image1", parameters = Nil),
               dataProvider = Some(
-                DataProvider(url = Some("url1resource1"), mantikfile = Some(TestItems.algorithm1.toJson), directory = Some("dir1"))
+                DataProvider(url = Some("http://file-service:1234/files/file1"), mantikfile = Some(TestItems.algorithm1.toJson), directory = Some("dir1"))
               )
             ),
             Map(
@@ -69,15 +71,15 @@ class JobGraphConverterSpec extends TestBase {
             )
           ),
           "2" -> Node(
-            ExistingService("url2"),
+            ExistingService("http://file-service:1234"),
             Map(
-              "resource2" -> ResourceType.Sink
+              "files/file2" -> ResourceType.Sink
             )
           )
         ),
         links = Link.links(
-          NodeResourceRef("0", "resource0") -> NodeResourceRef("1", "apply"),
-          NodeResourceRef("1", "apply") -> NodeResourceRef("2", "resource2")
+          NodeResourceRef("0", "files/file0") -> NodeResourceRef("1", "apply"),
+          NodeResourceRef("1", "apply") -> NodeResourceRef("2", "files/file2")
         )
       ),
       contentType = Some("my-content-type")

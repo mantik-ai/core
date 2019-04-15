@@ -7,7 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.stream.Materializer
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
-import ai.mantik.executor.model.{ Job, JobStatus }
+import ai.mantik.executor.model.{ Job, JobStatus, PublishServiceRequest, PublishServiceResponse }
 import ai.mantik.executor.{ Errors, Executor }
 import org.slf4j.LoggerFactory
 
@@ -36,6 +36,14 @@ class ExecutorClient(url: Uri)(implicit actorSystem: ActorSystem, mat: Materiali
   override def logs(isolationSpace: String, id: String): Future[String] = {
     val req = buildRequest(HttpMethods.GET, "logs", Seq("isolationSpace" -> isolationSpace, "id" -> id))
     executeRequest[String](req)
+  }
+
+  override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
+    val req = buildRequest(HttpMethods.POST, "publishService")
+    for {
+      entity <- Marshal(publishServiceRequest).to[RequestEntity]
+      response <- executeRequest[PublishServiceResponse](req.withEntity(entity))
+    } yield response
   }
 
   private def buildRequest(method: HttpMethod, path: String, queryArgs: Seq[(String, String)] = Nil): HttpRequest = {

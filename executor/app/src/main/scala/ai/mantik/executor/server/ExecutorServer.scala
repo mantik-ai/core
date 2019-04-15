@@ -10,7 +10,7 @@ import akka.stream.Materializer
 import com.typesafe.scalalogging.Logger
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import ai.mantik.executor.{ Config, Errors, Executor }
-import ai.mantik.executor.model.Job
+import ai.mantik.executor.model.{ Job, PublishServiceRequest }
 
 import scala.concurrent.{ Await, ExecutionContext }
 import scala.util.control.NonFatal
@@ -55,6 +55,15 @@ class ExecutorServer(config: Config, executor: Executor)(implicit actorSystem: A
           parameters('isolationSpace, 'id) { (isolationSpace, jobId) =>
             onSuccess(executor.logs(isolationSpace, jobId)) { logs =>
               complete(logs)
+            }
+          }
+        }
+      },
+      path("publishService") {
+        post {
+          entity(as[PublishServiceRequest]) { request =>
+            onSuccess(executor.publishService(request)) { response =>
+              complete(response)
             }
           }
         }
