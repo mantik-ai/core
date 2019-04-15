@@ -9,14 +9,18 @@ import ai.mantik.planner._
 import ai.mantik.planner.impl.FutureHelper
 import ai.mantik.repository.{ FileRepository, MantikArtifact, Repository }
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.Uri
 import akka.stream.Materializer
+import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import io.circe.syntax._
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 /** Responsible for executing plans. */
 private[impl] class PlanExecutorImpl(
+    config: Config,
     fileRepository: FileRepository,
     repository: Repository, executor: Executor,
     isolationSpace: String,
@@ -27,8 +31,27 @@ private[impl] class PlanExecutorImpl(
   logger.info(s"Initializing PlanExecutor")
 
   def execute(plan: Plan): Future[Any] = {
-    FutureHelper.time(logger, "Open Files")(ExecutionOpenFiles.openFiles(fileRepository, plan.files)).flatMap { implicit fileContext =>
-      executeOp(plan.op)
+    for {
+      fileServiceUri <- prepareKubernetesFileServiceResult
+      openFiles <- FutureHelper.time(logger, "Open Files")(ExecutionOpenFiles.openFiles(fileServiceUri, fileRepository, plan.files))
+      result <- executeOp(plan.op)(openFiles)
+    } yield result
+  }
+
+  private lazy val prepareKubernetesFileServiceResult = FutureHelper.time(logger, "Prepare File Service") {
+    val kubernetesName = config.getString("mantik.core.fileServiceKubernetesName")
+    val address = fileRepository.address()
+    val request = PublishServiceRequest(
+      isolationSpace = isolationSpace,
+      serviceName = kubernetesName,
+      port = address.getPort,
+      externalName = address.getAddress.getHostAddress,
+      externalPort = address.getPort
+    )
+    logger.debug(s"Preparing FileService ${request.asJson}")
+    executor.publishService(request).map { response =>
+      logger.info(s"FileService is published with ${response.name}")
+      Uri(s"http://${response.name}") // is of format domain:port
     }
   }
 

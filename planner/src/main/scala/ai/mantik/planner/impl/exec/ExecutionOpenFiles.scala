@@ -5,11 +5,18 @@ import ai.mantik.planner.impl.FutureHelper
 import ai.mantik.planner.{ PlanFile, PlanFileReference }
 import ai.mantik.repository.FileRepository
 import ai.mantik.repository.FileRepository.{ FileGetResult, FileStorageResult }
+import akka.http.scaladsl.model.Uri
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-/** Handles Open Files during Plan Execution, part of [[PlanExecutorImpl]]. */
+/**
+ * Handles Open Files during Plan Execution, part of [[PlanExecutorImpl]].
+ * @param remoteFileServiceUri remote URI for the FileService
+ * @param readFiles files for reading
+ * @param writeFiles files for writing
+ */
 private[impl] case class ExecutionOpenFiles(
+    remoteFileServiceUri: Uri,
     private val readFiles: Map[PlanFileReference, FileGetResult] = Map.empty,
     private val writeFiles: Map[PlanFileReference, FileStorageResult] = Map.empty
 ) {
@@ -38,9 +45,9 @@ object ExecutionOpenFiles {
    * Open multiple files.
    * Note: files are opened sequential, as they may refer to each other.
    */
-  def openFiles(fileRepository: FileRepository, files: List[PlanFile])(implicit ec: ExecutionContext): Future[ExecutionOpenFiles] = {
+  def openFiles(removeFileServiceUri: Uri, fileRepository: FileRepository, files: List[PlanFile])(implicit ec: ExecutionContext): Future[ExecutionOpenFiles] = {
     // we open them sequentially as they can refer to each other...
-    FutureHelper.afterEachOtherStateful(files, ExecutionOpenFiles()) {
+    FutureHelper.afterEachOtherStateful(files, ExecutionOpenFiles(removeFileServiceUri)) {
       case (state, file) =>
         openFile(fileRepository, state, file)
     }

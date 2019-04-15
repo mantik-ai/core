@@ -3,6 +3,7 @@ package ai.mantik.planner.impl.exec
 import ai.mantik.executor.model.{Container, ContainerService, DataProvider, ExistingService, Graph, Job, Link, Node, NodeResourceRef, NodeService, ResourceType}
 import ai.mantik.planner.PlanNodeService
 import ai.mantik.planner.PlanNodeService.DockerContainer
+import akka.http.scaladsl.model.Uri
 
 /**
   * Helper for converting the graph (in [[ai.mantik.planner.PlanOp.RunGraph]])
@@ -76,7 +77,7 @@ private [impl] class JobGraphConverter (isolationSpace: String, files: Execution
   def convertDockerContainer(d: PlanNodeService.DockerContainer): ContainerService = {
     val dataUrl = d.data.map { dataFile =>
       val fileGet = files.resolveFileRead(dataFile)
-      fileGet.executorClusterUrl + fileGet.resource
+      Uri(fileGet.path).resolvedAgainst(files.remoteFileServiceUri).toString()
     }
     val dataProvider = DataProvider(
       url = dataUrl,
@@ -93,16 +94,16 @@ private [impl] class JobGraphConverter (isolationSpace: String, files: Execution
   /** Converts a file node to that way the executor expects. Note: the resource name changes and links must be updated. */
   def convertFileNode(node: Node[PlanNodeService.File]): Node[ExistingService] = {
     require(node.resources.size == 1, "This only works for single-resource nodes yet")
-    val (repoUrl, resourceName, resourceType) = node.resources.head._2 match {
+    val (resourceName, resourceType) = node.resources.head._2 match {
       case rt@ (ResourceType.Sink | ResourceType.Transformer) =>
         val writeFileInstance = files.resolveFileWrite(node.service.fileReference)
-        (writeFileInstance.executorClusterUrl, writeFileInstance.resource, rt)
+        (writeFileInstance.path, rt)
       case ResourceType.Source =>
         val readFileInstance = files.resolveFileRead(node.service.fileReference)
-        (readFileInstance.executorClusterUrl, readFileInstance.resource, ResourceType.Source)
+        (readFileInstance.path, ResourceType.Source)
     }
     Node(
-      ExistingService(repoUrl),
+      ExistingService(files.remoteFileServiceUri.toString()),
       Map(
         resourceName -> resourceType
       )

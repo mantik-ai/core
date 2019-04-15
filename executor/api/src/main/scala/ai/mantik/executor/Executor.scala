@@ -1,6 +1,6 @@
 package ai.mantik.executor
 
-import ai.mantik.executor.model.{ Job, JobStatus }
+import ai.mantik.executor.model.{ Job, JobStatus, PublishServiceRequest, PublishServiceResponse }
 
 import scala.concurrent.Future
 
@@ -15,4 +15,10 @@ trait Executor {
 
   /** Returns the logs of a job. */
   def logs(isolationSpace: String, id: String): Future[String]
+
+  /**
+   * Publish a external service to the cluster.
+   * Note: this only for simplifying local deployments.
+   */
+  def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse]
 }

@@ -1,10 +1,11 @@
 package ai.mantik.repository.impl
 
+import java.net.{ Inet4Address, InetAddress, InetSocketAddress, NetworkInterface }
 import java.nio.file.{ Files, Path }
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ HttpEntity, MediaType, MediaTypes }
+import akka.http.scaladsl.model.{ HttpEntity, MediaType, MediaTypes, Uri }
 import akka.http.scaladsl.server.Directives._
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ FileIO, Sink, Source }
@@ -17,6 +18,7 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.util.Success
 import ai.mantik.repository.Errors
+import akka.io.Inet
 import com.typesafe.config.Config
 
 /** Simple local file service, for development, no security at all. */
@@ -31,8 +33,6 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
   private val subConfig = config.getConfig("mantik.repository.fileRepository")
   val port = subConfig.getInt("port")
   val interface = subConfig.getString("interface")
-  val externalServiceName = subConfig.getString("externalServiceName")
-  val externalUrl = s"http://${externalServiceName}/files/"
 
   case class FileInfo(temporary: Boolean, written: Option[Long] = None, contentType: Option[String] = None)
 
@@ -137,7 +137,7 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
   }
 
   val bindResult = Await.result(Http().bindAndHandle(route, interface, port), 60.seconds)
-  logger.info(s"Listening on ${port}, external ${externalUrl}, do not forget to add it to the cluster")
+  logger.info(s"Listening on ${interface}:${boundPort}, external ${address}")
 
   override def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult] = {
     lock.synchronized {
@@ -146,7 +146,7 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
       files(id) = FileInfo(temporary = temporary)
       Future.successful(
         FileRepository.FileStorageResult(
-          id, externalUrl, resource = id
+          id, makePath(id), resource = id
         )
       )
     }
@@ -159,7 +159,7 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
       case Some(file) =>
         Future.successful(
           FileRepository.FileGetResult(
-            id, externalUrl, resource = id, contentType = file.contentType
+            id, makePath(id), resource = id, contentType = file.contentType
           )
         )
     }
@@ -192,8 +192,8 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
     }
   }
 
-  private def makeExternalName(id: String): String = {
-    externalUrl + "/" + id
+  private def makePath(id: String): String = {
+    "files/" + id
   }
 
   private def localFileName(id: String): Path = {
@@ -211,5 +211,27 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
 
   def boundPort: Int = {
     bindResult.localAddress.getPort
+  }
+
+  override def address(): InetSocketAddress = _address
+
+  private lazy val _address = figureOutAddress()
+
+  private def figureOutAddress(): InetSocketAddress = {
+    // This is tricky: https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
+    // We can't know which one is available from kubernetes
+    // hopefully the first non-loopback is it.
+    import scala.collection.JavaConverters._
+    val addresses = (for {
+      networkInterface <- NetworkInterface.getNetworkInterfaces.asScala
+      if !networkInterface.isLoopback
+      address <- networkInterface.getInetAddresses.asScala
+    } yield address).toVector
+    // We prefer ipv4
+    val address = addresses.collectFirst {
+      case ipv4: Inet4Address => ipv4
+    }.orElse(addresses.headOption).getOrElse(InetAddress.getLocalHost)
+    logger.info(s"Choosing ${address} from ${addresses}")
+    new InetSocketAddress(address, boundPort)
   }
 }

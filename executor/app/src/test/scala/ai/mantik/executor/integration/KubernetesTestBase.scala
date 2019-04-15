@@ -49,6 +49,7 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
 
   private def deleteKubernetesContent(): Unit = {
     val pendingNamespaces = await(_kubernetesClient.getNamespaceNames).filter(_.startsWith(config.namespacePrefix))
+
     pendingNamespaces.foreach { namespace =>
       logger.info(s"Deleting namespace ${namespace}")
       val namespaced = _kubernetesClient.usingNamespace(namespace)
@@ -56,7 +57,8 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
       await(namespaced.deleteAll[ListResource[Pod]]())
       await(namespaced.deleteAll[ListResource[Job]]())
       await(_kubernetesClient.delete[Namespace](namespace, gracePeriodSeconds = 0))
-      logger.info(s"Waiting for final deletion...")
+    }
+    pendingNamespaces.foreach { namespace =>
       waitForNamespaceDeletion(namespace)
     }
   }

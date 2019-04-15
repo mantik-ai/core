@@ -47,7 +47,7 @@ class SimpleTempFileRepositorySpec extends TestBase with AkkaSupport {
 
   it should "allow file upload and download" in {
     val s = await(repo.requestFileStorage(true))
-    s.executorClusterUrl shouldBe repo.externalUrl
+    s.path shouldBe s"files/${s.fileId}"
     s.resource shouldBe s.fileId
 
     val uri = Uri(s.fileId).resolvedAgainst(rootUri)
@@ -82,6 +82,12 @@ class SimpleTempFileRepositorySpec extends TestBase with AkkaSupport {
     val source = await(repo.loadFile(s.fileId))
     val bytes = collectByteSource(source)
     bytes shouldBe ByteString(testBytes)
+  }
+
+  it should "know it's address" in {
+    val address = repo.address()
+    address.getPort shouldBe repo.boundPort
+    address.getAddress.getHostAddress shouldNot startWith ("127.0.") // No loopback devices
   }
 
   // TODO More tests

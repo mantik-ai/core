@@ -1,5 +1,8 @@
 package ai.mantik.repository
 
+import java.net.InetSocketAddress
+
+import akka.http.scaladsl.model.Uri
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 
@@ -22,6 +25,9 @@ trait FileRepository {
 
   /** Request retrieval of a file. */
   def loadFile(id: String): Future[Source[ByteString, _]]
+
+  /** Returns the address of the repository (must be reachable from the executor). */
+  def address(): InetSocketAddress
 }
 
 object FileRepository {
@@ -29,8 +35,8 @@ object FileRepository {
   /** Result of file storage request. */
   case class FileStorageResult(
       fileId: String,
-      // External URL of the Cluster.
-      executorClusterUrl: String,
+      // Relative Path under which the file is available from the server
+      path: String,
       // Name of the file resource
       resource: String
   )
@@ -38,7 +44,8 @@ object FileRepository {
   /** Result of get file request. */
   case class FileGetResult(
       fileId: String,
-      executorClusterUrl: String,
+      // Relative Path under which the file is available from the server
+      path: String,
       resource: String,
       contentType: Option[String]
   )

@@ -51,6 +51,8 @@ object ZipUtils {
 
     output.async
 
+    val myTestCase = new RuntimeException()
+
     val result = Flow.fromSinkAndSourceMat(input, output) {
       case (inputStream, outputStream) =>
         Future {

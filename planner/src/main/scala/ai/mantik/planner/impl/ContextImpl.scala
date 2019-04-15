@@ -116,7 +116,7 @@ object ContextImpl {
       actorSystem.terminate()
     }
     val executor: Executor = new ExecutorClient(executorUrl)
-    val planExecutor = new PlanExecutorImpl(fileRepo, repository, executor, "local", "application/x-mantik-bundle")
+    val planExecutor = new PlanExecutorImpl(config, fileRepo, repository, executor, "local", "application/x-mantik-bundle")
     new ContextImpl(repository, fileRepo, planner, planExecutor, shutdownMethod)
   }
 }
