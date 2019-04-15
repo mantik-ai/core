@@ -44,6 +44,7 @@ func (s *HttpGetSource) accept() {
 		conn, err := s.listener.Accept()
 		if err != nil {
 			log.Warnf("Error on accepting TCP Connection %s", err.Error())
+			return
 		}
 		requestId := s.nextRequestId
 		s.nextRequestId++

@@ -172,7 +172,7 @@ lazy val executorApp = (project in file("executor/app"))
   .settings(
     mainClass in Compile := Some("ai.mantik.executor.Main"),
     packageName := "executor",
-    dockerExposedPorts := Seq(8080),
+    dockerExposedPorts := Seq(8085),
     dockerBaseImage := "openjdk:8u191-jre-alpine3.9",
     daemonUserUid in Docker := None,
     daemonUser in Docker := "daemon",
