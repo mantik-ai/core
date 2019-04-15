@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.planner._
-import ai.mantik.planner.plugins.Plugins
+import ai.mantik.planner.bridge.Bridges
 import cats.data.State
 
 /**
@@ -12,9 +12,9 @@ import cats.data.State
  *
  * This way it's pure functional and easier to test.
  */
-private[impl] class PlannerImpl(formats: Plugins) extends Planner {
+private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
 
-  val elements = new PlannerElements(formats)
+  val elements = new PlannerElements(bridges)
 
   override def convert[T](action: Action[T]): Plan = {
     val (planningState, planOp) = convertSingleAction(action).run(PlanningState()).value

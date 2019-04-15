@@ -1,4 +1,5 @@
 package ai.mantik.executor.model
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.testutils.TestBase
 import io.circe.Json
 import io.circe.syntax._

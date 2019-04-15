@@ -3,6 +3,7 @@ package ai.mantik.planner.impl
 import ai.mantik.ds.FundamentalType.Int32
 import ai.mantik.ds.element.{Bundle, Primitive, SingleElement}
 import ai.mantik.executor.model._
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner.{PlanFileReference, PlanNodeService, PlanOp}
 import ai.mantik.testutils.TestBase
 
@@ -18,7 +19,7 @@ class ResourcePlanSpec extends TestBase {
     graph = Graph (
       Map(
         "1" -> Node(
-          PlanNodeService.DockerContainer("foo", None, TestItems.algorithm1),
+          PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
           resources = Map (
             "inout" -> ResourceType.Transformer
           )
@@ -38,7 +39,7 @@ class ResourcePlanSpec extends TestBase {
     graph = Graph (
       Map(
         "1" -> Node(
-          PlanNodeService.DockerContainer("learner", None, TestItems.learning1),
+          PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
           resources = Map (
             "in1" -> ResourceType.Sink,
             "out1" -> ResourceType.Source,
@@ -61,7 +62,7 @@ class ResourcePlanSpec extends TestBase {
     graph = Graph (
       Map(
         "1" -> Node(
-          PlanNodeService.DockerContainer("learner", None, TestItems.learning1),
+          PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
           resources = Map (
             "in1" -> ResourceType.Sink,
             "in2" -> ResourceType.Sink,
@@ -84,7 +85,7 @@ class ResourcePlanSpec extends TestBase {
     graph = Graph (
       Map (
         "2" -> Node(
-          PlanNodeService.DockerContainer("bar", None, TestItems.dataSet1),
+          PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
           resources = Map (
             "out" -> ResourceType.Source
           )
@@ -126,13 +127,13 @@ class ResourcePlanSpec extends TestBase {
       graph = Graph(
         Map (
           "1" -> Node(
-            PlanNodeService.DockerContainer("foo", None, TestItems.algorithm1),
+            PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
             resources = Map (
               "inout" -> ResourceType.Transformer
             )
           ),
           "2" -> Node(
-            PlanNodeService.DockerContainer("bar", None, TestItems.dataSet1),
+            PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
             resources = Map (
               "out" -> ResourceType.Source
             )
@@ -153,7 +154,7 @@ class ResourcePlanSpec extends TestBase {
       graph = Graph(
         Map (
           "1" -> Node(
-            PlanNodeService.DockerContainer("learner", None, TestItems.learning1),
+            PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
             resources = Map (
               "in1" -> ResourceType.Sink,
               "in2" -> ResourceType.Sink,
@@ -161,7 +162,7 @@ class ResourcePlanSpec extends TestBase {
             )
           ),
           "2" -> Node(
-            PlanNodeService.DockerContainer("bar", None, TestItems.dataSet1),
+            PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
             resources = Map (
               "out" -> ResourceType.Source
             )
@@ -182,7 +183,7 @@ class ResourcePlanSpec extends TestBase {
       graph = Graph(
         Map (
           "1" -> Node(
-            PlanNodeService.DockerContainer("learner", None, TestItems.learning1),
+            PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
             resources = Map (
               "in1" -> ResourceType.Sink,
               "out1" -> ResourceType.Source,
@@ -190,7 +191,7 @@ class ResourcePlanSpec extends TestBase {
             )
           ),
           "2" -> Node(
-            PlanNodeService.DockerContainer("bar", None, TestItems.dataSet1),
+            PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
             resources = Map (
               "out" -> ResourceType.Source
             )

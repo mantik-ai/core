@@ -8,8 +8,8 @@ import ai.mantik.ds.helper.ZipUtils
 import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
+import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.PlanExecutorImpl
-import ai.mantik.planner.plugins.Plugins
 import ai.mantik.repository._
 import ai.mantik.repository.impl.{ SimpleInMemoryRepository, SimpleTempFileRepository }
 import akka.actor.ActorSystem
@@ -110,13 +110,20 @@ object ContextImpl {
 
     val repository = new SimpleInMemoryRepository()
     val fileRepo: FileRepository = new SimpleTempFileRepository(config)
-    val formatPlugins = Plugins.default
-    val planner = new PlannerImpl(formatPlugins)
+    val bridges: Bridges = Bridges.loadFromConfig(config)
+    val planner = new PlannerImpl(bridges)
     val shutdownMethod: () => Unit = () => {
       actorSystem.terminate()
     }
     val executor: Executor = new ExecutorClient(executorUrl)
-    val planExecutor = new PlanExecutorImpl(config, fileRepo, repository, executor, "local", "application/x-mantik-bundle")
+    val planExecutor = new PlanExecutorImpl(
+      config,
+      fileRepo,
+      repository,
+      executor,
+      "local",
+      "application/x-mantik-bundle",
+      bridges.dockerConfig)
     new ContextImpl(repository, fileRepo, planner, planExecutor, shutdownMethod)
   }
 }

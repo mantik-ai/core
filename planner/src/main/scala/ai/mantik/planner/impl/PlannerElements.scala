@@ -3,9 +3,8 @@ package ai.mantik.planner.impl
 import ai.mantik
 import ai.mantik.executor.model._
 import ai.mantik.planner
-import ai.mantik.planner.plugins.Plugins
 import ai.mantik.planner._
-import ai.mantik.repository.FileRepository.{ FileGetResult, FileStorageResult }
+import ai.mantik.planner.bridge.Bridges
 import ai.mantik.repository._
 import cats.data.State
 
@@ -13,7 +12,7 @@ import cats.data.State
  * Raw Elements in Plan Construction.
  * Class should have no side effects (except nodeIdGenerator).
  */
-class PlannerElements(formats: Plugins) {
+class PlannerElements(bridges: Bridges) {
 
   /** Converts a plan to a job. */
   def sourcePlanToJob(sourcePlan: ResourcePlan): PlanOp = {
@@ -69,10 +68,10 @@ class PlannerElements(formats: Plugins) {
    * @param file the file, if one is present.
    */
   def dataSet(mantikfile: Mantikfile[DataSetDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
-    val plugin = formats.pluginForFormat(mantikfile.definition.format).getOrElse {
+    val bridge = bridges.formatBridge(mantikfile.definition.format).getOrElse {
       throw new Planner.FormatNotSupportedException(mantikfile.definition.format)
     }
-    plugin.clusterReaderContainerImage(mantikfile) match {
+    bridge.container match {
       case None =>
         // directly pipe data
         val fileToUse = file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
@@ -84,15 +83,14 @@ class PlannerElements(formats: Plugins) {
 
   /** Generates the plan for an algorithm which runtime data may come from a file. */
   def algorithm(mantikfile: Mantikfile[AlgorithmDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
-    val plugin = formats.pluginForAlgorithm(mantikfile.definition.stack).getOrElse {
+    val bridge = bridges.algorithmBridge(mantikfile.definition.stack).getOrElse {
       throw new Planner.AlgorithmStackNotSupportedException(mantikfile.definition.stack)
     }
-    val imageName = plugin.transformationContainerImage
     val applyResource = "apply"
 
     val node = Node(
       PlanNodeService.DockerContainer(
-        imageName, data = file, mantikfile
+        bridge.container, data = file, mantikfile
       ),
       Map(
         applyResource -> ResourceType.Transformer
@@ -115,10 +113,9 @@ class PlannerElements(formats: Plugins) {
 
   /** Generates the plan for a trainable algorithm. */
   def trainableAlgorithm(mantikfile: Mantikfile[TrainableAlgorithmDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
-    val plugin = formats.pluginForTrainableAlgorithm(mantikfile.definition.stack).getOrElse {
+    val bridge = bridges.trainableAlgorithmBridge(mantikfile.definition.stack).getOrElse {
       throw new Planner.AlgorithmStackNotSupportedException(mantikfile.definition.stack)
     }
-    val image = plugin.trainableContainerImage
 
     val trainResource = "train"
     val statsResource = "stats"
@@ -126,7 +123,7 @@ class PlannerElements(formats: Plugins) {
 
     val node = Node(
       PlanNodeService.DockerContainer(
-        image, data = file, mantikfile = mantikfile
+        bridge.container, data = file, mantikfile = mantikfile
       ),
       Map(
         trainResource -> ResourceType.Sink,

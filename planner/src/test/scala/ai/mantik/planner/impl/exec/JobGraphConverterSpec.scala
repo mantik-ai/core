@@ -1,6 +1,7 @@
 package ai.mantik.planner.impl.exec
 
-import ai.mantik.executor.model.{ Container, ContainerService, DataProvider, ExecutorModelDefaults, ExistingService, Graph, Job, Link, Node, NodeResourceRef, ResourceType }
+import ai.mantik.executor.model.docker.{ Container, DockerLogin }
+import ai.mantik.executor.model.{ ContainerService, DataProvider, ExecutorModelDefaults, ExistingService, Graph, Job, Link, Node, NodeResourceRef, ResourceType }
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.{ PlanFileReference, PlanNodeService }
 import ai.mantik.repository.FileRepository.{ FileGetResult, FileStorageResult }
@@ -29,7 +30,7 @@ class JobGraphConverterSpec extends TestBase {
         )
       ),
       "1" -> Node(
-        PlanNodeService.DockerContainer("image1", Some(PlanFileReference(1)), TestItems.algorithm1),
+        PlanNodeService.DockerContainer(Container("image1"), Some(PlanFileReference(1)), TestItems.algorithm1),
         resources = Map(
           "apply" -> ResourceType.Transformer
         )
@@ -48,7 +49,9 @@ class JobGraphConverterSpec extends TestBase {
   )
 
   "translateGraphIntoJob" should "work" in {
-    val got = new JobGraphConverter("space1", files, "my-content-type").translateGraphIntoJob(inputGraph)
+    val got = new JobGraphConverter("space1", files, "my-content-type", Seq(
+      DockerLogin("repo1", "user1", "password1")
+    )).translateGraphIntoJob(inputGraph)
     got shouldBe Job(
       isolationSpace = "space1",
       graph = Graph(
@@ -82,7 +85,10 @@ class JobGraphConverterSpec extends TestBase {
           NodeResourceRef("1", "apply") -> NodeResourceRef("2", "files/file2")
         )
       ),
-      contentType = Some("my-content-type")
+      contentType = Some("my-content-type"),
+      extraLogins = Seq(
+        DockerLogin("repo1", "user1", "password1")
+      )
     )
   }
 }

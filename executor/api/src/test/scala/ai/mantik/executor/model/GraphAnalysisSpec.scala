@@ -1,5 +1,6 @@
 package ai.mantik.executor.model
 
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.testutils.TestBase
 
 class GraphAnalysisSpec extends TestBase {

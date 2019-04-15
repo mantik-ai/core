@@ -14,12 +14,15 @@ class KubernetesNamer(id: String, superPrefix: String = "job-") {
 
   val configName = prefix + "config"
 
+  val pullSecretName = prefix + "pullsecret"
+
   private val podNames = mutable.Map.empty[String, String]
   private val usedNames = mutable.Set.empty[String]
   private object lock
 
   usedNames.add(jobName)
   usedNames.add(configName)
+  usedNames.add(pullSecretName)
 
   def podName(nodeName: String): String = {
     lock.synchronized {

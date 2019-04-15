@@ -2,7 +2,6 @@ package ai.mantik.planner
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
-import ai.mantik.planner.plugins.NaturalFormatPlugin
 import ai.mantik.repository.{ DataSetDefinition, Mantikfile }
 
 /** Represents a DataSet. */
@@ -30,9 +29,12 @@ object DataSet {
   private[planner] def natural(source: Source, dataType: DataType): DataSet = {
     DataSet(source, Mantikfile.pure(
       DataSetDefinition(
-        format = NaturalFormatPlugin.format,
+        format = NaturalFormatName,
         `type` = dataType
       )
     ))
   }
+
+  /** Name of the always-existing natural format. */
+  val NaturalFormatName = "natural"
 }
