@@ -1,8 +1,12 @@
 package ai.mantik.executor.impl
 
+import java.nio.charset.StandardCharsets
+
 import ai.mantik.executor.Config
 import ai.mantik.executor.model._
+import ai.mantik.executor.model.docker.{ Container, DockerConfig, DockerLogin }
 import ai.mantik.testutils.TestBase
+import io.circe.Json
 import skuber.RestartPolicy
 import io.circe.syntax._
 
@@ -11,8 +15,14 @@ class KubernetesJobConverterSpec extends TestBase {
   val config = Config().copy(
     sideCar = Container("my_sidecar", Seq("sidecar_arg")),
     coordinator = Container("my_coordinator", Seq("coordinator_arg")),
+    payloadPreparer = Container("payload_preparer"),
     namespacePrefix = "systemtest-",
-    podTrackerId = "mantik-executor"
+    podTrackerId = "mantik-executor",
+    dockerConfig = DockerConfig().copy(
+      logins = Seq(
+        DockerLogin("repo1", "user1", "password1")
+      )
+    )
   )
 
   val simpleAbJob = Job(
@@ -38,7 +48,10 @@ class KubernetesJobConverterSpec extends TestBase {
         NodeResourceRef("A", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("B", ExecutorModelDefaults.SinkResource)
       )
     ),
-    contentType = Some("application/my-content-type")
+    contentType = Some("application/my-content-type"),
+    extraLogins = Seq(
+      DockerLogin("repo2", "user2", "password2")
+    )
   )
 
   trait SimpleAbEnv {
@@ -132,5 +145,25 @@ class KubernetesJobConverterSpec extends TestBase {
     withClue("there must be an fsGroup element") {
       spec.securityContext.flatMap(_.fsGroup) shouldBe Some(1000)
     }
+  }
+
+  "pullSecrets" should "convert pull screts" in new SimpleAbEnv {
+    val secrets = converter.pullSecret.get
+    secrets.name shouldBe "job-job1-pullsecret"
+    secrets.metadata.labels.get("jobId") shouldBe Some("job1")
+    val value = secrets.data.ensuring(_.size == 1).get(".dockerconfigjson").get
+    val parsed = io.circe.parser.parse(new String(value, StandardCharsets.UTF_8)).right.get
+    parsed shouldBe Json.obj(
+      "auths" -> Json.obj(
+        "repo1" -> Json.obj(
+          "username" -> Json.fromString("user1"),
+          "password" -> Json.fromString("password1")
+        ),
+        "repo2" -> Json.obj(
+          "username" -> Json.fromString("user2"),
+          "password" -> Json.fromString("password2")
+        )
+      )
+    )
   }
 }

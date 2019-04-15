@@ -1,9 +1,9 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.executor.model._
-import ai.mantik.planner.plugins.Plugins
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner._
 import ai.mantik.repository._
 import ai.mantik.testutils.TestBase
@@ -13,7 +13,7 @@ class PlannerImplSpec extends TestBase {
 
   private trait Env {
     val isolationSpace = "test"
-    val planner = new PlannerImpl(TestItems.testPlugins)
+    val planner = new PlannerImpl(TestItems.testBridges)
 
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
       f.run(PlanningState()).value
@@ -108,7 +108,7 @@ class PlannerImplSpec extends TestBase {
             )
           ),
           "2" -> Node (
-            PlanNodeService.DockerContainer("algorithm1_image", data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
+            PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
             resources = Map (
               ExecutorModelDefaults.TransformationResource -> ResourceType.Transformer
             )
@@ -168,7 +168,7 @@ class PlannerImplSpec extends TestBase {
               )
             ),
             "2" -> Node (
-              PlanNodeService.DockerContainer("algorithm1_image", data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
+              PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
               resources = Map (
                 ExecutorModelDefaults.TransformationResource -> ResourceType.Transformer
               )
@@ -252,7 +252,7 @@ class PlannerImplSpec extends TestBase {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer("training1_image", data = Some(PlanFileReference(1)), mantikfile = TestItems.learning1), resources = Map(
+            PlanNodeService.DockerContainer(Container("training1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.learning1), resources = Map(
               "train" -> ResourceType.Sink,
               "stats" -> ResourceType.Source,
               "result" -> ResourceType.Source
@@ -278,7 +278,7 @@ class PlannerImplSpec extends TestBase {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer("algorithm1_image", data = Some(PlanFileReference(1)), mantikfile = TestItems.algorithm1), resources = Map(
+            PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.algorithm1), resources = Map(
               "apply" -> ResourceType.Transformer
             )
           )

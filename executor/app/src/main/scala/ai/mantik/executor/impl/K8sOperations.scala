@@ -69,6 +69,17 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
     }
   }
 
+  /** Like create, but ignores argument if it's None. */
+  def maybeCreate[O <: ObjectResource](namespace: Option[String], maybeObj: Option[O])(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[Option[O]] = {
+    maybeObj.map { obj =>
+      create(namespace, obj).map {
+        Some(_)
+      }
+    }.getOrElse(
+      Future.successful(None)
+    )
+  }
+
   /** Creates or replaces  */
   def createOrReplace[O <: ObjectResource](namespace: Option[String], obj: O)(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[O] = {
     val client = namespacedClient(namespace)

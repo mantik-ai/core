@@ -2,6 +2,7 @@ package ai.mantik.executor.integration
 
 import ai.mantik.executor.impl.KubernetesJobConverter
 import ai.mantik.executor.model._
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.testutils.KubernetesIntegrationTest
 import skuber.{ LabelSelector, ListResource, Pod }
 import skuber.json.format._

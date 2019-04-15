@@ -5,7 +5,8 @@ import java.util.Base64
 
 import ai.mantik.executor.Config
 import ai.mantik.executor.model._
-import skuber.{ ConfigMap, Container, EnvFromSource, ObjectMeta, Pod, PodSecurityContext, RestartPolicy, Volume }
+import io.circe.Json
+import skuber.{ ConfigMap, Container, EnvFromSource, LocalObjectReference, ObjectMeta, Pod, PodSecurityContext, RestartPolicy, Secret, Volume }
 import io.circe.syntax._
 
 object KubernetesJobConverter {
@@ -61,6 +62,38 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
     )
   }
 
+  /** Returns docker secrets for getting images, if needed. */
+  lazy val pullSecret: Option[Secret] = {
+    val allLogins = (config.dockerConfig.logins ++ job.extraLogins).distinct
+    if (allLogins.isEmpty) {
+      None
+    } else {
+      // Doc: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      val dockerConfigFile = Json.obj(
+        "auths" -> Json.obj(
+          allLogins.map { login =>
+            login.repository -> Json.obj(
+              "username" -> Json.fromString(login.username),
+              "password" -> Json.fromString(login.password)
+            )
+          }: _*
+        )
+      )
+      Some(
+        Secret(
+          metadata = ObjectMeta(
+            name = namer.pullSecretName,
+            labels = defaultLabels
+          ),
+          data = Map(
+            ".dockerconfigjson" -> dockerConfigFile.spaces2.getBytes(StandardCharsets.UTF_8)
+          ),
+          `type` = "kubernetes.io/dockerconfigjson"
+        )
+      )
+    }
+  }
+
   def coordinatorPlan(podIpAdresses: Map[String, String]): CoordinatorPlan = {
     val nodes = job.graph.nodes.map {
       case (nodeName, node) =>
@@ -79,7 +112,7 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
     )
   }
 
-  def convertCoodinator: skuber.batch.Job = {
+  def convertCoordinator: skuber.batch.Job = {
     skuber.batch.Job(
       metadata = ObjectMeta(
         name = namer.jobName,
@@ -124,7 +157,10 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
                       )
                     )
                   ),
-                  restartPolicy = RestartPolicy.Never
+                  restartPolicy = RestartPolicy.Never,
+                  imagePullSecrets = pullSecret.toList.map { secret =>
+                    LocalObjectReference(secret.name)
+                  }
                 )
               )
             )
@@ -171,6 +207,9 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
         List(
           Volume("data", Volume.EmptyDir())
         )
+      },
+      imagePullSecrets = pullSecret.toList.map { secret =>
+        LocalObjectReference(secret.name)
       }
     )
     Pod(

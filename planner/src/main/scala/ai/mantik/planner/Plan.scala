@@ -3,6 +3,7 @@ package ai.mantik.planner
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.model.Graph
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.repository.{ MantikDefinition, MantikId, Mantikfile }
 
 /**
@@ -38,7 +39,7 @@ object PlanNodeService {
   case class File(fileReference: PlanFileReference) extends PlanNodeService
 
   /** Represents a docker container in the graph. */
-  case class DockerContainer(image: String, data: Option[PlanFileReference] = None, mantikfile: Mantikfile[_ <: MantikDefinition]) extends PlanNodeService
+  case class DockerContainer(container: Container, data: Option[PlanFileReference] = None, mantikfile: Mantikfile[_ <: MantikDefinition]) extends PlanNodeService
 }
 
 /** An operation inside a plan. */

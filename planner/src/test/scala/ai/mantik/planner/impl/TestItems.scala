@@ -2,7 +2,8 @@ package ai.mantik.planner.impl
 
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.funcational.SimpleFunction
-import ai.mantik.planner.plugins.{ AlgorithmPlugin, NaturalFormatPlugin, Plugins, TrainableAlgorithmPlugin }
+import ai.mantik.executor.model.docker.{ Container, DockerConfig }
+import ai.mantik.planner.bridge.{ AlgorithmBridge, BridgeList, Bridges, FormatBridge, TrainableAlgorithmBridge }
 import ai.mantik.repository.{ AlgorithmDefinition, DataSetDefinition, MantikDefinition, Mantikfile, TrainableAlgorithmDefinition }
 
 object TestItems {
@@ -37,18 +38,14 @@ object TestItems {
     )
   )
 
-  val algoPlugin1 = new AlgorithmPlugin {
-    override def stack: String = "algorithm_stack1"
-    override def transformationContainerImage: String = "algorithm1_image"
-  }
-  val learningPlugin = new TrainableAlgorithmPlugin {
-    override def stack: String = "training_stack1"
-    override def trainableContainerImage: String = "training1_image"
-  }
+  val algoPlugin1 = AlgorithmBridge("algorithm_stack1", Container("algorithm1_image"))
+  val learningPlugin = TrainableAlgorithmBridge("training_stack1", Container("training1_image"))
+  val naturalBridge = FormatBridge("natural", None)
 
-  val testPlugins = new Plugins(
-    List(NaturalFormatPlugin),
-    List(algoPlugin1),
-    List(learningPlugin)
+  val testBridges = BridgeList(
+    Seq(algoPlugin1),
+    Seq(learningPlugin),
+    Seq(naturalBridge),
+    DockerConfig()
   )
 }

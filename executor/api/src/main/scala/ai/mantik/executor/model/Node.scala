@@ -1,15 +1,9 @@
 package ai.mantik.executor.model
 
+import ai.mantik.executor.model.docker.Container
 import io.circe.{ Decoder, Encoder, ObjectEncoder }
 import io.circe.generic.JsonCodec
 import io.circe.generic.semiauto
-
-/** Defines how a container is going to be started. */
-@JsonCodec
-case class Container(
-    image: String,
-    parameters: Seq[String] = Nil
-)
 
 /** Something which provides the Node functionality, either a container or an existing service. */
 @JsonCodec

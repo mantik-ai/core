@@ -1,10 +1,9 @@
 package ai.mantik.executor
 
+import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import com.typesafe.config.{ ConfigFactory, Config => TypesafeConfig }
-import ai.mantik.executor.model.Container
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
-import scala.collection.JavaConverters._
 
 /**
  * Configuration for the execution.
@@ -21,6 +20,7 @@ import scala.collection.JavaConverters._
  * @param interface interface to listen on
  * @param port port to listen on
  * @param kubernetesRetryTimes how often something is retried if kubernetes asks for.
+ * @param dockerConfig docker configuration
  */
 case class Config(
     sideCar: Container,
@@ -34,7 +34,8 @@ case class Config(
     defaultRetryInterval: FiniteDuration,
     interface: String,
     port: Int,
-    kubernetesRetryTimes: Int
+    kubernetesRetryTimes: Int,
+    dockerConfig: DockerConfig
 )
 
 object Config {
@@ -43,10 +44,11 @@ object Config {
 
   /** Load settings from Config. */
   def fromTypesafeConfig(c: TypesafeConfig): Config = {
+    val dockerConfig = DockerConfig.parseFromConfig(c.getObject("docker").toConfig)
     Config(
-      sideCar = parseContainer(c.getConfig("containers.sideCar")),
-      coordinator = parseContainer(c.getConfig("containers.coordinator")),
-      payloadPreparer = parseContainer(c.getConfig("containers.payloadPreparer")),
+      sideCar = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(c.getConfig("containers.sideCar"))),
+      coordinator = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(c.getConfig("containers.coordinator"))),
+      payloadPreparer = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(c.getConfig("containers.payloadPreparer"))),
       namespacePrefix = c.getString("kubernetes.behavior.namespacePrefix"),
       podTrackerId = c.getString("app.podTrackerId"),
       podPullImageTimeout = c.getDuration("kubernetes.behavior.podPullImageTimeout"),
@@ -55,14 +57,8 @@ object Config {
       defaultRetryInterval = c.getDuration("kubernetes.behavior.retryInterval"),
       kubernetesRetryTimes = c.getInt("kubernetes.behavior.retryTimes"),
       interface = c.getString("app.server.interface"),
-      port = c.getInt("app.server.port")
-    )
-  }
-
-  private def parseContainer(c: TypesafeConfig): Container = {
-    Container(
-      image = c.getString("image"),
-      parameters = c.getStringList("parameters").asScala
+      port = c.getInt("app.server.port"),
+      dockerConfig = dockerConfig
     )
   }
 

@@ -1,6 +1,7 @@
 package ai.mantik.planner.impl.exec
 
-import ai.mantik.executor.model.{Container, ContainerService, DataProvider, ExistingService, Graph, Job, Link, Node, NodeResourceRef, NodeService, ResourceType}
+import ai.mantik.executor.model.docker.DockerLogin
+import ai.mantik.executor.model.{ContainerService, DataProvider, ExistingService, Graph, Job, Link, Node, NodeResourceRef, NodeService, ResourceType}
 import ai.mantik.planner.PlanNodeService
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import akka.http.scaladsl.model.Uri
@@ -11,7 +12,7 @@ import akka.http.scaladsl.model.Uri
   *
   * This adapter shouldn't be too complex, otherwise we should think about changing the executor more.
   * */
-private [impl] class JobGraphConverter (isolationSpace: String, files: ExecutionOpenFiles, contentType: String) {
+private [impl] class JobGraphConverter (isolationSpace: String, files: ExecutionOpenFiles, contentType: String, extraLogins: Seq[DockerLogin]) {
 
   /** Translate a graph like the planner creates to a Executor Job. */
   def translateGraphIntoJob(graph: Graph[PlanNodeService]): Job = {
@@ -30,7 +31,8 @@ private [impl] class JobGraphConverter (isolationSpace: String, files: Execution
     Job(
       isolationSpace,
       updatedGraph,
-      contentType = Some(contentType)
+      contentType = Some(contentType),
+      extraLogins = extraLogins
     )
   }
 
@@ -85,7 +87,7 @@ private [impl] class JobGraphConverter (isolationSpace: String, files: Execution
       directory = d.mantikfile.definition.directory
     )
     val containerService = ContainerService(
-      main = Container(d.image),
+      main = d.container,
       dataProvider = Some(dataProvider),
     )
     containerService

@@ -31,31 +31,32 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
     val jobId = UUID.randomUUID().toString
     val namespace = namespaceForIsolationSpace(job.isolationSpace)
     logger.info(s"Creating job ${jobId} in namespace ${namespace}...")
-    ops.ensureNamespace(namespace).flatMap { namespacedClient =>
-      logger.debug(s"Namespace for job ${job.isolationSpace}/${jobId}: ${namespace} ensured...")
-      val converter = try {
-        new KubernetesJobConverter(config, job, jobId)
-      } catch {
-        case e: GraphAnalysis.AnalyzerException =>
-          logger.warn(s"Graph analysis failed", e)
-          throw new Errors.BadRequestException(s"Graph analysis failed: e: ${e.getMessage}")
-      }
 
+    val converter = try {
+      new KubernetesJobConverter(config, job, jobId)
+    } catch {
+      case e: GraphAnalysis.AnalyzerException =>
+        logger.warn(s"Graph analysis failed", e)
+        return Future.failed(new Errors.BadRequestException(s"Graph analysis failed: e: ${e.getMessage}"))
+    }
+
+    val maybePullSecret = converter.pullSecret
+
+    for {
+      _ <- ops.ensureNamespace(namespace)
+      _ <- ops.maybeCreate(Some(namespace), maybePullSecret)
       // Pods are not reachable by it's name but by their IP Address, however we must first start them to get their IP Address.
-      ops.startPodsAndGetIpAdresses(Some(namespace), converter.pods).flatMap { podsWithIpAdresses =>
-        logger.debug(s"Created pods for ${jobId}: ${podsWithIpAdresses.values}")
-
-        val configMap = converter.configuration(podsWithIpAdresses)
-        ops.create(Some(namespace), configMap).flatMap { configMap =>
-          logger.debug(s"Created ConfigMap for ${jobId}")
-          val job = converter.convertCoodinator
-          ops.create(Some(namespace), job).map { job =>
-            logger.info(s"Created ${podsWithIpAdresses.size} pods, config map and job ${job.name}")
-            tracker.subscribe(job)
-            jobId
-          }
-        }
-      }
+      podsWithIpAdresses <- ops.startPodsAndGetIpAdresses(Some(namespace), converter.pods)
+      _ = logger.debug(s"Created pods for ${jobId}: ${podsWithIpAdresses.values}")
+      configMap = converter.configuration(podsWithIpAdresses)
+      _ <- ops.create(Some(namespace), configMap)
+      _ = logger.debug(s"Created ConfigMap for ${jobId}")
+      job = converter.convertCoordinator
+      _ <- ops.create(Some(namespace), job)
+    } yield {
+      logger.info(s"Created ${podsWithIpAdresses.size} pods, config map and job ${job.name}")
+      tracker.subscribe(job)
+      jobId
     }
   }
 
