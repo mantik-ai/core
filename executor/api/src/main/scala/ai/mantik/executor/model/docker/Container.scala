@@ -8,7 +8,19 @@ import io.circe.generic.JsonCodec
 case class Container(
     image: String,
     parameters: Seq[String] = Nil
-)
+) {
+
+  /** Returns the docker image tag. */
+  def imageTag: Option[String] = {
+    val slashIdx = image.indexOf('/')
+    val tagIdx = image.indexOf(':', slashIdx + 1)
+    if (tagIdx > 0) {
+      Some(image.substring(tagIdx + 1))
+    } else {
+      None
+    }
+  }
+}
 
 object Container {
 

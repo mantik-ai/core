@@ -7,8 +7,9 @@ type Node struct {
 }
 
 type NodeResourceRef struct {
-	Node     string `json:"node"`
-	Resource string `json:"resource"`
+	Node        string  `json:"node"`
+	Resource    string  `json:"resource"`
+	ContentType *string `json:"contentType"`
 }
 
 func (n *NodeResourceRef) Str() string {
@@ -19,7 +20,6 @@ func (n *NodeResourceRef) Str() string {
 type Flow []NodeResourceRef
 
 type Plan struct {
-	Nodes       map[string]Node `json:"nodes"`
-	Flows       []Flow          `json:"flows"`
-	ContentType *string
+	Nodes map[string]Node `json:"nodes"`
+	Flows []Flow          `json:"flows"`
 }

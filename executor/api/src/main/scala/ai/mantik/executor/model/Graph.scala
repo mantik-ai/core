@@ -51,7 +51,19 @@ object Link {
 case class Graph[+T](
     nodes: Map[String, Node[T]],
     links: Seq[Link] = Nil
-)
+) {
+
+  /**
+   * Resolves a node resource reference.
+   * @return the node and the resource, None if not found.
+   */
+  def resolveReference(ref: NodeResourceRef): Option[(Node[T], NodeResource)] = {
+    for {
+      node <- nodes.get(ref.node)
+      resource <- node.resources.get(ref.resource)
+    } yield (node, resource)
+  }
+}
 
 object Graph {
   implicit def graphEncoder[T: Encoder]: ObjectEncoder[Graph[T]] = semiauto.deriveEncoder[Graph[T]]

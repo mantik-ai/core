@@ -21,7 +21,7 @@ class ResourcePlanSpec extends TestBase {
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
           resources = Map (
-            "inout" -> ResourceType.Transformer
+            "inout" -> NodeResource(ResourceType.Transformer)
           )
         )
       )
@@ -41,9 +41,9 @@ class ResourcePlanSpec extends TestBase {
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
           resources = Map (
-            "in1" -> ResourceType.Sink,
-            "out1" -> ResourceType.Source,
-            "out2" -> ResourceType.Source
+            "in1" -> NodeResource(ResourceType.Sink),
+            "out1" -> NodeResource(ResourceType.Source),
+            "out2" -> NodeResource(ResourceType.Source)
           )
         )
       )
@@ -64,9 +64,9 @@ class ResourcePlanSpec extends TestBase {
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
           resources = Map (
-            "in1" -> ResourceType.Sink,
-            "in2" -> ResourceType.Sink,
-            "out" -> ResourceType.Source
+            "in1" -> NodeResource(ResourceType.Sink),
+            "in2" -> NodeResource(ResourceType.Sink),
+            "out" -> NodeResource(ResourceType.Source)
           )
         )
       )
@@ -87,7 +87,7 @@ class ResourcePlanSpec extends TestBase {
         "2" -> Node(
           PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
           resources = Map (
-            "out" -> ResourceType.Source
+            "out" -> NodeResource(ResourceType.Source)
           )
         )
       )
@@ -129,13 +129,13 @@ class ResourcePlanSpec extends TestBase {
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
             resources = Map (
-              "inout" -> ResourceType.Transformer
+              "inout" -> NodeResource(ResourceType.Transformer)
             )
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
             resources = Map (
-              "out" -> ResourceType.Source
+              "out" -> NodeResource(ResourceType.Source)
             )
           )
         ),
@@ -156,15 +156,15 @@ class ResourcePlanSpec extends TestBase {
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
             resources = Map (
-              "in1" -> ResourceType.Sink,
-              "in2" -> ResourceType.Sink,
-              "out" -> ResourceType.Source
+              "in1" -> NodeResource(ResourceType.Sink),
+              "in2" -> NodeResource(ResourceType.Sink),
+              "out" -> NodeResource(ResourceType.Source)
             )
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
             resources = Map (
-              "out" -> ResourceType.Source
+              "out" -> NodeResource(ResourceType.Source)
             )
           )
         ),
@@ -185,15 +185,15 @@ class ResourcePlanSpec extends TestBase {
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
             resources = Map (
-              "in1" -> ResourceType.Sink,
-              "out1" -> ResourceType.Source,
-              "out2" -> ResourceType.Source
+              "in1" -> NodeResource(ResourceType.Sink),
+              "out1" -> NodeResource(ResourceType.Source),
+              "out2" -> NodeResource(ResourceType.Source)
             )
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
             resources = Map (
-              "out" -> ResourceType.Source
+              "out" -> NodeResource(ResourceType.Source)
             )
           )
         ),

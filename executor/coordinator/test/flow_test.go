@@ -36,8 +36,8 @@ func TestSimpleABCopy(t *testing.T) {
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
-				coordinator.NodeResourceRef{"A", "Source"},
-				coordinator.NodeResourceRef{"B", "Sink"},
+				coordinator.NodeResourceRef{"A", "Source", nil},
+				coordinator.NodeResourceRef{"B", "Sink", nil},
 			},
 		},
 	}
@@ -88,8 +88,8 @@ func TestQuitRequested(t *testing.T) {
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
-				coordinator.NodeResourceRef{"A", "Source"},
-				coordinator.NodeResourceRef{"B", "Sink"},
+				coordinator.NodeResourceRef{"A", "Source", nil},
+				coordinator.NodeResourceRef{"B", "Sink", nil},
 			},
 		},
 	}
@@ -174,16 +174,16 @@ func TestLearnFlow(t *testing.T) {
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
-				coordinator.NodeResourceRef{"in", "Source"},
-				coordinator.NodeResourceRef{"learn", "In"},
+				coordinator.NodeResourceRef{"in", "Source", nil},
+				coordinator.NodeResourceRef{"learn", "In", nil},
 			},
 			coordinator.Flow{
-				coordinator.NodeResourceRef{"learn", "State"},
-				coordinator.NodeResourceRef{"state", "StateSink"},
+				coordinator.NodeResourceRef{"learn", "State", nil},
+				coordinator.NodeResourceRef{"state", "StateSink", nil},
 			},
 			coordinator.Flow{
-				coordinator.NodeResourceRef{"learn", "Result"},
-				coordinator.NodeResourceRef{"result", "ResultSink"},
+				coordinator.NodeResourceRef{"learn", "Result", nil},
+				coordinator.NodeResourceRef{"result", "ResultSink", nil},
 			},
 		},
 	}
@@ -226,8 +226,14 @@ func TestLearnFlow(t *testing.T) {
 func TestCustomMimeType(t *testing.T) {
 	testData := []byte("Hello World")
 	abc := CreateAbcFlowNodes(testData)
-	contentType := "application/x-msgpack"
-	abc.plan.ContentType = &contentType
+
+	contentType1 := "input1"
+	contentType2 := "input2"
+	contentType3 := "input3"
+
+	abc.plan.Flows[0][0].ContentType = &contentType1
+	abc.plan.Flows[0][1].ContentType = &contentType2
+	abc.plan.Flows[0][2].ContentType = &contentType3
 
 	c, err := coordinator.CreateCoordinator("localhost", randomPortSettings, &abc.plan)
 	assert.NoError(t, err)
@@ -238,9 +244,9 @@ func TestCustomMimeType(t *testing.T) {
 	assert.Equal(t, 1, abc.sourceServer.Requests)
 	assert.Equal(t, 1, abc.transformServer.Requests)
 	assert.Equal(t, 1, abc.sinkServer.Requests)
-	assert.Equal(t, contentType, abc.sourceServer.MimeTypes[0])
-	assert.Equal(t, contentType, abc.transformServer.MimeTypes[0])
-	assert.Equal(t, contentType, abc.sinkServer.MimeTypes[0])
+	assert.Equal(t, contentType1, abc.sourceServer.MimeTypes[0])
+	assert.Equal(t, contentType2, abc.transformServer.MimeTypes[0])
+	assert.Equal(t, contentType3, abc.sinkServer.MimeTypes[0])
 	assert.Equal(t, testData, abc.sinkServer.RequestData[0])
 	assert.Equal(t, testData, abc.transformServer.RequestData[0])
 	abc.waitUntilSideCarEnd()
@@ -271,8 +277,8 @@ func TestCoordinatorWaitSideCars(t *testing.T) {
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
-				coordinator.NodeResourceRef{"A", "Source"},
-				coordinator.NodeResourceRef{"B", "Sink"},
+				coordinator.NodeResourceRef{"A", "Source", nil},
+				coordinator.NodeResourceRef{"B", "Sink", nil},
 			},
 		},
 	}

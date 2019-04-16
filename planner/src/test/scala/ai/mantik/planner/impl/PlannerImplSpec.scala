@@ -8,6 +8,7 @@ import ai.mantik.planner._
 import ai.mantik.repository._
 import ai.mantik.testutils.TestBase
 import cats.data.State
+import io.circe.CursorOp.SetLefts
 
 class PlannerImplSpec extends TestBase {
 
@@ -49,7 +50,7 @@ class PlannerImplSpec extends TestBase {
           "1" -> Node (
             PlanNodeService.File(PlanFileReference(1)),
             resources = Map (
-              ExecutorModelDefaults.SourceResource -> ResourceType.Source
+              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source)
             )
           )
         )
@@ -74,7 +75,7 @@ class PlannerImplSpec extends TestBase {
           "1" -> Node (
             PlanNodeService.File(PlanFileReference(1)),
             resources = Map (
-              ExecutorModelDefaults.SourceResource -> ResourceType.Source
+              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source)
             )
           )
         )
@@ -104,13 +105,13 @@ class PlannerImplSpec extends TestBase {
           "1" -> Node (
             PlanNodeService.File(PlanFileReference(1)),
             resources = Map (
-              ExecutorModelDefaults.SourceResource -> ResourceType.Source
+              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
             )
           ),
           "2" -> Node (
             PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
             resources = Map (
-              ExecutorModelDefaults.TransformationResource -> ResourceType.Transformer
+              ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
           )
         ),
@@ -149,11 +150,12 @@ class PlannerImplSpec extends TestBase {
           DataSet(Source.Loaded("dataset1"), TestItems.dataSet1)
         )
       )
-      val (pureState, pureOp) = runWithEmptyState(planner.translateItemPayloadSource(source))
       val (state, (op, file)) = runWithEmptyState(planner.translateItemPayloadSourceAsFile(
         source, canBeTemporary = temp
       ))
-      state.files shouldBe pureState.files ++ List (
+      state.files shouldBe List (
+        PlanFile(PlanFileReference(1), read = true, fileId = Some("dataset1")),
+        PlanFile(PlanFileReference(2), read = true, fileId = Some("algo1")),
         PlanFile(PlanFileReference(3), read = true, write = true, temporary = temp)
       )
       file shouldBe PlanFileReference(3)
@@ -164,20 +166,20 @@ class PlannerImplSpec extends TestBase {
             "1" -> Node (
               PlanNodeService.File(PlanFileReference(1)),
               resources = Map (
-                ExecutorModelDefaults.SourceResource -> ResourceType.Source
+                ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
               )
             ),
             "2" -> Node (
               PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
               resources = Map (
-                ExecutorModelDefaults.TransformationResource -> ResourceType.Transformer
+                ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
               )
             ),
             // this part is used for generating the file
             "3" -> Node (
               PlanNodeService.File(PlanFileReference(3)),
               resources = Map (
-                ExecutorModelDefaults.SinkResource -> ResourceType.Sink
+                ExecutorModelDefaults.SinkResource -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType))
               )
             )
           ),
@@ -209,7 +211,7 @@ class PlannerImplSpec extends TestBase {
       Map(
         "1" -> Node(
           PlanNodeService.File(PlanFileReference(1)),
-          Map(ExecutorModelDefaults.SourceResource -> ResourceType.Source)
+          Map(ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType)))
         )
       )
     )
@@ -234,7 +236,7 @@ class PlannerImplSpec extends TestBase {
         "1" -> Node(
           PlanNodeService.File(PlanFileReference(1)),
           Map(
-            ExecutorModelDefaults.SourceResource -> ResourceType.Source
+            ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
           )
         )
       )
@@ -253,9 +255,9 @@ class PlannerImplSpec extends TestBase {
         nodes = Map(
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("training1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.learning1), resources = Map(
-              "train" -> ResourceType.Sink,
-              "stats" -> ResourceType.Source,
-              "result" -> ResourceType.Source
+              "train" -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType)),
+              "stats" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType)),
+              "result" -> NodeResource(ResourceType.Source, Some(ContentTypes.ZipFileContentType))
             )
           )
         )
@@ -279,7 +281,7 @@ class PlannerImplSpec extends TestBase {
         nodes = Map(
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.algorithm1), resources = Map(
-              "apply" -> ResourceType.Transformer
+              "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
           )
         )

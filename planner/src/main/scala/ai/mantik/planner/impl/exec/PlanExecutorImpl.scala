@@ -1,13 +1,10 @@
 package ai.mantik.planner.impl.exec
 
-import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.DockerConfig
-import ai.mantik.planner.PlanNodeService.DockerContainer
 import ai.mantik.planner._
-import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.FutureHelper
 import ai.mantik.repository.{ FileRepository, MantikArtifact, Repository }
 import akka.actor.ActorSystem
@@ -26,7 +23,6 @@ private[impl] class PlanExecutorImpl(
     fileRepository: FileRepository,
     repository: Repository, executor: Executor,
     isolationSpace: String,
-    contentType: String,
     dockerConfig: DockerConfig
 )(implicit ec: ExecutionContext, actorSystem: ActorSystem, materializer: Materializer) extends PlanExecutor {
 
@@ -93,7 +89,7 @@ private[impl] class PlanExecutorImpl(
           repository.store(artifact)
         }
       case PlanOp.RunGraph(graph) =>
-        val jobGraphConverter = new JobGraphConverter(isolationSpace, files, contentType, dockerConfig.logins)
+        val jobGraphConverter = new JobGraphConverter(isolationSpace, files, dockerConfig.logins)
         val job = jobGraphConverter.translateGraphIntoJob(graph)
         FutureHelper.time(logger, s"Executing Job in isolationSpace ${job.isolationSpace}") {
           executeJobAndWaitForReady(job)

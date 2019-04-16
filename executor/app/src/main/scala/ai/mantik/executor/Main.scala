@@ -23,6 +23,9 @@ object Main extends App {
     val k8sOperations = new K8sOperations(config, kubernetesClient)
     val executor = new ExecutorImpl(config, k8sOperations)
     val server = new ExecutorServer(config, executor)
+    logger.info("Starting Executor")
+    logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
+    logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
     server.start()
   } catch {
     case e: Exception =>

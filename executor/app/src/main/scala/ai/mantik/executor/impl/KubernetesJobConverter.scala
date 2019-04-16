@@ -103,13 +103,34 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
         }
         nodeName -> CoordinatorPlan.Node(podIp + ":8503") // TODO Configurable side car port
     }
+
     CoordinatorPlan(
       nodes,
       flows = analysis.flows.map { flow =>
-        flow.nodes
-      }.toSeq,
-      contentType = job.contentType
+        flow.nodes.map(convertResourceRefToCoordinator)
+      }.toSeq
     )
+  }
+
+  private def convertResourceRefToCoordinator(nodeResourceRef: NodeResourceRef): CoordinatorPlan.NodeResourceRef = {
+    val (_, resource) = job.graph.resolveReference(nodeResourceRef).getOrElse {
+      throw new IllegalStateException(s"Could not resolve node reference ${nodeResourceRef}")
+    }
+    CoordinatorPlan.NodeResourceRef(
+      node = nodeResourceRef.node,
+      resource = nodeResourceRef.resource,
+      contentType = resource.contentType
+    )
+  }
+
+  def createImagePullPolicy(container: ai.mantik.executor.model.docker.Container): Container.PullPolicy.Value = {
+    // Overriding the policy to a similar behaviour to kubernetes default
+    container.imageTag match {
+      case None           => Container.PullPolicy.Always
+      case Some("latest") => Container.PullPolicy.Always
+      case _              => Container.PullPolicy.IfNotPresent
+    }
+
   }
 
   def convertCoordinator: skuber.batch.Job = {
@@ -146,7 +167,8 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
                           "COORDINATOR_IP",
                           skuber.EnvVar.FieldRef("status.podIP")
                         )
-                      )
+                      ),
+                      imagePullPolicy = createImagePullPolicy(config.coordinator)
                     )
                   ),
                   volumes = List(
@@ -180,6 +202,7 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
         List(Container(
           name = "main",
           image = ct.main.image,
+          imagePullPolicy = createImagePullPolicy(ct.main),
           volumeMounts = ct.dataProvider.map { dataProvider =>
             List(Volume.Mount(name = "data", mountPath = "/data"))
           }.getOrElse(Nil)
@@ -248,7 +271,8 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
       args = config.payloadPreparer.parameters.toList ++ urlArgument ++ mantikfileArgument ++ payloadDirArgument,
       volumeMounts = List(
         Volume.Mount(name = "data", mountPath = "/data")
-      )
+      ),
+      imagePullPolicy = createImagePullPolicy(config.payloadPreparer)
     )
   }
 
@@ -264,7 +288,8 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
     Container(
       name = KubernetesJobConverter.SidecarContainerName,
       image = config.sideCar.image,
-      args = config.sideCar.parameters.toList ++ List("-url", urlForSideCar(node.service)) ++ shutdownParameters
+      args = config.sideCar.parameters.toList ++ List("-url", urlForSideCar(node.service)) ++ shutdownParameters,
+      imagePullPolicy = createImagePullPolicy(config.sideCar)
     )
   }
 

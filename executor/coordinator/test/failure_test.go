@@ -34,8 +34,8 @@ func TestUnreachableNode(t *testing.T) {
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
-				coordinator.NodeResourceRef{"A", "Source"},
-				coordinator.NodeResourceRef{"B", "Sink"},
+				coordinator.NodeResourceRef{"A", "Source", nil},
+				coordinator.NodeResourceRef{"B", "Sink", nil},
 			},
 		},
 	}

@@ -60,11 +60,6 @@ func (c *Coordinator) logPlan() {
 		log.Printf("  - %s : %s", name, n.Address)
 	}
 	log.Printf("Flow Count: %d", len(c.plan.Flows))
-	contentType := "<undefined>"
-	if c.plan.ContentType != nil {
-		contentType = *c.plan.ContentType
-	}
-	log.Printf("Content Type: %s", contentType)
 }
 
 func (c *Coordinator) Run() error {
@@ -211,7 +206,7 @@ func (c *Coordinator) initializeSource(encodedFlowSubId string, ref NodeResource
 	req := protocol.RequestStream{
 		Id:          encodedFlowSubId,
 		Resource:    ref.Resource,
-		ContentType: c.plan.ContentType,
+		ContentType: ref.ContentType,
 	}
 	err = sideCar.RequestStream(&req, &resp)
 	if err = handleCommunicationErrors(ref.Node, err, resp.ResponseBase); err != nil {
@@ -234,7 +229,7 @@ func (c *Coordinator) initializeSink(encodedFlowSubId string, fromAddress string
 		Resource:    ref.Resource,
 		Source:      fromAddress,
 		Id:          encodedFlowSubId,
-		ContentType: c.plan.ContentType,
+		ContentType: ref.ContentType,
 	}
 
 	err = sideCar.RequestTransfer(&req, &resp)
@@ -258,7 +253,7 @@ func (c *Coordinator) initializeTransformation(encodedFlowSubId string, fromAddr
 		Resource:    ref.Resource,
 		Source:      fromAddress,
 		Id:          encodedFlowSubId,
-		ContentType: c.plan.ContentType,
+		ContentType: ref.ContentType,
 	}
 	err = sideCar.RequestTransformation(&req, &resp)
 	if err = handleCommunicationErrors(ref.Node, err, resp.ResponseBase); err != nil {

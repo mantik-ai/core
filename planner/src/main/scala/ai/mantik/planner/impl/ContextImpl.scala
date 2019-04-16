@@ -122,7 +122,6 @@ object ContextImpl {
       repository,
       executor,
       "local",
-      "application/x-mantik-bundle",
       bridges.dockerConfig)
     new ContextImpl(repository, fileRepo, planner, planExecutor, shutdownMethod)
   }
