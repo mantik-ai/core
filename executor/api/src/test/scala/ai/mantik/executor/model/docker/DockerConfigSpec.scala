@@ -16,5 +16,6 @@ class DockerConfigSpec extends TestBase {
     resolveImage("foo:othertag", Some("repo"), Some("tag")) shouldBe "repo/foo:othertag"
     resolveImage("otherrepo/foo:othertag", Some("repo"), Some("tag")) shouldBe "otherrepo/foo:othertag"
     resolveImage("foo", None, None) shouldBe "foo"
+    resolveImage("foo", Some("localhost:32000"), Some("latest")) shouldBe "localhost:32000/foo:latest"
   }
 }

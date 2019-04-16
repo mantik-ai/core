@@ -26,9 +26,9 @@ class HelloLearnerSpec extends IntegrationTestBase {
               )
             ),
             resources = Map(
-              "in" -> ResourceType.Sink,
-              "status" -> ResourceType.Source,
-              "result" -> ResourceType.Source
+              "in" -> NodeResource(ResourceType.Sink),
+              "status" -> NodeResource(ResourceType.Source),
+              "result" -> NodeResource(ResourceType.Source)
             )
           ),
           "C" -> Node.sink(

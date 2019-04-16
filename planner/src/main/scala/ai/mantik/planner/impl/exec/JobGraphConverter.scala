@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.executor.model.docker.DockerLogin
-import ai.mantik.executor.model.{ContainerService, DataProvider, ExistingService, Graph, Job, Link, Node, NodeResourceRef, NodeService, ResourceType}
+import ai.mantik.executor.model.{ContainerService, DataProvider, ExistingService, Graph, Job, Link, Node, NodeResource, NodeResourceRef, NodeService, ResourceType}
 import ai.mantik.planner.PlanNodeService
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import akka.http.scaladsl.model.Uri
@@ -12,7 +12,7 @@ import akka.http.scaladsl.model.Uri
   *
   * This adapter shouldn't be too complex, otherwise we should think about changing the executor more.
   * */
-private [impl] class JobGraphConverter (isolationSpace: String, files: ExecutionOpenFiles, contentType: String, extraLogins: Seq[DockerLogin]) {
+private [impl] class JobGraphConverter (isolationSpace: String, files: ExecutionOpenFiles, extraLogins: Seq[DockerLogin]) {
 
   /** Translate a graph like the planner creates to a Executor Job. */
   def translateGraphIntoJob(graph: Graph[PlanNodeService]): Job = {
@@ -31,7 +31,6 @@ private [impl] class JobGraphConverter (isolationSpace: String, files: Execution
     Job(
       isolationSpace,
       updatedGraph,
-      contentType = Some(contentType),
       extraLogins = extraLogins
     )
   }
@@ -96,18 +95,18 @@ private [impl] class JobGraphConverter (isolationSpace: String, files: Execution
   /** Converts a file node to that way the executor expects. Note: the resource name changes and links must be updated. */
   def convertFileNode(node: Node[PlanNodeService.File]): Node[ExistingService] = {
     require(node.resources.size == 1, "This only works for single-resource nodes yet")
-    val (resourceName, resourceType) = node.resources.head._2 match {
-      case rt@ (ResourceType.Sink | ResourceType.Transformer) =>
-        val writeFileInstance = files.resolveFileWrite(node.service.fileReference)
-        (writeFileInstance.path, rt)
-      case ResourceType.Source =>
-        val readFileInstance = files.resolveFileRead(node.service.fileReference)
-        (readFileInstance.path, ResourceType.Source)
+
+    val nodeResource = node.resources.head._2
+    val isWrite = nodeResource.resourceType == ResourceType.Sink || nodeResource.resourceType == ResourceType.Transformer
+    val resourceName = if (isWrite){
+      files.resolveFileWrite(node.service.fileReference).path
+    } else {
+      files.resolveFileRead(node.service.fileReference).path
     }
     Node(
       ExistingService(files.remoteFileServiceUri.toString()),
       Map(
-        resourceName -> resourceType
+        resourceName -> nodeResource
       )
     )
   }

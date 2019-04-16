@@ -48,20 +48,20 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
    * Note: due to a flaw this will most likely lead to a fragmented PlanOp
    * as we can only load files directly into new nodes.
    */
-  def translateItemPayloadSource(source: Source): State[PlanningState, ResourcePlan] = {
+  def translateItemPayloadSource(source: Source, expectedContentType: Option[String] = None): State[PlanningState, ResourcePlan] = {
     source match {
       case Source.Empty =>
         // No Support yet.
         throw new Planner.NotAvailableException("Empty Source")
       case loaded: Source.Loaded =>
         PlanningState(_.readFile(loaded.fileId)).flatMap { file =>
-          elements.loadFileNode(file.id)
+          elements.loadFileNode(file.id, expectedContentType)
         }
       case l: Source.Literal =>
         // Ugly this leads to fragmented plan.
         for {
           fileReference <- PlanningState(_.pipeFile(temporary = true))
-          loader <- elements.loadFileNode(fileReference.id)
+          loader <- elements.loadFileNode(fileReference.id, expectedContentType)
         } yield {
           val pusher = elements.literalToPushBundle(l, fileReference)
           loader.prependOp(pusher)
@@ -95,7 +95,7 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
         for {
           operationResult <- translateItemPayloadSource(other)
           file <- PlanningState(_.pipeFile(temporary = canBeTemporary))
-          fileNode <- elements.createStoreFileNode(file)
+          fileNode <- elements.createStoreFileNode(file, operationResult.outputResource(0).contentType)
         } yield {
           val runner = fileNode.application(operationResult)
           elements.sourcePlanToJob(runner) -> file.id

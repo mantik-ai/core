@@ -1,9 +1,10 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.executor.model.docker.{ Container, DockerLogin }
-import ai.mantik.executor.model.{ ContainerService, DataProvider, ExecutorModelDefaults, ExistingService, Graph, Job, Link, Node, NodeResourceRef, ResourceType }
+import ai.mantik.executor.model.{ ContainerService, DataProvider, ExecutorModelDefaults, ExistingService, Graph, Job, Link, Node, NodeResource, NodeResourceRef, ResourceType }
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.{ PlanFileReference, PlanNodeService }
+import ai.mantik.repository.ContentTypes
 import ai.mantik.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.testutils.TestBase
 import akka.http.scaladsl.model.Uri
@@ -26,19 +27,19 @@ class JobGraphConverterSpec extends TestBase {
       "0" -> Node(
         PlanNodeService.File(PlanFileReference(0)),
         resources = Map(
-          ExecutorModelDefaults.SourceResource -> ResourceType.Source
+          ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
         )
       ),
       "1" -> Node(
         PlanNodeService.DockerContainer(Container("image1"), Some(PlanFileReference(1)), TestItems.algorithm1),
         resources = Map(
-          "apply" -> ResourceType.Transformer
+          "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
         )
       ),
       "2" -> Node(
         PlanNodeService.File(PlanFileReference(2)),
         resources = Map(
-          ExecutorModelDefaults.SinkResource -> ResourceType.Sink
+          ExecutorModelDefaults.SinkResource -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType))
         )
       )
     ),
@@ -49,7 +50,7 @@ class JobGraphConverterSpec extends TestBase {
   )
 
   "translateGraphIntoJob" should "work" in {
-    val got = new JobGraphConverter("space1", files, "my-content-type", Seq(
+    val got = new JobGraphConverter("space1", files, Seq(
       DockerLogin("repo1", "user1", "password1")
     )).translateGraphIntoJob(inputGraph)
     got shouldBe Job(
@@ -59,7 +60,7 @@ class JobGraphConverterSpec extends TestBase {
           "0" -> Node(
             ExistingService("http://file-service:1234"),
             Map(
-              "files/file0" -> ResourceType.Source
+              "files/file0" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
             )
           ),
           "1" -> Node(
@@ -70,13 +71,13 @@ class JobGraphConverterSpec extends TestBase {
               )
             ),
             Map(
-              "apply" -> ResourceType.Transformer
+              "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
           ),
           "2" -> Node(
             ExistingService("http://file-service:1234"),
             Map(
-              "files/file2" -> ResourceType.Sink
+              "files/file2" -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType))
             )
           )
         ),
@@ -85,7 +86,6 @@ class JobGraphConverterSpec extends TestBase {
           NodeResourceRef("1", "apply") -> NodeResourceRef("2", "files/file2")
         )
       ),
-      contentType = Some("my-content-type"),
       extraLogins = Seq(
         DockerLogin("repo1", "user1", "password1")
       )

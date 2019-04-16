@@ -1,6 +1,6 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.executor.model.{ Graph, Link, Node }
+import ai.mantik.executor.model.{ Graph, Link, Node, NodeResource, NodeResourceRef }
 import ai.mantik.planner.Planner
 
 /** Extends the graph with some convenience methods. */
@@ -18,14 +18,14 @@ private[impl] class PlannerGraphOps[T](graph: Graph[T]) {
 
   /** Add links to the graph. */
   def addLinks(extraLinks: Link*): Graph[T] = {
-    val missingNodes = for {
+    val missingRefs = for {
       Link(in, out) <- extraLinks
-      nodeName <- Seq(in, out)
-      if !graph.nodes.get(nodeName.node).exists(_.resources.contains(nodeName.resource))
-    } yield nodeName
+      ref <- Seq(in, out)
+      if graph.resolveReference(ref).isEmpty
+    } yield ref
 
-    if (missingNodes.nonEmpty) {
-      throw new Planner.InconsistencyException(s"Missing node references $missingNodes")
+    if (missingRefs.nonEmpty) {
+      throw new Planner.InconsistencyException(s"Missing node references $missingRefs")
     }
     graph.copy(
       links = graph.links ++ extraLinks

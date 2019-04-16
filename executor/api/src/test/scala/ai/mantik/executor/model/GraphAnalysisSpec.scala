@@ -111,9 +111,9 @@ class GraphAnalysisSpec extends TestBase {
               )
             ),
             resources = Map(
-              "train_in" -> ResourceType.Sink,
-              "stats" -> ResourceType.Source,
-              "trained_out" -> ResourceType.Source
+              "train_in" -> NodeResource(ResourceType.Sink),
+              "stats" -> NodeResource(ResourceType.Source, Some("application/x-mantik-bundle")),
+              "trained_out" -> NodeResource(ResourceType.Source, Some("application/zip"))
             )
           ),
           "trained_saver" -> Node.sink(

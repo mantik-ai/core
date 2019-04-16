@@ -12,8 +12,7 @@ class CoordinatorPlanSpec extends TestBase {
       """
         |{
         |	"nodes":{"A":{"address":"localhost:50501"}, "B":{"address":"localhost:50502"}},
-        |	"flows":[[{"node": "A", "resource": "in"}, {"node": "B", "resource": "out"}]],
-        |	"contentType": "application/x-msgpack"
+        |	"flows":[[{"node": "A", "resource": "in", "contentType": "application/x-mantik-bundle"}, {"node": "B", "resource": "out"}]]
         |}
       """.stripMargin
     val parsedJson = parser.parse(json).getOrElse(fail)
@@ -25,11 +24,10 @@ class CoordinatorPlanSpec extends TestBase {
       ),
       flows = Seq(
         Seq(
-          NodeResourceRef("A", "in"), NodeResourceRef("B", "out")
+          CoordinatorPlan.NodeResourceRef("A", "in", Some("application/x-mantik-bundle")), CoordinatorPlan.NodeResourceRef("B", "out", None)
         )
-      ),
-      contentType = Some("application/x-msgpack")
+      )
     )
-    plan.asJson shouldBe parsedJson
+    plan.asJson.as[CoordinatorPlan].right.get shouldBe plan
   }
 }

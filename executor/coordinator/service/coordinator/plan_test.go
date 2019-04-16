@@ -10,14 +10,13 @@ func TestPlanSerialization(t *testing.T) {
 	jsonCode := `
 {
 	"nodes":{"A":{"address":"localhost:50501"}, "B":{"address":"localhost:50502"}}, 
-	"flows":[[{"node": "A", "resource": "in"}, {"node": "B", "resource": "out"}]],
-	"contentType": "application/x-msgpack"
+	"flows":[[{"node": "A", "resource": "in", "contentType": "application/x-mantik-bundle"}, {"node": "B", "resource": "out"}]]
 }`
 	var p Plan
 	err := json.Unmarshal([]byte(jsonCode), &p)
 	assert.NoError(t, err)
 
-	msgPack := "application/x-msgpack"
+	ct := "application/x-mantik-bundle"
 
 	expected := Plan{
 		Nodes: map[string]Node{
@@ -25,9 +24,8 @@ func TestPlanSerialization(t *testing.T) {
 			"B": {"localhost:50502"},
 		},
 		Flows: []Flow{
-			{NodeResourceRef{"A", "in"}, NodeResourceRef{"B", "out"}},
+			{NodeResourceRef{"A", "in", &ct}, NodeResourceRef{"B", "out", nil}},
 		},
-		ContentType: &msgPack,
 	}
 	assert.Equal(t, expected, p)
 

@@ -34,8 +34,8 @@ class GraphAnalysis[T](graph: Graph[T]) {
   private def determineFlows(): Set[Flow] = {
     val result = for {
       (name, node) <- graph.nodes
-      (resourceName, resourceType) <- node.resources
-      if resourceType == ResourceType.Sink
+      (resourceName, nodeResource) <- node.resources
+      if nodeResource.resourceType == ResourceType.Sink
     } yield determineFlow(NodeResourceRef(name, resourceName))
     result.toSet
   }
@@ -44,8 +44,8 @@ class GraphAnalysis[T](graph: Graph[T]) {
     @tailrec
     def findPath(isStart: Boolean, current: NodeResourceRef, way: List[NodeResourceRef]): List[NodeResourceRef] = {
       val node = graph.nodes.getOrElse(current.node, throw new ResourceNotFoundException(current))
-      val resourceType = node.resources.getOrElse(current.resource, throw new ResourceNotFoundException(current))
-      resourceType match {
+      val resource = node.resources.getOrElse(current.resource, throw new ResourceNotFoundException(current))
+      resource.resourceType match {
         case ResourceType.Sink if !isStart =>
           throw new FlowFromSinkException(current)
         case ResourceType.Transformer | ResourceType.Sink =>
@@ -53,7 +53,7 @@ class GraphAnalysis[T](graph: Graph[T]) {
           if (way.contains(origin)) {
             throw new CycleDetectedException(current)
           }
-          findPath(false, origin, origin :: way)
+          findPath(isStart = false, origin, origin :: way)
         case ResourceType.Source =>
           // done
           way.reverse
@@ -67,7 +67,7 @@ class GraphAnalysis[T](graph: Graph[T]) {
   private def findSingleSourceForLink(node: NodeResourceRef): NodeResourceRef = {
     reverseLinks.get(node) match {
       case Some(Seq(source)) => source
-      case Some(others)      => throw new MultiTargetDetected(node)
+      case Some(_)           => throw new MultiTargetDetected(node)
       case None              => throw new UnreachableNodeDetected(node)
     }
   }
@@ -90,14 +90,14 @@ object GraphAnalysis {
 
   abstract class AnalyzerException(resource: NodeResourceRef, msg: String) extends RuntimeException(msg)
 
-  class CycleDetectedException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Cycle in ${resource} detectecd")
+  class CycleDetectedException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Cycle in $resource detectecd")
 
-  class UnreachableNodeDetected(resource: NodeResourceRef) extends AnalyzerException(resource, s"Unreachable resource ${resource}")
+  class UnreachableNodeDetected(resource: NodeResourceRef) extends AnalyzerException(resource, s"Unreachable resource $resource")
 
-  class MultiTargetDetected(resource: NodeResourceRef) extends AnalyzerException(resource, s"Multi target ${resource} detected")
+  class MultiTargetDetected(resource: NodeResourceRef) extends AnalyzerException(resource, s"Multi target $resource detected")
 
-  class FlowFromSinkException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Detected data flow from ${resource}")
+  class FlowFromSinkException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Detected data flow from $resource")
 
-  class ResourceNotFoundException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Recource not found ${resource}")
+  class ResourceNotFoundException(resource: NodeResourceRef) extends AnalyzerException(resource, s"Recource not found $resource")
 
 }

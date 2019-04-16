@@ -56,9 +56,9 @@ func CreateAbcFlowNodes(testData []byte) *ABCFlowNodes {
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
-				coordinator.NodeResourceRef{"A", "Source"},
-				coordinator.NodeResourceRef{"B", "Transformer"},
-				coordinator.NodeResourceRef{"C", "Sink"},
+				coordinator.NodeResourceRef{"A", "Source", nil},
+				coordinator.NodeResourceRef{"B", "Transformer", nil},
+				coordinator.NodeResourceRef{"C", "Sink", nil},
 			},
 		},
 	}

@@ -14,6 +14,8 @@ import cats.data.State
  */
 class PlannerElements(bridges: Bridges) {
 
+  import ContentTypes._
+
   /** Converts a plan to a job. */
   def sourcePlanToJob(sourcePlan: ResourcePlan): PlanOp = {
     PlanOp.combine(
@@ -31,8 +33,8 @@ class PlannerElements(bridges: Bridges) {
   }
 
   /** Creates a [[ResourcePlan]] which saves data from it's sink to a file. */
-  def createStoreFileNode(fileReference: PlanFile): State[PlanningState, ResourcePlan] = {
-    val node = Node.sink(PlanNodeService.File(fileReference.id))
+  def createStoreFileNode(fileReference: PlanFile, contentType: Option[String]): State[PlanningState, ResourcePlan] = {
+    val node = Node.sink(PlanNodeService.File(fileReference.id), contentType)
     PlanningState.stateChange(_.withNextNodeId) { nodeId =>
       ResourcePlan(
         graph = Graph(
@@ -46,8 +48,8 @@ class PlannerElements(bridges: Bridges) {
   }
 
   /** Creates a [[ResourcePlan]] which loads a file and represents it as output. */
-  def loadFileNode(fileReference: PlanFileReference): State[PlanningState, ResourcePlan] = {
-    val node = Node.source(PlanNodeService.File(fileReference))
+  def loadFileNode(fileReference: PlanFileReference, expectedContentType: Option[String]): State[PlanningState, ResourcePlan] = {
+    val node = Node.source(PlanNodeService.File(fileReference), expectedContentType)
     PlanningState.stateChange(_.withNextNodeId) { nodeId =>
       val graph = Graph(
         nodes = Map(
@@ -75,7 +77,7 @@ class PlannerElements(bridges: Bridges) {
       case None =>
         // directly pipe data
         val fileToUse = file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
-        loadFileNode(fileToUse)
+        loadFileNode(fileToUse, Some(ContentTypes.MantikBundleContentType))
       case Some(containerName) =>
         throw new mantik.planner.Planner.NotAvailableException(s"No support yet for file format plugins ($containerName")
     }
@@ -93,7 +95,7 @@ class PlannerElements(bridges: Bridges) {
         bridge.container, data = file, mantikfile
       ),
       Map(
-        applyResource -> ResourceType.Transformer
+        applyResource -> NodeResource(ResourceType.Transformer, Some(MantikBundleContentType)),
       )
     )
 
@@ -126,9 +128,9 @@ class PlannerElements(bridges: Bridges) {
         bridge.container, data = file, mantikfile = mantikfile
       ),
       Map(
-        trainResource -> ResourceType.Sink,
-        statsResource -> ResourceType.Source,
-        resultResource -> ResourceType.Source
+        trainResource -> NodeResource(ResourceType.Sink, Some(MantikBundleContentType)),
+        statsResource -> NodeResource(ResourceType.Source, Some(MantikBundleContentType)),
+        resultResource -> NodeResource(ResourceType.Source, Some(ZipFileContentType))
       )
     )
 

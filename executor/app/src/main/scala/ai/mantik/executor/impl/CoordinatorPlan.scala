@@ -6,13 +6,18 @@ import ai.mantik.executor.model.NodeResourceRef
 /** The plan for the coordinator process. Must match the Definition in the Go Code. */
 case class CoordinatorPlan(
     nodes: Map[String, CoordinatorPlan.Node],
-    flows: Seq[Seq[NodeResourceRef]],
-    contentType: Option[String] = None
+    flows: Seq[Seq[CoordinatorPlan.NodeResourceRef]]
 )
 
 object CoordinatorPlan {
   case class Node(
       address: String
+  )
+
+  case class NodeResourceRef(
+      node: String,
+      resource: String,
+      contentType: Option[String]
   )
 
   // JSON Encoder

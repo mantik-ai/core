@@ -34,21 +34,20 @@ class KubernetesJobConverterSpec extends TestBase {
             main = Container(
               image = "executor_sample_source"
             )
-          )
+          ), Some("contentType1")
         ),
         "B" -> Node.sink(
           ContainerService(
             main = Container(
               image = "executor_sample_sink"
             )
-          )
+          ), Some("contentType2")
         )
       ),
       links = Link.links(
         NodeResourceRef("A", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("B", ExecutorModelDefaults.SinkResource)
       )
     ),
-    contentType = Some("application/my-content-type"),
     extraLogins = Seq(
       DockerLogin("repo2", "user2", "password2")
     )
@@ -93,6 +92,13 @@ class KubernetesJobConverterSpec extends TestBase {
     }
   }
 
+  it should "convert nice pull policies" in new SimpleAbEnv {
+    converter.createImagePullPolicy(Container("foo")) shouldBe skuber.Container.PullPolicy.Always
+    converter.createImagePullPolicy(Container("foo:latest")) shouldBe skuber.Container.PullPolicy.Always
+    converter.createImagePullPolicy(Container("foo:master")) shouldBe skuber.Container.PullPolicy.IfNotPresent
+    converter.createImagePullPolicy(Container("foo:other")) shouldBe skuber.Container.PullPolicy.IfNotPresent
+  }
+
   it should "create a coordinator plan" in new SimpleAbEnv {
     converter.coordinatorPlan(ipMapping) shouldBe CoordinatorPlan(
       nodes = Map(
@@ -100,9 +106,8 @@ class KubernetesJobConverterSpec extends TestBase {
         "B" -> CoordinatorPlan.Node("192.168.1.2:8503")
       ),
       flows = Seq(
-        Seq(NodeResourceRef("A", "out"), NodeResourceRef("B", "in"))
-      ),
-      contentType = Some("application/my-content-type")
+        Seq(CoordinatorPlan.NodeResourceRef("A", "out", Some("contentType1")), CoordinatorPlan.NodeResourceRef("B", "in", Some("contentType2")))
+      )
     )
   }
 
@@ -141,6 +146,7 @@ class KubernetesJobConverterSpec extends TestBase {
     spec.initContainers.head.args shouldBe List("-url", "url1", "-mantikfile", "bWYx", "-pdir", "dir1")
     spec.initContainers.head.volumeMounts.map(_.name) shouldBe List("data")
     spec.volumes.map(_.name) shouldBe List("data")
+    spec.containers.foreach(_.imagePullPolicy shouldBe skuber.Container.PullPolicy.Always)
 
     withClue("there must be an fsGroup element") {
       spec.securityContext.flatMap(_.fsGroup) shouldBe Some(1000)

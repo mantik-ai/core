@@ -74,7 +74,14 @@ object ResourceType {
  */
 case class Node[+T](
     service: T,
-    resources: Map[String, ResourceType]
+    resources: Map[String, NodeResource]
+)
+
+/** A Node Resource. */
+@JsonCodec
+case class NodeResource(
+    resourceType: ResourceType,
+    contentType: Option[String] = None
 )
 
 object Node {
@@ -83,17 +90,17 @@ object Node {
   implicit def decoder[T: Decoder]: Decoder[Node[T]] = semiauto.deriveDecoder[Node[T]]
 
   /** Generates a Default Sink. */
-  def sink[T](service: T): Node[T] = Node[T](
-    service, resources = Map(ExecutorModelDefaults.SinkResource -> ResourceType.Sink)
+  def sink[T](service: T, contentType: Option[String] = None): Node[T] = Node[T](
+    service, resources = Map(ExecutorModelDefaults.SinkResource -> NodeResource(ResourceType.Sink, contentType))
   )
 
   /** Generates a Default Source. */
-  def source[T](service: T): Node[T] = Node[T](
-    service, resources = Map(ExecutorModelDefaults.SourceResource -> ResourceType.Source)
+  def source[T](service: T, contentType: Option[String] = None): Node[T] = Node[T](
+    service, resources = Map(ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, contentType))
   )
 
   /** Generates a Default Transformer. */
   def transformer[T](service: T): Node[T] = Node[T](
-    service, resources = Map(ExecutorModelDefaults.TransformationResource -> ResourceType.Transformer)
+    service, resources = Map(ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer))
   )
 }

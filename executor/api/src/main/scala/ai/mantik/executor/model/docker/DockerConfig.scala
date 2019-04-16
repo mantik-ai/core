@@ -21,16 +21,20 @@ case class DockerConfig(
 
   /** Resolves an image (adds default image tag and repository if not given). */
   def resolveImageName(imageName: String): String = {
+    // Tricky: repo may contain ":"
+    val repoDelimiterIdx = imageName.indexOf("/")
+    val tagDelimiterIdx = imageName.indexOf(":", repoDelimiterIdx + 1)
+
     val imageWithRepository = (imageName, defaultImageRepository) match {
-      case (i, _) if i.contains("/") => i
-      case (i, Some(repo))           => repo + "/" + i
-      case (i, _)                    => i
+      case (i, _) if repoDelimiterIdx >= 0 => i
+      case (i, Some(repo))                 => repo + "/" + i
+      case (i, _)                          => i
     }
 
     val imageWithTag = (imageWithRepository, defaultImageTag) match {
-      case (i, _) if i.contains(":") => i
-      case (i, Some(tag))            => i + ":" + tag
-      case (i, _)                    => i
+      case (i, _) if tagDelimiterIdx >= 0 => i
+      case (i, Some(tag))                 => i + ":" + tag
+      case (i, _)                         => i
     }
 
     imageWithTag

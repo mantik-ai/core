@@ -1,8 +1,9 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.executor.model._
-import ai.mantik.planner.{ Plan, PlanNodeService, PlanOp }
+import ai.mantik.planner.{ Plan, PlanNodeService, PlanOp, Planner }
 import PlannerGraphOps._
+import ai.mantik.planner
 
 /**
  * Describes a way a resource is calculated (a containing part of a graph).
@@ -48,5 +49,12 @@ private[impl] case class ResourcePlan(
       inputs = inputs.drop(argument.outputs.size),
       outputs = outputs
     )
+  }
+
+  def outputResource(id: Int): NodeResource = {
+    require(id >= 0 && id < outputs.length, "Invalid output id")
+    graph.resolveReference(outputs(id)).getOrElse {
+      throw new planner.Planner.InconsistencyException(s"Output ${outputs(id)} could not be resolved")
+    }._2
   }
 }
