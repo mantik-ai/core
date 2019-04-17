@@ -40,9 +40,15 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
 
   /** Generate the Pod Definitions. */
   lazy val pods: Seq[Pod] = {
-    job.graph.nodes.map {
+    job.graph.nodes.flatMap {
       case (name, node) =>
-        convertNode(name, node)
+        node.service match {
+          case _: ExistingService if config.enableExistingServiceNodeCollapse =>
+            // do not create a Pod for it, let other nodes or coordinator access url directly
+            None
+          case _ =>
+            Some(convertNode(name, node))
+        }
     }.toSeq
   }
 
@@ -94,14 +100,20 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
     }
   }
 
-  def coordinatorPlan(podIpAdresses: Map[String, String]): CoordinatorPlan = {
+  def coordinatorPlan(podIpAddresses: Map[String, String]): CoordinatorPlan = {
     val nodes = job.graph.nodes.map {
       case (nodeName, node) =>
-        val podName = namer.podName(nodeName)
-        val podIp = podIpAdresses.get(podName).getOrElse {
-          throw new IllegalStateException(s"Could not get ip adress of pod $podName of node $nodeName")
+        node.service match {
+          case e: ExistingService if config.enableExistingServiceNodeCollapse =>
+            nodeName -> CoordinatorPlan.Node(url = Some(e.url))
+          case _ =>
+            val podName = namer.podName(nodeName)
+            val podIp = podIpAddresses.get(podName).getOrElse {
+              throw new IllegalStateException(s"Could not get ip adress of pod $podName of node $nodeName")
+            }
+            val address = podIp + ":8503" // TODO Configurable side car port
+            nodeName -> CoordinatorPlan.Node(address = Some(address))
         }
-        nodeName -> CoordinatorPlan.Node(podIp + ":8503") // TODO Configurable side car port
     }
 
     CoordinatorPlan(

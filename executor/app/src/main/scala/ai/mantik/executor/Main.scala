@@ -26,6 +26,7 @@ object Main extends App {
     logger.info("Starting Executor")
     logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
     logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
+    logger.info(s"Enable Existing Service Node Collapse: ${config.enableExistingServiceNodeCollapse}")
     server.start()
   } catch {
     case e: Exception =>

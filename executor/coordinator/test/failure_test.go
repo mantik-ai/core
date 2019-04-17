@@ -29,8 +29,8 @@ func TestUnreachableNode(t *testing.T) {
 
 	plan := coordinator.Plan{
 		Nodes: map[string]coordinator.Node{
-			"A": {fmt.Sprintf("localhost:%d", sideCar1FakePort)},
-			"B": {fmt.Sprintf("localhost:%d", sideCar2.Port())},
+			"A": coordinator.MakeAddressNode("localhost", sideCar1FakePort),
+			"B": coordinator.MakeAddressNode("localhost", sideCar2.Port()),
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{

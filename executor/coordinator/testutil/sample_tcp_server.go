@@ -33,8 +33,8 @@ func (s *SampleTcpSource) Close() {
 	s.l.Close()
 }
 
-func (s *SampleTcpSource) FullAddress() string {
-	return fmt.Sprintf("localhost:%d", s.Port)
+func (s *SampleTcpSource) Url() string {
+	return fmt.Sprintf("tcp://localhost:%d", s.Port)
 }
 
 func (s *SampleTcpSource) run() {

@@ -5,7 +5,6 @@ import (
 	"coordinator/service/protocol"
 	"coordinator/service/sidecar"
 	"coordinator/testutil"
-	"fmt"
 	"sync"
 )
 
@@ -50,9 +49,9 @@ func CreateAbcFlowNodes(testData []byte) *ABCFlowNodes {
 
 	r.plan = coordinator.Plan{
 		Nodes: map[string]coordinator.Node{
-			"A": {fmt.Sprintf("localhost:%d", r.sourceSideCar.Port())},
-			"B": {fmt.Sprintf("localhost:%d", r.transformSideCar.Port())},
-			"C": {fmt.Sprintf("localhost:%d", r.sinkSideCar.Port())},
+			"A": coordinator.MakeAddressNode("localhost", r.sourceSideCar.Port()),
+			"B": coordinator.MakeAddressNode("localhost", r.transformSideCar.Port()),
+			"C": coordinator.MakeAddressNode("localhost", r.sinkSideCar.Port()),
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
