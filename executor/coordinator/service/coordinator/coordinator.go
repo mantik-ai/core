@@ -3,16 +3,21 @@ package coordinator
 import (
 	"context"
 	"coordinator/service/protocol"
+	"coordinator/service/sidecar"
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"net/url"
 	"strings"
 	"sync"
 )
 
 type FlowNodeState struct {
-	input    string
-	port     int
+	// Debug, where the data is coming from (may be empty)
+	input string
+	// URL providing the stream
+	// Can be tcp://[host:port] or http://
+	url      string
 	isAction bool
 	// runtime
 	in              int64
@@ -34,6 +39,9 @@ type Coordinator struct {
 	mux            sync.Mutex
 	flowStates     []*FlowState
 	pendingActions int // actions (sinks) which wait to be completed.
+
+	// Embedded sidecar, for flows consisting only of external nodes
+	embeddedSideCar *sidecar.PlainSidecar
 }
 
 func CreateCoordinator(coordinatorAddress string, settings *protocol.Settings, plan *Plan) (*Coordinator, error) {
@@ -46,6 +54,7 @@ func CreateCoordinator(coordinatorAddress string, settings *protocol.Settings, p
 	}
 	coordinator.server = server
 	coordinator.logPlan()
+	coordinator.embeddedSideCar = sidecar.CreateHeadlessSideCar(settings, &coordinator)
 	return &coordinator, nil
 }
 
@@ -57,7 +66,7 @@ func (c *Coordinator) Address() string {
 func (c *Coordinator) logPlan() {
 	log.Printf("Node Count: %d", len(c.plan.Nodes))
 	for name, n := range c.plan.Nodes {
-		log.Printf("  - %s : %s", name, n.Address)
+		log.Printf("  - %s : %s", name, n.Str())
 	}
 	log.Printf("Flow Count: %d", len(c.plan.Flows))
 }
@@ -94,7 +103,13 @@ func (c *Coordinator) initializeConnections() error {
 	// Initializing all Nodes in parallel
 	p := c.server.Ac.Parallel()
 
+	sideCarNodeCount := 0
 	for nodeName, node := range c.plan.Nodes {
+		if !node.IsSideCarNode() {
+			continue
+		}
+		sideCarNodeCount += 1
+
 		func(nodeName string, addr string) {
 
 			p.Add(func() error {
@@ -105,7 +120,7 @@ func (c *Coordinator) initializeConnections() error {
 				return err
 			})
 
-		}(nodeName, node.Address)
+		}(nodeName, *node.Address)
 	}
 	err := p.Result()
 
@@ -113,7 +128,7 @@ func (c *Coordinator) initializeConnections() error {
 		return err
 	}
 
-	log.Infof("Connected to %d Nodes", len(c.plan.Nodes))
+	log.Infof("Connected to %d SideCar Nodes (of %d Nodes)", sideCarNodeCount, len(c.plan.Nodes))
 	return nil
 }
 
@@ -139,25 +154,39 @@ func (c *Coordinator) initializeFlow(flowId int, flow Flow) (*FlowState, error) 
 	defer c.mux.Unlock()
 
 	var flowState FlowState
-	var lastHostAddress = ""
+	var state *FlowNodeState
+	var lastExistingNode *string
+	var responsibleSidecar protocol.SideCarService = c.embeddedSideCar
+	var responsibleSidecarAddress = c.Address()
 	for subId, nodeRef := range flow {
-		var state *FlowNodeState
 		var err error
 		encodedFlowSubId := encodeFlowIdSubId(flowId, subId)
+		node, exists := c.plan.Nodes[nodeRef.Node]
+		if !exists {
+			return nil, errors.Errorf("Could not resolve node %s", nodeRef.Node)
+		}
+		if node.IsSideCarNode() {
+			responsibleSidecar, err = c.server.GetSideCar(nodeRef.Node)
+			if err != nil {
+				return nil, errors.Wrapf(err, "Could not find sidecar %s", nodeRef.Node)
+			}
+			responsibleSidecarAddress = *node.Address
+		}
+
 		if subId == 0 {
 			// First node (Source)
-			state, err = c.initializeSource(encodedFlowSubId, nodeRef)
+			state, err = c.initializeSource(&node, responsibleSidecar, encodedFlowSubId, nodeRef)
 			if err != nil {
 				return nil, errors.Wrapf(err, "Could not initialize source %s", nodeRef.Str())
 			}
 		} else if subId == len(flow)-1 {
 			// Last Node (Sink)
-			state, err = c.initializeSink(encodedFlowSubId, lastHostAddress, nodeRef)
+			state, err = c.initializeSink(&node, responsibleSidecar, encodedFlowSubId, state, lastExistingNode, nodeRef)
 			if err != nil {
 				return nil, errors.Wrapf(err, "Could not initialize sink %s", nodeRef.Str())
 			}
 		} else {
-			state, err = c.initializeTransformation(encodedFlowSubId, lastHostAddress, nodeRef)
+			state, err = c.initializeTransformation(&node, responsibleSidecarAddress, responsibleSidecar, encodedFlowSubId, state, lastExistingNode, nodeRef)
 			if err != nil {
 				return nil, errors.Wrapf(err, "Could not initialize transformation %s", nodeRef.Str())
 			}
@@ -166,8 +195,10 @@ func (c *Coordinator) initializeFlow(flowId int, flow Flow) (*FlowState, error) 
 			c.pendingActions++
 		}
 		flowState.nodeStates = append(flowState.nodeStates, state)
-		nodeAddress := c.plan.Nodes[nodeRef.Node].Address
-		lastHostAddress = addressWithNewPort(nodeAddress, state.port)
+		if node.IsSideCarNode() {
+			foo := nodeRef.Node
+			lastExistingNode = &foo
+		}
 	}
 	return &flowState, nil
 }
@@ -186,20 +217,27 @@ func decodeFlowIdSubId(id string) (flowId int, subId int) {
 	return
 }
 
-// Replacs the port number in adress with a new number. If not existing, just add it.
-func addressWithNewPort(oldAddress string, port int) string {
-	idx := strings.LastIndex(oldAddress, ":")
+func formatTcpStreamUrl(sideCarAddress string, port int) string {
+	idx := strings.LastIndex(sideCarAddress, ":")
+	var host string
 	if idx < 0 {
-		return fmt.Sprintf("%s:%d", oldAddress, port)
+		host = sideCarAddress
 	} else {
-		return fmt.Sprintf("%s:%d", oldAddress[:idx], port)
+		host = sideCarAddress[:idx]
 	}
+	return fmt.Sprintf("tcp://%s:%d", host, port)
 }
 
-func (c *Coordinator) initializeSource(encodedFlowSubId string, ref NodeResourceRef) (*FlowNodeState, error) {
-	sideCar, err := c.server.GetSideCar(ref.Node)
-	if err != nil {
-		return nil, err
+func (c *Coordinator) initializeSource(node *Node, sideCar protocol.SideCarService, encodedFlowSubId string, ref NodeResourceRef) (*FlowNodeState, error) {
+	if node.IsExternalNode() {
+		// do not go via sidecar, let the next one load it.
+		fullUrl, err := resolveUrl(*node.Url, ref.Resource)
+		if err != nil {
+			return nil, err
+		}
+		return &FlowNodeState{
+			url: fullUrl,
+		}, nil
 	}
 
 	var resp protocol.RequestStreamResponse
@@ -208,17 +246,38 @@ func (c *Coordinator) initializeSource(encodedFlowSubId string, ref NodeResource
 		Resource:    ref.Resource,
 		ContentType: ref.ContentType,
 	}
-	err = sideCar.RequestStream(&req, &resp)
+	err := sideCar.RequestStream(&req, &resp)
 	if err = handleCommunicationErrors(ref.Node, err, resp.ResponseBase); err != nil {
 		return nil, err
 	}
 	return &FlowNodeState{
-		port: resp.Port,
+		url: formatTcpStreamUrl(*node.Address, resp.Port),
 	}, nil
 }
 
-func (c *Coordinator) initializeSink(encodedFlowSubId string, fromAddress string, ref NodeResourceRef) (*FlowNodeState, error) {
-	sideCar, err := c.server.GetSideCar(ref.Node)
+func resolveUrl(base string, resource string) (string, error) {
+	root, err := url.Parse(base)
+	if err != nil {
+		return "", err
+	}
+	sub, err := url.Parse(resource)
+	if err != nil {
+		return "", err
+	}
+	resolved := root.ResolveReference(sub)
+	return resolved.String(), nil
+}
+
+func (c *Coordinator) initializeSink(node *Node, sideCar protocol.SideCarService, encodedFlowSubId string, lastNode *FlowNodeState, lastExistingNode *string, ref NodeResourceRef) (*FlowNodeState, error) {
+	var err error
+	var destination string
+
+	if node.IsExternalNode() {
+		destination, err = resolveUrl(*node.Url, ref.Resource)
+	} else {
+		destination = ref.Resource
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -226,8 +285,8 @@ func (c *Coordinator) initializeSink(encodedFlowSubId string, fromAddress string
 	var resp protocol.RequestTransferResponse
 
 	req := protocol.RequestTransfer{
-		Resource:    ref.Resource,
-		Source:      fromAddress,
+		Destination: destination,
+		Source:      lastNode.url,
 		Id:          encodedFlowSubId,
 		ContentType: ref.ContentType,
 	}
@@ -237,21 +296,29 @@ func (c *Coordinator) initializeSink(encodedFlowSubId string, fromAddress string
 		return nil, err
 	}
 	return &FlowNodeState{
-		input:    fromAddress,
+		input:    lastNode.url,
 		isAction: true,
 	}, nil
 }
 
-func (c *Coordinator) initializeTransformation(encodedFlowSubId string, fromAddress string, ref NodeResourceRef) (*FlowNodeState, error) {
-	sideCar, err := c.server.GetSideCar(ref.Node)
+func (c *Coordinator) initializeTransformation(node *Node, sideCarAddress string, sideCar protocol.SideCarService, encodedFlowSubId string, lastNode *FlowNodeState, lastExistingNode *string, ref NodeResourceRef) (*FlowNodeState, error) {
+	var err error
+	var destination string
+
+	if node.IsExternalNode() {
+		destination, err = resolveUrl(*node.Url, ref.Resource)
+	} else {
+		destination = ref.Resource
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
 	var resp protocol.RequestTransformationResponse
 	req := protocol.RequestTransformation{
-		Resource:    ref.Resource,
-		Source:      fromAddress,
+		Destination: destination,
+		Source:      lastNode.url,
 		Id:          encodedFlowSubId,
 		ContentType: ref.ContentType,
 	}
@@ -260,8 +327,8 @@ func (c *Coordinator) initializeTransformation(encodedFlowSubId string, fromAddr
 		return nil, err
 	}
 	return &FlowNodeState{
-		input:    fromAddress,
-		port:     resp.Port,
+		input:    lastNode.url,
+		url:      formatTcpStreamUrl(sideCarAddress, resp.Port),
 		isAction: false,
 	}, nil
 }

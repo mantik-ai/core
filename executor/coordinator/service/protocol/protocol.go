@@ -40,11 +40,11 @@ type RequestStreamResponse struct {
 type RequestTransfer struct {
 	// identification, used for Status Information
 	Id string
-	// Destination Resource
-	Resource string
+	// Destination, can be a resource or an URL
+	Destination string
 	// The (optional) content type which should be used
 	ContentType *string
-	// The IP and port of the source
+	// Source URL (tcp:// or http://)
 	Source string
 }
 
@@ -58,10 +58,10 @@ type RequestTransformation struct {
 	// identification, used for Status Information
 	Id string
 	// Resource which will do the Transformation
-	Resource string
+	Destination string
 	// The (optional) content type which should be used
 	ContentType *string
-	// The IP and port of the source
+	// Source URL (tcp:// or http://)
 	Source string
 }
 

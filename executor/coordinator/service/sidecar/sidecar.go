@@ -3,22 +3,16 @@ package sidecar
 import (
 	"bytes"
 	"coordinator/service/protocol"
-	"coordinator/service/streamer"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 )
 
 type SideCar struct {
-	server              *protocol.SideCarServer
-	url                 *url.URL
-	getStreams          []*streamer.HttpGetSource
-	postSinks           []*streamer.HttpPostSink
-	postTransformations []*streamer.HttpPostTransformation
-	lock                sync.Mutex
+	server *protocol.SideCarServer
+	*PlainSidecar
 	shutdownWebservice  bool // if true, shutdown the webservice at the end
 	webserviceReachable bool
 }
@@ -27,7 +21,7 @@ func CreateSideCar(settings *protocol.Settings, rootUrl string, shutdownWebservi
 	log.Debugf("Starting side car for %s", rootUrl)
 	var s SideCar
 	var err error
-	s.url, err = url.Parse(rootUrl)
+	url, err := url.Parse(rootUrl)
 	if err != nil {
 		log.Errorf("Could not parse URL %s", rootUrl)
 		return nil, err
@@ -38,6 +32,7 @@ func CreateSideCar(settings *protocol.Settings, rootUrl string, shutdownWebservi
 		return nil, err
 	}
 	s.shutdownWebservice = shutdownWebservice
+	s.PlainSidecar = CreateUrlSidecar(url, settings, s.blockUntilWebServiceReachable, s.server.Coordinator)
 	return &s, nil
 }
 
@@ -123,7 +118,7 @@ func (s *SideCar) tryAccessWebService() error {
 
 func (s *SideCar) shutdownWebServiceIfEnabled() {
 	if s.shutdownWebservice {
-		url, err := s.resolveResource("/admin/quit")
+		url, err := s.resolveDestination("/admin/quit")
 		if err != nil {
 			log.Errorf("Could not resolve /admin/quit Call %s", err.Error())
 			return
@@ -136,108 +131,6 @@ func (s *SideCar) shutdownWebServiceIfEnabled() {
 			log.Errorf("Calling /admin/quit returned non 200 %d", response.StatusCode)
 		}
 	}
-}
-
-/** Resolve the URL of a Resource. */
-func (s *SideCar) resolveResource(resource string) (string, error) {
-	u, err := url.Parse(resource)
-	if err != nil {
-		return "", err
-	}
-	full := s.url.ResolveReference(u)
-	return full.String(), nil
-}
-
-func (s *SideCar) RequestStream(req *protocol.RequestStream, res *protocol.RequestStreamResponse) error {
-	err := s.blockUntilWebServiceReachable()
-	if err != nil {
-		return err
-	}
-
-	fullUrl, err := s.resolveResource(req.Resource)
-	if err != nil {
-		return err
-	}
-	streamer, err := streamer.CreateHttpGetSource(fullUrl, req.ContentType, s.makeStreamNotifyFn(req.Id), s.server.Settings.HttpGetRetryTime)
-	if err != nil {
-		res.Error = err.Error()
-		return nil
-	}
-	log.Infof("Added a new streamer for %s to port %d", fullUrl, streamer.Port)
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.getStreams = append(s.getStreams, streamer)
-	res.Port = streamer.Port
-	return nil
-}
-
-func (s *SideCar) makeStreamNotifyFn(id string) streamer.StreamNotifyFn {
-	return func(reqId int, in int64, out int64, inFailure error, done bool) {
-		coordinator, err := s.server.Coordinator()
-		if err != nil {
-			log.Warn("Could not get coordinator?!")
-			return
-		}
-		var s protocol.StatusUpdate
-		var r protocol.StatusUpdateResponse
-		s.Id = id
-		// name and challenge is automatially added
-		s.Ingress = in
-		s.Outgress = out
-		s.Done = done
-		if inFailure != nil {
-			s.Error = inFailure.Error()
-		}
-		err = coordinator.StatusUpdate(&s, &r)
-		if err != nil {
-			log.Warnf("Could not send status update to coordinator %s", err.Error())
-		}
-	}
-}
-
-func (s *SideCar) RequestTransfer(req *protocol.RequestTransfer, res *protocol.RequestTransferResponse) error {
-	err := s.blockUntilWebServiceReachable()
-	if err != nil {
-		return err
-	}
-
-	fullUrl, err := s.resolveResource(req.Resource)
-	if err != nil {
-		return err
-	}
-	sink, err := streamer.CreateHttpPostSink(req.Source, fullUrl, req.ContentType, s.makeStreamNotifyFn(req.Id))
-	if err != nil {
-		res.Error = err.Error()
-		return nil
-	}
-	log.Infof("Added new sink from %s to %s", req.Source, fullUrl)
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.postSinks = append(s.postSinks, sink)
-	// no extra values to return
-	return nil
-}
-
-func (s *SideCar) RequestTransformation(req *protocol.RequestTransformation, res *protocol.RequestTransformationResponse) error {
-	err := s.blockUntilWebServiceReachable()
-	if err != nil {
-		return err
-	}
-	fullUrl, err := s.resolveResource(req.Resource)
-	if err != nil {
-		return err
-	}
-	transformation, err := streamer.CreateHttpPostTransformation(req.Source, fullUrl, req.ContentType, s.makeStreamNotifyFn(req.Id))
-	if err != nil {
-		res.Error = err.Error()
-		return nil
-	}
-	log.Infof("Added new transformation from %s via %s to %d", req.Source, fullUrl, transformation.Port)
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.postTransformations = append(s.postTransformations, transformation)
-	res.Port = transformation.Port
-	return nil
 }
 
 func (s *SideCar) blockUntilWebServiceReachable() error {

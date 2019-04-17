@@ -11,8 +11,11 @@ case class CoordinatorPlan(
 
 object CoordinatorPlan {
   case class Node(
-      address: String
-  )
+      address: Option[String] = None,
+      url: Option[String] = None
+  ) {
+    require(address.isDefined != url.isDefined, "Either Adress or URL must be defined, but not both")
+  }
 
   case class NodeResourceRef(
       node: String,

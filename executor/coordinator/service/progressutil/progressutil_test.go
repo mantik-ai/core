@@ -31,15 +31,14 @@ func (d *dummySource) Read(p []byte) (n int, err error) {
 }
 
 func TestSimpleNotification(t *testing.T) {
-	// Should take around 100ms second to read
 	source1 := dummySource{
-		20, 5 * time.Millisecond, nil,
+		20, 20 * time.Millisecond, nil,
 	}
 	var result bytes.Buffer
 	calls := 0
 	foundDone := false
 	lastBytes := int64(0)
-	bytes, err := CopyAndNotify(10*time.Millisecond, &source1, &result, func(bytes int64, failed error, done bool) {
+	bytes, err := CopyAndNotify(40*time.Millisecond, &source1, &result, func(bytes int64, failed error, done bool) {
 		calls++
 		assert.NoError(t, failed)
 		assert.True(t, bytes >= lastBytes)

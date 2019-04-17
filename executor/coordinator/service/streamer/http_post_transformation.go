@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 )
 
 /*
@@ -22,9 +23,10 @@ type HttpPostTransformation struct {
 	nextRequestId int
 	from          string
 	contentType   *string
+	retryInterval time.Duration
 }
 
-func CreateHttpPostTransformation(from string, url string, contentType *string, notifyFn StreamNotifyFn) (*HttpPostTransformation, error) {
+func CreateHttpPostTransformation(from string, url string, contentType *string, notifyFn StreamNotifyFn, retryInterval time.Duration) (*HttpPostTransformation, error) {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return nil, err
@@ -37,6 +39,7 @@ func CreateHttpPostTransformation(from string, url string, contentType *string, 
 	r.listener = listener
 	r.from = from
 	r.contentType = contentType
+	r.retryInterval = retryInterval
 	log.Debugf("Created transformation process from %s to %s on port %d", from, url, r.Port)
 	go r.accept()
 	return &r, nil
@@ -59,8 +62,7 @@ func (s *HttpPostTransformation) Close() {
 }
 
 func (s *HttpPostTransformation) serveConnection(requestId int, c net.Conn) {
-	fromConnection, err := net.Dial("tcp", s.from)
-	defer fromConnection.Close()
+	fromConnection, err := OpenStream(s.from, s.retryInterval, s.contentType)
 	defer c.Close()
 
 	if err != nil {
@@ -68,6 +70,7 @@ func (s *HttpPostTransformation) serveConnection(requestId int, c net.Conn) {
 		s.fn(0, 0, 0, err, false)
 		return
 	}
+	defer fromConnection.Close()
 
 	// TODO It's currently not possible (at least for the server in Go) that we
 	// can consume and forward the response before we completely send the request to the server.

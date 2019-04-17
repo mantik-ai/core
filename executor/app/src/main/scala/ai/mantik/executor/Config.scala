@@ -35,7 +35,8 @@ case class Config(
     interface: String,
     port: Int,
     kubernetesRetryTimes: Int,
-    dockerConfig: DockerConfig
+    dockerConfig: DockerConfig,
+    enableExistingServiceNodeCollapse: Boolean
 )
 
 object Config {
@@ -58,7 +59,8 @@ object Config {
       kubernetesRetryTimes = c.getInt("kubernetes.behavior.retryTimes"),
       interface = c.getString("app.server.interface"),
       port = c.getInt("app.server.port"),
-      dockerConfig = dockerConfig
+      dockerConfig = dockerConfig,
+      enableExistingServiceNodeCollapse = c.getBoolean("app.enableExistingServiceNodeCollapse")
     )
   }
 

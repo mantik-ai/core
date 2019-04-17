@@ -5,7 +5,6 @@ import (
 	"coordinator/service/protocol"
 	"coordinator/service/sidecar"
 	"coordinator/testutil"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
@@ -31,8 +30,8 @@ func TestSimpleABCopy(t *testing.T) {
 
 	plan := coordinator.Plan{
 		Nodes: map[string]coordinator.Node{
-			"A": {fmt.Sprintf("localhost:%d", sideCar1.Port())},
-			"B": {fmt.Sprintf("localhost:%d", sideCar2.Port())},
+			"A": coordinator.MakeAddressNode("localhost", sideCar1.Port()),
+			"B": coordinator.MakeAddressNode("localhost", sideCar2.Port()),
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
@@ -83,8 +82,8 @@ func TestQuitRequested(t *testing.T) {
 
 	plan := coordinator.Plan{
 		Nodes: map[string]coordinator.Node{
-			"A": {fmt.Sprintf("localhost:%d", sideCar1.Port())},
-			"B": {fmt.Sprintf("localhost:%d", sideCar2.Port())},
+			"A": coordinator.MakeAddressNode("localhost", sideCar1.Port()),
+			"B": coordinator.MakeAddressNode("localhost", sideCar2.Port()),
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
@@ -167,10 +166,10 @@ func TestLearnFlow(t *testing.T) {
 
 	plan := coordinator.Plan{
 		Nodes: map[string]coordinator.Node{
-			"in":     {fmt.Sprintf("localhost:%d", inCar.Port())},
-			"learn":  {fmt.Sprintf("localhost:%d", learnCar.Port())},
-			"state":  {fmt.Sprintf("localhost:%d", stateSinkCar.Port())},
-			"result": {fmt.Sprintf("localhost:%d", resultSinkCar.Port())},
+			"in":     coordinator.MakeAddressNode("localhost", inCar.Port()),
+			"learn":  coordinator.MakeAddressNode("localhost", learnCar.Port()),
+			"state":  coordinator.MakeAddressNode("localhost", stateSinkCar.Port()),
+			"result": coordinator.MakeAddressNode("localhost", resultSinkCar.Port()),
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{
@@ -272,8 +271,8 @@ func TestCoordinatorWaitSideCars(t *testing.T) {
 
 	plan := coordinator.Plan{
 		Nodes: map[string]coordinator.Node{
-			"A": {fmt.Sprintf("localhost:%d", sideCar1Port)},
-			"B": {fmt.Sprintf("localhost:%d", sideCar2Port)},
+			"A": coordinator.MakeAddressNode("localhost", sideCar1Port),
+			"B": coordinator.MakeAddressNode("localhost", sideCar2Port),
 		},
 		Flows: []coordinator.Flow{
 			coordinator.Flow{

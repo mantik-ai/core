@@ -4,22 +4,23 @@ import (
 	"coordinator/service/progressutil"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"net"
 	"net/http"
+	"time"
 )
 
 /* A sink is an active process, which copies data from a TCP url to a HTTP Post sink. */
 type HttpPostSink struct {
-	from        string
-	url         string
-	fn          StreamNotifyFn
-	contentType *string
-	done        chan struct{}
+	from          string
+	url           string
+	fn            StreamNotifyFn
+	contentType   *string
+	done          chan struct{}
+	retryInterval time.Duration
 }
 
-func CreateHttpPostSink(from string, url string, contentType *string, fn StreamNotifyFn) (*HttpPostSink, error) {
+func CreateHttpPostSink(from string, url string, contentType *string, fn StreamNotifyFn, retryInterval time.Duration) (*HttpPostSink, error) {
 	sink := HttpPostSink{
-		from, url, fn, contentType, make(chan struct{}, 0),
+		from, url, fn, contentType, make(chan struct{}, 0), retryInterval,
 	}
 	log.Debugf("Created sink process from %s to %s", from, url)
 	go sink.run()
@@ -27,14 +28,14 @@ func CreateHttpPostSink(from string, url string, contentType *string, fn StreamN
 }
 
 func (s *HttpPostSink) run() {
-	conn, err := net.Dial("tcp", s.from)
-	defer conn.Close()
+	conn, err := OpenStream(s.from, s.retryInterval, s.contentType)
 	defer s.finish()
 	if err != nil {
 		log.Warnf("Could not request %s", s.from)
 		s.fn(0, 0, 0, err, false)
 		return
 	}
+	defer conn.Close()
 	wrappedConnection := progressutil.MakeProgressReader(conn)
 	notifier := progressutil.GeneratePeriodicCallback(StreamNotificationDelay, func() {
 		s.fn(0, wrappedConnection.Bytes(), 0, nil, false)

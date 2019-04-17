@@ -7,57 +7,92 @@ import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.{ Container, DockerConfig, DockerLogin }
 import ai.mantik.testutils.TestBase
 import io.circe.Json
-import skuber.RestartPolicy
+import skuber.{ RestartPolicy, Volume }
 import io.circe.syntax._
 
 class KubernetesJobConverterSpec extends TestBase {
 
-  val config = Config().copy(
-    sideCar = Container("my_sidecar", Seq("sidecar_arg")),
-    coordinator = Container("my_coordinator", Seq("coordinator_arg")),
-    payloadPreparer = Container("payload_preparer"),
-    namespacePrefix = "systemtest-",
-    podTrackerId = "mantik-executor",
-    dockerConfig = DockerConfig().copy(
-      logins = Seq(
-        DockerLogin("repo1", "user1", "password1")
+  trait Env {
+    def config = Config().copy(
+      sideCar = Container("my_sidecar", Seq("sidecar_arg")),
+      coordinator = Container("my_coordinator", Seq("coordinator_arg")),
+      payloadPreparer = Container("payload_preparer"),
+      namespacePrefix = "systemtest-",
+      podTrackerId = "mantik-executor",
+      dockerConfig = DockerConfig().copy(
+        logins = Seq(
+          DockerLogin("repo1", "user1", "password1")
+        )
       )
     )
-  )
+  }
 
-  val simpleAbJob = Job(
-    "helloworld",
-    graph = Graph(
-      nodes = Map(
-        "A" -> Node.source(
-          ContainerService(
-            main = Container(
-              image = "executor_sample_source"
-            )
-          ), Some("contentType1")
+  trait SimpleAbEnv extends Env {
+    val job = Job(
+      "helloworld",
+      graph = Graph(
+        nodes = Map(
+          "A" -> Node.source(
+            ContainerService(
+              main = Container(
+                image = "executor_sample_source"
+              )
+            ), Some("contentType1")
+          ),
+          "B" -> Node.sink(
+            ContainerService(
+              main = Container(
+                image = "executor_sample_sink"
+              )
+            ), Some("contentType2")
+          )
         ),
-        "B" -> Node.sink(
-          ContainerService(
-            main = Container(
-              image = "executor_sample_sink"
-            )
-          ), Some("contentType2")
+        links = Link.links(
+          NodeResourceRef("A", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("B", ExecutorModelDefaults.SinkResource)
         )
       ),
-      links = Link.links(
-        NodeResourceRef("A", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("B", ExecutorModelDefaults.SinkResource)
+      extraLogins = Seq(
+        DockerLogin("repo2", "user2", "password2")
       )
-    ),
-    extraLogins = Seq(
-      DockerLogin("repo2", "user2", "password2")
     )
-  )
 
-  trait SimpleAbEnv {
-    val converter = new KubernetesJobConverter(config, simpleAbJob, "job1")
-    val podNameA = converter.namer.podName("A")
-    val podNameB = converter.namer.podName("B")
-    val ipMapping = Map(
+    lazy val converter = new KubernetesJobConverter(config, job, "job1")
+    lazy val podNameA = converter.namer.podName("A")
+    lazy val podNameB = converter.namer.podName("B")
+    lazy val ipMapping = Map(
+      podNameA -> "192.168.1.1",
+      podNameB -> "192.168.1.2"
+    )
+  }
+
+  trait SimpleAbExistingEnv extends Env {
+    val job = Job(
+      "helloworld",
+      graph = Graph(
+        nodes = Map(
+          "A" -> Node.source(
+            ContainerService(
+              main = Container(
+                image = "executor_sample_source"
+              )
+            ), Some("contentType1")
+          ),
+          "B" -> Node.sink(
+            ExistingService("http://external-service"), Some("contentType2")
+          )
+        ),
+        links = Link.links(
+          NodeResourceRef("A", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("B", ExecutorModelDefaults.SinkResource)
+        )
+      )
+    )
+
+    lazy val enableCollapse = true
+    override def config: Config = super.config.copy(enableExistingServiceNodeCollapse = enableCollapse)
+    lazy val converter = new KubernetesJobConverter(config, job, "job1")
+    lazy val podNameA = converter.namer.podName("A")
+    lazy val podNameB = converter.namer.podName("B")
+    lazy val ipMapping = Map(
       podNameA -> "192.168.1.1",
       podNameB -> "192.168.1.2"
     )
@@ -102,8 +137,8 @@ class KubernetesJobConverterSpec extends TestBase {
   it should "create a coordinator plan" in new SimpleAbEnv {
     converter.coordinatorPlan(ipMapping) shouldBe CoordinatorPlan(
       nodes = Map(
-        "A" -> CoordinatorPlan.Node("192.168.1.1:8503"),
-        "B" -> CoordinatorPlan.Node("192.168.1.2:8503")
+        "A" -> CoordinatorPlan.Node(Some("192.168.1.1:8503")),
+        "B" -> CoordinatorPlan.Node(Some("192.168.1.2:8503"))
       ),
       flows = Seq(
         Seq(CoordinatorPlan.NodeResourceRef("A", "out", Some("contentType1")), CoordinatorPlan.NodeResourceRef("B", "in", Some("contentType2")))
@@ -120,7 +155,30 @@ class KubernetesJobConverterSpec extends TestBase {
   }
 
   it should "create a nice job" in new SimpleAbEnv {
-    pending
+    val kubernetesJob = converter.convertCoordinator
+    kubernetesJob.metadata.name shouldBe converter.namer.jobName
+    kubernetesJob.metadata.labels shouldBe Map(
+      "jobId" -> "job1",
+      "trackerId" -> config.podTrackerId
+    )
+    kubernetesJob.spec.get.backoffLimit shouldBe Some(0)
+    val podTemplate = kubernetesJob.spec.get.template.get
+    podTemplate.metadata.labels shouldBe Map(
+      "jobId" -> "job1",
+      "trackerId" -> config.podTrackerId,
+      "role" -> KubernetesJobConverter.CoordinatorRole
+    )
+    val podSpec = podTemplate.spec.get
+    podSpec.restartPolicy shouldBe RestartPolicy.Never
+    podSpec.containers.size shouldBe 1
+    val container = podSpec.containers.head
+    container.image shouldBe config.coordinator.image
+    container.args shouldBe config.coordinator.parameters ++ List("-planFile", "/config/plan")
+    container.volumeMounts shouldBe List(
+      Volume.Mount(
+        "config-volume", mountPath = "/config"
+      )
+    )
   }
 
   "convertNode" should "like data containers" in new SimpleAbEnv {
@@ -171,5 +229,22 @@ class KubernetesJobConverterSpec extends TestBase {
         )
       )
     )
+  }
+
+  "external services" should "be collapsed if enabled" in new SimpleAbExistingEnv {
+    converter.pods.size shouldBe 1
+    val converterPlan = converter.coordinatorPlan(ipMapping)
+    val bNode = converterPlan.nodes.get("B").get
+    bNode.address shouldBe None
+    bNode.url shouldBe Some("http://external-service")
+  }
+
+  it should "not collapse if disabled" in new SimpleAbExistingEnv {
+    override lazy val enableCollapse = false
+    converter.pods.size shouldBe 2
+    val converterPlan = converter.coordinatorPlan(ipMapping)
+    val bNode = converterPlan.nodes.get("B").get
+    bNode.address shouldBe Some(ipMapping(podNameB) + ":8503")
+    bNode.url shouldBe None
   }
 }

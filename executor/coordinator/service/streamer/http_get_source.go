@@ -2,10 +2,8 @@ package streamer
 
 import (
 	"coordinator/service/progressutil"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net"
-	"net/http"
 	"time"
 )
 
@@ -57,58 +55,16 @@ func (s *HttpGetSource) Close() {
 }
 
 func (s *HttpGetSource) serveConnection(requestId int, c net.Conn) {
-	var resp *http.Response
-	var err error
-	for {
-		resp, err = s.tryGetHtpSource()
-		if err == tryAgainError {
-			time.Sleep(s.retryInterval)
-			continue
-		} else {
-			break
-		}
-	}
+	stream, err := OpenHttpStream(s.Url, s.retryInterval, s.contentType)
 	if err != nil {
 		s.notifyFn(requestId, 0, 0, err, false)
 		c.Close()
 		return
 	}
 
-	defer resp.Body.Close()
+	defer stream.Close()
 	defer c.Close()
-	progressutil.CopyAndNotify(StreamNotificationDelay, resp.Body, c, func(bytes int64, failed error, done bool) {
+	progressutil.CopyAndNotify(StreamNotificationDelay, stream, c, func(bytes int64, failed error, done bool) {
 		s.notifyFn(requestId, 0, bytes, failed, done)
 	})
-}
-
-// Error returned by tryGetHttpSource, if it should be tried again
-var tryAgainError = errors.New("Try again")
-
-func (s *HttpGetSource) tryGetHtpSource() (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, s.Url, nil)
-	if s.contentType != nil {
-		req.Header.Add(HttpAccept, *s.contentType)
-	}
-	if err != nil {
-		log.Warnf("Could not create HTTP request %s", err.Error())
-		return nil, err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Warnf("Got an error on HTTP Get %s", err.Error())
-		return nil, err
-	}
-	if resp.StatusCode == 409 {
-		log.Info("Got 409 on HTTP Get, will try again later")
-		return nil, tryAgainError
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		log.Warnf("Got %d Response on HTTP GET %s", resp.StatusCode, s.Url)
-		err = errors.Errorf("Got %d response on HTTP GET", resp.StatusCode)
-		return nil, err
-	}
-	if resp.StatusCode == 204 {
-		log.Warn("Empty 204 Response on HTTP GET")
-	}
-	return resp, nil
 }

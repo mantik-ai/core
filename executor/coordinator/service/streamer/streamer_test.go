@@ -53,7 +53,7 @@ func TestSimpleABStreamingTest(t *testing.T) {
 
 	getSource, err := CreateHttpGetSource(ts1.ResourceUrl(), &contentType, getNotify, time.Second)
 	assert.NoError(t, err)
-	postSink, err := CreateHttpPostSink(fmt.Sprintf("localhost:%d", getSource.Port), ts2.ResourceUrl(), &contentType, postNotify)
+	postSink, err := CreateHttpPostSink(fmt.Sprintf("tcp://localhost:%d", getSource.Port), ts2.ResourceUrl(), &contentType, postNotify, time.Second)
 	assert.NoError(t, err)
 
 	postSink.Wait()
@@ -66,6 +66,48 @@ func TestSimpleABStreamingTest(t *testing.T) {
 	assert.True(t, gotGetDone)
 	assert.True(t, gotPostDone)
 	assert.Equal(t, int64(testLength), getDoneOutBytes)
+	assert.Equal(t, int64(testLength), postPostInBytes)
+	assert.Equal(t, testBytes, ts2.RequestData[0])
+}
+
+func TestHttpToHttpStream(t *testing.T) {
+	testLength := 1000000
+
+	testBytes := make([]byte, testLength)
+	rand.Read(testBytes)
+
+	ts1 := testutil.CreateSampleSource("foo1", testBytes)
+
+	defer ts1.Close()
+
+	ts2 := testutil.CreateSampleSink("foo2")
+	defer ts2.Close()
+
+	var gotPostNotify = 0
+	var gotPostDone = false
+	var postPostInBytes int64 = 0
+
+	var postNotify StreamNotifyFn = func(reqId int, in int64, out int64, inFailure error, done bool) {
+		gotPostNotify++
+		if done {
+			gotPostDone = true
+			assert.NoError(t, inFailure)
+			postPostInBytes = in
+		}
+	}
+
+	contentType := "foo"
+
+	postSink, err := CreateHttpPostSink(ts1.ResourceUrl(), ts2.ResourceUrl(), &contentType, postNotify, time.Second)
+	assert.NoError(t, err)
+
+	postSink.Wait()
+	assert.Equal(t, 1, ts1.Requests)
+	assert.Equal(t, 1, ts2.Requests)
+	assert.Equal(t, contentType, ts1.MimeTypes[0])
+	assert.Equal(t, contentType, ts2.MimeTypes[0])
+	assert.True(t, gotPostNotify == 1)
+	assert.True(t, gotPostDone)
 	assert.Equal(t, int64(testLength), postPostInBytes)
 	assert.Equal(t, testBytes, ts2.RequestData[0])
 }
@@ -105,7 +147,7 @@ func TestTransformation(t *testing.T) {
 		}
 	}
 	contentType := "application/boom"
-	transformation, err := CreateHttpPostTransformation(netSource.FullAddress(), ts.ResourceUrl(), &contentType, postNotify)
+	transformation, err := CreateHttpPostTransformation(netSource.Url(), ts.ResourceUrl(), &contentType, postNotify, time.Second)
 	assert.NoError(t, err)
 
 	bytes, err := testutil.TcpPullData(fmt.Sprintf("localhost:%d", transformation.Port))
