@@ -12,7 +12,7 @@ object DataSetTransformation {
     val context: Context = Context.local()
     try {
       // TODO: Copy test into the same directory
-      val sampleFile = new File("../bridge/bridge/tf/saved_model/test/resources/samples/double_multiply").toPath
+      val sampleFile = new File("bridge/tf/saved_model/test/resources/samples/double_multiply").toPath
       context.pushLocalMantikFile(sampleFile)
 
       val dataset = DataSet.literal(

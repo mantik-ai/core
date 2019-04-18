@@ -12,7 +12,7 @@ object TrainAlgorithm {
   def main(args: Array[String]): Unit = {
     val context: Context = Context.local()
     try {
-      val sampleFile = new File("../bridge/bridge/sklearn/simple_learn/example/kmeans").toPath
+      val sampleFile = new File("bridge/sklearn/simple_learn/example/kmeans").toPath
       context.pushLocalMantikFile(sampleFile)
 
       def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
