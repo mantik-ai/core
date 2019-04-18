@@ -1,0 +1,10 @@
+directory: trained_model
+name: double_multiply
+stack: tf.saved_model
+type:
+  input:
+    columns:
+      x: float64
+  output:
+    columns:
+      "y": float64 # Note: pure 'y' would be interpreted as "true" in YAML.

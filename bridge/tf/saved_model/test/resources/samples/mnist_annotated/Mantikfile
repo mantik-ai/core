@@ -1,0 +1,18 @@
+directory: trained_model
+stack: tf.saved_model
+type:
+  input:
+    columns:
+      x:
+        type: image
+        width: 28
+        height: 28
+        components:
+          black:
+            componentType: uint8
+  output:
+    columns:
+      "y":
+        type: tensor
+        shape: [10]
+        componentType: float32

@@ -1,0 +1,27 @@
+name: kmeans
+stack: sklearn.simple_learn
+directory: code
+kind: trainable
+# TODO: Without support for meta variables not yet really useful
+# Example would be here: https://gl.ambrosys.de/mantik/core/issues/6#note_27995
+
+# The type of training data
+trainingType:
+  columns:
+    coordinates:
+      type: tensor
+      shape: [2]
+      componentType: float64
+# The type for statistic after training
+statType: void
+# The type when trained
+type:
+  input:
+    columns:
+      coordinates:
+        type: tensor
+        shape: [2]
+        componentType: float64
+  output:
+    columns:
+      label: int32
