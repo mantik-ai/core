@@ -116,8 +116,16 @@ object NaturalFormatReaderWriter {
 
     val decoded: Flow[ByteString, RootElement, _] = messagePackFramer.prefixAndTail(1).flatMapConcat {
       case (header, followUp) =>
-        val parsedHeader = MessagePackJsonSupport.fromMessagePackBytes(header.head).as[Header].right.getOrElse {
-          val exc = throw new EncodingException(s"Could not parse header")
+        val asJson = try {
+          MessagePackJsonSupport.fromMessagePackBytes(header.head)
+        } catch {
+          case e: Exception =>
+            val exc = new EncodingException("Invalid Header", e)
+            result.tryFailure(exc)
+            throw exc
+        }
+        val parsedHeader = asJson.as[Header].right.getOrElse {
+          val exc = new EncodingException(s"Could not parse header")
           result.tryFailure(exc)
           throw exc
         }

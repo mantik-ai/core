@@ -11,5 +11,5 @@ object Errors {
   class FormatDefinitionException(msg: String) extends RuntimeException(msg)
 
   /** Something is not encoded in the way we expect it. */
-  class EncodingException(msg: String) extends RuntimeException(msg)
+  class EncodingException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
 }

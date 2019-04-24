@@ -2,12 +2,14 @@ package ai.mantik.ds.formats.natural
 
 import java.io.File
 
+import ai.mantik.ds.Errors.EncodingException
 import ai.mantik.ds.FundamentalType.{ Int32, StringType }
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.{ Bundle, RootElement, TabularRow }
 import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import ai.mantik.ds.element.PrimitiveEncoder._
+import akka.util.ByteString
 
 import scala.concurrent.Future
 
@@ -77,6 +79,23 @@ class NaturalFormatReaderWriterSpec extends TestBase with GlobalAkkaSupport with
 
     await(futureDataType) shouldBe sampleBundle.model
     await(futureData) shouldBe sampleBundle.rows
+  }
+
+  it should "report errors on empty streams" in {
+    val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
+    intercept[EncodingException] {
+      await(Source.empty.via(decoder).runWith(Sink.seq))
+    }
+  }
+
+  it should "report errors on good header and broken data" in {
+    val source = Source(
+      List(sampleBundle.asGzipSync(), ByteString(0x4d.toByte))
+    )
+    val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
+    intercept[EncodingException] {
+      await(source.via(decoder).runWith(Sink.seq))
+    }
   }
 
   it should "be possible to skip the encoding of the header" in {

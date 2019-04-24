@@ -1,8 +1,12 @@
 package ai.mantik.ds.element
 
+import java.io.File
+
 import ai.mantik.ds.{ FundamentalType, TabularData, Tensor, TypeSamples }
 import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
 import PrimitiveEncoder._
+import ai.mantik.ds.Errors.EncodingException
+import ai.mantik.ds.helper.ZipUtils
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 
@@ -110,6 +114,33 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
       intercept[IllegalArgumentException] {
         badBundle.render()
       }
+    }
+  }
+
+  "deserializers" should "not hang on empty data" in {
+    // Regression Bug #47
+    val source = Source.empty
+    intercept[EncodingException] {
+      await(source.runWith(Bundle.fromStreamWithHeader))
+    }
+  }
+
+  it should "decode empty data when there is no header needed" in {
+    val bundle = await(Source.empty.runWith(Bundle.fromStreamWithoutHeader(sampleBundle.model)))
+    bundle.model shouldBe sampleBundle.model
+    bundle.rows shouldBe empty
+  }
+
+  it should "not hang on invalid data" in {
+    // Regression Bug #47
+    import scala.concurrent.duration._
+    val dir = new File(getClass.getResource("/sample_directory").toURI).toPath
+    val source = ZipUtils.zipDirectory(dir, 10.seconds)
+    intercept[EncodingException] {
+      await(source.runWith(Bundle.fromStreamWithHeader))
+    }
+    intercept[EncodingException] {
+      await(source.runWith(Bundle.fromStreamWithoutHeader(sampleBundle.model)))
     }
   }
 }
