@@ -33,7 +33,7 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
             )
         }
       case p: Action.FetchAction =>
-        translateItemPayloadSourceAsFile(p.dataSet.source, canBeTemporary = true).map {
+        manifestDataSetAsFile(p.dataSet, canBeTemporary = true).map {
           case (preplan, fileId) =>
             PlanOp.seq(
               preplan,
@@ -90,16 +90,22 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
           (pushing, reference.id)
         }
       case other =>
-        // Execute the plan and write the result into a file
-        // Which can then be loaded...
-        for {
-          operationResult <- translateItemPayloadSource(other)
-          file <- PlanningState(_.pipeFile(temporary = canBeTemporary))
-          fileNode <- elements.createStoreFileNode(file, operationResult.outputResource(0).contentType)
-        } yield {
-          val runner = fileNode.application(operationResult)
-          elements.sourcePlanToJob(runner) -> file.id
+        translateItemPayloadSource(other).flatMap { operationResult =>
+          resourcePlanToFile(operationResult, canBeTemporary)
         }
+    }
+  }
+
+  /** Converts a resource plan into a possible temporary file. Note: this leads to a splitted plan, usually. */
+  private def resourcePlanToFile(resourcePlan: ResourcePlan, canBeTemporary: Boolean): State[PlanningState, (PlanOp, PlanFileReference)] = {
+    // Execute the plan and write the result into a file
+    // Which can then be loaded...
+    for {
+      file <- PlanningState(_.pipeFile(temporary = canBeTemporary))
+      fileNode <- elements.createStoreFileNode(file, resourcePlan.outputResource(0).contentType)
+    } yield {
+      val runner = fileNode.application(resourcePlan)
+      elements.sourcePlanToJob(runner) -> file.id
     }
   }
 
@@ -161,4 +167,15 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
     }
   }
 
+  /** Manifest a data set as (natural encoded) file. */
+  def manifestDataSetAsFile(dataSet: DataSet, canBeTemporary: Boolean): State[PlanningState, (PlanOp, PlanFileReference)] = {
+    if (dataSet.mantikfile.definition.format == DataSet.NaturalFormatName) {
+      // We can directly use it's file
+      translateItemPayloadSourceAsFile(dataSet.source, canBeTemporary)
+    } else {
+      manifestDataSet(dataSet).flatMap { resourcePlan =>
+        resourcePlanToFile(resourcePlan, canBeTemporary)
+      }
+    }
+  }
 }

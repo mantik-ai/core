@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
 	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
@@ -123,7 +122,7 @@ func TestLearningCycle(t *testing.T) {
 		parsed, err := natural.DecodeBundle(serializer.BACKEND_MSGPACK, content)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(parsed.Rows))
-		assert.Equal(t, int32(6), parsed.Rows[0].Columns[0].(element.Primitive).X)
+		assert.Equal(t, int32(6), parsed.GetTabularPrimitive(0, 0))
 	}()
 
 	wg.Add(2)

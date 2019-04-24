@@ -19,7 +19,9 @@ class KubernetesJobConverterSpec extends TestBase {
       payloadPreparer = Container("payload_preparer"),
       namespacePrefix = "systemtest-",
       podTrackerId = "mantik-executor",
-      dockerConfig = DockerConfig().copy(
+      dockerConfig = DockerConfig(
+        defaultImageTag = Some("mytag"),
+        defaultImageRepository = Some("my-repo"),
         logins = Seq(
           DockerLogin("repo1", "user1", "password1")
         )
@@ -185,7 +187,7 @@ class KubernetesJobConverterSpec extends TestBase {
     val node = Node.sink(
       ContainerService(
         main = Container(
-          image = "runner"
+          image = "repo/runner:latest"
         ),
         dataProvider = Some(DataProvider(
           url = Some("url1"),
@@ -197,7 +199,7 @@ class KubernetesJobConverterSpec extends TestBase {
     val converted = converter.convertNode("A", node)
     val spec = converted.spec.get
     spec.containers.size shouldBe 2 // sidecar, main
-    spec.containers.map(_.image) should contain theSameElementsAs Seq("runner", config.sideCar.image)
+    spec.containers.map(_.image) should contain theSameElementsAs Seq("repo/runner:latest", config.sideCar.image)
     spec.containers.find(_.name == "main").get.volumeMounts.map(_.name) shouldBe List("data")
     spec.initContainers.size shouldBe 1
     spec.initContainers.head.image shouldBe "payload_preparer"
@@ -209,6 +211,19 @@ class KubernetesJobConverterSpec extends TestBase {
     withClue("there must be an fsGroup element") {
       spec.securityContext.flatMap(_.fsGroup) shouldBe Some(1000)
     }
+  }
+
+  it should "resolve the container image" in new SimpleAbEnv {
+    val node = Node.sink(
+      ContainerService(
+        main = Container(
+          image = "runner"
+        )
+      )
+    )
+    val converted = converter.convertNode("A", node)
+    val mainContainer = converted.spec.get.containers.ensuring(_.size == 2).find(_.name == "main").get
+    mainContainer.image shouldBe "my-repo/runner:mytag"
   }
 
   "pullSecrets" should "convert pull screts" in new SimpleAbEnv {

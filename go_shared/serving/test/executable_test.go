@@ -42,6 +42,7 @@ func TestAutoAdaptLearnableAlgorithm(t *testing.T) {
 
 	mantikfile, err := serving.ParseMantikFile([]byte(
 		`{
+	"kind":"trainable",
 	"trainingType": {
 		"columns": {
 			"a1": "int8"
@@ -85,4 +86,31 @@ func TestAutoAdaptLearnableAlgorithm(t *testing.T) {
 	oldDir, err := learnAlg.LearnResultDirectory()
 	assert.NoError(t, err)
 	assert.Equal(t, oldDir, dir)
+}
+
+func TestAutoAdaptDataSource(t *testing.T) {
+	source := NewDataSet()
+	mantikfile, err := serving.ParseMantikFile([]byte(
+		`{
+		"kind": "dataset",
+		"type": {
+			"columns": {
+				"x": "string",
+				"y": "int64"
+			}
+		}
+	}
+`))
+	assert.NoError(t, err)
+	adapted, err := serving.AutoAdapt(source, mantikfile)
+	assert.NoError(t, err)
+	casted, ok := adapted.(serving.ExecutableDataSet)
+	assert.True(t, ok)
+	assert.Equal(t, casted.Type(), mantikfile.(*serving.DataSetMantikfile).Type)
+	elements, err := element.ReadAllFromStreamReader(casted.Get())
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(elements))
+	assert.Equal(t, "Hello", elements[0].(*element.TabularRow).Columns[0].(element.Primitive).X)
+	assert.Equal(t, int64(1), elements[0].(*element.TabularRow).Columns[1].(element.Primitive).X)
+	assert.Equal(t, int64(2), elements[1].(*element.TabularRow).Columns[1].(element.Primitive).X)
 }

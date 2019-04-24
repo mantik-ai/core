@@ -78,8 +78,31 @@ class PlannerElements(bridges: Bridges) {
         // directly pipe data
         val fileToUse = file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
         loadFileNode(fileToUse, Some(ContentTypes.MantikBundleContentType))
-      case Some(containerName) =>
-        throw new mantik.planner.Planner.NotAvailableException(s"No support yet for file format plugins ($containerName")
+      case Some(container) =>
+
+        val getResource = "get"
+
+        val node = Node (
+          PlanNodeService.DockerContainer (
+            container, data = file, mantikfile
+          ),
+          Map (
+            getResource -> NodeResource(ResourceType.Source, Some(MantikBundleContentType))
+          )
+        )
+
+        PlanningState.stateChange(_.withNextNodeId) { nodeId =>
+          val graph = Graph (
+            nodes = Map (
+              nodeId -> node
+            )
+          )
+          ResourcePlan (
+            graph = graph,
+            inputs = Nil,
+            outputs = Seq(NodeResourceRef(nodeId, getResource))
+          )
+        }
     }
   }
 

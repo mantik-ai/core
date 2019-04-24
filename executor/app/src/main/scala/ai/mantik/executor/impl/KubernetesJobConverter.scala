@@ -211,10 +211,12 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
 
     val containers = node.service match {
       case ct: ContainerService =>
+        val resolved = config.dockerConfig.resolveContainer(ct.main)
         List(Container(
           name = "main",
-          image = ct.main.image,
+          image = resolved.image,
           imagePullPolicy = createImagePullPolicy(ct.main),
+          args = resolved.parameters.toList,
           volumeMounts = ct.dataProvider.map { dataProvider =>
             List(Volume.Mount(name = "data", mountPath = "/data"))
           }.getOrElse(Nil)

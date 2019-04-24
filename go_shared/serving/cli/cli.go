@@ -95,7 +95,7 @@ func Start(args []string, backend serving.Backend) {
 	}
 }
 
-func loadAndAdapt(backend serving.Backend, dirName string, mantikFile *serving.Mantikfile) serving.Executable {
+func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Mantikfile) serving.Executable {
 	executable, err := backend.LoadModel(dirName, mantikFile)
 
 	if err != nil {
@@ -103,22 +103,18 @@ func loadAndAdapt(backend serving.Backend, dirName string, mantikFile *serving.M
 		return nil
 	}
 
-	if mantikFile.Type != nil {
-		// trying to bridge it to the expected format
-		adapted, err := serving.AutoAdapt(executable, mantikFile)
-		if err != nil {
-			executable.Cleanup()
-			printErrorAndQuit(RC_COULD_NOT_ADAPT_ALGORITHM, "Could not adapt executable %s", err.Error())
-			return nil
-		}
-		return adapted
-	} else {
-		return executable
+	// trying to bridge it to the expected format
+	adapted, err := serving.AutoAdapt(executable, mantikFile)
+	if err != nil {
+		executable.Cleanup()
+		printErrorAndQuit(RC_COULD_NOT_ADAPT_ALGORITHM, "Could not adapt executable %s", err.Error())
+		return nil
 	}
+	return adapted
 }
 
 // Returns directory of mantik file and parsed mantik file
-func loadMantikfile(flagSet *flag.FlagSet) (string, *serving.Mantikfile) {
+func loadMantikfile(flagSet *flag.FlagSet) (string, serving.Mantikfile) {
 	extraDir := "."
 	if flagSet.NArg() > 0 {
 		extraDir = flagSet.Arg(0)

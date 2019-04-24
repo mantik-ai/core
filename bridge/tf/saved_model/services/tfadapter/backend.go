@@ -9,11 +9,11 @@ import (
 type TensorflowBackend struct {
 }
 
-func (t *TensorflowBackend) LoadModel(directory string, mantikfile *serving.Mantikfile) (serving.Executable, error) {
-	if mantikfile.Directory == nil {
+func (t *TensorflowBackend) LoadModel(directory string, mantikfile serving.Mantikfile) (serving.Executable, error) {
+	if mantikfile.Directory() == nil {
 		return nil, errors.New("Directory required")
 	}
-	fullDir := path.Join(directory, *mantikfile.Directory)
+	fullDir := path.Join(directory, *mantikfile.Directory())
 	model, err := LoadModel(fullDir)
 	if err != nil {
 		return nil, err

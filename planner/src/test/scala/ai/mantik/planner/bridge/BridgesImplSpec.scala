@@ -14,8 +14,6 @@ class BridgesImplSpec extends TestBase {
     bridgeLoader.trainableAlgorithms shouldNot be(empty)
     bridgeLoader.algorithms shouldNot be(empty)
     bridgeLoader.formats shouldNot be(empty)
-    bridgeLoader.dockerConfig.defaultImageRepository shouldBe (defined)
-    bridgeLoader.dockerConfig.defaultImageTag shouldBe (defined)
 
     bridges.algorithmBridge(bridgeLoader.algorithms.head.stack) shouldBe
       Some(bridgeLoader.algorithms.head)

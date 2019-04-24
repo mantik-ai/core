@@ -153,3 +153,43 @@ func (l *trainAlgorithm) LearnResultDirectory() (string, error) {
 	}
 	return l.tempDir, nil
 }
+
+type datasetExample struct {
+}
+
+func (d *datasetExample) Cleanup() {
+	// empty
+}
+
+func (d *datasetExample) ExtensionInfo() interface{} {
+	panic("implement me")
+}
+
+func (d *datasetExample) Type() ds.TypeReference {
+	return ds.FromJsonStringOrPanicRef(`
+		{
+			"columns": {
+				"x": "string",
+				"y": "int32"
+			}
+		}
+`)
+}
+
+func (d *datasetExample) Get() element.StreamReader {
+	bundle := builder.Bundle(
+		d.Type().Underlying,
+		builder.PrimitiveRow("Hello", int32(1)),
+		builder.PrimitiveRow("World", int32(2)),
+	)
+	// stupid cast, TODO
+	elements := make([]element.Element, len(bundle.Rows))
+	for i, r := range bundle.Rows {
+		elements[i] = r
+	}
+	return element.CreateSliceStreamReader(elements)
+}
+
+func NewDataSet() *datasetExample {
+	return &datasetExample{}
+}

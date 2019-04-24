@@ -4,6 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
+	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
 	"testing"
 )
@@ -38,7 +39,7 @@ func TestEmptyReadWrite(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	bundle := element.Bundle{
-		format, []*element.TabularRow{},
+		format, []element.Element{},
 	}
 	testEncodeAndDecode(t, &bundle)
 }
@@ -54,19 +55,12 @@ func TestSimple(t *testing.T) {
 			`,
 	)
 	assert.NoError(t, err)
-	bundle := element.Bundle{
-		format, []*element.TabularRow{
-			{
-				[]element.Element{element.Primitive{int32(4)}},
-			},
-			{
-				[]element.Element{element.Primitive{int32(2)}},
-			},
-			{
-				[]element.Element{element.Primitive{int32(-2)}},
-			},
-		},
-	}
+	bundle := builder.Bundle(
+		format,
+		builder.Row(element.Primitive{int32(4)}),
+		builder.Row(element.Primitive{int32(2)}),
+		builder.Row(element.Primitive{int32(-2)}),
+	)
 	testEncodeAndDecode(t, &bundle)
 }
 
@@ -82,19 +76,12 @@ func TestMultiType(t *testing.T) {
 			`,
 	)
 	assert.NoError(t, err)
-	bundle := element.Bundle{
-		format, []*element.TabularRow{
-			{
-				[]element.Element{element.Primitive{int32(4)}, element.Primitive{"Hello"}},
-			},
-			{
-				[]element.Element{element.Primitive{int32(2)}, element.Primitive{"World"}},
-			},
-			{
-				[]element.Element{element.Primitive{int32(-2)}, element.Primitive{""}},
-			},
-		},
-	}
+	bundle := builder.Bundle(
+		format,
+		builder.Row(element.Primitive{int32(4)}, element.Primitive{"Hello"}),
+		builder.Row(element.Primitive{int32(2)}, element.Primitive{"World"}),
+		builder.Row(element.Primitive{int32(-2)}, element.Primitive{""}),
+	)
 	testEncodeAndDecode(t, &bundle)
 }
 
@@ -120,26 +107,22 @@ func TestAllPrimitiveTypes(t *testing.T) {
 			`,
 	)
 	assert.NoError(t, err)
-	bundle := element.Bundle{
-		format, []*element.TabularRow{
-			{
-				[]element.Element{
-					element.Primitive{int8(-4)},
-					element.Primitive{uint8(4)},
-					element.Primitive{int32(-345458)},
-					element.Primitive{uint32(54385348)},
-					element.Primitive{int64(-383458435834)},
-					element.Primitive{uint64(3453434468368865386)},
-					element.Primitive{float32(-4.5)},
-					element.Primitive{float64(43543545354555.35)},
-					element.Primitive{string("Hello World")},
-					element.Primitive{true},
-					element.Primitive{false},
-					element.Primitive{nil},
-				},
-			},
-		},
-	}
+	bundle := builder.Bundle(
+		format, builder.Row(
+			element.Primitive{int8(-4)},
+			element.Primitive{uint8(4)},
+			element.Primitive{int32(-345458)},
+			element.Primitive{uint32(54385348)},
+			element.Primitive{int64(-383458435834)},
+			element.Primitive{uint64(3453434468368865386)},
+			element.Primitive{float32(-4.5)},
+			element.Primitive{float64(43543545354555.35)},
+			element.Primitive{string("Hello World")},
+			element.Primitive{true},
+			element.Primitive{false},
+			element.Primitive{nil},
+		),
+	)
 	testEncodeAndDecode(t, &bundle)
 }
 
@@ -163,17 +146,12 @@ func TestImage(t *testing.T) {
 			`,
 	)
 	assert.NoError(t, err)
-	bundle := element.Bundle{
-		format, []*element.TabularRow{
-			{
-				[]element.Element{
-					&element.ImageElement{
-						[]byte("ABCDEF"),
-					},
-				},
-			},
+	bundle := builder.Bundle(
+		format, builder.Row(&element.ImageElement{
+			[]byte("ABCDEF"),
 		},
-	}
+		),
+	)
 	testEncodeAndDecode(t, &bundle)
 }
 
@@ -192,17 +170,13 @@ func TestTensor(t *testing.T) {
 			`,
 	)
 	assert.NoError(t, err)
-	bundle := element.Bundle{
-		format, []*element.TabularRow{
-			{
-				[]element.Element{
-					&element.TensorElement{
-						[]float32{2.3, -2.0, 5.0, 0.0, -3.0, 5.0},
-					},
-				},
+	bundle := builder.Bundle(
+		format, builder.Row(
+			&element.TensorElement{
+				[]float32{2.3, -2.0, 5.0, 0.0, -3.0, 5.0},
 			},
-		},
-	}
+		),
+	)
 	testEncodeAndDecode(t, &bundle)
 }
 
@@ -223,30 +197,24 @@ func TestEmbeddedTabular(t *testing.T) {
 			`,
 	)
 	assert.NoError(t, err)
-	bundle := element.Bundle{
-		format, []*element.TabularRow{
-			{
-				[]element.Element{
-					&element.EmbeddedTabularElement{
-						[]*element.TabularRow{
-							&element.TabularRow{
-								[]element.Element{element.Primitive{int32(4)}, element.Primitive{"Hello"}},
-							},
-							&element.TabularRow{
-								[]element.Element{element.Primitive{int32(-1)}, element.Primitive{"World"}},
-							},
-						},
+	bundle := builder.Bundle(
+		format, builder.Row(
+			&element.EmbeddedTabularElement{
+				[]*element.TabularRow{
+					&element.TabularRow{
+						[]element.Element{element.Primitive{int32(4)}, element.Primitive{"Hello"}},
+					},
+					&element.TabularRow{
+						[]element.Element{element.Primitive{int32(-1)}, element.Primitive{"World"}},
 					},
 				},
 			},
-			{
-				[]element.Element{
-					&element.EmbeddedTabularElement{
-						[]*element.TabularRow{}, // empty row
-					},
-				},
+		),
+		builder.Row(
+			&element.EmbeddedTabularElement{
+				[]*element.TabularRow{}, // empty row
 			},
-		},
-	}
+		),
+	)
 	testEncodeAndDecode(t, &bundle)
 }

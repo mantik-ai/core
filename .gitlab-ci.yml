@@ -140,21 +140,26 @@ bridges_test:
   artifacts:
     paths:
       - bridge/tf/saved_model
+      - bridge/binary/target
     expire_in: 1 week
 
-bridges_tf_publish:
+bridges_publish:
   stage: publish
   image: docker:stable-git
   services:
     - docker:dind
   only:
-    - story/bridge25/bridge_to_core
+    - story/43/binary_format
     - master
     - tags
   dependencies:
     - bridges_test
   script:
-    - ./bridge/tf/saved_model/push_docker.sh
+    - export ENABLE_PUSH=TRUE
+    - ./bridge/tf/saved_model/create_docker_images.sh
+    - ./bridge/binary/create_docker_images.sh
+    - ./bridge/sklearn/simple_learn/create_docker_images.sh
+
 
 bridge_sklearn_test:
   stage: test
@@ -171,17 +176,3 @@ bridge_sklearn_test:
     - pipenv install --deploy --dev
     - pipenv run pytest
     - ./smoke_test.sh
-
-bridges_sklearn_publish:
-  stage: publish
-  image: docker:stable-git
-  services:
-    - docker:dind
-  only:
-    - story/bridge25/bridge_to_core
-    - master
-    - tags
-  dependencies:
-    - bridge_sklearn_test
-  script:
-    - ./bridge/sklearn/simple_learn/push_docker.sh

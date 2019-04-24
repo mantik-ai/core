@@ -26,6 +26,13 @@ object TestItems {
     )
   )
 
+  val dataSet2 = Mantikfile.pure(
+    DataSetDefinition(
+      format = "format1",
+      `type` = FundamentalType.StringType
+    )
+  )
+
   val learning1 = Mantikfile.pure(
     TrainableAlgorithmDefinition(
       stack = "training_stack1",
@@ -41,11 +48,12 @@ object TestItems {
   val algoPlugin1 = AlgorithmBridge("algorithm_stack1", Container("algorithm1_image"))
   val learningPlugin = TrainableAlgorithmBridge("training_stack1", Container("training1_image"))
   val naturalBridge = FormatBridge("natural", None)
+  val format1 = FormatBridge("format1", Some(Container("format1_image")))
 
   val testBridges = BridgeList(
     Seq(algoPlugin1),
     Seq(learningPlugin),
-    Seq(naturalBridge),
+    Seq(naturalBridge, format1),
     DockerConfig()
   )
 }

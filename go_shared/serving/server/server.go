@@ -72,13 +72,13 @@ func (s *Server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s* Server) quitHandler(w http.ResponseWriter, r * http.Request) {
+func (s *Server) quitHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 	w.WriteHeader(200)
-	time.AfterFunc(100 * time.Millisecond, func() {
+	time.AfterFunc(100*time.Millisecond, func() {
 		s.Close()
 	})
 }
@@ -116,6 +116,14 @@ func CreateServerForExecutable(executable serving.Executable, address string) (*
 	t, ok := executable.(serving.TrainableAlgorithm)
 	if ok {
 		s, err := CreateTrainableServer(t, address)
+		if err != nil {
+			return nil, err
+		}
+		return s.Server, nil
+	}
+	d, ok := executable.(serving.ExecutableDataSet)
+	if ok {
+		s, err := CreateDataSetServer(d, address)
 		if err != nil {
 			return nil, err
 		}

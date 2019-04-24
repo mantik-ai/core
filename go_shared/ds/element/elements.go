@@ -71,3 +71,37 @@ type StreamReader interface {
 	// Error may be EOF.
 	Read() (Element, error)
 }
+
+// Create a StreamReader for an element slice
+func CreateSliceStreamReader(elements []Element) StreamReader {
+	return &sliceStreamReader{elements, 0}
+}
+
+type sliceStreamReader struct {
+	elements []Element
+	pos      int
+}
+
+func (s *sliceStreamReader) Read() (Element, error) {
+	if s.pos >= len(s.elements) {
+		return nil, io.EOF
+	}
+	result := s.elements[s.pos]
+	s.pos += 1
+	return result, nil
+}
+
+// Read a stream reader until exhausted.
+func ReadAllFromStreamReader(reader StreamReader) ([]Element, error) {
+	var buf []Element
+	for {
+		e, err := reader.Read()
+		if err == io.EOF {
+			return buf, nil
+		}
+		if err != nil {
+			return buf, err
+		}
+		buf = append(buf, e)
+	}
+}

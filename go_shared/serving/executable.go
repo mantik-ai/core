@@ -69,3 +69,12 @@ type TrainableAlgorithm interface {
 	// (Into what it is imported is the decision of Mantik itself).
 	LearnResultDirectory() (string, error)
 }
+
+/** Interface for a DataSet. */
+type ExecutableDataSet interface {
+	Executable
+	// Returns the generated type
+	Type() ds.TypeReference
+	// Returns generated elements
+	Get() element.StreamReader
+}
