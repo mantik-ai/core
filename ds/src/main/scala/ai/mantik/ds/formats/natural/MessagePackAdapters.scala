@@ -1,11 +1,11 @@
 package ai.mantik.ds.formats.natural
 
-import ai.mantik.ds.Errors.FormatNotSupportedException
+import ai.mantik.ds.Errors.{ EncodingException, FormatNotSupportedException }
 import ai.mantik.ds.FundamentalType._
 import ai.mantik.ds._
 import ai.mantik.ds.element._
 import akka.util.ByteString
-import org.msgpack.core.{ MessageFormat, MessagePacker, MessageUnpacker }
+import org.msgpack.core.{ MessageFormat, MessagePackException, MessagePacker, MessageUnpacker }
 
 import scala.reflect.ClassTag
 
@@ -223,6 +223,7 @@ private[natural] object MessagePackAdapters {
   trait RootElementContext {
     def write(messagePacker: MessagePacker, rootElement: RootElement): Unit
 
+    @throws[EncodingException]
     def read(messageUnpacker: MessageUnpacker): RootElement
   }
 
@@ -249,16 +250,21 @@ private[natural] object MessagePackAdapters {
     }
 
     override def read(messageUnpacker: MessageUnpacker): TabularRow = {
-      val length = messageUnpacker.unpackArrayHeader()
-      require(length == subAdapters.length)
-      val builder = IndexedSeq.newBuilder[Element]
-      builder.sizeHint(length)
-      subAdapters.foreach { adapter =>
-        builder += adapter.read(messageUnpacker)
+      try {
+        val length = messageUnpacker.unpackArrayHeader()
+        require(length == subAdapters.length)
+        val builder = IndexedSeq.newBuilder[Element]
+        builder.sizeHint(length)
+        subAdapters.foreach { adapter =>
+          builder += adapter.read(messageUnpacker)
+        }
+        TabularRow(
+          builder.result()
+        )
+      } catch {
+        case e: MessagePackException =>
+          throw new EncodingException("Error on decoding", e)
       }
-      TabularRow(
-        builder.result()
-      )
     }
   }
 
@@ -272,7 +278,12 @@ private[natural] object MessagePackAdapters {
     }
 
     override def read(messageUnpacker: MessageUnpacker): RootElement = {
-      SingleElement(subAdapter.read(messageUnpacker))
+      try {
+        SingleElement(subAdapter.read(messageUnpacker))
+      } catch {
+        case e: MessagePackException =>
+          throw new EncodingException("Error on decoding", e)
+      }
     }
   }
 
