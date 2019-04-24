@@ -5,4 +5,5 @@ MYDIR=`dirname $0`
 cd $MYDIR
 
 ./tf/saved_model/build.sh
+./binary/build.sh
 

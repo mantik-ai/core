@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/vmihailenco/msgpack"
 	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
 	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
@@ -71,8 +70,8 @@ func TestStandardPages(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, response.StatusCode)
 	})
-	t.Run("quit", func(t * testing.T){
-		response, err := http.Post(f.url + "/admin/quit", "", nil)
+	t.Run("quit", func(t *testing.T) {
+		response, err := http.Post(f.url+"/admin/quit", "", nil)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 	})
@@ -209,9 +208,9 @@ func TestServingWithHeader(t *testing.T) {
 		parsed, err := natural.DecodeBundle(serializer.BACKEND_MSGPACK, content)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(parsed.Rows))
-		assert.Equal(t, int32(12), parsed.Rows[0].Columns[0].(element.Primitive).X)
-		assert.Equal(t, int32(6), parsed.Rows[1].Columns[0].(element.Primitive).X)
-		assert.Equal(t, int32(-6), parsed.Rows[2].Columns[0].(element.Primitive).X)
+		assert.Equal(t, int32(12), parsed.GetTabularPrimitive(0, 0))
+		assert.Equal(t, int32(6), parsed.GetTabularPrimitive(1, 0))
+		assert.Equal(t, int32(-6), parsed.GetTabularPrimitive(2, 0))
 	})
 
 	t.Run("json", func(t *testing.T) {
@@ -226,8 +225,8 @@ func TestServingWithHeader(t *testing.T) {
 		parsed, err := natural.DecodeBundle(serializer.BACKEND_JSON, content)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(parsed.Rows))
-		assert.Equal(t, int32(12), parsed.Rows[0].Columns[0].(element.Primitive).X)
-		assert.Equal(t, int32(6), parsed.Rows[1].Columns[0].(element.Primitive).X)
-		assert.Equal(t, int32(-6), parsed.Rows[2].Columns[0].(element.Primitive).X)
+		assert.Equal(t, int32(12), parsed.GetTabularPrimitive(0, 0))
+		assert.Equal(t, int32(6), parsed.GetTabularPrimitive(1, 0))
+		assert.Equal(t, int32(-6), parsed.GetTabularPrimitive(2, 0))
 	})
 }

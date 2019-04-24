@@ -10,16 +10,7 @@ if [ ! -f target/coordinator ]; then
     exit 1
 fi
 
-# Rude check if docker can be used without sudo
-# (On Linux Workstation I do not want to be docker runnable without, due security concerns)
-if docker ps > /dev/null 2>&1; then
-    echo "Docker works"
-    DOCKER_CALL="docker"
-else
-    echo "Docker seems to need sudo"
-    DOCKER_CALL="sudo docker"
-fi
-
+. ./../../scripts/ci/docker_help.sh
 
 $DOCKER_CALL build -t coordinator .
 
@@ -40,25 +31,9 @@ $DOCKER_CALL build --build-arg input_executable=target/executor_sample_learner_l
 echo "Building Sample Transformer"
 $DOCKER_CALL build --build-arg input_executable=target/executor_sample_transformer_linux -t executor_sample_transformer .
 
-
-if [ -n "$ENABLE_PUSH" ]; then
-    echo "Docker Login..."
-    docker login -u mantik.ci -p $SONATYPE_MANTIK_PASSWORD mdocker.rcxt.de
-
-    handle_image () {
-        IMAGE_NAME=mdocker.rcxt.de/$1:$CI_COMMIT_REF_SLUG
-        echo "Handling Image $1 ---> $IMAGE_NAME"
-        docker tag $1 $IMAGE_NAME
-        docker push $IMAGE_NAME
-    }
-
-    handle_image coordinator
-    handle_image payload_preparer
-    handle_image executor_sample_sink
-    handle_image executor_sample_source
-    handle_image executor_sample_learner
-    handle_image executor_sample_transformer
-    echo "Pushing Done"
-else
-    echo "Pushing disabled"
-fi
+docker_push coordinator
+docker_push payload_preparer
+docker_push executor_sample_sink
+docker_push executor_sample_source
+docker_push executor_sample_learner
+docker_push executor_sample_transformer

@@ -31,17 +31,13 @@ func loadMantikExecutableAlgorithm(backend serving.Backend, directory string) (s
 		return nil, errors.Wrap(err, "Could not load model")
 	}
 
-	if parsedMantikFile.Type != nil {
-		// trying to bridge it to the expected format
-		adapted, err := serving.AutoAdapt(algorithm, parsedMantikFile)
-		if err != nil {
-			algorithm.Cleanup()
-			return nil, errors.Wrap(err, "Could not adapt algorithm")
-		}
-		return adapted.(serving.ExecutableAlgorithm), nil
-	} else {
-		return algorithm.(serving.ExecutableAlgorithm), nil
+	// trying to bridge it to the expected format
+	adapted, err := serving.AutoAdapt(algorithm, parsedMantikFile)
+	if err != nil {
+		algorithm.Cleanup()
+		return nil, errors.Wrap(err, "Could not adapt algorithm")
 	}
+	return adapted.(serving.ExecutableAlgorithm), nil
 }
 
 type Fixture struct {

@@ -5,7 +5,7 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 )
 
-func Bundle(dataType ds.DataType, tabularRows ...*element.TabularRow) element.Bundle {
+func Bundle(dataType ds.DataType, tabularRows ...element.Element) element.Bundle {
 	return element.Bundle{dataType, tabularRows}
 }
 

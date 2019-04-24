@@ -291,6 +291,90 @@ class PlannerImplSpec extends TestBase {
     )
   }
 
+  "manifestDataSet" should "manifest a literal" in new Env {
+    val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
+      DataSet(Source.Loaded("file1"), TestItems.dataSet1)
+    ))
+
+    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
+    sourcePlan shouldBe ResourcePlan(
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.File(PlanFileReference(1)),
+            resources = Map(
+              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+            )
+          )
+        ),
+      ),
+      outputs = Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
+    )
+  }
+
+  it should "also manifest a bridged dataset" in new Env {
+    val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
+      DataSet(Source.Loaded("file1"), TestItems.dataSet2)
+    ))
+
+    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
+    sourcePlan shouldBe ResourcePlan(
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.DockerContainer(Container("format1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
+            resources = Map(
+              "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+            )
+          )
+        ),
+      ),
+      outputs = Seq(NodeResourceRef("1", "get"))
+    )
+  }
+
+  "manifestDataSetAsFile" should "return a literal" in new Env {
+    val (state, (op, file)) = runWithEmptyState(planner.manifestDataSetAsFile(
+      DataSet(Source.Loaded("file1"), TestItems.dataSet1), canBeTemporary = true
+    ))
+
+    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
+    op shouldBe PlanOp.Empty
+    file shouldBe PlanFileReference(1)
+  }
+
+  it should "also manifest a bridged dataset" in new Env {
+    val (state, (op, file)) = runWithEmptyState(planner.manifestDataSetAsFile(
+      DataSet(Source.Loaded("file1"), TestItems.dataSet2), canBeTemporary = true
+    ))
+    state.files shouldBe List(
+      PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")),
+      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true)
+    )
+    op shouldBe PlanOp.RunGraph(
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.DockerContainer(Container("format1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
+            resources = Map(
+              "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+            )
+          ),
+          "2" -> Node(
+            PlanNodeService.File(PlanFileReference(2)),
+            resources = Map(
+              ExecutorModelDefaults.SinkResource -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType))
+            )
+          )
+        ),
+        links = Link.links(
+          NodeResourceRef("1", "get") -> NodeResourceRef("2", ExecutorModelDefaults.SinkResource)
+        )
+      )
+    )
+    file shouldBe PlanFileReference(2)
+  }
+
   "convert" should "convert a simple save action" in new Env {
     val plan = planner.convert(
       Action.SaveAction(
@@ -327,6 +411,24 @@ class PlannerImplSpec extends TestBase {
     plan.op shouldBe PlanOp.seq(
       PlanOp.PushBundle(lit, PlanFileReference(1)),
       PlanOp.PullBundle(lit.model, PlanFileReference(1))
+    )
+  }
+
+  it should "also work if it has to convert a executed dataset" in new Env {
+    val inner = DataSet(Source.Loaded("file1"), TestItems.dataSet2)
+    val plan = planner.convert(
+      Action.FetchAction (
+        inner
+      )
+    )
+    plan.files shouldBe List(
+      PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")),
+      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true)
+    )
+    val (_, (innerTranslated, _)) = runWithEmptyState(planner.manifestDataSetAsFile(inner, true))
+    plan.op shouldBe PlanOp.seq(
+      innerTranslated,
+      PlanOp.PullBundle(inner.dataType, PlanFileReference(2))
     )
   }
 }

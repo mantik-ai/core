@@ -27,13 +27,12 @@ export SKUBER_URL=http://localhost:8080
 
 ## Compiling Executor Helper Containers
 
-- Use `executor/coordinator/build.sh` for building
-- Use `executor/coordinator/create_docker_images.sh` for creating docker images
-- Use `executor/scripts/dev/push_test_containers_to_microk8s.sh` to push the images to the Microk8s Registry.
+- Use `scripts/dev/build_all.sh` for building
+- Use `scripts/dev/push_microk8s.sh` to build and push container images to the Microk8s Registry.
 
 ## Starting Executor
 
-- Start the class `Main` with `-Dconfig.resource=application_local_microk8s.conf` inside IntelliJ.
+- Use `scripts/dev/start_executor_microk8s.sh`. It overrides the config to use Microk8s Registry.
 
 ## Run the examples
 

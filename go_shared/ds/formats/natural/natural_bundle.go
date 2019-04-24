@@ -50,7 +50,7 @@ func DecodeBundleFromReader(backendType serializer.BackendType, reader io.Reader
 		return nil
 	}
 
-	var incomingRows = []*element.TabularRow{} // we want empty slices for deep comparison
+	var incomingRows = []element.Element{} // we want empty slices for deep comparison
 	var backend, err = serializer.CreateDeserializingBackend(backendType, reader)
 	if err != nil {
 		return nil, err

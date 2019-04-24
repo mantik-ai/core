@@ -33,7 +33,7 @@ Each Mantikfile must contain type-related information
 
 ### DataSet
 
-A DataSet Mantikfile must contain a field `type` which delares its type.
+A DataSet Mantikfile must contain a field `type` which declares its type.
 
 It must contain a field `format` which maps to a format plugin. 
 
@@ -65,7 +65,7 @@ Example for a Data Set definition
 kind: dataset
 name: mnist_test
 format: binary
-model:
+type:
   columns:
     x:
       type: image

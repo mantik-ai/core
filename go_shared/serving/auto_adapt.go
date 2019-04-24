@@ -7,14 +7,21 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 )
 
-func AutoAdapt(executable Executable, mantikfile *Mantikfile) (Executable, error) {
+func AutoAdapt(executable Executable, mantikfile Mantikfile) (Executable, error) {
 	algorithm, ok := executable.(ExecutableAlgorithm)
 	if ok {
-		return AutoAdaptExecutableAlgorithm(algorithm, mantikfile.Type.Input.Underlying, mantikfile.Type.Output.Underlying)
+		mf := mantikfile.(*AlgorithmMantikfile)
+		return AutoAdaptExecutableAlgorithm(algorithm, mf.Type.Input.Underlying, mf.Type.Output.Underlying)
 	}
 	trainable, ok := executable.(TrainableAlgorithm)
 	if ok {
-		return autoAdaptTrainableAlgorithm(trainable, mantikfile)
+		mf := mantikfile.(*TrainableMantikfile)
+		return autoAdaptTrainableAlgorithm(trainable, mf)
+	}
+	dataset, ok := executable.(ExecutableDataSet)
+	if ok {
+		mf := mantikfile.(*DataSetMantikfile)
+		return autoAdaptDataSet(dataset, mf)
 	}
 	panic("Implement me")
 }
@@ -123,7 +130,7 @@ func (s *singleIntoMultipleAlgorithmAdapter) ExtensionInfo() interface{} {
 	return s.algorithm.ExtensionInfo()
 }
 
-func autoAdaptTrainableAlgorithm(algorithm TrainableAlgorithm, mantikfile *Mantikfile) (TrainableAlgorithm, error) {
+func autoAdaptTrainableAlgorithm(algorithm TrainableAlgorithm, mantikfile *TrainableMantikfile) (TrainableAlgorithm, error) {
 	trainingAdapter, err := adapt.LookupAutoAdapter(mantikfile.TrainingType.Underlying, algorithm.TrainingType().Underlying)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not adapter training type")
@@ -186,4 +193,55 @@ func (a *adaptedTrainableAlgorithm) Type() *AlgorithmType {
 
 func (a *adaptedTrainableAlgorithm) LearnResultDirectory() (string, error) {
 	return a.original.LearnResultDirectory()
+}
+
+func autoAdaptDataSet(set ExecutableDataSet, mantikfile *DataSetMantikfile) (ExecutableDataSet, error) {
+	adapter, err := adapt.LookupAutoAdapter(set.Type().Underlying, mantikfile.Type.Underlying)
+	if err != nil {
+		return nil, err
+	}
+	return &adaptedDataSet{
+		set,
+		mantikfile.Type,
+		adapter,
+	}, nil
+}
+
+type adaptedDataSet struct {
+	original ExecutableDataSet
+	newType  ds.TypeReference
+	adapter  adapt.Adapter
+}
+
+func (a *adaptedDataSet) Cleanup() {
+	a.original.Cleanup()
+}
+
+func (a *adaptedDataSet) ExtensionInfo() interface{} {
+	return a.original.ExtensionInfo()
+}
+
+func (a *adaptedDataSet) Type() ds.TypeReference {
+	return a.newType
+}
+
+func (a *adaptedDataSet) Get() element.StreamReader {
+	return &adaptedStreamReader{
+		a.adapter,
+		a.original.Get(),
+	}
+}
+
+type adaptedStreamReader struct {
+	adapter  adapt.Adapter
+	original element.StreamReader
+}
+
+func (a *adaptedStreamReader) Read() (element.Element, error) {
+	e, err := a.original.Read()
+	if err != nil {
+		return nil, err
+	}
+	adapted, err := a.adapter(e)
+	return adapted, err
 }

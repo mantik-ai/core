@@ -5,4 +5,4 @@ MYDOR=`dirname $0`
 cd $MYDOR
 
 ./tf/saved_model/test.sh
-
+./binary/test.sh

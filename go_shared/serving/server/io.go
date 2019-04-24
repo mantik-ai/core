@@ -64,7 +64,7 @@ func GenerateInputParser(expectedInput ds.DataType) (InputParser, error) {
 	return result, nil
 }
 
-type OutputEncoder = func(resultElements []element.Element, w http.ResponseWriter, r *http.Request)
+type OutputEncoder = func(stream element.StreamReader, w http.ResponseWriter, r *http.Request)
 
 func GenerateOutputEncoder(expectedOutput ds.DataType) (OutputEncoder, error) {
 	serializer, err := natural.LookupRootElementSerializer(expectedOutput)
@@ -72,9 +72,9 @@ func GenerateOutputEncoder(expectedOutput ds.DataType) (OutputEncoder, error) {
 		return nil, err
 	}
 
-	result := func(resultElements []element.Element, w http.ResponseWriter, r *http.Request) {
+	result := func(stream element.StreamReader, w http.ResponseWriter, r *http.Request) {
 		contentType := figureOutContentType(r)
-		err = EncodeOutput(expectedOutput, serializer, resultElements, contentType, w)
+		err = EncodeOutput(expectedOutput, serializer, stream, contentType, w)
 		if err != nil {
 			log.Printf("Error serializing response %s", err.Error())
 			sendError(w, 500, "Could not serialize response")
@@ -101,19 +101,6 @@ func figureOutContentType(request *http.Request) string {
 	return MimeJson
 }
 
-func accepts(header http.Header, toAccept string) bool {
-	accepting := header[HeaderAccept]
-	if accepting == nil {
-		return false
-	}
-	for _, v := range accepting {
-		if v == toAccept {
-			return true
-		}
-	}
-	return false
-}
-
 /*
 Combines InputParser and OutputEncoder into a Http Handler
 */
@@ -138,7 +125,7 @@ func GenerateTypedStreamHandler(
 			return
 		}
 		applied, err := handler(elements)
-		outputEncoder(applied, w, r)
+		outputEncoder(element.CreateSliceStreamReader(applied), w, r)
 	}
 	return result, nil
 }
@@ -245,7 +232,7 @@ func decodeSingleImage(image *ds.Image, f *multipart.FileHeader) (*element.Image
 }
 
 /** Writes serialized elements back into the output. */
-func EncodeOutput(dataType ds.DataType, rootSerializer natural.ElementSerializer, elements []element.Element, contentType string, w http.ResponseWriter) error {
+func EncodeOutput(dataType ds.DataType, rootSerializer natural.ElementSerializer, stream element.StreamReader, contentType string, w http.ResponseWriter) error {
 	var backendType serializer.BackendType
 	var withHeader = false
 
@@ -276,8 +263,15 @@ func EncodeOutput(dataType ds.DataType, rootSerializer natural.ElementSerializer
 			return err
 		}
 	}
-	for _, e := range elements {
-		err := rootSerializer.Write(backend, e)
+	for {
+		element, err := stream.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		err = rootSerializer.Write(backend, element)
 		if err != nil {
 			return err
 		}
