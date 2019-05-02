@@ -1,6 +1,8 @@
 ThisBuild / organization := "ai.mantik"
 ThisBuild / version := "0.1-SNAPSHOT"
 ThisBuild / scalaVersion := "2.12.8"
+ThisBuild / scalacOptions += "-Xfatal-warnings"
+ThisBuild / scalacOptions += "-feature" 
 
 val akkaVersion = "2.5.20"
 val akkaHttpVersion = "10.1.7"
@@ -184,7 +186,12 @@ lazy val planner = (project in file ("planner"))
   .dependsOn(ds, executorApi, repository)
   .settings(
     name := "planner",
-    libraryDependencies += "org.typelevel" %% "cats-core" % "1.6.0",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core" % "1.6.0",
+
+      // Parboiled (Parsers)
+      "org.parboiled" %% "parboiled" % "2.1.5"
+    ),
     scalacOptions += "-Ypartial-unification" // Needed for Cats
   )
   .settings(

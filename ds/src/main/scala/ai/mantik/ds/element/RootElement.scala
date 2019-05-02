@@ -34,7 +34,7 @@ object Primitive {
   val unit: Primitive[Unit] = Primitive[Unit](())
 }
 
-/** Single serialized image. */
+/** Single serialized image (big endian, flat) */
 case class ImageElement(bytes: ByteString) extends Element
 
 /**

@@ -64,6 +64,7 @@ object Config {
     )
   }
 
+  import scala.language.implicitConversions
   private implicit def convertDuration(d: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
     Duration.fromNanos(d.toNanos)
   }

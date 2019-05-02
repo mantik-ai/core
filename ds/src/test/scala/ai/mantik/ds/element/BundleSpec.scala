@@ -99,6 +99,17 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     }
   }
 
+  "fundamental" should "build fundamental bundles" in {
+    Bundle.fundamental(5) shouldBe Bundle.build(
+      FundamentalType.Int32, Primitive(5)
+    )
+  }
+
+  "single" should "return a single element if applicable" in {
+    Bundle.fundamental(5).single shouldBe Some(Primitive(5))
+    sampleBundle.single shouldBe None
+  }
+
   "toString" should "render the bundle" in {
     Bundle.build(FundamentalType.Int32, Primitive(3)).toString shouldBe "3"
     withClue("It should not crash on illegal values") {

@@ -74,6 +74,17 @@ case class Bundle(
       case e: Exception => "<Error Bundle>"
     }
   }
+
+  /**
+   * Returns the single element contained in the bundle.
+   * This works only for Bundles which are not tabular.
+   */
+  def single: Option[Element] = {
+    rows match {
+      case Vector(SingleElement(e)) => Some(e)
+      case _                        => None
+    }
+  }
 }
 
 object Bundle {
@@ -197,5 +208,13 @@ object Bundle {
     require(!nonTabular.isInstanceOf[TabularData], "Builder can only be used for nontabular data")
     Bundle(nonTabular, Vector(SingleElement(value)))
   }
+
+  /** Wrap a single primitive non tabular value. */
+  def fundamental[ST](x: ST)(implicit valueEncoder: ValueEncoder[ST]): Bundle = {
+    Bundle(valueEncoder.fundamentalType, Vector(SingleElement(valueEncoder.wrap(x))))
+  }
+
+  /** The empty value. */
+  def void: Bundle = Bundle.build(FundamentalType.VoidType, Primitive.unit)
 }
 
