@@ -11,7 +11,7 @@ import io.circe._
  * TODO: Circe's [[KeyDecoder]] and [[KeyEncoder]] somehow have a similar meaning however
  * they are abstract classes so we cannot easily mix them together. Maybe it's a good idea to clean up.
  */
-class EnumDiscriminatorCodec[T](mapping: Seq[(String, T)]) extends Encoder[T] with Decoder[T] {
+class EnumDiscriminatorCodec[T](val mapping: Seq[(String, T)]) extends Encoder[T] with Decoder[T] {
 
   private val DecodeMap: Map[String, T] = mapping.toMap
     .ensuring(_.size == mapping.size, "There may be no duplicates in mapping")

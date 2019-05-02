@@ -27,7 +27,7 @@ class JobTracker(ops: K8sOperations) extends Actor {
       ops.watch(None, s.job).foreach { result =>
         result.runWith(Sink.actorRef(self, OnQuitEvent))
       }
-    case w: WatchEvent[Job] =>
+    case w: WatchEvent[Job] @unchecked =>
       logger.debug("Watch Event", w._object)
     case Stop =>
       logger.warn("Quit")

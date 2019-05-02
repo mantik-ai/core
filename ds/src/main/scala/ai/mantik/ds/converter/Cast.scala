@@ -1,0 +1,221 @@
+package ai.mantik.ds.converter
+
+import ai.mantik.ds.converter.casthelper.{ FundamentalCasts, ImageHelper, TensorHelper }
+import ai.mantik.ds.element._
+import ai.mantik.ds._
+
+/**
+ * A Single Cast Operation, converting one element type to another one.
+ * @param from source type
+ * @param to destination type
+ * @param loosing if true, the cast is loosing precision
+ * @param canFail if true, the cast can fail
+ * @param op the cast operation
+ */
+case class Cast(from: DataType, to: DataType, loosing: Boolean, canFail: Boolean, op: Element => Element) extends DataTypeConverter {
+
+  /** Append another cast to this cast. */
+  def append(other: Cast): Cast = {
+    require(other.from == to)
+    if (isIdentity) {
+      // this is a identity cast
+      return other
+    }
+    if (other.isIdentity) {
+      // other is identity cast
+      return this
+    }
+    Cast(
+      from, other.to, loosing || other.loosing, canFail || other.canFail, x => other.op(op(x))
+    )
+  }
+
+  override def targetType: DataType = to
+
+  def isIdentity: Boolean = from == to
+
+  override def convert(element: Element): Element = op(element)
+}
+
+object Cast {
+
+  /** Find a cast from one type to another. */
+  def findCast(from: DataType, to: DataType): Either[String, Cast] = {
+    (from, to) match {
+      case (f: FundamentalType, t: FundamentalType) =>
+        findFundamentalCast(f, t)
+      case (f: FundamentalType, t: Tensor) =>
+        findFundamentalToTensorCast(f, t)
+      case (t: Tensor, f: FundamentalType) =>
+        findTensorToFundamentalCast(t, f)
+      case (t: Tensor, i: Image) =>
+        findTensorToImageCast(t, i)
+      case (i: Image, t: Tensor) =>
+        findImageToTensorCast(i, t)
+      case (from: Tensor, to: Tensor) =>
+        findTensorToTensorCast(from, to)
+      case (from: Image, to: Image) =>
+        findImageToImageCast(from, to)
+      case _ =>
+        Left(s"Cannot cast from ${from} to ${to}")
+    }
+  }
+
+  /** Find a cast operation from fundamental to fundamental types. */
+  def findFundamentalCast(from: FundamentalType, to: FundamentalType): Either[String, Cast] = {
+    FundamentalCasts.findFundamentalCast(from, to)
+  }
+
+  private def findFundamentalToTensorCast(ft: FundamentalType, tensor: Tensor): Either[String, Cast] = {
+    if (tensor.shape != List(1)) {
+      return Left("Cannot cast a fundamental type into a non 1 Tensor")
+    }
+
+    for {
+      toTensorType <- findFundamentalCast(ft, tensor.componentType)
+      packer = TensorHelper.tensorPacker(tensor.componentType)
+    } yield toTensorType.append(
+      converter.Cast(
+        tensor.componentType,
+        tensor,
+        loosing = false,
+        canFail = false,
+        op = e => packer(IndexedSeq(e.asInstanceOf[Primitive[_]])))
+    )
+  }
+
+  private def findTensorToFundamentalCast(tensor: Tensor, ft: FundamentalType): Either[String, Cast] = {
+    if (tensor.shape != List(1)) {
+      return Left("Cannot cast a non-1 tensor to a fundamental type")
+    }
+    for {
+      toSingleType <- findFundamentalCast(tensor.componentType, ft)
+      unpacker = TensorHelper.tensorUnpacker(tensor.componentType)
+    } yield {
+      converter.Cast(
+        tensor,
+        tensor.componentType,
+        loosing = false,
+        canFail = false,
+        op = e => unpacker(e.asInstanceOf[TensorElement[_]]).head
+      ).append(toSingleType)
+    }
+  }
+
+  private def findTensorToImageCast(tensor: Tensor, image: Image): Either[String, Cast] = {
+    if (image.width * image.height != tensor.packedElementCount) {
+      return Left("Cannot cast a tensor with different element count to a image")
+    }
+    val imageComponentType = image.components.map(_._2.componentType) match {
+      case List(single) => single
+      case _            => return Left("Can only create single component images")
+    }
+    for {
+      imagePacker <- ImageHelper.imagePacker(image)
+      typeConversion <- findFundamentalCast(tensor.componentType, imageComponentType)
+      tensorUnpacker = TensorHelper.tensorUnpacker(tensor.componentType)
+    } yield {
+      converter.Cast(
+        from = tensor,
+        to = image,
+        loosing = typeConversion.loosing,
+        canFail = typeConversion.canFail,
+        op = { e =>
+          val elements = tensorUnpacker(e.asInstanceOf[TensorElement[_]])
+          val casted = if (typeConversion.isIdentity) elements else {
+            elements.map(x => typeConversion.op(x).asInstanceOf[Primitive[_]])
+          }
+          imagePacker(casted)
+        }
+      )
+    }
+  }
+
+  private def findImageToTensorCast(image: Image, tensor: Tensor): Either[String, Cast] = {
+    if (image.width * image.height != tensor.packedElementCount) {
+      return Left("Cannot cast a tensor with different element count to a image")
+    }
+    val imageComponentType = image.components.map(_._2.componentType) match {
+      case List(single) => single
+      case _            => return Left("Can only cast single component images")
+    }
+    for {
+      imageUnpacker <- ImageHelper.imageUnpacker(image)
+      typeConversion <- findFundamentalCast(imageComponentType, tensor.componentType)
+      tensorPacker = TensorHelper.tensorPacker(tensor.componentType)
+    } yield {
+      converter.Cast(
+        from = image,
+        to = tensor,
+        loosing = typeConversion.loosing,
+        canFail = typeConversion.canFail,
+        op = { i =>
+          val imageElements = imageUnpacker(i.asInstanceOf[ImageElement])
+          val casted = if (typeConversion.isIdentity) imageElements else {
+            imageElements.map(x => typeConversion.op(x).asInstanceOf[Primitive[_]])
+          }
+          tensorPacker(casted)
+        }
+      )
+    }
+  }
+
+  private def findTensorToTensorCast(from: Tensor, to: Tensor): Either[String, Cast] = {
+    if (from.packedElementCount != to.packedElementCount) {
+      return Left(s"Cannot cast ${from} to ${to} due incompatible shape")
+    }
+    for {
+      componentCast <- findFundamentalCast(from.componentType, to.componentType)
+      unpacker = TensorHelper.tensorUnpacker(from.componentType)
+      packer = TensorHelper.tensorPacker(to.componentType)
+    } yield {
+      converter.Cast(
+        from = from,
+        to = to,
+        loosing = componentCast.loosing,
+        canFail = componentCast.canFail,
+        op = { e: Element =>
+          if (componentCast.isIdentity) {
+            // as we using flat serialization, we can go the very fast path, data is equal
+            e
+          } else {
+            val unpacked = unpacker(e.asInstanceOf[TensorElement[_]])
+            val converted = unpacked.map(x => componentCast.op(x).asInstanceOf[Primitive[_]])
+            packer(converted)
+          }
+        }
+      )
+    }
+  }
+
+  private def findImageToImageCast(from: Image, to: Image): Either[String, Cast] = {
+    val srcComponentType = from.components.map(_._2.componentType) match {
+      case List(single) => single
+      case _            => return Left("Can only cast single component images")
+    }
+    val dstComponentType = to.components.map(_._2.componentType) match {
+      case List(single) => single
+      case _            => return Left("Can only cast single component images")
+    }
+    if (from.width != to.width || from.height != to.height) {
+      return Left("Can only cast images with same size. You can override this through a tensor cast")
+    }
+    for {
+      componentCast <- findFundamentalCast(srcComponentType, dstComponentType)
+      imageUnpacker <- ImageHelper.imageUnpacker(from)
+      imagePacker <- ImageHelper.imagePacker(to)
+    } yield {
+      converter.Cast(
+        from = from,
+        to = to,
+        loosing = componentCast.loosing,
+        canFail = componentCast.canFail,
+        op = { e =>
+          val unpacked = imageUnpacker(e.asInstanceOf[ImageElement])
+          val casted = unpacked.map(x => (componentCast.op(x).asInstanceOf[Primitive[_]]))
+          imagePacker(casted)
+        }
+      )
+    }
+  }
+}

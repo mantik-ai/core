@@ -12,4 +12,7 @@ object Errors {
 
   /** Something is not encoded in the way we expect it. */
   class EncodingException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
+
+  /** If some feature is not supported. */
+  class FeatureNotSupported(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
 }
