@@ -82,18 +82,18 @@ func TestServingJson(t *testing.T) {
 	defer f.Close()
 
 	t.Run("empty", func(t *testing.T) {
-		sample := bytes.Buffer{}
-		response, err := http.Post(f.url+"/apply", MimeJson, &sample)
+		sample := bytes.NewBufferString("[]")
+		response, err := http.Post(f.url+"/apply", MimeJson, sample)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 		assert.Equal(t, MimeJson, response.Header.Get(HeaderContentType))
 		content, _ := ioutil.ReadAll(response.Body)
-		assert.Equal(t, 0, len(content))
+		assert.Equal(t, "[]", string(content))
 	})
 
 	t.Run("simple", func(t *testing.T) {
-		sample := `[400]`
-		expectedResponse := `[1200]`
+		sample := `[[400]]`
+		expectedResponse := `[[1200]]`
 		response, err := http.Post(f.url+"/apply", MimeJson, bytes.NewBufferString(sample))
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, response.StatusCode)
@@ -104,8 +104,8 @@ func TestServingJson(t *testing.T) {
 
 	t.Run("multiple", func(t *testing.T) {
 		// tricky, as the algorithm is using a single value only.
-		sample := `[100][-100][200]`
-		expectedResponse := `[300][-300][600]`
+		sample := `[[100],[-100],[200]]`
+		expectedResponse := `[[300],[-300],[600]]`
 		response, err := http.Post(f.url+"/apply", MimeJson, bytes.NewBufferString(sample))
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, response.StatusCode)

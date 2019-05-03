@@ -4,7 +4,7 @@ import ai.mantik.ds.element.{Primitive, PrimitiveEncoder, TensorElement}
 import ai.mantik.ds.{FundamentalType, Tensor}
 
 /** Packs and unpacks Tensors. */
-private[converter] object TensorHelper {
+private[ds] object TensorHelper {
 
   def tensorUnpacker(ft: FundamentalType): TensorElement[_] => IndexedSeq[Primitive[_]] = {
     tensorPrimitiveConverters(ft).unpacker

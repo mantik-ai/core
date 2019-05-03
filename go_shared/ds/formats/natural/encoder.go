@@ -13,10 +13,18 @@ type naturalEncoder struct {
 }
 
 func (n naturalEncoder) Write(row element.Element) error {
+	err := n.backend.NextRow()
+	if err != nil {
+		return err
+	}
 	return n.rootElementSerializer.Write(n.backend, row)
 }
 
 func (n naturalEncoder) Close() error {
+	err := n.backend.Finish()
+	if err != nil {
+		return err
+	}
 	return n.backend.Flush()
 }
 
@@ -29,12 +37,19 @@ func CreateEncoder(format ds.DataType, backend serializer.SerializingBackend) (e
 		return nil, errors.Wrap(err, "Could not create Root element serializer")
 	}
 
-	err = WriteHeader(
-		backend, element.Header{ds.Ref(format)},
-	)
+	header := serializer.Header{ds.Ref(format)}
+	err = backend.EncodeHeader(&header)
 
 	if err != nil {
 		return nil, err
+	}
+
+	_, isTabular := format.(*ds.TabularData)
+	if isTabular {
+		err = backend.StartTabularValues()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result := naturalEncoder{

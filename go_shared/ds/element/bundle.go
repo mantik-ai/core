@@ -12,3 +12,13 @@ type Bundle struct {
 func (b *Bundle) GetTabularPrimitive(row int, column int) interface{} {
 	return b.Rows[row].(*TabularRow).Columns[column].(Primitive).X
 }
+
+// Get a Primitive, assuming that  the bundle is a single element.
+func (b *Bundle) GetSinglePrimitive() interface{} {
+	return b.Rows[0].(Primitive).X
+}
+
+func (b *Bundle) IsTabular() bool {
+	_, ok := b.Type.(*ds.TabularData)
+	return ok
+}

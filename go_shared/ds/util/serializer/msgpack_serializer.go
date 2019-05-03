@@ -8,7 +8,26 @@ import (
 )
 
 type msgPackSerializingBackend struct {
-	msgpack.Encoder
+	*msgpack.Encoder
+}
+
+func (m msgPackSerializingBackend) EncodeHeader(h *Header) error {
+	return m.EncodeJson(h)
+}
+
+func (m msgPackSerializingBackend) StartTabularValues() error {
+	// not needed for msgpack
+	return nil
+}
+
+func (m msgPackSerializingBackend) NextRow() error {
+	// not needed for msgpack
+	return nil
+}
+
+func (m msgPackSerializingBackend) Finish() error {
+	// Nothing to do
+	return nil
 }
 
 func (m msgPackSerializingBackend) EncodeJson(i interface{}) error {

@@ -4,20 +4,29 @@ import java.nio.file.Path
 
 import ai.mantik.ds._
 import ai.mantik.ds.converter.StringPreviewGenerator
+import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.formats.natural.{ NaturalFormatDescription, NaturalFormatReaderWriter }
 import ai.mantik.ds.helper.ZipUtils
 import akka.stream.scaladsl.{ Compression, FileIO, Keep, Sink, Source }
 import akka.stream.{ IOResult, Materializer }
 import akka.util.ByteString
+import io.circe.{ Decoder, Encoder, ObjectEncoder }
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext, Future }
 
-/** An in-memory data bundle */
-case class Bundle(
-    model: DataType,
-    rows: Vector[RootElement]
-) {
+/**
+ * An in-memory data bundle
+ *
+ * This is either a [[TabularBundle]] or a [[SingleElementBundle]].
+ */
+sealed trait Bundle {
+
+  /** The underlying data type. */
+  def model: DataType
+
+  /** Returns the rows of the bundle. In case of single elements Vector[SingleElement] is returned. */
+  def rows: Vector[RootElement]
   /**
    * Export the bundle into single file ZIP File.
    * Note: this is intended for testing.
@@ -79,18 +88,51 @@ case class Bundle(
    * Returns the single element contained in the bundle.
    * This works only for Bundles which are not tabular.
    */
-  def single: Option[Element] = {
-    rows match {
-      case Vector(SingleElement(e)) => Some(e)
-      case _                        => None
-    }
-  }
+  def single: Option[Element]
+}
+
+/** A Bundle which contains a single element. */
+case class SingleElementBundle(
+    model: DataType,
+    element: Element
+) extends Bundle {
+  override def rows: Vector[RootElement] = Vector(SingleElement(element))
+
+  override def single: Option[Element] = Some(element)
+}
+
+/** A  Bundle which contains tabular data. */
+case class TabularBundle(
+    model: TabularData,
+    rows: Vector[TabularRow]
+) extends Bundle {
+  override def single: Option[Element] = None
 }
 
 object Bundle {
 
   /** File name for used in toZipBundle operations. */
   val DefaultFileName = "file.dat"
+
+  /**
+   * Constructs a bundle from data type and elements.
+   * @throws IllegalArgumentException if the bundle is invalid.
+   */
+  def apply(model: DataType, elements: Vector[RootElement]): Bundle = {
+    elements match {
+      case Vector(s: SingleElement) => SingleElementBundle(model, s.element)
+      case rows =>
+        val tabularRows = rows.collect {
+          case r: TabularRow => r
+          case _             => throw new IllegalArgumentException(s"Got a bundle non tabular rows, which have not count 1")
+        }
+        model match {
+          case t: TabularData => TabularBundle(t, tabularRows)
+          case _ =>
+            throw new IllegalArgumentException("Got a non tabular bundle with tabular rows")
+        }
+    }
+  }
 
   /**
    * Import the natural bundle from a single file ZIP File.
@@ -165,7 +207,7 @@ object Bundle {
 
   /** Experimental Builder for Natural types. */
   class Builder(tabularData: TabularData) {
-    private val rowBuilder = Vector.newBuilder[RootElement]
+    private val rowBuilder = Vector.newBuilder[TabularRow]
 
     /** Add a row (just use the pure Scala Types, no Primitives or similar. */
     def row(values: Any*): Builder = {
@@ -173,7 +215,7 @@ object Bundle {
       this
     }
 
-    def result: Bundle = Bundle(
+    def result: TabularBundle = TabularBundle(
       tabularData, rowBuilder.result()
     )
 
@@ -204,17 +246,22 @@ object Bundle {
   def build(tabularData: TabularData): Builder = new Builder(tabularData)
 
   /** Build a non-tabular value. */
-  def build(nonTabular: DataType, value: Element): Bundle = {
+  def build(nonTabular: DataType, value: Element): SingleElementBundle = {
     require(!nonTabular.isInstanceOf[TabularData], "Builder can only be used for nontabular data")
-    Bundle(nonTabular, Vector(SingleElement(value)))
+    SingleElementBundle(nonTabular, value)
   }
 
   /** Wrap a single primitive non tabular value. */
-  def fundamental[ST](x: ST)(implicit valueEncoder: ValueEncoder[ST]): Bundle = {
-    Bundle(valueEncoder.fundamentalType, Vector(SingleElement(valueEncoder.wrap(x))))
+  def fundamental[ST](x: ST)(implicit valueEncoder: ValueEncoder[ST]): SingleElementBundle = {
+    SingleElementBundle(valueEncoder.fundamentalType, valueEncoder.wrap(x))
   }
 
   /** The empty value. */
-  def void: Bundle = Bundle.build(FundamentalType.VoidType, Primitive.unit)
+  def void: SingleElementBundle = Bundle.build(FundamentalType.VoidType, Primitive.unit)
+
+  /** JSON Encoder. */
+  implicit val encoder: ObjectEncoder[Bundle] = JsonFormat
+  /** JSON Decoder. */
+  implicit val decoder: Decoder[Bundle] = JsonFormat
 }
 

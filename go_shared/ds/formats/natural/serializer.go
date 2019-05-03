@@ -7,11 +7,6 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
 )
 
-func WriteHeader(backend serializer.SerializingBackend, h element.Header) error {
-	// Should go the same way as JSON
-	return backend.EncodeJson(h)
-}
-
 type ElementSerializer interface {
 	Write(backend serializer.SerializingBackend, element element.Element) error
 }
@@ -57,9 +52,10 @@ func lookupElementSerializer(dataType ds.DataType) (ElementSerializer, error) {
 }
 
 func LookupRootElementSerializer(dataType ds.DataType) (ElementSerializer, error) {
-	tabularData, ok := dataType.(*ds.TabularData)
-	if !ok {
-		return nil, errors.New("Only tabular data supported right now")
+	tabularData, isTabular := dataType.(*ds.TabularData)
+	if !isTabular {
+		// Single Element
+		return lookupElementSerializer(dataType)
 	}
 	tableRowSerializer, error := prepareTableRowSerializer(tabularData)
 	if error != nil {

@@ -1,9 +1,9 @@
 package ai.mantik.planner.select.run
 
-import ai.mantik.ds.element.{ Bundle, Primitive }
+import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.operations.BinaryOperation
-import ai.mantik.ds.{ DataType, FundamentalType, Image, Tensor }
-import ai.mantik.planner.select.{ BinaryExpression, BinaryOp, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Select, SelectProjection, Utils }
+import ai.mantik.ds.{ DataType, FundamentalType }
+import ai.mantik.planner.select._
 
 import scala.annotation.tailrec
 
@@ -42,7 +42,7 @@ object Compiler {
           add(rest)
         case Nil =>
           // Special case, no condition given, just put an empty true onto the stack.
-          resultBuilder ++= Vector(OpCode.Constant(FundamentalType.BoolType, Primitive(true)))
+          resultBuilder ++= Vector(OpCode.Constant(Bundle.fundamental(true)))
       }
     }
     add(subLists)
@@ -96,11 +96,7 @@ object Compiler {
       case c: Condition =>
         compileCondition(c)
       case c: ConstantExpression =>
-        c.value.single match {
-          case None => Left(s"Non single value constant ${c.value} not supported")
-          case Some(singleValue) =>
-            Right(Vector(OpCode.Constant(c.value.model, singleValue)))
-        }
+        Right(Vector(OpCode.Constant(c.value)))
       case c: ColumnExpression =>
         Right(Vector(OpCode.Get(c.columnId)))
       case c: CastExpression =>

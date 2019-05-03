@@ -1,11 +1,13 @@
 package natural
 
 import (
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
+	"reflect"
 	"testing"
 )
 
@@ -18,8 +20,8 @@ func testEncodeAndDecode(t *testing.T, bundle *element.Bundle) {
 
 	jsonBytes, err := EncodeBundle(bundle, serializer.BACKEND_JSON)
 
-	// println("AS JSON")
-	// println(string(jsonBytes))
+	println("AS JSON")
+	println(string(jsonBytes))
 
 	assert.NoError(t, err)
 	jsonBack, err := DecodeBundle(serializer.BACKEND_JSON, jsonBytes)
@@ -217,4 +219,64 @@ func TestEmbeddedTabular(t *testing.T) {
 		),
 	)
 	testEncodeAndDecode(t, &bundle)
+}
+
+func TestJsonEncodingForPrimitives(t *testing.T) {
+	sample := `
+		{"type":"int32", "value":100}
+	`
+	bundle, err := DecodeBundle(serializer.BACKEND_JSON, []byte(sample))
+	assert.NoError(t, err)
+	assert.Equal(t, ds.Int32, bundle.Type)
+	assert.Equal(t, int32(100), bundle.GetSinglePrimitive())
+
+	encoded, err := EncodeBundle(bundle, serializer.BACKEND_JSON)
+	assert.NoError(t, err)
+	assert.True(t, compareJson([]byte(sample), encoded))
+}
+
+func TestEncodingTabular(t *testing.T) {
+	sample := `
+		{"type":{"type":"tabular", "columns": {"x": "int32", "y": "string"}},"value": [[1,"Hello"], [2,"World"]]}
+	`
+	bundle, err := DecodeBundle(serializer.BACKEND_JSON, []byte(sample))
+	assert.NoError(t, err)
+	assert.Equal(t, int32(1), bundle.GetTabularPrimitive(0, 0))
+	assert.Equal(t, "Hello", bundle.GetTabularPrimitive(0, 1))
+	assert.Equal(t, int32(2), bundle.GetTabularPrimitive(1, 0))
+	assert.Equal(t, "World", bundle.GetTabularPrimitive(1, 1))
+
+	encoded, err := EncodeBundle(bundle, serializer.BACKEND_JSON)
+	assert.True(t, compareJson([]byte(sample), encoded))
+}
+
+func TestEncodeBundleRef(t *testing.T) {
+	sample := BundleRef{
+		builder.PrimitiveBundle(ds.Int32, element.Primitive{int32(4)}),
+	}
+	bytes, err := json.Marshal(sample)
+	assert.NoError(t, err)
+	assert.Equal(t, `{"type":"int32","value":4}`, string(bytes))
+	bytes2, err := json.Marshal(&sample)
+	assert.Equal(t, bytes, bytes2)
+	var back BundleRef
+	err = json.Unmarshal(bytes, &back)
+	assert.NoError(t, err)
+	assert.Equal(t, sample, back)
+}
+
+// Returns true, if both JSONs are equal
+func compareJson(a []byte, b []byte) bool {
+	// trick: https://gist.github.com/turtlemonvh/e4f7404e28387fadb8ad275a99596f67
+	var aDecoded interface{}
+	var bDecoded interface{}
+	err := json.Unmarshal(a, &aDecoded)
+	if err != nil {
+		panic(err.Error())
+	}
+	err = json.Unmarshal(b, &bDecoded)
+	if err != nil {
+		panic(err.Error())
+	}
+	return reflect.DeepEqual(aDecoded, bDecoded)
 }

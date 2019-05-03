@@ -11,6 +11,7 @@ import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 
 import scala.concurrent.Future
+import io.circe.syntax._
 
 class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
 
@@ -113,9 +114,9 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
   "toString" should "render the bundle" in {
     Bundle.build(FundamentalType.Int32, Primitive(3)).toString shouldBe "3"
     withClue("It should not crash on illegal values") {
-      val badBundle = Bundle(
+      val badBundle = SingleElementBundle(
         FundamentalType.Int32,
-        Vector(
+        EmbeddedTabularElement(
           TabularRow(
             TensorElement(IndexedSeq(1))
           )
@@ -153,5 +154,12 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     intercept[EncodingException] {
       await(source.runWith(Bundle.fromStreamWithoutHeader(sampleBundle.model)))
     }
+  }
+
+  "json" should "work" in {
+    // More tests in JSON Encoder implementation
+    val json = sampleBundle.asJson
+    val back = json.as[Bundle]
+    back shouldBe Right(sampleBundle)
   }
 }

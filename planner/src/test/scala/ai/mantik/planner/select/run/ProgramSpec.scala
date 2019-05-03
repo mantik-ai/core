@@ -1,7 +1,7 @@
 package ai.mantik.planner.select.run
 
 import ai.mantik.ds.FundamentalType
-import ai.mantik.ds.element.ValueEncoder
+import ai.mantik.ds.element.{ Bundle, ValueEncoder }
 import ai.mantik.testutils.TestBase
 
 class ProgramSpec extends TestBase {
@@ -14,7 +14,7 @@ class ProgramSpec extends TestBase {
 
   it should "work in average case" in {
     val ops = Vector(
-      OpCode.Constant(FundamentalType.Int32, ValueEncoder.wrap(1)),
+      OpCode.Constant(Bundle.fundamental(1)),
       OpCode.Get(0),
       OpCode.Equals,
       OpCode.Neg,
@@ -22,7 +22,7 @@ class ProgramSpec extends TestBase {
       OpCode.Equals,
       OpCode.ReturnOnFalse,
       OpCode.Pop,
-      OpCode.Constant(FundamentalType.Int32, ValueEncoder.wrap(1))
+      OpCode.Constant(Bundle.fundamental(1))
     )
     Program.fromOps(
       ops
