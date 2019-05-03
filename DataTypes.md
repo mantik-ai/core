@@ -37,17 +37,19 @@ The serialization format should
 
 ## Serialization
 
-The serialization is done using MessagePack or a JSON Stream. A Mantik stream consists of the following:
+The serialization is done using MessagePack stream or JSON. 
 
-Header:
+### Message Pack Stream
+
+The message pack stream consists of multiple elements. The first is a header of the following format:
+
 ```
 {
     "format": // The Mantik format type, usually a table.
 }
 ```
 
-When using message pack, then the header is transported with the exact message pack representation of 
-the JSON of the format.
+(In it's MessagePack analogy of JSON)
 
 
 Afterwards the elements are sent after another. Usually they are Table Rows, and each row is 
@@ -55,12 +57,27 @@ expressed as Array of the serialization of the elements.
 
 The serialization of the types is described in the types itself.
 
+### JSON Bundle
+
+The JSON Bundle is a slightly different, because it should be valid JSON, and JSON does not understand streams.
+
+The encoding is as like:
+
+```
+{
+    "type": // Mantik Data Type format
+    "value": // The value of the bundle.
+}
+```
+The `value` is usually an array of arrays, when encoding tabular data.
+For single elements, it's just the single element.
+
 Serialization itself can be piped through GZip, however it's enough if services just accept
 GZIP-Compressed HTTP.
 
 ### Example for Serialization
 
-A table of coordinates with names and sample image could be expressed like this:
+A table of coordinates with names and sample image could be expressed like this in MessagePack
 
 ```
 {
@@ -87,9 +104,34 @@ A table of coordinates with names and sample image could be expressed like this:
 [5.3, 6.3, "Potsdam", "u634u34f0wg0ewg4"]
 ```
 
-Note that the complete stream itself is not a JSON Document. As it can be streamed, a client
-must wait until each element is closed `{` by corresponding `}`, `[` by corresponding `]`.
-In MsgPack this is an easy operation, in JSON this requires some pre processing.
+in JSON it looks like this: 
+```
+{
+    "type": {
+        "columns": {
+            "x": "float64",
+            "y": "float64",
+            "name": "string",
+            "icon": {
+                "type": image,
+                "width": 100,
+                "height": 100,
+                "componentType: {
+                    "red": "uint8",
+                    "blue": "uint8",
+                    "green": "uint8"
+                },
+                "format": "png"
+            }
+        }
+    },
+    "value": [
+        [1.2, 5.4, "Berlin", "4g3th43thkve55435"],
+        [5.3, 6.3, "Potsdam", "u634u34f0wg0ewg4"]
+    ]   
+}
+
+```
 
 The Base64-Encoding of the image in the example is not valid.
 
@@ -181,7 +223,6 @@ The encoding is done row wise.
 
 The components are encoded in big endian.
 
-**Not yet implemented:**
 The JSON Encoding is a Base64-String.
 
 Alternatively, there can be a format specifier in `format`. The following values are supported
@@ -215,7 +256,7 @@ More types will follow, e.g. Lists.
 
 ## Implementation
 
-The Scala implementation resides in `app/components/ds`. A Golang implementation resides in the `go_shared` project.
+The Scala implementation resides in `ds`. A Golang implementation resides in the `go_shared/ds` project.
 
 ## Problems:
 

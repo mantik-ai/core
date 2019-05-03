@@ -169,6 +169,13 @@ func DecodeInput(expectedType ds.DataType, rootDeserializer natural.ElementDeser
 		return nil, err
 	}
 
+	_, isTabular := expectedType.(*ds.TabularData)
+	if isTabular {
+		if err = backend.StartReadingTabularValues(); err != nil {
+			return nil, err
+		}
+	}
+
 	var buf []element.Element = nil
 
 	for {
@@ -252,14 +259,20 @@ func EncodeOutput(dataType ds.DataType, rootSerializer natural.ElementSerializer
 	}
 
 	w.Header().Set(HeaderContentType, contentType)
+	_, isTabular := dataType.(*ds.TabularData)
 
 	backend, err := serializer.CreateSerializingBackend(backendType, w)
 	if err != nil {
 		return err
 	}
 	if withHeader {
-		err := natural.WriteHeader(backend, element.Header{ds.Ref(dataType)})
+		err := backend.EncodeHeader(&serializer.Header{ds.Ref(dataType)})
 		if err != nil {
+			return err
+		}
+	}
+	if isTabular {
+		if err = backend.StartTabularValues(); err != nil {
 			return err
 		}
 	}
@@ -271,10 +284,17 @@ func EncodeOutput(dataType ds.DataType, rootSerializer natural.ElementSerializer
 		if err != nil {
 			return err
 		}
+		if err = backend.NextRow(); err != nil {
+			return err
+		}
 		err = rootSerializer.Write(backend, element)
 		if err != nil {
 			return err
 		}
+	}
+	err = backend.Finish()
+	if err != nil {
+		return err
 	}
 	return nil
 }

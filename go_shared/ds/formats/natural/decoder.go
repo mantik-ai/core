@@ -13,8 +13,7 @@ type DataTypeHandler func(dataType ds.DataType) error
 Create a Decoder, which calls the data handler if the type is specified.
 */
 func CreateDecoder(dataTypeHandler DataTypeHandler, backend serializer.DeserializingBackend) (element.StreamReader, error) {
-	var header element.Header
-	err := backend.DecodeJson(&header)
+	header, err := backend.DecodeHeader()
 	if err != nil {
 		return nil, errors.Wrap(err, "Error decoding header")
 	}
@@ -26,6 +25,13 @@ func CreateDecoder(dataTypeHandler DataTypeHandler, backend serializer.Deseriali
 	deserializer, err := LookupRootElementDeserializer(header.Format.Underlying)
 	if err != nil {
 		return nil, err
+	}
+	_, isTabular := header.Format.Underlying.(*ds.TabularData)
+	if isTabular {
+		err = backend.StartReadingTabularValues()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return decoder{
 		backend, deserializer,

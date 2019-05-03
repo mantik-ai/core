@@ -24,7 +24,7 @@ class CompilerSpec extends TestBase {
     compile(simpleInput, "select *") shouldBe Right(
       SelectProgram(
         selector = Program(
-          OpCode.Constant(FundamentalType.BoolType, ValueEncoder.wrap(true))
+          OpCode.Constant(Bundle.fundamental(true)),
         ),
         projector = Program(
           OpCode.Get(0),
@@ -39,7 +39,7 @@ class CompilerSpec extends TestBase {
       SelectProgram(
         selector = Program(
           OpCode.Get(0),
-          OpCode.Constant(FundamentalType.Int8, ValueEncoder.wrap(1.toByte)),
+          OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
           OpCode.Equals
         ),
@@ -56,13 +56,13 @@ class CompilerSpec extends TestBase {
       SelectProgram(
         selector = Program(
           OpCode.Get(0),
-          OpCode.Constant(FundamentalType.Int8, ValueEncoder.wrap(1.toByte)),
+          OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
           OpCode.Equals,
           OpCode.ReturnOnFalse,
           OpCode.Pop,
           OpCode.Get(1),
-          OpCode.Constant(FundamentalType.StringType, ValueEncoder.wrap("boom")),
+          OpCode.Constant(Bundle.fundamental("boom")),
           OpCode.Equals
         ),
         projector = Program(
@@ -78,11 +78,11 @@ class CompilerSpec extends TestBase {
       SelectProgram(
         selector = Program (
           OpCode.Get(0),
-          OpCode.Constant(FundamentalType.Int8, ValueEncoder.wrap(1.toByte)),
+          OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
           OpCode.Equals,
           OpCode.Get(1),
-          OpCode.Constant(FundamentalType.StringType, ValueEncoder.wrap("boom")),
+          OpCode.Constant(Bundle.fundamental("boom")),
           OpCode.Equals,
           OpCode.And,
           OpCode.Neg
@@ -100,7 +100,7 @@ class CompilerSpec extends TestBase {
       SelectProgram(
         selector = Program.fromOps(
           Vector(
-            OpCode.Constant(FundamentalType.BoolType, ValueEncoder.wrap(true))
+            OpCode.Constant(Bundle.fundamental(true)),
           )
         ),
         projector = Program(
@@ -115,12 +115,12 @@ class CompilerSpec extends TestBase {
       SelectProgram(
         selector = Program.fromOps(
           Vector(
-            OpCode.Constant(FundamentalType.BoolType, ValueEncoder.wrap(true))
+            OpCode.Constant(Bundle.fundamental(true)),
           )
         ),
         projector = Program(
           OpCode.Get(0),
-          OpCode.Constant(FundamentalType.Int8, ValueEncoder.wrap(1.toByte)),
+          OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
           OpCode.BinaryOp(FundamentalType.Int32, BinaryOperation.Add),
           OpCode.Cast(FundamentalType.Int32, FundamentalType.Float64),

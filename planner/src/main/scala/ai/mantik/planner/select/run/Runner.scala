@@ -53,8 +53,8 @@ class Runner(program: Program) {
       }
     }
     op match {
-      case OpCode.Constant(_, value) =>
-        makeContinueOp(_.push(value))
+      case OpCode.Constant(value) =>
+        makeContinueOp(_.push(value.element))
       case OpCode.Get(i) =>
         (a, s) => {
           s.push(a(i))

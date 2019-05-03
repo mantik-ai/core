@@ -21,7 +21,7 @@ func (t *TabularData) GetColumn(name string) DataType {
 	return nil
 }
 
-func (t* TabularData) IndexOfColumn(name string) int {
+func (t *TabularData) IndexOfColumn(name string) int {
 	for i, value := range t.Columns {
 		if value.Name == name {
 			return i

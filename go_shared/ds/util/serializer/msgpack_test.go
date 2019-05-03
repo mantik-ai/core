@@ -21,12 +21,12 @@ func TestMsgPackJsonSerialization(t *testing.T) {
 	for _, sample := range samples {
 		buf := bytes.NewBuffer([]byte{})
 		encoder := msgpack.NewEncoder(buf)
-		backend := msgPackSerializingBackend{Encoder: *encoder}
+		backend := msgPackSerializingBackend{Encoder: encoder}
 		err := backend.EncodeJson(ds.Ref(sample))
 		assert.NoError(t, err)
 
 		decoder := msgpack.NewDecoder(buf)
-		decoderBackend := msgPackDeserializingBackend{Decoder: *decoder}
+		decoderBackend := msgPackDeserializingBackend{Decoder: decoder}
 		var back ds.TypeReference
 		err = decoderBackend.DecodeJson(&back)
 		assert.NoError(t, err)
@@ -41,12 +41,12 @@ func TestRawJsonSupport(t *testing.T) {
 	for _, sample := range samples {
 		buf := bytes.NewBuffer([]byte{})
 		encoder := msgpack.NewEncoder(buf)
-		backend := msgPackSerializingBackend{*encoder}
+		backend := msgPackSerializingBackend{encoder}
 		err := backend.EncodeRawJson([]byte(sample))
 		assert.NoError(t, err)
 
 		decoder := msgpack.NewDecoder(buf)
-		decoderBackend := msgPackDeserializingBackend{*decoder}
+		decoderBackend := msgPackDeserializingBackend{decoder}
 		back, err := decoderBackend.DecodeRawJson()
 		assert.NoError(t, err)
 		assert.Equal(t, sample, string(back))

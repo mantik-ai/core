@@ -1,9 +1,10 @@
 package serializer
 
 import (
-	"bufio"
+	"bytes"
 	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack"
+	"gl.ambrosys.de/mantik/go_shared/ds"
 	"io"
 )
 
@@ -12,15 +13,30 @@ type BackendType = int
 const BACKEND_MSGPACK BackendType = 1
 const BACKEND_JSON BackendType = 2
 
+// The header with type information
+type Header struct {
+	Format ds.TypeReference `json:"format"`
+}
+
 func CreateSerializingBackend(backendType BackendType, destination io.Writer) (SerializingBackend, error) {
 	switch backendType {
 	case BACKEND_MSGPACK:
 		encoder := msgpack.NewEncoder(destination)
-		return &msgPackSerializingBackend{Encoder: *encoder}, nil
+		return &msgPackSerializingBackend{Encoder: encoder}, nil
 	case BACKEND_JSON:
-		return &jsonSerializer{destination, nil}, nil
+		return &jsonSerializer{destination, nil, false, false, 0}, nil
 	default:
 		return nil, errors.New("Unsupported backend")
+	}
+}
+
+func CreateDeserializingBackendForBytes(backendType BackendType, blob []byte) (DeserializingBackend, error) {
+	// JSON Consumes always arrays, no need to convert to reader
+	if backendType == BACKEND_JSON {
+		return MakeJsonDeserializer(blob), nil
+	} else {
+		reader := bytes.NewReader(blob)
+		return CreateDeserializingBackend(backendType, reader)
 	}
 }
 
@@ -28,10 +44,10 @@ func CreateDeserializingBackend(backendType BackendType, reader io.Reader) (Dese
 	switch backendType {
 	case BACKEND_MSGPACK:
 		return &msgPackDeserializingBackend{
-			*msgpack.NewDecoder(reader),
+			msgpack.NewDecoder(reader),
 		}, nil
 	case BACKEND_JSON:
-		return &jsonDeserializer{bufio.NewReader(reader), nil, 0}, nil
+		return MakeJsonDeserializerFromReader(reader)
 	default:
 		return nil, errors.Errorf("Unsupported backend %d", backendType)
 	}
@@ -41,8 +57,12 @@ func CreateDeserializingBackend(backendType BackendType, reader io.Reader) (Dese
 // The interface is compatible to vmihailenco/msgpack with some extensions
 
 type SerializingBackend interface {
+	EncodeHeader(h *Header) error
+	// Start writing tabular values (creates [ in JSON)
+	StartTabularValues() error
+	// A Next row is going to be written
+	NextRow() error
 	EncodeArrayLen(l int) error
-	EncodeJson(i interface{}) error
 	// Methods are like in msgpack.Encoder (for automatic deriving)
 	EncodeInt8(v int8) error
 	EncodeUint8(v uint8) error
@@ -57,11 +77,16 @@ type SerializingBackend interface {
 	EncodeBytes(bytes []byte) error
 	EncodeNil() error
 	Flush() error
+	// Finish the stream.
+	Finish() error
 }
 
 type DeserializingBackend interface {
+	// Decode the header
+	DecodeHeader() (*Header, error)
+	// Tell the backend, that's going to deserialize more than one root value
+	StartReadingTabularValues() error
 	DecodeArrayLen() (int, error)
-	DecodeJson(destination interface{}) error
 	DecodeInt8() (int8, error)
 	DecodeUint8() (uint8, error)
 	DecodeInt32() (int32, error)

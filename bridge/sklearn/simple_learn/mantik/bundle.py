@@ -72,11 +72,8 @@ class Bundle(object):
 
     @staticmethod
     def decode_json_bundle(json_str):
-        # Note: this is the new variant as discussed in https://gl.ambrosys.de/mantik/core/issues/2
         parsed = json.loads(json_str)  # Needed for DataType
-        header = parsed.get("header")
-        datatype = header.get("format")
-        data_type = DataType(datatype)
+        data_type = DataType(parsed.get("type"))
         value = parsed.get("value")
         return Bundle(data_type, value)
 
@@ -125,9 +122,7 @@ class Bundle(object):
             raise Exception("No type available")
 
         value = {
-            "header": {
-                "format": self.type.representation
-            },
+            "type": self.type.representation,
             "value": self.value
         }
         return json.dumps(value)

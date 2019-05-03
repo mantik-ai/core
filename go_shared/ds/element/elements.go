@@ -1,7 +1,6 @@
 package element
 
 import (
-	"gl.ambrosys.de/mantik/go_shared/ds"
 	"io"
 )
 
@@ -13,10 +12,6 @@ const KIND_EMBEDDED_TABULAR = 5
 
 type Element interface {
 	Kind() int
-}
-
-type Header struct {
-	Format ds.TypeReference `json:"format"`
 }
 
 type TabularRow struct {

@@ -1,24 +1,54 @@
 package serializer
 
 import (
-	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"github.com/pkg/errors"
+	"gl.ambrosys.de/mantik/go_shared/ds"
+	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer/jsonsplit"
+	"io"
+	"io/ioutil"
 )
 
 type jsonDeserializer struct {
-	reader          *bufio.Reader
-	pendingElements []jsonElement
+	jsonBlob        []byte
+	splitter        *jsonsplit.JsonSplitter
+	pendingElements []jsonsplit.JsonElement
 	pos             int
 }
 
-func (j *jsonDeserializer) nextElement() (jsonElement, error) {
+type jsonStructure struct {
+	Type  ds.TypeReference
+	Value json.RawMessage
+}
+
+func MakeJsonDeserializerFromReader(reader io.Reader) (DeserializingBackend, error) {
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	return MakeJsonDeserializer(data), nil
+}
+
+func MakeJsonDeserializer(blob []byte) DeserializingBackend {
+	return &jsonDeserializer{
+		blob,
+		nil,
+		nil,
+		0,
+	}
+}
+
+func (j *jsonDeserializer) nextElement() (jsonsplit.JsonElement, error) {
+	if j.splitter == nil {
+		j.splitter = jsonsplit.MakeJsonSplitter(j.jsonBlob)
+	}
 	if j.pos >= len(j.pendingElements) {
 		j.pos = 0
-		elements, err := readJsonElements(j.reader)
+		elements, err := j.splitter.ReadJsonElements()
 		if err != nil {
-			return jsonElement{}, err
+			return jsonsplit.JsonElement{}, err
 		}
 		j.pendingElements = elements
 	}
@@ -27,110 +57,39 @@ func (j *jsonDeserializer) nextElement() (jsonElement, error) {
 	return result, nil
 }
 
-func (j *jsonDeserializer) peekNextElement() (jsonElement, error) {
-	if j.pos >= len(j.pendingElements) {
-		j.pos = 0
-		elements, err := readJsonElements(j.reader)
-		if stackOverflow != nil {
-			return jsonElement{}, err
-		}
-		j.pendingElements = elements
-	}
-	return j.pendingElements[j.pos], nil
-}
-
 func (j *jsonDeserializer) DecodeArrayLen() (int, error) {
 	e, err := j.nextElement()
 	if err != nil {
 		return 0, err
 	}
-	if e.elementType != Array {
+	if e.ElementType != jsonsplit.Array {
 		return 0, errors.New("No array type")
 	}
-	return e.value.(int), nil
+	return e.Value.(int), nil
 }
 
-func (j *jsonDeserializer) DecodeJson(destination interface{}) error {
-	// this is tricky, we have to reserialize it...
-	buf := bytes.Buffer{}
-	err := j.decodePlainJson(&buf)
+func (j *jsonDeserializer) DecodeHeader() (*Header, error) {
+	if j.splitter != nil {
+		panic("Cannot decode header after reading started")
+	}
+	var structure jsonStructure
+	err := json.Unmarshal(j.jsonBlob, &structure)
+	if err != nil {
+		return nil, err
+	}
+	var header Header
+	header.Format = structure.Type
+	// Start over with value
+	j.jsonBlob = structure.Value
+	return &header, nil
+}
+
+func (j *jsonDeserializer) StartReadingTabularValues() error {
+	splitter, err := jsonsplit.MakeJsonSplitterForArray(j.jsonBlob)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(buf.Bytes(), destination)
-}
-
-func (j *jsonDeserializer) decodePlainJson(buf *bytes.Buffer) error {
-	e, err := j.nextElement()
-	if err != nil {
-		return err
-	}
-	code := e.elementType
-
-	if code == Array {
-		return j.decodePlainJsonArray(buf, e.value.(int))
-	}
-	if code == Object {
-		return j.decodePlainJsonObject(buf, e.value.(int))
-	}
-	if code == String {
-		encoded, _ := json.Marshal(e.value.(string))
-		_, err := buf.Write(encoded)
-		return err
-	}
-	if code == OtherLiteral {
-		_, err := buf.Write([]byte(e.value.(string)))
-		return err
-	}
-	return errors.Errorf("Unsupported type %d", code)
-}
-
-func (j *jsonDeserializer) decodePlainJsonArray(buf *bytes.Buffer, arrayLength int) error {
-	var err error
-	if err = buf.WriteByte('['); err != nil {
-		return err
-	}
-	for i := 0; i < arrayLength; i++ {
-		if i > 0 {
-			if err = buf.WriteByte(','); err != nil {
-				return err
-			}
-		}
-		if err = j.decodePlainJson(buf); err != nil {
-			return err
-		}
-	}
-	if err = buf.WriteByte(']'); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (j *jsonDeserializer) decodePlainJsonObject(buf *bytes.Buffer, objectLength int) error {
-	var err error
-	if err = buf.WriteByte('{'); err != nil {
-		return err
-	}
-	for i := 0; i < objectLength; i++ {
-		if i > 0 {
-			if err = buf.WriteByte(','); err != nil {
-				return err
-			}
-		}
-		err := j.decodePlainJson(buf)
-		if err != nil {
-			return err
-		}
-		if err = buf.WriteByte(':'); err != nil {
-			return err
-		}
-		if err = j.decodePlainJson(buf); err != nil {
-			return err
-		}
-	}
-	if err = buf.WriteByte('}'); err != nil {
-		return err
-	}
+	j.splitter = splitter
 	return nil
 }
 
@@ -139,10 +98,10 @@ func (j *jsonDeserializer) DecodeLiteral(i interface{}) error {
 	if err != nil {
 		return err
 	}
-	if e.elementType != OtherLiteral {
+	if e.ElementType != jsonsplit.OtherLiteral {
 		return errors.New("Expected literal")
 	}
-	return json.Unmarshal([]byte(e.value.(string)), i)
+	return json.Unmarshal([]byte(e.Value.(string)), i)
 }
 
 func (j *jsonDeserializer) DecodeInt8() (int8, error) {
@@ -186,10 +145,10 @@ func (j *jsonDeserializer) DecodeString() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if e.elementType != String {
+	if e.ElementType != jsonsplit.String {
 		return "", errors.New("No string type")
 	}
-	return e.value.(string), nil
+	return e.Value.(string), nil
 }
 
 func (j *jsonDeserializer) DecodeFloat32() (float32, error) {
@@ -211,20 +170,13 @@ func (j *jsonDeserializer) DecodeBool() (bool, error) {
 }
 
 func (j *jsonDeserializer) DecodeBytes() ([]byte, error) {
-	len, err := j.DecodeArrayLen()
+	s, err := j.DecodeString()
 	if err != nil {
 		return nil, err
 	}
-	result := make([]byte, len)
-	for i := 0; i < len; i++ {
-		var b byte
-		err := j.DecodeLiteral(&b)
-		if err != nil {
-			return nil, err
-		}
-		result[i] = b
-	}
-	return result, nil
+	decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewReader([]byte(s)))
+	data, err := ioutil.ReadAll(decoder)
+	return data, err
 }
 
 func (j *jsonDeserializer) DecodeNil() error {
@@ -232,7 +184,7 @@ func (j *jsonDeserializer) DecodeNil() error {
 	if err != nil {
 		return err
 	}
-	if e.elementType != OtherLiteral {
+	if e.ElementType != jsonsplit.OtherLiteral {
 		return errors.New("Expected literal")
 	}
 	// discard content

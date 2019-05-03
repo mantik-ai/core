@@ -1,7 +1,7 @@
 package ai.mantik.planner.select
 
 import ai.mantik.ds.{ DataType, FundamentalType }
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
 
 /** A expression (e.g. Inside Select). */
 sealed trait Expression {
@@ -10,7 +10,7 @@ sealed trait Expression {
 
 /** A Constant Expression. */
 case class ConstantExpression(
-    value: Bundle
+    value: SingleElementBundle
 ) extends Expression {
   override def dataType: DataType = value.model
 }

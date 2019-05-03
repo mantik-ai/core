@@ -9,6 +9,10 @@ func Bundle(dataType ds.DataType, tabularRows ...element.Element) element.Bundle
 	return element.Bundle{dataType, tabularRows}
 }
 
+func PrimitiveBundle(dataType ds.DataType, e element.Element) element.Bundle {
+	return element.Bundle{dataType, []element.Element{e}}
+}
+
 func Rows(tabularRows ...*element.TabularRow) []*element.TabularRow {
 	return tabularRows
 }

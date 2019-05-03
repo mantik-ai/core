@@ -1,7 +1,7 @@
 package ai.mantik.planner.select.run
 
 import ai.mantik.ds.{ DataType, FundamentalType }
-import ai.mantik.ds.element.Element
+import ai.mantik.ds.element.{ SingleElementBundle }
 import ai.mantik.ds.operations.BinaryOperation
 
 /** A Single OpCode in a stack based interpretation Machine. */
@@ -13,7 +13,7 @@ object OpCode {
   case class Get(id: Int) extends OpCode("get", consuming = 0)
 
   /** Push a Constant to the stack. */
-  case class Constant(dataType: DataType, value: Element) extends OpCode("cnt", consuming = 0)
+  case class Constant(value: SingleElementBundle) extends OpCode("cnt", consuming = 0)
 
   /** Just pop an element from the stack. */
   case object Pop extends OpCode("pop", consuming = 1, producing = 0)

@@ -23,12 +23,10 @@ def test_json_serialisation():
 def test_json_bundle_serialisation():
     json = '''
     {
-        "header": {
-            "format": {
-                "columns":{
-                    "a": "int32",
-                    "b": "string"
-                }
+        "type": { 
+            "columns":{
+                "a": "int32",
+                "b": "string"
             }
         },
         "value": [[1,2],[3,4]]
@@ -55,9 +53,7 @@ def test_json_bundle_serialisation():
 def test_json_bundle_serialisation_single():
     json = '''
     {
-        "header": {
-            "format": "int32"
-        },
+        "type": "int32",
         "value": 1234
     }     
     '''

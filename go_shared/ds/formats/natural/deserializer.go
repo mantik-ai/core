@@ -21,7 +21,8 @@ func (n *nilDeserializer) Read(backend serializer.DeserializingBackend) (element
 func LookupRootElementDeserializer(dataType ds.DataType) (ElementDeserializer, error) {
 	tabularData, ok := dataType.(*ds.TabularData)
 	if !ok {
-		return nil, errors.New("Only tabular data supported")
+		// deserialize a single element
+		return lookupElementDeserializer(dataType)
 	}
 	trds, err := newTabularRowDeserializer(*tabularData)
 	if err != nil {

@@ -9,7 +9,18 @@ import (
 )
 
 type msgPackDeserializingBackend struct {
-	msgpack.Decoder
+	*msgpack.Decoder
+}
+
+func (m msgPackDeserializingBackend) DecodeHeader() (*Header, error) {
+	var header Header
+	err := m.DecodeJson(&header)
+	return &header, err
+}
+
+func (m msgPackDeserializingBackend) StartReadingTabularValues() error {
+	// nothing to do
+	return nil
 }
 
 func (m msgPackDeserializingBackend) DecodeJson(destination interface{}) error {

@@ -1,6 +1,7 @@
 package serializer
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"io"
 )
@@ -9,6 +10,10 @@ type jsonSerializer struct {
 	destination io.Writer
 	// A stack for sub elements (arrays, objects)
 	stack []stackElement
+	// A Header has been written and must be closed
+	hasHeader bool
+	isTabular bool
+	rowCount  int
 }
 
 func (j *jsonSerializer) push(data []byte) error {
@@ -61,6 +66,65 @@ func (j *arrayStack) After() error {
 
 func (j *arrayStack) Done() bool {
 	return true
+}
+
+func (j *jsonSerializer) EncodeHeader(h *Header) error {
+	if j.hasHeader {
+		panic("Header may be encoded only once")
+	}
+	encodedData, err := h.Format.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	_, err = j.destination.Write(
+		[]byte(`{"type":`),
+	)
+	if err != nil {
+		return err
+	}
+	_, err = j.destination.Write(encodedData)
+	if err != nil {
+		return err
+	}
+	_, err = j.destination.Write(
+		[]byte(`,"value":`),
+	)
+	if err != nil {
+		return err
+	}
+	j.hasHeader = true
+	return nil
+}
+
+func (j *jsonSerializer) StartTabularValues() error {
+	err := j.plainWrite("[")
+	j.isTabular = true
+	j.rowCount = 0
+	return err
+}
+
+func (j *jsonSerializer) NextRow() error {
+	if j.rowCount > 0 {
+		err := j.plainWrite(",")
+		if err != nil {
+			return err
+		}
+	}
+	j.rowCount += 1
+	return nil
+}
+
+func (j *jsonSerializer) Finish() error {
+	if j.isTabular {
+		err := j.plainWrite("]")
+		if err != nil {
+			return err
+		}
+	}
+	if j.hasHeader {
+		return j.plainWrite("}")
+	}
+	return nil
 }
 
 func (j *jsonSerializer) EncodeArrayLen(l int) error {
@@ -121,22 +185,23 @@ func (j *jsonSerializer) EncodeBool(b bool) error {
 }
 
 func (j *jsonSerializer) EncodeBytes(bytes []byte) error {
-	err := j.EncodeArrayLen(len(bytes))
+	// Bytes only happens for Images and for this
+	// We defined a base64 encoding in a string.
+	err := j.plainWrite("\"")
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(bytes); i++ {
-		b := bytes[i]
-		encoded, err := json.Marshal(b)
-		if err != nil {
-			return err
-		}
-		err = j.push(encoded)
-		if err != nil {
-			return err
-		}
+	encoder := base64.NewEncoder(base64.StdEncoding, j.destination)
+	_, err = encoder.Write(bytes)
+	if err != nil {
+		return err
 	}
-	return nil
+	err = encoder.Close()
+	if err != nil {
+		return err
+	}
+	err = j.push([]byte("\""))
+	return err
 }
 
 func (j *jsonSerializer) EncodeNil() error {
@@ -146,4 +211,9 @@ func (j *jsonSerializer) EncodeNil() error {
 func (j *jsonSerializer) Flush() error {
 	// Nothing todo
 	return nil
+}
+
+func (j *jsonSerializer) plainWrite(s string) error {
+	_, err := j.destination.Write([]byte(s))
+	return err
 }

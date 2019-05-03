@@ -49,7 +49,7 @@ func TestDataSetStandardPages(t *testing.T) {
 		block, err := ioutil.ReadAll(response.Body)
 		assert.NoError(t, err)
 		str := string(block)
-		assert.Equal(t, `["Hello",1]["World",2]`, str)
+		assert.Equal(t, `[["Hello",1],["World",2]]`, str)
 	})
 
 	t.Run("get", func(t *testing.T) {
