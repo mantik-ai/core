@@ -2,8 +2,8 @@ package binaryadapter
 
 import (
 	"encoding/json"
-	"github.com/ghodss/yaml"
 	"gl.ambrosys.de/mantik/go_shared/ds"
+	"gl.ambrosys.de/mantik/go_shared/util/yaml"
 )
 
 type FileEntry struct {

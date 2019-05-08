@@ -2,6 +2,7 @@ package ds
 
 import (
 	"github.com/stretchr/testify/assert"
+	"gl.ambrosys.de/mantik/go_shared/util/yaml"
 	"testing"
 )
 
@@ -167,4 +168,31 @@ func TestComparison(t *testing.T) {
 	var y DataType
 	y = x
 	assert.Equal(t, x, y)
+}
+
+func TestStableOrder(t *testing.T) {
+	// Bug 55
+	sample :=
+		`
+{
+      "type" : "tabular",
+      "columns" : {
+        "x" : "int32",
+        "y" : "int32",
+        "s" : "string"
+      }
+}
+`
+	table := FromJsonStringOrPanic(sample).(*TabularData)
+	assert.Equal(t, table.Columns[0].Name, "x")
+	assert.Equal(t, table.Columns[1].Name, "y")
+	assert.Equal(t, table.Columns[2].Name, "s")
+
+	var table2Ref TypeReference
+	err := yaml.Unmarshal([]byte(sample), &table2Ref)
+	assert.NoError(t, err)
+	table2 := table2Ref.Underlying.(*TabularData)
+	assert.Equal(t, table2.Columns[0].Name, "x")
+	assert.Equal(t, table2.Columns[1].Name, "y")
+	assert.Equal(t, table2.Columns[2].Name, "s")
 }

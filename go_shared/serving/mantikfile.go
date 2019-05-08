@@ -1,9 +1,9 @@
 package serving
 
 import (
-	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/ds"
+	"gl.ambrosys.de/mantik/go_shared/util/yaml"
 )
 
 type Mantikfile interface {
