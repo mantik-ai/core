@@ -23,6 +23,9 @@ func (b BundleRef) MarshalJSON() ([]byte, error) {
 
 func (b *BundleRef) UnmarshalJSON(data []byte) error {
 	bundle, err := DecodeBundle(serializer.BACKEND_JSON, data)
+	if err != nil {
+		return err
+	}
 	b.Bundle = *bundle
 	return err
 }

@@ -23,16 +23,13 @@ private[select] object SelectBuilder {
     for {
       projections <- buildProjections(input, statement)
       selectors <- buildSelectors(input, statement)
-    } yield Select(projections, selectors)
+    } yield Select(input, projections, selectors)
   }
 
-  private def buildProjections(input: TabularData, statement: AST.SelectNode): Either[String, List[SelectProjection]] = {
+  private def buildProjections(input: TabularData, statement: AST.SelectNode): Either[String, Option[List[SelectProjection]]] = {
     if (statement.isAll) {
       Right(
-        input.columns.zipWithIndex.map {
-          case ((columnName, columnType), idx) =>
-            SelectProjection(columnName, ColumnExpression(idx, columnType))
-        }.toList
+        None
       )
     } else {
       Utils.flatEither(
@@ -40,7 +37,7 @@ private[select] object SelectBuilder {
           case (selectColumnNode, idx) =>
             buildProjection(input, selectColumnNode, idx)
         }
-      )
+      ).map(Some(_))
     }
   }
 

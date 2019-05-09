@@ -1,7 +1,8 @@
 package ai.mantik.planner.select.builder
 
+import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageFormat, Tensor }
-import ai.mantik.planner.select.{ BinaryOp, CastExpression, Expression }
+import ai.mantik.planner.select.{ CastExpression, Expression }
 import ai.mantik.planner.select.parser.AST
 
 /** Converts Casts and other type related stuff */
@@ -32,7 +33,7 @@ private[builder] object CastBuilder {
   }
 
   /** Returns the type which can be used for doing an operation on both types. */
-  def operationType(op: BinaryOp, left: Expression, right: Expression): Either[String, DataType] = {
+  def operationType(op: BinaryOperation, left: Expression, right: Expression): Either[String, DataType] = {
     // currently the same
     comparisonType(left, right)
   }

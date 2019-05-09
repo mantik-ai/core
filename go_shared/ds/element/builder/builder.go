@@ -31,13 +31,22 @@ func Row(elements ...element.Element) *element.TabularRow {
 
 /* A row which consits of primitives only. */
 func PrimitiveRow(elements ...interface{}) *element.TabularRow {
+	return &element.TabularRow{PrimitiveElements(elements...)}
+}
+
+// Wraps multiple primitives into elements.
+func PrimitiveElements(elements ...interface{}) []element.Element {
 	converted := make([]element.Element, len(elements))
 	for i := 0; i < len(elements); i++ {
 		converted[i] = element.Primitive{elements[i]}
 	}
-	return &element.TabularRow{converted}
+	return converted
 }
 
 func Tensor(values interface{}) *element.TensorElement {
 	return &element.TensorElement{values}
+}
+
+func Embedded(rows ...*element.TabularRow) *element.EmbeddedTabularElement {
+	return &element.EmbeddedTabularElement{rows}
 }

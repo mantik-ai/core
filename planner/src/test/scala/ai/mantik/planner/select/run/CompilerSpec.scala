@@ -23,13 +23,8 @@ class CompilerSpec extends TestBase {
   it should "compile a simple select all" in {
     compile(simpleInput, "select *") shouldBe Right(
       SelectProgram(
-        selector = Program(
-          OpCode.Constant(Bundle.fundamental(true)),
-        ),
-        projector = Program(
-          OpCode.Get(0),
-          OpCode.Get(1)
-        )
+        None,
+        None,
       )
     )
   }
@@ -37,16 +32,13 @@ class CompilerSpec extends TestBase {
   it should "compile a trivial filter" in {
     compile(simpleInput, "select * where x = 1") shouldBe Right(
       SelectProgram(
-        selector = Program(
+        selector = Some(Program(
           OpCode.Get(0),
           OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
-          OpCode.Equals
-        ),
-        projector = Program(
-          OpCode.Get(0),
-          OpCode.Get(1)
-        )
+          OpCode.Equals(FundamentalType.Int32)
+        )),
+        projector = None
       )
     )
   }
@@ -54,21 +46,18 @@ class CompilerSpec extends TestBase {
   it should "compile a double filter" in {
     compile(simpleInput, "select * where x = 1 and y = 'boom'") shouldBe Right(
       SelectProgram(
-        selector = Program(
+        selector = Some(Program(
           OpCode.Get(0),
           OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
-          OpCode.Equals,
+          OpCode.Equals(FundamentalType.Int32),
           OpCode.ReturnOnFalse,
           OpCode.Pop,
           OpCode.Get(1),
           OpCode.Constant(Bundle.fundamental("boom")),
-          OpCode.Equals
-        ),
-        projector = Program(
-          OpCode.Get(0),
-          OpCode.Get(1)
-        )
+          OpCode.Equals(FundamentalType.StringType)
+        )),
+        projector = None
       )
     )
   }
@@ -76,21 +65,18 @@ class CompilerSpec extends TestBase {
   it should "compile a not filter" in {
     compile(simpleInput, "select * where not(x = 1 and y = 'boom')") shouldBe Right(
       SelectProgram(
-        selector = Program (
+        selector = Some(Program (
           OpCode.Get(0),
           OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
-          OpCode.Equals,
+          OpCode.Equals(FundamentalType.Int32),
           OpCode.Get(1),
           OpCode.Constant(Bundle.fundamental("boom")),
-          OpCode.Equals,
+          OpCode.Equals(FundamentalType.StringType),
           OpCode.And,
           OpCode.Neg
-        ),
-        projector = Program(
-          OpCode.Get(0),
-          OpCode.Get(1)
-        )
+        )),
+        projector = None
       )
     )
   }
@@ -98,14 +84,10 @@ class CompilerSpec extends TestBase {
   it should "compile a trivial select" in {
     compile(simpleInput, "select y") shouldBe Right(
       SelectProgram(
-        selector = Program.fromOps(
-          Vector(
-            OpCode.Constant(Bundle.fundamental(true)),
-          )
-        ),
-        projector = Program(
+        selector = None,
+        projector = Some(Program(
           OpCode.Get(1)
-        )
+        ))
       )
     )
   }
@@ -113,18 +95,14 @@ class CompilerSpec extends TestBase {
   it should "work with a more complex select" in {
     compile(simpleInput, "select CAST(x + 1 AS float64)") shouldBe Right(
       SelectProgram(
-        selector = Program.fromOps(
-          Vector(
-            OpCode.Constant(Bundle.fundamental(true)),
-          )
-        ),
-        projector = Program(
+        selector = None,
+        projector = Some(Program(
           OpCode.Get(0),
           OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
           OpCode.BinaryOp(FundamentalType.Int32, BinaryOperation.Add),
           OpCode.Cast(FundamentalType.Int32, FundamentalType.Float64),
-        )
+        ))
       )
     )
   }

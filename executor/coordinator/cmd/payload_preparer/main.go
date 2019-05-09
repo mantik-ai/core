@@ -29,7 +29,7 @@ const TempFile = "download.temp"
 /* Prepares the /data directory by unziping a file given as URL. Also places Mantikfile at the correct place. */
 func main() {
 	options := flag.NewFlagSet("preparer", flag.ExitOnError)
-	url := options.String("url", "", "Url to download")
+	url := options.String("url", "", "Optional Url to download")
 	dir := options.String("dir", "/data", "Destination Directory")
 	payloadSubDir := options.String("pdir", "", "Optional Payload Sub directory")
 	mantikfile := options.String("mantikfile", "", "Mantikfile to add (Base64 encoded)")
@@ -43,8 +43,11 @@ func main() {
 		os.Exit(RcInvalidArgs)
 	}
 	if len(*url) == 0 {
-		println("Empty URL")
-		os.Exit(RcInvalidArgs)
+		if len(*mantikfile) == 0 {
+			println("Nothing to do, no URL no mantikfile")
+			os.Exit(0)
+		}
+		println("Continuing with empty URL")
 	}
 
 	// For Debugging file permissions
@@ -75,6 +78,11 @@ func main() {
 			os.Exit(RcCouldNotWriteMantikFile)
 		}
 		println("Wrote Mantikfile...")
+	}
+
+	if len(*url) == 0 {
+		// Stopping now, no data payload
+		os.Exit(0)
 	}
 
 	payload, err := retrieveUrl(*url)

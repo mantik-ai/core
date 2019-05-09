@@ -1,0 +1,32 @@
+# Does a simple calculation select (x + y) as a, (x - y) as b
+stack: select
+type:
+    input:
+        columns:
+            "x": int32
+            "y": int32
+    output:
+        columns:
+            sum: int32
+            dif: int32
+selectProgram:
+    # The selector is empty
+    projector:
+        args: 2
+        retStackDepth: 2
+        stackInitDepth: 2
+        ops:
+          - get
+          - 0
+          - get
+          - 1
+          - bn
+          - int32
+          - add
+          - get
+          - 0
+          - get
+          - 1
+          - bn
+          - int32
+          - sub

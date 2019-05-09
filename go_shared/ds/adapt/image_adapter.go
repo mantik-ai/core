@@ -1,47 +1,14 @@
 package adapt
 
 import (
-	"encoding/binary"
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/ds"
+	"gl.ambrosys.de/mantik/go_shared/ds/adapt/construct"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"reflect"
+	"io"
 )
 
-func lookupImageToTensor(from *ds.Image, to *ds.Tensor) (Adapter, error) {
-	// only one component currently supported
-	if len(from.Components) != 1 {
-		return nil, errors.Errorf("Image to tensor conversion only supported for 1 component, got %d", len(from.Components))
-	}
-	// compatible componentTypes?
-	imageComponentType, ok := from.Components[0].Component.ComponentType.Underlying.(*ds.FundamentalType)
-	if !ok {
-		return nil, errors.Errorf("Only fundamental image components supported")
-	}
-	tensorComponentType, ok := to.ComponentType.Underlying.(*ds.FundamentalType)
-	if !ok {
-		return nil, errors.Errorf("Only fundamental tensor components supported")
-	}
-
-	if from.Format != nil {
-		// TODO: At least support conversion into string tensor, as this is usual.
-		return nil, errors.Errorf("No support for image formats yet")
-	}
-
-	componentConverter, err := imageComponentConverter(imageComponentType, tensorComponentType)
-	if err != nil {
-		return nil, errors.Errorf(
-			"Image to Tensor not available as component types are not convertable, from %s, to %s",
-			ds.ToJsonString(imageComponentType),
-			ds.ToJsonString(tensorComponentType),
-		)
-	}
-
-	byteReader, err := lookupByteReader(imageComponentType)
-	if err != nil {
-		return nil, err
-	}
-
+func lookupImageToTensor(from *ds.Image, to *ds.Tensor) (*Cast, error) {
 	packedCount := to.PackedElementCount()
 
 	if packedCount != from.Width*from.Height {
@@ -52,99 +19,99 @@ func lookupImageToTensor(from *ds.Image, to *ds.Tensor) (Adapter, error) {
 		)
 	}
 
-	var conversionFunction Adapter = func(in element.Element) (element.Element, error) {
-		imageElement := in.(*element.ImageElement)
-		resultBlock := reflect.MakeSlice(reflect.SliceOf(tensorComponentType.GoType), packedCount, packedCount)
-		for i := 0; i < packedCount; i++ {
-			resultBlock.Index(i).Set(
-				reflect.ValueOf(componentConverter(byteReader(imageElement.Bytes, i))),
-			)
-		}
-		result := element.TensorElement{resultBlock.Interface()}
-		return &result, nil
+	imageReader, err := construct.CreateImageReader(from)
+	if err != nil {
+		return nil, err
 	}
-	return conversionFunction, nil
+	tensorWriter, err := construct.CreateTensorWriter(to)
+	if err != nil {
+		return nil, err
+	}
+	return constructComponentCast(imageReader, tensorWriter)
 }
 
-type byteReader func(in []byte, idx int) interface{}
+func lookupTensorToImage(from *ds.Tensor, to *ds.Image) (*Cast, error) {
+	packedCount := from.PackedElementCount()
 
-func imageComponentConverter(from *ds.FundamentalType, to *ds.FundamentalType) (RawAdapter, error) {
-	// Image components often convert from [0..255] into [0..1] (floating point).
-	if from == to {
-		return emptyRawAdapter, nil
-	}
-	var result RawAdapter
-
-	if from == ds.Uint8 {
-		if to == ds.Float32 {
-			result = func(i interface{}) interface{} {
-				return float32(i.(uint8)) / 255.0
-			}
-		} else if to == ds.Float64 {
-			result = func(i interface{}) interface{} {
-				return float64(i.(uint8)) / 255.0
-			}
-		}
-	} else if from == ds.Float32 && to == ds.Uint8 {
-		result = func(i interface{}) interface{} {
-			in := i.(float32)
-			if in < 0 {
-				return uint8(0)
-			} else if in >= 1.0 {
-				return uint8(255)
-			} else {
-				return uint8(in * 255)
-			}
-		}
-	} else if from == ds.Float64 && to == ds.Uint8 {
-		result = func(i interface{}) interface{} {
-			in := i.(float64)
-			if in < 0 {
-				return uint8(0)
-			} else if in >= 1.0 {
-				return uint8(255)
-			} else {
-				return uint8(in * 255)
-			}
-		}
+	if packedCount != to.Width*to.Height {
+		return nil, errors.Errorf(
+			"Tensor shape packed element count is incompatible to image packed element count %d, got %d",
+			packedCount,
+			to.Width*to.Height,
+		)
 	}
 
-	if result != nil {
+	tensorReader, err := construct.CreateTensorReader(from)
+	if err != nil {
+		return nil, err
+	}
+	imageWriter, err := construct.CreateImageWriter(to)
+	if err != nil {
+		return nil, err
+	}
+	return constructComponentCast(tensorReader, imageWriter)
+}
+
+func lookupImageToImage(from *ds.Image, to *ds.Image) (*Cast, error) {
+	if from.Width != to.Width || from.Height != to.Height {
+		return nil, errors.New("Incompatible image size")
+	}
+
+	reader, err := construct.CreateImageReader(from)
+	if err != nil {
+		return nil, err
+	}
+
+	writer, err := construct.CreateImageWriter(to)
+	if err != nil {
+		return nil, err
+	}
+
+	return constructComponentCast(reader, writer)
+}
+
+func constructComponentCast(reader construct.ComponentReader, writer construct.ComponentWriter) (*Cast, error) {
+	componentCast, err := LookupCast(reader.UnderlyingType(), writer.UnderlyingType())
+	if err != nil {
+		return nil, err
+	}
+	var adapter Adapter = func(input element.Element) (element.Element, error) {
+		components, err := reader.ReadComponents(input)
+		if err != nil {
+			return nil, err
+		}
+		singleWriter := writer.Start()
+		for {
+			element, err := components.Read()
+			if element != nil {
+				translated, err := componentCast.Adapter(element)
+				if err != nil {
+					return nil, err
+				}
+				err = singleWriter.Write(translated)
+				if err != nil {
+					return nil, err
+				}
+			}
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+		err = singleWriter.Close()
+		if err != nil {
+			return nil, err
+		}
+		result := singleWriter.Result()
 		return result, nil
-	} else {
-		return LookupRawAdapter(from, to)
 	}
-}
-
-func lookupByteReader(componentType *ds.FundamentalType) (byteReader, error) {
-	var result byteReader
-	switch componentType {
-	case ds.Uint8:
-		result = func(in []byte, idx int) interface{} {
-			return uint8(in[idx])
-		}
-	case ds.Int8:
-		result = func(in []byte, idx int) interface{} {
-			return int8(in[idx])
-		}
-	case ds.Int32:
-		result = func(in []byte, idx int) interface{} {
-			return int32(binary.BigEndian.Uint32(in[idx*4:]))
-		}
-	case ds.Uint32:
-		result = func(in []byte, idx int) interface{} {
-			return binary.BigEndian.Uint32(in[idx*4:])
-		}
-	case ds.Int64:
-		result = func(in []byte, idx int) interface{} {
-			return int64(binary.BigEndian.Uint64(in[idx*8:]))
-		}
-	case ds.Uint64:
-		result = func(in []byte, idx int) interface{} {
-			return uint64(binary.BigEndian.Uint64(in[idx*8:]))
-		}
-	default:
-		return nil, errors.Errorf("Unsupported type for byte reading %s", componentType.TypeName())
-	}
-	return result, nil
+	return &Cast{
+		From:    reader.Type(),
+		To:      writer.Type(),
+		Loosing: componentCast.Loosing,
+		CanFail: componentCast.CanFail,
+		Adapter: adapter,
+	}, nil
 }

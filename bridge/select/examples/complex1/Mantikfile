@@ -1,0 +1,64 @@
+{
+  "selectProgram" : {
+    "selector" : {
+      "args" : 1,
+      "retStackDepth" : 1,
+      "stackInitDepth" : 2,
+      "ops" : [
+        "get",
+        0,
+        "cnt",
+        {
+          "type" : "int8",
+          "value" : 100
+        },
+        "cast",
+        "int8",
+        "int32",
+        "eq",
+        "int32"
+      ]
+    },
+    "projector" : {
+      "args" : 3,
+      "retStackDepth" : 2,
+      "stackInitDepth" : 2,
+      "ops" : [
+        "get",
+        0,
+        "get",
+        1,
+        "bn",
+        "int32",
+        "add",
+        "get",
+        2
+      ]
+    }
+  },
+  "kind" : "algorithm",
+  "author" : null,
+  "authorEmail" : null,
+  "name" : null,
+  "version" : null,
+  "directory" : null,
+  "stack" : "select",
+  "type" : {
+    "kind" : "simple",
+    "input" : {
+      "type" : "tabular",
+      "columns" : {
+        "x" : "int32",
+        "y" : "int32",
+        "s" : "string"
+      }
+    },
+    "output" : {
+      "type" : "tabular",
+      "columns" : {
+        "sum" : "int32",
+        "s" : "string"
+      }
+    }
+  }
+}

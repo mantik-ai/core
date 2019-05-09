@@ -1,10 +1,13 @@
 package ai.mantik.planner.select
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.TabularData
+import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.funcational.SimpleFunction
 import ai.mantik.planner.select.builder.SelectBuilder
 import ai.mantik.planner.select.run.SelectRunner
+import ai.mantik.planner.select.run.Compiler
+import ai.mantik.repository.{ AlgorithmDefinition, Mantikfile }
 
 import scala.collection.immutable.ListMap
 
@@ -16,21 +19,44 @@ import scala.collection.immutable.ListMap
  * it's a design goal that improvements should be solved similar to
  * SQL if applicable.
  *
- * @param projections the columns which are returned
+ * @param projections the columns which are returned, if None all are returned.
  * @param selection AND-concatenated filters
  */
 case class Select(
-    projections: List[SelectProjection],
+    inputType: TabularData,
+    projections: Option[List[SelectProjection]] = None,
     selection: List[Condition] = Nil
 ) {
-  lazy val resultingType: TabularData = {
-    TabularData(
-      ListMap(
-        projections.map { column =>
-          column.columnName -> column.expression.dataType
-        }: _*
+
+  def resultingType: TabularData = {
+    projections match {
+      case None => inputType
+      case Some(projections) =>
+        TabularData(
+          ListMap(
+            projections.map { column =>
+              column.columnName -> column.expression.dataType
+            }: _*
+          )
+        )
+    }
+  }
+
+  /**
+   * Compile select statement to a select mantikfile.
+   * @return either an error or a mantikfile which can execute the selection.
+   */
+  def compileToSelectMantikfile(): Either[String, Mantikfile[AlgorithmDefinition]] = {
+    val selectProgram = Compiler.compile(this)
+    selectProgram.map { program =>
+
+      val functionType = SimpleFunction(
+        inputType,
+        resultingType
       )
-    )
+
+      SelectMantikfileBuilder(program, functionType).toMantikfile
+    }
   }
 }
 

@@ -22,3 +22,16 @@ func (b *Bundle) IsTabular() bool {
 	_, ok := b.Type.(*ds.TabularData)
 	return ok
 }
+
+// Return the single value of a bundle. Tabular Bundles are wrapped into an Embedded One.
+func (b *Bundle) SingleValue() Element {
+	if b.IsTabular() {
+		rows := make([]*TabularRow, 0, len(b.Rows))
+		for i, row := range b.Rows {
+			rows[i] = row.(*TabularRow)
+		}
+		return &EmbeddedTabularElement{rows}
+	} else {
+		return b.Rows[0]
+	}
+}

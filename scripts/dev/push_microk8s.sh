@@ -30,6 +30,11 @@ pushd sklearn/simple_learn
 transfer_image bridge.sklearn.simple
 popd
 
+pushd "select"
+./create_docker_images.sh
+transfer_image select_bridge
+popd
+
 
 pushd tf/saved_model
 # Note: this only works in Linux, as we can't build the executable correctly inside OSX

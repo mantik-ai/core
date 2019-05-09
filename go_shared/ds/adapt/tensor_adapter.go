@@ -3,6 +3,7 @@ package adapt
 import (
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/ds"
+	"gl.ambrosys.de/mantik/go_shared/ds/adapt/construct"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"reflect"
 )
@@ -14,20 +15,24 @@ Tensor Adapters:
 - fundamental types can be converted to scalar tensors and back
 */
 
-func lookupTensorAdapter(from *ds.Tensor, to *ds.Tensor) (Adapter, error) {
+func lookupTensorAdapter(from *ds.Tensor, to *ds.Tensor) (*Cast, error) {
 	if reflect.DeepEqual(from.Shape, to.Shape) || // case same shape
 		len(from.Shape) > 0 && reflect.DeepEqual(from.Shape[1:], to.Shape) ||
 		len(to.Shape) > 0 && reflect.DeepEqual(to.Shape[1:], from.Shape) {
-		componentAdapter, err := lookupTensorComponentAdapter(from.ComponentType.Underlying, to.ComponentType.Underlying)
+		reader, err := construct.CreateTensorReader(from)
 		if err != nil {
 			return nil, err
 		}
-		return componentAdapter, nil
+		writer, err := construct.CreateTensorWriter(to)
+		if err != nil {
+			return nil, err
+		}
+		return constructComponentCast(reader, writer)
 	}
-	return nil, nil
+	return nil, errors.New("Incompatible tensors")
 }
 
-func lookupTensorPackOut(from *ds.Tensor, to *ds.FundamentalType) (Adapter, error) {
+func lookupTensorPackOut(from *ds.Tensor, to *ds.FundamentalType) (*Cast, error) {
 	if from.PackedElementCount() != 1 {
 		return nil, errors.New("only single element tensors can be packed out into scalars")
 	}
@@ -35,18 +40,29 @@ func lookupTensorPackOut(from *ds.Tensor, to *ds.FundamentalType) (Adapter, erro
 	if !fromOk {
 		return nil, errors.Errorf("Only fundamental types supported, got %s", from.TypeName())
 	}
-	underlyingAdapter, err := LookupRawAdapter(fromFundamental, to)
+	underlyingCast, err := LookupCast(fromFundamental, to)
 	if err != nil {
 		return nil, err
 	}
 	adapter := func(in element.Element) (element.Element, error) {
 		inCasted := in.(*element.TensorElement)
-		return element.Primitive{underlyingAdapter(reflect.ValueOf(inCasted.Values).Index(0).Interface())}, nil
+		inValue := element.Primitive{(reflect.ValueOf(inCasted.Values).Index(0).Interface())}
+		convertedIn, err := underlyingCast.Adapter(inValue)
+		if err != nil {
+			return nil, err
+		}
+		return convertedIn, nil
 	}
-	return adapter, nil
+	return &Cast{
+		From:    from,
+		To:      to,
+		Loosing: underlyingCast.Loosing,
+		CanFail: underlyingCast.CanFail,
+		Adapter: adapter,
+	}, nil
 }
 
-func lookupTensorPackIn(from *ds.FundamentalType, to *ds.Tensor) (Adapter, error) {
+func lookupTensorPackIn(from *ds.FundamentalType, to *ds.Tensor) (*Cast, error) {
 	if to.PackedElementCount() != 1 {
 		return nil, errors.New("only single element tensors can be packed in from scalars")
 	}
@@ -54,44 +70,26 @@ func lookupTensorPackIn(from *ds.FundamentalType, to *ds.Tensor) (Adapter, error
 	if !toOk {
 		return nil, errors.Errorf("Only fundamental types supported, got %s", from.TypeName())
 	}
-	underlyingAdapter, err := LookupRawAdapter(from, toFundamental)
+	underlyingCast, err := LookupCast(from, toFundamental)
 	if err != nil {
 		return nil, err
 	}
 	tensorSliceType := reflect.SliceOf(toFundamental.GoType)
 	adapter := func(in element.Element) (element.Element, error) {
-		inCasted := in.(element.Primitive)
+		converted, err := underlyingCast.Adapter(in)
+		if err != nil {
+			return nil, err
+		}
+		plain := converted.(element.Primitive).X
 		resultSlice := reflect.MakeSlice(tensorSliceType, 1, 1)
-		resultSlice.Index(0).Set(reflect.ValueOf(underlyingAdapter(inCasted.X)))
+		resultSlice.Index(0).Set(reflect.ValueOf(plain))
 		return &element.TensorElement{resultSlice.Interface()}, nil
 	}
-	return adapter, nil
-}
-
-func lookupTensorComponentAdapter(from ds.DataType, to ds.DataType) (Adapter, error) {
-	fromFundamental, fromOk := from.(*ds.FundamentalType)
-	toFundamental, toOk := to.(*ds.FundamentalType)
-	if !fromOk || !toOk {
-		return nil, errors.Errorf("Only fundamental types supported, got %s to %s", from.TypeName(), to.TypeName())
-	}
-	if fromFundamental == toFundamental {
-		return emptyAdapter, nil
-	}
-	underlyingAdapter, err := LookupRawAdapter(fromFundamental, toFundamental)
-	if err != nil {
-		return nil, err
-	}
-	targetSliceType := reflect.SliceOf(toFundamental.GoType)
-
-	adapter := func(in element.Element) (element.Element, error) {
-		inTensorSlice := reflect.ValueOf(in.(*element.TensorElement).Values)
-		l := inTensorSlice.Len()
-		newValues := reflect.MakeSlice(targetSliceType, l, l)
-		for i := 0; i < l; i++ {
-			newValues.Index(i).Set(reflect.ValueOf(underlyingAdapter(inTensorSlice.Index(i).Interface())))
-		}
-		return &element.TensorElement{newValues.Interface()}, nil
-	}
-
-	return adapter, nil
+	return &Cast{
+		From:    from,
+		To:      to,
+		CanFail: underlyingCast.CanFail,
+		Loosing: underlyingCast.Loosing,
+		Adapter: adapter,
+	}, nil
 }

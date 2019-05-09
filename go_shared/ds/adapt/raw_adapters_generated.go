@@ -118,12 +118,342 @@ func LookupRawAdapter(from *ds.FundamentalType, to *ds.FundamentalType) (RawAdap
 			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
 		}
 
+	case ds.Uint64:
+		switch to {
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Int64:
+		switch to {
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
 	case ds.Float32:
 		switch to {
 
 		case ds.Float64:
 			result = func(i interface{}) interface{} {
 				return float64(i.(float32))
+			}
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Float64:
+		switch to {
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	default:
+		return nil, errors.Errorf("No raw converter from %s", from.TypeName())
+	}
+	return result, nil
+}
+
+func LookupLossyRawAdapter(from *ds.FundamentalType, to *ds.FundamentalType) (RawAdapter, error) {
+	if from == to {
+		return emptyRawAdapter, nil
+	}
+	var result RawAdapter
+	switch from {
+
+	case ds.Uint8:
+		switch to {
+
+		case ds.Uint8:
+			result = func(i interface{}) interface{} {
+				return uint8(i.(uint8))
+			}
+
+		case ds.Int8:
+			result = func(i interface{}) interface{} {
+				return int8(i.(uint8))
+			}
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Int8:
+		switch to {
+
+		case ds.Uint64:
+			result = func(i interface{}) interface{} {
+				return uint64(i.(int8))
+			}
+
+		case ds.Uint8:
+			result = func(i interface{}) interface{} {
+				return uint8(i.(int8))
+			}
+
+		case ds.Int8:
+			result = func(i interface{}) interface{} {
+				return int8(i.(int8))
+			}
+
+		case ds.Uint32:
+			result = func(i interface{}) interface{} {
+				return uint32(i.(int8))
+			}
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Uint32:
+		switch to {
+
+		case ds.Float32:
+			result = func(i interface{}) interface{} {
+				return float32(i.(uint32))
+			}
+
+		case ds.Uint8:
+			result = func(i interface{}) interface{} {
+				return uint8(i.(uint32))
+			}
+
+		case ds.Int8:
+			result = func(i interface{}) interface{} {
+				return int8(i.(uint32))
+			}
+
+		case ds.Uint32:
+			result = func(i interface{}) interface{} {
+				return uint32(i.(uint32))
+			}
+
+		case ds.Int32:
+			result = func(i interface{}) interface{} {
+				return int32(i.(uint32))
+			}
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Int32:
+		switch to {
+
+		case ds.Uint64:
+			result = func(i interface{}) interface{} {
+				return uint64(i.(int32))
+			}
+
+		case ds.Float32:
+			result = func(i interface{}) interface{} {
+				return float32(i.(int32))
+			}
+
+		case ds.Uint8:
+			result = func(i interface{}) interface{} {
+				return uint8(i.(int32))
+			}
+
+		case ds.Int8:
+			result = func(i interface{}) interface{} {
+				return int8(i.(int32))
+			}
+
+		case ds.Uint32:
+			result = func(i interface{}) interface{} {
+				return uint32(i.(int32))
+			}
+
+		case ds.Int32:
+			result = func(i interface{}) interface{} {
+				return int32(i.(int32))
+			}
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Uint64:
+		switch to {
+
+		case ds.Uint32:
+			result = func(i interface{}) interface{} {
+				return uint32(i.(uint64))
+			}
+
+		case ds.Int32:
+			result = func(i interface{}) interface{} {
+				return int32(i.(uint64))
+			}
+
+		case ds.Uint64:
+			result = func(i interface{}) interface{} {
+				return uint64(i.(uint64))
+			}
+
+		case ds.Int64:
+			result = func(i interface{}) interface{} {
+				return int64(i.(uint64))
+			}
+
+		case ds.Float32:
+			result = func(i interface{}) interface{} {
+				return float32(i.(uint64))
+			}
+
+		case ds.Float64:
+			result = func(i interface{}) interface{} {
+				return float64(i.(uint64))
+			}
+
+		case ds.Uint8:
+			result = func(i interface{}) interface{} {
+				return uint8(i.(uint64))
+			}
+
+		case ds.Int8:
+			result = func(i interface{}) interface{} {
+				return int8(i.(uint64))
+			}
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Int64:
+		switch to {
+
+		case ds.Float32:
+			result = func(i interface{}) interface{} {
+				return float32(i.(int64))
+			}
+
+		case ds.Float64:
+			result = func(i interface{}) interface{} {
+				return float64(i.(int64))
+			}
+
+		case ds.Uint8:
+			result = func(i interface{}) interface{} {
+				return uint8(i.(int64))
+			}
+
+		case ds.Int8:
+			result = func(i interface{}) interface{} {
+				return int8(i.(int64))
+			}
+
+		case ds.Uint32:
+			result = func(i interface{}) interface{} {
+				return uint32(i.(int64))
+			}
+
+		case ds.Int32:
+			result = func(i interface{}) interface{} {
+				return int32(i.(int64))
+			}
+
+		case ds.Uint64:
+			result = func(i interface{}) interface{} {
+				return uint64(i.(int64))
+			}
+
+		case ds.Int64:
+			result = func(i interface{}) interface{} {
+				return int64(i.(int64))
+			}
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Float32:
+		switch to {
+
+		case ds.Uint32:
+			result = func(i interface{}) interface{} {
+				return uint32(i.(float32))
+			}
+
+		case ds.Int32:
+			result = func(i interface{}) interface{} {
+				return int32(i.(float32))
+			}
+
+		case ds.Uint64:
+			result = func(i interface{}) interface{} {
+				return uint64(i.(float32))
+			}
+
+		case ds.Int64:
+			result = func(i interface{}) interface{} {
+				return int64(i.(float32))
+			}
+
+		case ds.Float32:
+			result = func(i interface{}) interface{} {
+				return float32(i.(float32))
+			}
+
+		case ds.Uint8:
+			result = func(i interface{}) interface{} {
+				return uint8(i.(float32))
+			}
+
+		case ds.Int8:
+			result = func(i interface{}) interface{} {
+				return int8(i.(float32))
+			}
+
+		default:
+			return nil, errors.Errorf("No raw converter from %s to %s", from.TypeName(), to.TypeName())
+		}
+
+	case ds.Float64:
+		switch to {
+
+		case ds.Int32:
+			result = func(i interface{}) interface{} {
+				return int32(i.(float64))
+			}
+
+		case ds.Uint64:
+			result = func(i interface{}) interface{} {
+				return uint64(i.(float64))
+			}
+
+		case ds.Int64:
+			result = func(i interface{}) interface{} {
+				return int64(i.(float64))
+			}
+
+		case ds.Float32:
+			result = func(i interface{}) interface{} {
+				return float32(i.(float64))
+			}
+
+		case ds.Float64:
+			result = func(i interface{}) interface{} {
+				return float64(i.(float64))
+			}
+
+		case ds.Uint8:
+			result = func(i interface{}) interface{} {
+				return uint8(i.(float64))
+			}
+
+		case ds.Int8:
+			result = func(i interface{}) interface{} {
+				return int8(i.(float64))
+			}
+
+		case ds.Uint32:
+			result = func(i interface{}) interface{} {
+				return uint32(i.(float64))
 			}
 
 		default:

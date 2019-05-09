@@ -17,12 +17,7 @@ class SelectBuilderSpec extends TestBase {
   it should "support select *" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT *")
     got shouldBe Right(
-      Select(
-        List(
-          SelectProjection("x", ColumnExpression(0, FundamentalType.Int32)),
-          SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
-        )
-      )
+      Select(simpleInput)
     )
     got.right.get.resultingType shouldBe simpleInput
   }
@@ -30,9 +25,11 @@ class SelectBuilderSpec extends TestBase {
   it should "support selecting a single" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT y")
     got shouldBe Right(
-      Select(
-        List(
-          SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
+      Select(simpleInput,
+        Some(
+          List(
+            SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
+          )
         )
       )
     )
@@ -44,10 +41,12 @@ class SelectBuilderSpec extends TestBase {
   it should "support selecting multiple" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT y,x")
     got shouldBe Right(
-      Select(
-        List(
-          SelectProjection("y", ColumnExpression(1, FundamentalType.StringType)),
-          SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
+      Select(simpleInput,
+        Some(
+          List(
+            SelectProjection("y", ColumnExpression(1, FundamentalType.StringType)),
+            SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
+          )
         )
       )
     )
@@ -60,13 +59,15 @@ class SelectBuilderSpec extends TestBase {
   it should "support simple casts" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT CAST(x as int64)")
     got shouldBe Right(
-      Select(
-        List(
-          SelectProjection(
-            "x",
-            CastExpression(
-              ColumnExpression(0, FundamentalType.Int32),
-              FundamentalType.Int64
+      Select(simpleInput,
+        Some(
+          List(
+            SelectProjection(
+              "x",
+              CastExpression(
+                ColumnExpression(0, FundamentalType.Int32),
+                FundamentalType.Int64
+              )
             )
           )
         )
@@ -80,12 +81,15 @@ class SelectBuilderSpec extends TestBase {
   it should "support simple constants" in {
     val got = SelectBuilder.buildSelect(emptyInput, "SELECT 1,true,false,2.5,void")
     val expected = Select(
-      List(
-        SelectProjection("$1", ConstantExpression(Bundle.build(FundamentalType.Int8, Primitive(1: Byte)))),
-        SelectProjection("$2", ConstantExpression(Bundle.build(FundamentalType.BoolType, Primitive(true)))),
-        SelectProjection("$3", ConstantExpression(Bundle.build(FundamentalType.BoolType, Primitive(false)))),
-        SelectProjection("$4", ConstantExpression(Bundle.build(FundamentalType.Float32, Primitive(2.5f)))),
-        SelectProjection("$5", ConstantExpression(Bundle.build(FundamentalType.VoidType, Primitive.unit)))
+      emptyInput,
+      Some(
+        List(
+          SelectProjection("$1", ConstantExpression(Bundle.build(FundamentalType.Int8, Primitive(1: Byte)))),
+          SelectProjection("$2", ConstantExpression(Bundle.build(FundamentalType.BoolType, Primitive(true)))),
+          SelectProjection("$3", ConstantExpression(Bundle.build(FundamentalType.BoolType, Primitive(false)))),
+          SelectProjection("$4", ConstantExpression(Bundle.build(FundamentalType.Float32, Primitive(2.5f)))),
+          SelectProjection("$5", ConstantExpression(Bundle.build(FundamentalType.VoidType, Primitive.unit)))
+        )
       )
     )
     got.right.get.projections.zip(expected.projections).foreach {
@@ -99,10 +103,10 @@ class SelectBuilderSpec extends TestBase {
 
   it should "support simple filters" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE x = 5")
-    val expected = Select(
-      List(
+    val expected = Select(simpleInput,
+      Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
-      ),
+      )),
       List(
         Condition.Equals(
           ColumnExpression(0, FundamentalType.Int32),
@@ -119,10 +123,10 @@ class SelectBuilderSpec extends TestBase {
 
   it should "support simple filters II" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World'")
-    val expected = Select(
-      List(
+    val expected = Select(simpleInput,
+      Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
-      ),
+      )),
       List(
         Condition.Equals(
           ColumnExpression(1, FundamentalType.StringType),
@@ -135,10 +139,10 @@ class SelectBuilderSpec extends TestBase {
 
   it should "support simple combined filters" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World' and x = 1")
-    val expected = Select(
-      List(
+    val expected = Select(simpleInput,
+      Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
-      ),
+      )),
       List(
         Condition.Equals(
           ColumnExpression(1, FundamentalType.StringType),

@@ -6,4 +6,5 @@ cd $MYDIR
 
 ./tf/saved_model/build.sh
 ./binary/build.sh
+./select/build.sh
 
