@@ -1,8 +1,8 @@
 ThisBuild / organization := "ai.mantik"
 ThisBuild / version := "0.1-SNAPSHOT"
 ThisBuild / scalaVersion := "2.12.8"
-ThisBuild / scalacOptions += "-Xfatal-warnings"
-ThisBuild / scalacOptions += "-feature" 
+// ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
+ThisBuild / scalacOptions += "-feature"
 
 val akkaVersion = "2.5.20"
 val akkaHttpVersion = "10.1.7"
