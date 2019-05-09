@@ -1,14 +1,13 @@
 FROM python:3.7-slim
 RUN groupadd -r mantik-bridge && useradd -r -g mantik-bridge mantik-bridge
 
-ADD --chown=mantik-bridge:mantik-bridge requirements.txt /opt/bridge/requirements.txt
+ADD --chown=mantik-bridge:mantik-bridge target /opt/bridge/target
 
 WORKDIR /opt/bridge
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r target/requirements.txt
 
 
 ADD --chown=mantik-bridge:mantik-bridge *.py /opt/bridge/
-ADD --chown=mantik-bridge:mantik-bridge mantik /opt/bridge/mantik
 
 
 # Data Directory

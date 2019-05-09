@@ -7,8 +7,9 @@ verify_ssl = true
 pytest = "*"
 
 [packages]
-scikit-learn = "*"
-mantik = {editable = true,path = "./../../../python_shared"}
+pyyaml = "*"
+msgpack = "*"
+flask = "*"
 
 [requires]
 python_version = "3.7"

@@ -20,6 +20,21 @@ test_go_shared:
     paths:
       - vendor/go_path/
 
+test_python_shared:
+  stage: test
+  image: python:3.7-stretch
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  cache:
+    paths:
+      - .cache/pip
+      - venv/
+  script:
+    - cd python_shared
+    - pip install pipenv
+    - pipenv install --deploy --dev
+    - pipenv run pytest
+
 test_executor_go:
   stage: test
   image: golang:1.11-stretch
