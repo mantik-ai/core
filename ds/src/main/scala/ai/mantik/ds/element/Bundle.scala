@@ -107,6 +107,13 @@ case class TabularBundle(
     rows: Vector[TabularRow]
 ) extends Bundle {
   override def single: Option[Element] = None
+
+  /**
+   * Convert a tabular bundle into a single element bundle by inserting a wrapped tabular element.
+   * Note: this is in most cases practical, as tabular bundles are more efficient to encode.
+   * However during JSON Serialization/Deserialization this can be practical.
+   */
+  def toSingleElementBundle: SingleElementBundle = SingleElementBundle(model, EmbeddedTabularElement(rows))
 }
 
 object Bundle {
@@ -263,5 +270,16 @@ object Bundle {
   implicit val encoder: ObjectEncoder[Bundle] = JsonFormat
   /** JSON Decoder. */
   implicit val decoder: Decoder[Bundle] = JsonFormat
+}
+
+object SingleElementBundle {
+
+  /** Encoder for SingleElementBundle. */
+  implicit val encoder: Encoder[SingleElementBundle] = JsonFormat.contramap[SingleElementBundle](identity)
+
+  implicit val decoder: Decoder[SingleElementBundle] = JsonFormat.map {
+    case b: SingleElementBundle => b
+    case b: TabularBundle       => b.toSingleElementBundle
+  }
 }
 

@@ -2,4 +2,6 @@
 set -e
 MYDIR=`dirname $0`
 cd $MYDIR
-go test -v ./...
+
+source ././../../scripts/ci/golang_help.sh
+golang_test binary_bridge

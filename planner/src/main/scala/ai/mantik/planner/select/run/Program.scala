@@ -1,16 +1,20 @@
 package ai.mantik.planner.select.run
 
+import io.circe.{ Decoder, ObjectEncoder }
+
 /**
  * A Program for running select statements.
  * It works using a Stack-Based mini virtual machine.
  *
  * @param args the number of arguments (can be more, but will be ignored).
- * @param retStackLength the length on the stack at the end.
+ * @param retStackDepth the length on the stack at the end.
  * @param stackInitDepth how deep the stack should be pre-allocated.
+ *
+ * Note: argument names is part of communication protocol with a bridge.
  */
 case class Program(
     args: Int,
-    retStackLength: Int,
+    retStackDepth: Int,
     stackInitDepth: Int,
     ops: Vector[OpCode]
 )
@@ -47,4 +51,7 @@ object Program {
       case OpCode.Get(i) => i
     } :+ -1).max + 1
   }
+
+  implicit val encoder: ObjectEncoder[Program] = ProgramJson.programEncoder
+  implicit val decoder: Decoder[Program] = ProgramJson.programDecoder
 }

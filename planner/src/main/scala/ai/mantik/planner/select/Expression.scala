@@ -2,6 +2,7 @@ package ai.mantik.planner.select
 
 import ai.mantik.ds.{ DataType, FundamentalType }
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
+import ai.mantik.ds.operations.BinaryOperation
 
 /** A expression (e.g. Inside Select). */
 sealed trait Expression {
@@ -29,7 +30,7 @@ case class CastExpression(
 
 /** A Simple binary expression which works on the same type. */
 case class BinaryExpression(
-    op: BinaryOp,
+    op: BinaryOperation,
     left: Expression,
     right: Expression
 ) extends Expression {
@@ -54,13 +55,4 @@ object Condition {
   case class And(left: Expression, right: Expression) extends Condition
 
   case class Or(left: Expression, right: Expression) extends Condition
-}
-
-sealed trait BinaryOp
-
-object BinaryOp {
-  case object Add extends BinaryOp
-  case object Mul extends BinaryOp
-  case object Div extends BinaryOp
-  case object Sub extends BinaryOp
 }

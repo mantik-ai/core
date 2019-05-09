@@ -1,0 +1,28 @@
+# Casts SELECT CAST (x as int32) as a, CAST (y as int32) as b
+# Note: the cast can fail.
+stack: select
+type:
+    input:
+        columns:
+            "x": int32
+            "y": string
+    output:
+        columns:
+            a: int64
+            b: int32
+selectProgram:
+    projector:
+        args: 2
+        retStackDepth: 2
+        stackInitDepth: 2
+        ops:
+          - get
+          - 0
+          - cast
+          - int32
+          - int64
+          - get
+          - 1
+          - cast
+          - string
+          - int32

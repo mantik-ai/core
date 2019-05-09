@@ -61,8 +61,8 @@ Running
     docker run -it -p 8080:8080 --rm -e SKUBER_URL=http://host.docker.internal:8001 executor
     ```
 - Note: In order to do something useful, images must be reachable for the executor.
-  There is a simple script `executor/scripts/dev/push_test_containers_to_minikube.sh` which pushes
-  Docker Images to Minikube.     
+  This means that images must be pushed to the registry available from Kubernetes.
+  For Microk8s see [Executor.Microk8s.md](Executor.Microk8s.md).
 
 Todo
 ----
@@ -76,14 +76,9 @@ Executing Integration Tests
 ---------------------------
 
 Integration Testcases are marked with `@KubernetesIntegrationTest`-Annotation and are not part of regular
-SBT test run. In order to execute do the following:
+SBT test run. Their execution is currently only possible by hand. 
 
-- Install `minikube`
-- Start minikube `minikube start`
-- Start dashboard `minikube dashboard`
-- Build coordinators `coordinator/create_docker_images.sh`
-- Copy Images to minikube `scripts/dev/push_test_containers_to_minikube.sh`
-- Start Integration tests by hand (in IntelliJ)
+Images must be available from Kubernetes.
 
 
 Problems

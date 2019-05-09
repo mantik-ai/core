@@ -34,4 +34,6 @@ object ValueEncoder {
   def wrap[T: ValueEncoder](x: T): Primitive[_] = {
     implicitly[ValueEncoder[T]].wrap(x)
   }
+
+  def apply[T: ValueEncoder](x: T): Primitive[_] = wrap(x)
 }

@@ -1,0 +1,28 @@
+# Flips two columns, select y as a, x as b
+stack: select
+type:
+    input:
+        columns:
+            "x": int32
+            "y": string
+    output:
+        columns:
+            a: string
+            b: int32
+selectProgram:
+    selector:
+        args: 2
+        retStackDepth: 1
+        stackInitDepth: 1
+        ops:
+          - cnt
+          - { "type": "bool", "value": true }
+    projector:
+        args: 2
+        retStackDepth: 2
+        stackInitDepth: 2
+        ops:
+          - get
+          - 1
+          - get
+          - 0

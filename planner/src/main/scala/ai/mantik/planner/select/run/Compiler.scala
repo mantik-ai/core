@@ -1,7 +1,7 @@
 package ai.mantik.planner.select.run
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.operations.BinaryOperation
+import ai.mantik.ds.operations.{ BinaryFunction, BinaryOperation }
 import ai.mantik.ds.{ DataType, FundamentalType }
 import ai.mantik.planner.select._
 
@@ -17,14 +17,17 @@ object Compiler {
     } yield SelectProgram(selector, projector)
   }
 
-  def compileSelectors(selection: List[Condition]): Either[String, Program] = {
+  def compileSelectors(selection: List[Condition]): Either[String, Option[Program]] = {
+    if (selection.isEmpty) {
+      return Right(None)
+    }
     val maybeSubLists = Utils.flatEither(selection.map { condition =>
       compileCondition(condition)
     })
 
     maybeSubLists.map { subLists =>
       val allInOne = combineConditions(subLists)
-      Program.fromOps(allInOne)
+      Some(Program.fromOps(allInOne))
     }
   }
 
@@ -49,16 +52,20 @@ object Compiler {
     resultBuilder.result()
   }
 
-  def compileProjector(projections: List[SelectProjection]): Either[String, Program] = {
+  def compileProjector(projections: Option[List[SelectProjection]]): Either[String, Option[Program]] = {
+    val usedProjections = projections match {
+      case None              => return Right(None)
+      case Some(projections) => projections
+    }
     // Projections just put the result onto the stack, so they are just executed after each other
     val maybeSubLists = Utils.flatEither(
-      projections.map { projection =>
+      usedProjections.map { projection =>
         compileExpression(projection.expression)
       }
     )
     maybeSubLists.map { projectionOpCodes =>
       val allInOne = projectionOpCodes.toVector.flatten
-      Program.fromOps(allInOne)
+      Some(Program.fromOps(allInOne))
     }
   }
 
@@ -72,7 +79,7 @@ object Compiler {
         for {
           a <- compileExpression(c.left)
           b <- compileExpression(c.right)
-        } yield a ++ b :+ OpCode.Equals
+        } yield a ++ b :+ OpCode.Equals(c.left.dataType)
       case c: Condition.WrappedExpression => compileExpression(c.expression)
       case and: Condition.And =>
         for {
@@ -110,23 +117,15 @@ object Compiler {
         for {
           leftOps <- compileExpression(c.left)
           rightOps <- compileExpression(c.right)
-          op <- findOpCode(c.op, c.dataType)
+          op <- binaryOperation(c.op, c.dataType)
         } yield leftOps ++ rightOps :+ op
     }
   }
 
-  private def findOpCode(op: BinaryOp, dt: DataType): Either[String, OpCode] = {
-    val ft = dt match {
-      case ft: FundamentalType => ft
-      case _                   => return Left("Only fundamental types for binary ops supported")
+  private def binaryOperation(op: BinaryOperation, dt: DataType): Either[String, OpCode] = {
+    BinaryFunction.findBinaryFunction(op, dt) match {
+      case Left(error) => Left(error)
+      case Right(_)    => Right(OpCode.BinaryOp(dt, op))
     }
-    val binaryOp = op match {
-      case BinaryOp.Add => BinaryOperation.Add
-      case BinaryOp.Mul => BinaryOperation.Mul
-      case BinaryOp.Div => BinaryOperation.Div
-      case BinaryOp.Sub => BinaryOperation.Sub
-      case _            => return Left(s"Unsupported op ${op}")
-    }
-    Right(OpCode.BinaryOp(ft, binaryOp))
   }
 }

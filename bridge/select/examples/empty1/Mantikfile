@@ -1,0 +1,15 @@
+# Let everything through, SELECT *
+# Can still rename out columns
+stack: select
+type:
+    input:
+        columns:
+            "x": int32
+            "y": string
+    output:
+        columns:
+            a: int32
+            b: string
+selectProgram:
+    selector: null
+    projector: null

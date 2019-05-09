@@ -19,6 +19,10 @@ pushd tf/saved_model
 ./build.sh
 popd
 
+pushd "select"
+./build.sh
+popd
+
 popd
 
 echo "Building Coordinator Code"

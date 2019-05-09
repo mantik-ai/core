@@ -1,8 +1,9 @@
 package ai.mantik.planner.select.builder
 
+import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.planner.select.parser.AST
-import ai.mantik.planner.select.{ BinaryExpression, BinaryOp, ColumnExpression, Condition, Expression }
+import ai.mantik.planner.select.{ BinaryExpression, ColumnExpression, Condition, Expression }
 
 /** Convert AST Expressions into Expressions. */
 private[builder] object ExpressionBuilder {
@@ -44,7 +45,7 @@ private[builder] object ExpressionBuilder {
     }
   }
 
-  private def convertBinaryOperation(op: String): Either[String, BinaryOp] = {
+  private def convertBinaryOperation(op: String): Either[String, BinaryOperation] = {
     opMap.get(op) match {
       case None     => Left(s"Operation ${op} not yet supported")
       case Some(op) => Right(op)
@@ -52,10 +53,10 @@ private[builder] object ExpressionBuilder {
   }
 
   private val opMap = Map(
-    "+" -> BinaryOp.Add,
-    "-" -> BinaryOp.Sub,
-    "*" -> BinaryOp.Mul,
-    "/" -> BinaryOp.Div
+    "+" -> BinaryOperation.Add,
+    "-" -> BinaryOperation.Sub,
+    "*" -> BinaryOperation.Mul,
+    "/" -> BinaryOperation.Div
   )
 
   private def findColumn(input: TabularData, identifier: AST.IdentifierNode): Either[String, ColumnExpression] = {

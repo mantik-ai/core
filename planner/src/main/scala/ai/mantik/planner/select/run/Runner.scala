@@ -67,7 +67,7 @@ class Runner(program: Program) {
         makeTransformContinueOp { e =>
           Primitive(!e.asInstanceOf[Primitive[Boolean]].x)
         }
-      case OpCode.Equals =>
+      case OpCode.Equals(_) =>
         makeContinueOp { s =>
           val right = s.pop()
           val left = s.pop()
@@ -98,7 +98,7 @@ class Runner(program: Program) {
           true
         }
       case b: OpCode.BinaryOp =>
-        val function = eitherOrFeatureNotSupported(BinaryFunction.findBinaryFunction(b.op, b.ft))
+        val function = eitherOrFeatureNotSupported(BinaryFunction.findBinaryFunction(b.op, b.dataType))
         (_, s) => {
           val right = s.pop()
           val left = s.pop()

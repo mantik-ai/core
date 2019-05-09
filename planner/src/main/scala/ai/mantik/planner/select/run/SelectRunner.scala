@@ -1,7 +1,7 @@
 package ai.mantik.planner.select.run
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.element.{ Bundle, Primitive, TabularRow }
+import ai.mantik.ds.element.{ Bundle, Primitive, TabularBundle, TabularRow }
 import ai.mantik.planner.select.Select
 
 /**
@@ -15,22 +15,25 @@ class SelectRunner(select: Select) {
     case Left(error)           => throw new FeatureNotSupported(error)
     case Right(compiledSelect) => compiledSelect
   }
-  private val selectorRunner = new Runner(compiled.selector)
-  private val projectionRunner = new Runner(compiled.projector)
+  private val selectorRunner = compiled.selector.map(new Runner(_))
+  private val projectionRunner = compiled.projector.map(new Runner(_))
 
   /**
    * Run the select statement.
    * Note: if the bundles data type doesn't match, behaviour is undefined.
    */
   def run(bundle: Bundle): Bundle = {
-    val newRows = bundle.rows.flatMap {
+    val tabularBundle = bundle match {
+      case t: TabularBundle => t
+      case other =>
+        throw new IllegalArgumentException("Bundle is incosistent, excepeted tabular rows")
+    }
+    val newRows = tabularBundle.rows.flatMap {
       case row: TabularRow =>
-        val selectResult = selectorRunner.run(row.columns)
-        if (!selectResult.head.asInstanceOf[Primitive[Boolean]].x) {
-          // filter out
-          None
+        if (isSelected(row)) {
+          Some(project(row))
         } else {
-          Some(TabularRow(projectionRunner.run(row.columns)))
+          None
         }
       case other =>
         throw new IllegalArgumentException("Bundle is incosistent, excepeted tabular rows")
@@ -40,6 +43,23 @@ class SelectRunner(select: Select) {
       select.resultingType,
       newRows
     )
+  }
+
+  private def isSelected(row: TabularRow): Boolean = {
+    selectorRunner match {
+      case None => true
+      case Some(runner) =>
+        val selectResult = runner.run(row.columns)
+        selectResult.head.asInstanceOf[Primitive[Boolean]].x
+    }
+  }
+
+  private def project(row: TabularRow): TabularRow = {
+    projectionRunner match {
+      case None => row
+      case Some(runner) =>
+        TabularRow(runner.run(row.columns))
+    }
   }
 
 }
