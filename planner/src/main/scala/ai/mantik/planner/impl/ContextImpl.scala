@@ -16,18 +16,21 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaTypes
 import akka.stream.scaladsl.FileIO
 import akka.stream.{ ActorMaterializer, Materializer }
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ Config, ConfigFactory }
 import org.apache.commons.io.FileUtils
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 
-private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepository, planner: Planner, planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit ec: ExecutionContext, mat: Materializer) extends Context {
+private[impl] class ContextImpl(config: Config, repository: Repository, fileRepository: FileRepository, planner: Planner, planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit ec: ExecutionContext, mat: Materializer) extends Context {
   private val logger = LoggerFactory.getLogger(getClass)
 
+  private val dbLookupTimeout = Duration.fromNanos(config.getDuration("mantik.planner.dbLookupTimeout").toNanos)
+  private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
+
   override def loadDataSet(id: MantikId): DataSet = {
-    val (artifact, mf) = await(repository.getAs[DataSetDefinition](id))
+    val (artifact, mf) = await(repository.getAs[DataSetDefinition](id), dbLookupTimeout)
     mantik.planner.DataSet(
       mantikArtifactSource(artifact),
       mf
@@ -35,7 +38,7 @@ private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepo
   }
 
   override def loadTransformation(id: MantikId): Algorithm = {
-    val (artifact, mf) = await(repository.getAs[AlgorithmDefinition](id))
+    val (artifact, mf) = await(repository.getAs[AlgorithmDefinition](id), dbLookupTimeout)
     mantik.planner.Algorithm(
       mantikArtifactSource(artifact),
       mf
@@ -43,7 +46,7 @@ private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepo
   }
 
   override def loadTrainableAlgorithm(id: MantikId): TrainableAlgorithm = {
-    val (artifact, mf) = await(repository.getAs[TrainableAlgorithmDefinition](id))
+    val (artifact, mf) = await(repository.getAs[TrainableAlgorithmDefinition](id), dbLookupTimeout)
     TrainableAlgorithm(
       mantikArtifactSource(artifact),
       mf
@@ -56,12 +59,12 @@ private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepo
 
   override def execute[T](action: Action[T]): T = {
     val plan = planner.convert(action)
-    val result = await(planExecutor.execute(plan))
+    val result = await(planExecutor.execute(plan), jobTimeout)
     result.asInstanceOf[T]
   }
 
-  private def await[T](future: Future[T]) = {
-    Await.result(future, 60.seconds)
+  private def await[T](future: Future[T], timeout: FiniteDuration) = {
+    Await.result(future, timeout)
   }
 
   override def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): Unit = {
@@ -83,15 +86,15 @@ private[impl] class ContextImpl(repository: Repository, fileRepository: FileRepo
       require(resolved.startsWith(dir), "Data directory may not escape root directory")
       val tempFile = Files.createTempFile("mantik_context", ".zip")
       ZipUtils.zipDirectory(resolved, tempFile)
-      val fileStorage = await(fileRepository.requestFileStorage(false))
-      val sink = await(fileRepository.storeFile(fileStorage.fileId, MediaTypes.`application/octet-stream`.value))
+      val fileStorage = await(fileRepository.requestFileStorage(false), dbLookupTimeout)
+      val sink = await(fileRepository.storeFile(fileStorage.fileId, MediaTypes.`application/octet-stream`.value), dbLookupTimeout)
       val source = FileIO.fromPath(tempFile)
-      await(source.runWith(sink))
+      await(source.runWith(sink), dbLookupTimeout)
       tempFile.toFile.delete()
       fileStorage.fileId
     }
     val artifact = MantikArtifact(mantikfile, fileId, idToUse)
-    await(repository.store(artifact))
+    await(repository.store(artifact), dbLookupTimeout)
     logger.info(s"Storing ${artifact.id} done")
   }
 
@@ -123,6 +126,6 @@ object ContextImpl {
       executor,
       "local",
       bridges.dockerConfig)
-    new ContextImpl(repository, fileRepo, planner, planExecutor, shutdownMethod)
+    new ContextImpl(config, repository, fileRepo, planner, planExecutor, shutdownMethod)
   }
 }

@@ -40,9 +40,13 @@ pushd tf/saved_model
 # Note: this only works in Linux, as we can't build the executable correctly inside OSX
 echo "PWD=$PWD"
 ./create_docker_images.sh
-transfer_image tfbridge
+transfer_image bridge.tf.saved_model
 popd
 
+pushd tf/train
+./create_docker_images.sh
+transfer_image bridge.tf.train
+popd
 
 
 popd

@@ -3,7 +3,7 @@ package ai.mantik.planner.select
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.funcational.SimpleFunction
+import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.planner.select.builder.SelectBuilder
 import ai.mantik.planner.select.run.SelectRunner
 import ai.mantik.planner.select.run.Compiler
@@ -50,7 +50,7 @@ case class Select(
     val selectProgram = Compiler.compile(this)
     selectProgram.map { program =>
 
-      val functionType = SimpleFunction(
+      val functionType = FunctionType(
         inputType,
         resultingType
       )

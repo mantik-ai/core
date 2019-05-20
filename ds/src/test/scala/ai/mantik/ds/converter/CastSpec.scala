@@ -28,6 +28,30 @@ class CastSpec extends TestBase {
     c2.op(ValueEncoder.wrap(123L)) shouldBe ValueEncoder.wrap(123)
   }
 
+  it should "cast 8 bit integers to float32" in {
+    val c1 = Cast.findCast(FundamentalType.Uint8, FundamentalType.Float32).right.get
+    c1.op(Primitive(200.toByte)) shouldBe Primitive(200.toFloat)
+    c1.canFail shouldBe false
+    c1.loosing shouldBe false // 23 bits of precision in float32
+
+    val c2 = Cast.findCast(FundamentalType.Int8, FundamentalType.Float32).right.get
+    c2.op(Primitive(-10.toByte)) shouldBe Primitive(-10.toFloat)
+    c2.canFail shouldBe false
+    c2.loosing shouldBe false // 23 bits of precision in float32
+  }
+
+  it should "cast 32 bit integers to float64" in {
+    val c1 = Cast.findCast(FundamentalType.Uint32, FundamentalType.Float64).right.get
+    c1.op(Primitive(4000000000L.toInt)) shouldBe Primitive(4000000000L.toDouble)
+    c1.canFail shouldBe false
+    c1.loosing shouldBe false // 52 bits of precision in float32
+
+    val c2 = Cast.findCast(FundamentalType.Int32, FundamentalType.Float64).right.get
+    c2.op(Primitive(-200)) shouldBe Primitive(-200.toDouble)
+    c2.canFail shouldBe false
+    c2.loosing shouldBe false // 52 bits of precision in float32
+  }
+
   it should "work for chained conversions" in {
     val c1 = Cast.findCast(FundamentalType.Int8, FundamentalType.Int64).right.get
     c1.loosing shouldBe false

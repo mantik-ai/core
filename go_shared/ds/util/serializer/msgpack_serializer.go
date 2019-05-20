@@ -42,11 +42,10 @@ func (m msgPackSerializingBackend) EncodeJson(i interface{}) error {
 }
 
 func (m msgPackSerializingBackend) EncodeRawJson(jsonBytes []byte) error {
-	value, dataType, offset, err := jsonparser.Get(jsonBytes)
+	value, dataType, _, err := jsonparser.Get(jsonBytes)
 	if err != nil {
 		return err
 	}
-	println(value, dataType, offset)
 	return m.encodeJsonWithType(value, dataType)
 }
 

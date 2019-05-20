@@ -8,6 +8,6 @@ echo "MYDIR $PWD"
 
 . ../../../scripts/ci/docker_help.sh
 
-$DOCKER_CALL build -t tfbridge .
+$DOCKER_CALL build -t bridge.tf.saved_model .
 
-docker_push tfbridge
+docker_push bridge.tf.saved_model

@@ -6,4 +6,5 @@ cd $MYDOR
 
 ./tf/saved_model/test.sh
 ./binary/test.sh
+./bridge_debugger/test.sh
 ./select/test.sh

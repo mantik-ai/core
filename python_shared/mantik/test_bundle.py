@@ -177,3 +177,13 @@ def test_from_flat_column():
         ]
     )
     assert got == expected
+
+def test_len():
+    a = Bundle()
+    assert len(a) == 1 # null
+    b = Bundle(value=[[1], [2]])
+    assert len(b) == 2
+    c = Bundle(value="Hello World")
+    assert len(c) == 1
+    d = Bundle(value=4)
+    assert len(d) == 1

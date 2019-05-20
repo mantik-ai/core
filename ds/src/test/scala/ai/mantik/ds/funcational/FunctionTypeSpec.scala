@@ -18,7 +18,7 @@ class FunctionTypeSpec extends TestBase {
       """.stripMargin
     val jsonParsed = CirceJson.forceParseJson(sample)
     val parsed = jsonParsed.as[FunctionType].getOrElse(fail())
-    parsed shouldBe SimpleFunction(
+    parsed shouldBe FunctionType(
       FundamentalType.Uint8,
       FundamentalType.StringType
     )

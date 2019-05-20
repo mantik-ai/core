@@ -71,7 +71,7 @@ class PlannerElements(bridges: Bridges) {
    */
   def dataSet(mantikfile: Mantikfile[DataSetDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
     val bridge = bridges.formatBridge(mantikfile.definition.format).getOrElse {
-      throw new Planner.FormatNotSupportedException(mantikfile.definition.format)
+      throw new Planner.FormatNotSupportedException(s"Format ${mantikfile.definition.format} not supported")
     }
     bridge.container match {
       case None =>
@@ -109,7 +109,7 @@ class PlannerElements(bridges: Bridges) {
   /** Generates the plan for an algorithm which runtime data may come from a file. */
   def algorithm(mantikfile: Mantikfile[AlgorithmDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
     val bridge = bridges.algorithmBridge(mantikfile.definition.stack).getOrElse {
-      throw new Planner.AlgorithmStackNotSupportedException(mantikfile.definition.stack)
+      throw new Planner.AlgorithmStackNotSupportedException(s"Stack ${mantikfile.definition.stack} not supported")
     }
     val applyResource = "apply"
 
@@ -139,7 +139,7 @@ class PlannerElements(bridges: Bridges) {
   /** Generates the plan for a trainable algorithm. */
   def trainableAlgorithm(mantikfile: Mantikfile[TrainableAlgorithmDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
     val bridge = bridges.trainableAlgorithmBridge(mantikfile.definition.stack).getOrElse {
-      throw new Planner.AlgorithmStackNotSupportedException(mantikfile.definition.stack)
+      throw new Planner.AlgorithmStackNotSupportedException(s"Stack ${mantikfile.definition.stack} not supported")
     }
 
     val trainResource = "train"

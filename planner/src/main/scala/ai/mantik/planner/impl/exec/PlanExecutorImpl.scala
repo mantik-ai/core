@@ -29,6 +29,9 @@ private[impl] class PlanExecutorImpl(
   private val logger = LoggerFactory.getLogger(getClass)
   logger.info(s"Initializing PlanExecutor")
 
+  private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
+  private val jobPollInterval = Duration.fromNanos(config.getDuration("mantik.planner.jobPollInterval").toNanos)
+
   def execute(plan: Plan): Future[Any] = {
     for {
       fileServiceUri <- prepareKubernetesFileServiceResult
@@ -98,12 +101,8 @@ private[impl] class PlanExecutorImpl(
   }
 
   private def executeJobAndWaitForReady(job: Job): Future[Unit] = {
-    // TODO: Fixme
-    val jobTimeout = 60.seconds
-    val tryAgain = 1.second
-
     executor.schedule(job).flatMap { jobId =>
-      FutureHelper.tryMultipleTimes(jobTimeout, tryAgain) {
+      FutureHelper.tryMultipleTimes(jobTimeout, jobPollInterval) {
         executor.status(job.isolationSpace, jobId).map { status =>
           Option(status.state).filter { state =>
             state == JobState.Failed || state == JobState.Finished

@@ -12,10 +12,6 @@ type columnAdapter struct {
 }
 
 func lookupTableAdapter(from *ds.TabularData, to *ds.TabularData) (*Cast, error) {
-	// Algorithm:
-	// - Each expected column must also exist in from
-	// - Inner type must be convertable
-
 	columnCount := len(to.Columns)
 	columnAdapters := make([]columnAdapter, columnCount)
 
@@ -26,25 +22,21 @@ func lookupTableAdapter(from *ds.TabularData, to *ds.TabularData) (*Cast, error)
 	var loosing = false
 	var canFail = false
 
-	// Special Case, input and output has ony one column, than we can directly match it and do not have to look at the name
-	if columnCount == 1 && len(from.Columns) == 1 {
-		subAdapter, err := LookupCast(from.Columns[0].SubType.Underlying, to.Columns[0].SubType.Underlying)
+	columnMapping, err := matchColumnNames(from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	for toIndex, fromIndex := range columnMapping {
+		fromColumnType := from.Columns[fromIndex].SubType
+		toColumnType := to.Columns[toIndex].SubType
+		subAdapter, err := LookupCast(fromColumnType.Underlying, toColumnType.Underlying)
 		if err != nil {
 			return nil, err
 		}
-		columnAdapters[0] = columnAdapter{0, subAdapter}
-		loosing = subAdapter.Loosing
-		canFail = subAdapter.CanFail
-	} else {
-		for i, v := range to.Columns {
-			sourcePos, subAdapter, err := lookupColumnConverter(from, v.SubType.Underlying, v.Name)
-			if err != nil {
-				return nil, err
-			}
-			columnAdapters[i] = columnAdapter{sourcePos, subAdapter}
-			loosing = loosing || subAdapter.Loosing
-			canFail = canFail || subAdapter.CanFail
-		}
+		columnAdapters[toIndex] = columnAdapter{fromIndex, subAdapter}
+		loosing = loosing || subAdapter.Loosing
+		canFail = canFail || subAdapter.CanFail
 	}
 
 	var rowAdapter = func(in *element.TabularRow) (*element.TabularRow, error) {
@@ -86,16 +78,49 @@ func lookupTableAdapter(from *ds.TabularData, to *ds.TabularData) (*Cast, error)
 	}, nil
 }
 
-// Lookup a column with given name from a source table, generates a converter for it.
-func lookupColumnConverter(from *ds.TabularData, expectedType ds.DataType, name string) (int, *Cast, error) {
-	for i, v := range from.Columns {
-		if v.Name == name {
-			subAdapter, err := LookupCast(v.SubType.Underlying, expectedType)
-			if err != nil {
-				return 0, nil, err
+// Find matching column names when matching from to to, returns a list of indices into the from tabular data.
+func matchColumnNames(from *ds.TabularData, to *ds.TabularData) ([]int, error) {
+	if len(from.Columns) < len(to.Columns) {
+		return nil, errors.New("Less than necessary columns provided")
+	}
+	result := make([]int, len(to.Columns))
+	missingCount := 0
+	var firstMissing int
+	for idx, column := range to.Columns {
+		fromIdx := from.IndexOfColumn(column.Name)
+		if fromIdx >= 0 {
+			// ok
+			result[idx] = fromIdx
+		} else {
+			// missing
+			result[idx] = -1
+			missingCount += 1
+			if missingCount == 1 {
+				firstMissing = idx
 			}
-			return i, subAdapter, nil
 		}
 	}
-	return 0, nil, errors.Errorf("Column %s not found in source tabular data", name)
+	if missingCount > 1 {
+		return nil, errors.Errorf("%d columns not found in source tabular data (first = %s)", missingCount, to.Columns[firstMissing].Name)
+	}
+	if missingCount == 0 {
+		return result, nil
+	}
+	// special case, one is missing, if the count is the same, we can guess it.
+	if len(from.Columns) > len(to.Columns) {
+		return nil, errors.Errorf("Cannot resolve %s as source table has more elements", to.Columns[firstMissing].Name)
+	}
+	fields := make([]bool, len(from.Columns))
+	for _, v := range result {
+		if v >= 0 {
+			fields[v] = true
+		}
+	}
+	for idx, v := range fields {
+		if !v {
+			// this is the one we are looking for
+			result[firstMissing] = idx
+		}
+	}
+	return result, nil
 }

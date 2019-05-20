@@ -71,7 +71,9 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
               val sink = FileIO.toPath(fileName)
               val writeResult: Future[String] = req.entity.dataBytes.runWith(sink)
                 .andThen {
-                  case Success(io) => setFileStatus(id, _.copy(written = Some(io.count), contentType = Some(req.entity.contentType.value)))
+                  case Success(io) =>
+                    logger.info(s"Wrote ${fileName} with ${io.count} bytes")
+                    setFileStatus(id, _.copy(written = Some(io.count), contentType = Some(req.entity.contentType.value)))
                 }
                 .map(_ => "")
 

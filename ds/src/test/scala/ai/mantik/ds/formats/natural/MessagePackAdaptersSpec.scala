@@ -42,6 +42,14 @@ class MessagePackAdaptersSpec extends TestBase {
     }
   }
 
+  it should "decode float32 encapsulated in float64" in {
+    // Workaround #61
+    val bytes = ByteString(0xCB, 0x40, 0x54, 0x7F, 0xA9, 0x80, 0x00, 0x00, 0x00)
+    val adapter = MessagePackAdapters.lookupAdapter(FundamentalType.Float32)
+    val unpacker = MessagePack.newDefaultUnpacker(bytes.toArray)
+    adapter.read(unpacker) shouldBe ValueEncoder.wrap(81.9947204589844.toFloat)
+  }
+
   it should "encode uint8 correctly" in {
     // internally we encode signed, but in transport it should use the correct type.
     val value = Uint8.wrap(255.toByte)

@@ -1,0 +1,29 @@
+name: factor
+stack: tf.train
+trainedStack: tf.saved_model
+
+directory: code
+kind: trainable
+
+# Dummy model which figures out the factor between a and b
+
+trainingType:
+    columns:
+        a:
+          type: tensor
+          componentType: float32
+          shape: []
+        b:
+          type: tensor
+          componentType: float32
+          shape: []
+statType:
+    columns:
+        factor: float32
+type:
+    input:
+        columns:
+            a: float32
+    output:
+        columns:
+            b: float32

@@ -1,6 +1,7 @@
 import os
 from mantik.bridge import Algorithm
-from mantik import Mantikfile
+from mantik import Mantikfile, Bundle
+
 
 # Wraps the supplied algorithm
 class AlgorithmWrapper(Algorithm):
@@ -15,7 +16,7 @@ class AlgorithmWrapper(Algorithm):
         self.apply_func = algorithm.apply
         self.is_trained_status = False
         self.model = None
-        self.training_stats = None
+        self.training_stats_result = None
         self.mantikfile = mantikfile
 
     def is_trained(self) -> bool:
@@ -32,11 +33,14 @@ class AlgorithmWrapper(Algorithm):
             # This should now work and not catch
             self.model = self.try_init_func()
             print("Reinitialized after successful learn")
-            self.training_stats = stats
+            self.training_stats_result = stats
             self.is_trained_status = True
             return stats
         finally:
             os.chdir(old_pwd)
+
+    def training_stats(self) -> Bundle:
+        return self.training_stats_result
 
     def try_init_catching(self):
         old_pwd = os.getcwd()

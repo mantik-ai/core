@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/vmihailenco/msgpack"
 	"gl.ambrosys.de/mantik/go_shared/ds"
@@ -14,6 +15,7 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/serving/test"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"testing"
 )
 
@@ -75,6 +77,30 @@ func TestStandardPages(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 	})
+}
+
+func TestCloseNoError(t *testing.T) {
+	/*
+		Problem: The Serve() method should not return an error if the Bridge is closed via admin/quit
+	*/
+	algorithm := test.NewThreeTimes()
+	server, err := CreateServerForExecutable(algorithm, ":0")
+	assert.NoError(t, err)
+	err = server.Listen()
+	assert.NoError(t, err)
+	url := fmt.Sprintf("http://localhost:%d", server.ListenPort)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	serveResult := errors.New("Not Called")
+	go func() {
+		defer wg.Done()
+		serveResult = server.Serve()
+	}()
+	response, err := http.Post(url+"/admin/quit", "", nil)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	wg.Wait()
+	assert.NoError(t, serveResult)
 }
 
 func TestServingJson(t *testing.T) {

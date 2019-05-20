@@ -164,3 +164,13 @@ class Bundle(object):
 
     def __repr__(self):
         return "Bundle({}, {})".format(self.type, self.value)
+
+
+    def __len__(self):
+        """
+        Returns the number of rows.
+        """
+        if isinstance(self.value, list):
+            return len(self.value)
+        else:
+            return 1

@@ -75,8 +75,8 @@ type singleFileExtractor struct {
 }
 
 func (s *singleFileExtractor) ReadRow() ([]element.Element, error) {
-	n, err := s.reader.Read(s.buf)
-	if err != nil && !(err == io.EOF && n == len(s.buf)) { // do not return if EOF and all Bytes are read
+	_, err := io.ReadFull(s.reader, s.buf)
+	if err != nil {
 		return nil, err
 	}
 	result := make([]element.Element, s.columnCount)

@@ -34,6 +34,8 @@ def create_bridge_app(mantikfile: mantik.Mantikfile, algorithm: Algorithm) -> Fl
     def train():
         if not mantikfile.has_training():
             return make_response("No training available", 404)
+        if algorithm.is_trained():
+            return make_response("Algorithm already trained", 429)
 
         decoded = mantik.Bundle.decode(request.content_type, request.stream, mantikfile.training_type)
         algorithm.train(decoded)
@@ -57,7 +59,7 @@ def create_bridge_app(mantikfile: mantik.Mantikfile, algorithm: Algorithm) -> Fl
             return make_response("No training available", 404)
         if not algorithm.is_trained():
             return make_response("Algorithm not yet trained", 409)
-        result = algorithm.training_stats
+        result = algorithm.training_stats()
         result = (result or mantik.Bundle()).with_type_if_missing(mantikfile.stat_type)
         content_type = request.accept_mimetypes.best_match(mantik.MIME_TYPES)
         encoded = result.encode(content_type)

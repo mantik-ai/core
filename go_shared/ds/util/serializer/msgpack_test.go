@@ -52,3 +52,14 @@ func TestRawJsonSupport(t *testing.T) {
 		assert.Equal(t, sample, string(back))
 	}
 }
+
+func TestFloatFromDouble(t *testing.T) {
+	// Bug #61, python is serializing float32 to float64 values. This should not crash parsing in go.
+	data := []byte{0xCB, 0x40, 0x54, 0x7F, 0xA9, 0x80, 0x00, 0x00, 0x00}
+	decoder, err := CreateDeserializingBackend(BACKEND_MSGPACK, bytes.NewReader(data))
+	assert.NoError(t, err)
+	x, err := decoder.DecodeFloat32()
+	assert.NoError(t, err)
+	assert.Equal(t, float32(81.9947204589844), x)
+
+}

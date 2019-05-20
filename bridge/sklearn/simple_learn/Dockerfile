@@ -9,7 +9,6 @@ RUN pip install --no-cache-dir -r target/requirements.txt
 
 ADD --chown=mantik-bridge:mantik-bridge *.py /opt/bridge/
 
-
 # Data Directory
 RUN mkdir /data && chown mantik-bridge:mantik-bridge /data
 
