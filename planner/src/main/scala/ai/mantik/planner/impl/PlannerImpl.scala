@@ -2,6 +2,7 @@ package ai.mantik.planner.impl
 
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
+import ai.mantik.repository.ContentTypes
 import cats.data.State
 
 /**
@@ -161,9 +162,13 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
 
   /** Manifest a data set as a graph with one output. */
   def manifestDataSet(dataSet: DataSet): State[PlanningState, ResourcePlan] = {
-    translateItemPayloadSourceAsOptionalFile(dataSet.source, canBeTemporary = true).flatMap {
-      case (preplan, dataSetFile) =>
-        elements.dataSet(dataSet.mantikfile, dataSetFile).map(_.prependOp(preplan))
+    if (dataSet.mantikfile.definition.format == DataSet.NaturalFormatName) {
+      translateItemPayloadSource(dataSet.source, Some(ContentTypes.MantikBundleContentType))
+    } else {
+      translateItemPayloadSourceAsOptionalFile(dataSet.source, canBeTemporary = true).flatMap {
+        case (preplan, dataSetFile) =>
+          elements.dataSet(dataSet.mantikfile, dataSetFile).map(_.prependOp(preplan))
+      }
     }
   }
 

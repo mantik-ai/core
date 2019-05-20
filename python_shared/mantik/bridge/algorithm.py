@@ -1,6 +1,7 @@
+from abc import ABC
 from mantik import Bundle
 
-class Algorithm:
+class Algorithm(ABC):
     """
     Base class for algorithms
     """

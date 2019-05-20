@@ -1,6 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
@@ -244,6 +245,96 @@ class PlannerImplSpec extends TestBase {
     sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
   }
 
+  it should "manifest a literal" in new Env {
+    val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
+      DataSet(Source.Loaded("file1"), TestItems.dataSet1)
+    ))
+
+    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
+    sourcePlan shouldBe ResourcePlan(
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.File(PlanFileReference(1)),
+            resources = Map(
+              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+            )
+          )
+        ),
+      ),
+      outputs = Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
+    )
+  }
+
+  it should "also manifest a bridged dataset" in new Env {
+    val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
+      DataSet(Source.Loaded("file1"), TestItems.dataSet2)
+    ))
+
+    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
+    sourcePlan shouldBe ResourcePlan(
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.DockerContainer(Container("format1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
+            resources = Map(
+              "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+            )
+          )
+        ),
+      ),
+      outputs = Seq(NodeResourceRef("1", "get"))
+    )
+  }
+
+  it should "manifest the result of an algorithm" in new Env {
+    val ds1 = DataSet(Source.Loaded("1"), Mantikfile.pure(DataSetDefinition(
+      format = DataSet.NaturalFormatName, `type` = TabularData("x" -> FundamentalType.Int32)
+    )))
+    val algo1 = Mantikfile.pure(AlgorithmDefinition(
+      stack = "algorithm_stack1",
+      `type` = FunctionType(
+        input = TabularData("x" -> FundamentalType.Int32),
+        output = TabularData("y" -> FundamentalType.Int32)
+      )
+    ))
+    val algorithm = Algorithm(Source.Loaded("2"), algo1)
+    val applied = algorithm.apply(ds1)
+
+    val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
+      applied
+    ))
+
+    state.files shouldBe List(
+      PlanFile(PlanFileReference(1), read = true, fileId = Some("1")),
+      PlanFile(PlanFileReference(2), read = true, fileId = Some("2"))
+    )
+
+    val expected = ResourcePlan(
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.File(PlanFileReference(1)),
+            resources = Map(
+              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+            )
+          ),
+          "2" -> Node(
+            PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(2)), mantikfile = algo1), resources = Map(
+              "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
+            )
+          )
+        ),
+        links = Link.links(
+          NodeResourceRef("1", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("2", "apply")
+        )
+      ),
+      outputs = Seq(NodeResourceRef("2", "apply"))
+    )
+
+    sourcePlan shouldBe expected
+  }
+
   "manifestTrainableAlgorithm" should "manifest a trainable algorithm" in new Env {
     val (state, sourcePlan) = runWithEmptyState(planner.manifestTrainableAlgorithm(
       TrainableAlgorithm(Source.Loaded("file1"), TestItems.learning1)
@@ -288,48 +379,6 @@ class PlannerImplSpec extends TestBase {
       ),
       inputs = Seq(NodeResourceRef("1", "apply")),
       outputs = Seq(NodeResourceRef("1", "apply"))
-    )
-  }
-
-  "manifestDataSet" should "manifest a literal" in new Env {
-    val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
-      DataSet(Source.Loaded("file1"), TestItems.dataSet1)
-    ))
-
-    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
-    sourcePlan shouldBe ResourcePlan(
-      graph = Graph(
-        nodes = Map(
-          "1" -> Node(
-            PlanNodeService.File(PlanFileReference(1)),
-            resources = Map(
-              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
-            )
-          )
-        ),
-      ),
-      outputs = Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
-    )
-  }
-
-  it should "also manifest a bridged dataset" in new Env {
-    val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
-      DataSet(Source.Loaded("file1"), TestItems.dataSet2)
-    ))
-
-    state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
-    sourcePlan shouldBe ResourcePlan(
-      graph = Graph(
-        nodes = Map(
-          "1" -> Node(
-            PlanNodeService.DockerContainer(Container("format1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
-            resources = Map(
-              "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
-            )
-          )
-        ),
-      ),
-      outputs = Seq(NodeResourceRef("1", "get"))
     )
   }
 
@@ -430,5 +479,15 @@ class PlannerImplSpec extends TestBase {
       innerTranslated,
       PlanOp.PullBundle(inner.dataType, PlanFileReference(2))
     )
+  }
+
+  it should "convert a simple chained algorithm" in new Env {
+    val a = DataSet.literal(lit)
+    val b = a.select("select x as y")
+    val c = b.select("select y as z")
+    val action = c.fetch
+    val plan = planner.convert(action)
+    plan.op.asInstanceOf[PlanOp.Sequential].plans.size shouldBe 3 // pushing, calculation and pulling
+    plan.files.size shouldBe 2 // push file, calculation
   }
 }

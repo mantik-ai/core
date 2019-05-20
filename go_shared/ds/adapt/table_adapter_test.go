@@ -90,3 +90,13 @@ func TestSingleColumnTypeNameChange(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, builder.PrimitiveRow(int64(5)), adapted)
 }
+
+func TestSingleRemainingColumnTypeChange(t *testing.T) {
+	// Really borderline, however label can be matched
+	// and the remaining x and image are compatible
+	in := ds.FromJsonStringOrPanic(`{"type":"tabular","columns":{"x":{"type":"image","width":28,"height":28,"components":{"black":{"componentType":"uint8"}}},"label":"uint8"}}`)
+	out := ds.FromJsonStringOrPanic(`{"type":"tabular","columns":{"image":{"type":"tensor","componentType":"float32","shape":[28,28]},"label":"int32"}}`)
+
+	_, err := LookupAutoAdapter(in, out)
+	assert.NoError(t, err)
+}

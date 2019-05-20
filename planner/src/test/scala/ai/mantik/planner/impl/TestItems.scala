@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.FundamentalType
-import ai.mantik.ds.funcational.SimpleFunction
+import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.planner.bridge.{ AlgorithmBridge, BridgeList, Bridges, FormatBridge, TrainableAlgorithmBridge }
 import ai.mantik.repository.{ AlgorithmDefinition, DataSetDefinition, MantikDefinition, Mantikfile, TrainableAlgorithmDefinition }
@@ -11,7 +11,7 @@ object TestItems {
   val algorithm1 = Mantikfile.pure(
     AlgorithmDefinition(
       stack = "algorithm_stack1",
-      `type` = SimpleFunction(
+      `type` = FunctionType(
         input = FundamentalType.Int32,
         output = FundamentalType.StringType
       ),
@@ -38,7 +38,7 @@ object TestItems {
       stack = "training_stack1",
       trainingType = FundamentalType.Int32,
       statType = FundamentalType.StringType,
-      `type` = SimpleFunction(
+      `type` = FunctionType(
         input = FundamentalType.Int32,
         output = FundamentalType.BoolType
       )
@@ -49,9 +49,10 @@ object TestItems {
   val learningPlugin = TrainableAlgorithmBridge("training_stack1", Container("training1_image"))
   val naturalBridge = FormatBridge("natural", None)
   val format1 = FormatBridge("format1", Some(Container("format1_image")))
+  val selectBridge = AlgorithmBridge("select", Container("select_image"))
 
   val testBridges = BridgeList(
-    Seq(algoPlugin1),
+    Seq(algoPlugin1, selectBridge),
     Seq(learningPlugin),
     Seq(naturalBridge, format1),
     DockerConfig()

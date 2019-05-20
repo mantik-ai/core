@@ -4,6 +4,8 @@ import (
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/util/yaml"
+	"io/ioutil"
+	"os"
 )
 
 type Mantikfile interface {
@@ -111,4 +113,17 @@ func ParseMantikFile(bytes []byte) (Mantikfile, error) {
 		return &tf, err
 	}
 	return nil, errors.Errorf("Unsupported kind %s", kind)
+}
+
+func LoadMantikfile(filePath string) (Mantikfile, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	content, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMantikFile(content)
 }

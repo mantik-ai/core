@@ -44,7 +44,12 @@ func (s *Server) Listen() error {
 }
 
 func (s *Server) Serve() error {
-	return s.httpServer.Serve(s.listener)
+	err := s.httpServer.Serve(s.listener)
+	if err == http.ErrServerClosed {
+		// this is not an error
+		return nil
+	}
+	return err
 }
 
 func (s *Server) ListenAndServe() error {

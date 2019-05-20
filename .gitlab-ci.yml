@@ -174,7 +174,7 @@ bridges_publish:
     - ./bridge/tf/saved_model/create_docker_images.sh
     - ./bridge/binary/create_docker_images.sh
     - ./bridge/sklearn/simple_learn/create_docker_images.sh
-
+    - ./bridge/tf/train/create_docker_images.sh
 
 bridge_sklearn_test:
   stage: test
@@ -191,3 +191,18 @@ bridge_sklearn_test:
     - pipenv install --deploy --dev
     - pipenv run pytest
     - ./smoke_test.sh
+
+bridge_tf_train_test:
+  stage: test
+  image: python:3.7-stretch
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  cache:
+    paths:
+      - .cache/pip
+      - venv/
+  script:
+    - cd bridge/tf/train
+    - pip install pipenv
+    - pipenv install --deploy --dev
+    - pipenv run pytest

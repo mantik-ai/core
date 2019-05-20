@@ -14,12 +14,10 @@ case class Algorithm(
   def functionType: FunctionType = mantikfile.definition.`type`
 
   def apply(data: DataSet): DataSet = {
-    val dataType = functionType.applies(data.dataType) match {
-      case Left(error) => throw new RuntimeException(s"Types do not match $error")
-      case Right(ok)   => ok
-    }
+    val adapted = data.autoAdaptOrFail(functionType.input)
+
     DataSet.natural(
-      Source.OperationResult(Operation.Application(this, data)), dataType
+      Source.OperationResult(Operation.Application(this, adapted)), functionType.output
     )
   }
 }

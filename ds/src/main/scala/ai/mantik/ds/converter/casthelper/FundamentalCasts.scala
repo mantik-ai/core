@@ -67,11 +67,17 @@ private[converter] object FundamentalCasts {
     makeCastOp(FundamentalType.Uint8, FundamentalType.Int8, true, false)(identity: Byte => Byte),
     makeCastOp(FundamentalType.Int8, FundamentalType.Uint8, true, false)(identity: Byte => Byte),
 
+    makeCastOp(FundamentalType.Uint8, FundamentalType.Float32, loosing = false, canFail = false)((x => java.lang.Byte.toUnsignedInt(x).toFloat): Byte => Float),
+    makeCastOp(FundamentalType.Int8, FundamentalType.Float32, loosing = false, canFail = false)((x => x.toFloat): Byte => Float),
+
     makeCastOp(FundamentalType.Uint8, FundamentalType.Int32, false, false)((x => x & 0xff): Byte => Int),
     makeCastOp(FundamentalType.Uint32, FundamentalType.Int64, false, false)((x => x & 0xffffffffL): Int => Long),
 
     makeCastOp(FundamentalType.Uint32, FundamentalType.Int32, true, false)(identity: Int => Int),
     makeCastOp(FundamentalType.Int32, FundamentalType.Uint32, true, false)(identity: Int => Int),
+
+    makeCastOp(FundamentalType.Uint32, FundamentalType.Float64, loosing = false, canFail = false)((x => java.lang.Integer.toUnsignedLong(x).toDouble): Int => Double),
+    makeCastOp(FundamentalType.Int32, FundamentalType.Float64, loosing = false, canFail = false)((x => x.toDouble): Int => Double),
 
     makeCastOp(FundamentalType.Uint64, FundamentalType.Int64, true, false)(identity: Long => Long),
     makeCastOp(FundamentalType.Int64, FundamentalType.Uint64, true, false)(identity: Long => Long),
@@ -116,6 +122,8 @@ private[converter] object FundamentalCasts {
     makeStringSerializer(FundamentalType.Float32)((_.toString): Float => String),
     makeStringSerializer(FundamentalType.Float64)((_.toString): Double => String),
     makeStringSerializer(FundamentalType.VoidType)((_ => "void"): Unit => String),
+    makeStringSerializer(FundamentalType.Uint8)((x => java.lang.Byte.toUnsignedInt(x).toString): Byte => String),
+    makeStringSerializer(FundamentalType.Uint32)((x => java.lang.Integer.toUnsignedString(x)): Int => String),
     makeStringSerializer(FundamentalType.Uint64)((x => java.lang.Long.toUnsignedString(x)): Long => String)
   )
 

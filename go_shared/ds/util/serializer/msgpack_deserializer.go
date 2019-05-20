@@ -39,6 +39,12 @@ func (m msgPackDeserializingBackend) DecodeRawJson() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
+func (m msgPackDeserializingBackend) DecodeFloat32() (float32, error) {
+	// Workaround Issue #61, python encodes float32 to float64, so let's not fail on float64 here.
+	value, err := m.DecodeFloat64()
+	return float32(value), err
+}
+
 func (m msgPackDeserializingBackend) decodePlainJson(buf *bytes.Buffer) error {
 	code, err := m.PeekCode()
 

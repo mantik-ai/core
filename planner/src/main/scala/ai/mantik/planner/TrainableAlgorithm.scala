@@ -21,11 +21,9 @@ case class TrainableAlgorithm(
   def functionType: FunctionType = mantikfile.definition.`type`
 
   def train(trainingData: DataSet): (Algorithm, DataSet) = {
-    if (trainingData.dataType != trainingDataType) {
-      throw new RuntimeException(s"Training data is not as expected $trainingDataType")
-    }
+    val adapted = trainingData.autoAdaptOrFail(trainingDataType)
 
-    val op = Operation.Training(this, trainingData)
+    val op = Operation.Training(this, adapted)
 
     val trainedMantikfile = Mantikfile.generateTrainedMantikfile(mantikfile) match {
       case Left (err) => throw new RuntimeException(s"Could not generate trained mantikfle", err)

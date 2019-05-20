@@ -1,6 +1,6 @@
 package ai.mantik.repository
 
-import ai.mantik.ds.funcational.{FunctionType, SimpleFunction}
+import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.testutils.TestBase
 
@@ -36,7 +36,7 @@ class MantikfileSpec extends TestBase {
         version = Some("0.1"),
         stack = "tensorflow1.6",
         directory = Some("my_dir"),
-        `type` = SimpleFunction(FundamentalType.Uint8, FundamentalType.StringType)
+        `type` = FunctionType(FundamentalType.Uint8, FundamentalType.StringType)
       )
     )
   }
@@ -47,7 +47,7 @@ class MantikfileSpec extends TestBase {
         name = Some("My Mini Algorithm"),
         stack = "foobar",
         directory = Some("mydir"),
-        `type` = SimpleFunction(FundamentalType.BoolType, FundamentalType.BoolType)
+        `type` = FunctionType(FundamentalType.BoolType, FundamentalType.BoolType)
       )
     )
   }
@@ -82,7 +82,7 @@ class MantikfileSpec extends TestBase {
         version = Some("0.1"),
         stack = "bla",
         directory = Some("dir"),
-        `type` = SimpleFunction(FundamentalType.Uint8, FundamentalType.Uint8)
+        `type` = FunctionType(FundamentalType.Uint8, FundamentalType.Uint8)
       )
     }
   }
@@ -159,7 +159,7 @@ class MantikfileSpec extends TestBase {
       TrainableAlgorithmDefinition(
         name = Some("train1"),
         stack = "foo1",
-        `type` = SimpleFunction(
+        `type` = FunctionType(
           FundamentalType.Int32,
           FundamentalType.Int64
         ),
@@ -208,7 +208,7 @@ class MantikfileSpec extends TestBase {
     val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
     casted.definition shouldBe AlgorithmDefinition (
       stack = "foo1",
-      `type` = SimpleFunction(
+      `type` = FunctionType(
         FundamentalType.Int32,
         FundamentalType.Int64
       ),
@@ -238,7 +238,7 @@ class MantikfileSpec extends TestBase {
     val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
     casted.definition shouldBe AlgorithmDefinition (
       stack = "foo2",
-      `type` = SimpleFunction(
+      `type` = FunctionType(
         FundamentalType.Int32,
         FundamentalType.Int64
       ),

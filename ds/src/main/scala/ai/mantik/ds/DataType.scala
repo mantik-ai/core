@@ -31,6 +31,25 @@ case class TabularData(
     }
   }
 
+  override def toString: String = {
+    val builder = StringBuilder.newBuilder
+    var first = true
+    builder ++= "TabularData("
+    columns.foreach {
+      case (name, value) =>
+        if (!first) {
+          builder ++= ","
+        }
+        builder ++= s"$name:${value.toString}"
+        first = false
+    }
+    rowCount match {
+      case None     => // nothing
+      case Some(rc) => builder ++= s" rc=${rc}"
+    }
+    builder ++= ")"
+    builder.result()
+  }
 }
 
 object TabularData {
@@ -130,5 +149,9 @@ case class Tensor(
 
   /** Returns the element count a packed tensor would have. */
   lazy val packedElementCount: Long = shape.foldLeft(1L)(_ * _.toLong)
+
+  override def toString: String = {
+    s"Tensor(${componentType.name}, [${shape.mkString(",")}])"
+  }
 }
 

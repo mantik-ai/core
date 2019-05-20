@@ -1,0 +1,30 @@
+name: mnist_linear
+stack: tf.train
+trainedStack: tf.saved_model
+
+directory: code
+kind: trainable
+
+trainingType:
+    columns:
+        image:
+            type: tensor
+            shape: [28,28]
+            componentType: float32
+        label: int32
+
+statType:
+    columns:
+        epoch: int32
+        loss: float32
+
+type:
+    input:
+        columns:
+            image:
+                type: tensor
+                shape: [28,28]
+                componentType: float32
+    output:
+        columns:
+            label: uint8

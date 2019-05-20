@@ -30,6 +30,40 @@ func TestFundamentalCasts(t *testing.T) {
 	assert.Equal(t, element.Primitive{int32(-123)}, c2)
 }
 
+func TestNonLoosingIntToFloatCasts(t *testing.T) {
+	c1, err := LookupCast(ds.Int8, ds.Float32)
+	assert.NoError(t, err)
+	assert.False(t, c1.Loosing)
+	assert.False(t, c1.CanFail)
+	casted, err := c1.Adapter(element.Primitive{int8(-3)})
+	assert.NoError(t, err)
+	assert.Equal(t, element.Primitive{float32(-3.0)}, casted)
+
+	c2, err := LookupCast(ds.Uint8, ds.Float32)
+	assert.NoError(t, err)
+	assert.False(t, c2.Loosing)
+	assert.False(t, c2.CanFail)
+	casted, err = c2.Adapter(element.Primitive{uint8(200)})
+	assert.NoError(t, err)
+	assert.Equal(t, element.Primitive{float32(200.0)}, casted)
+
+	c3, err := LookupCast(ds.Int32, ds.Float64)
+	assert.NoError(t, err)
+	assert.False(t, c3.Loosing)
+	assert.False(t, c3.CanFail)
+	casted, err = c3.Adapter(element.Primitive{int32(-400000)})
+	assert.NoError(t, err)
+	assert.Equal(t, element.Primitive{float64(-400000.0)}, casted)
+
+	c4, err := LookupCast(ds.Uint32, ds.Float64)
+	assert.NoError(t, err)
+	assert.False(t, c4.Loosing)
+	assert.False(t, c4.CanFail)
+	casted, err = c4.Adapter(element.Primitive{uint32(400000)})
+	assert.NoError(t, err)
+	assert.Equal(t, element.Primitive{float64(400000.0)}, casted)
+}
+
 func TestToStringCast(t *testing.T) {
 	testToString(t, ds.Int32, int32(4), "4")
 	testToString(t, ds.Void, nil, "void")
