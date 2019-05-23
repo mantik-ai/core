@@ -1,12 +1,19 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.planner.{ PlanFile, PlanFileReference }
+import ai.mantik.planner.{ CacheKey, CacheKeyGroup, PlanFile, PlanFileReference, Source }
 import cats.data.State
 
+/**
+ * State for [[PlannerImpl]].
+ * @param nextNodeId the next available node id.
+ * @param nextFileReferenceId the next available file reference id
+ * @param filesRev requested files (reverse).
+ */
 private[impl] case class PlanningState(
     private val nextNodeId: Int = 1,
     private val nextFileReferenceId: Int = 1,
-    private val filesRev: List[PlanFile] = Nil // reverse requested files
+    private val filesRev: List[PlanFile] = Nil, // reverse requested files
+    cacheGroups: List[CacheKeyGroup] = Nil
 ) {
 
   /** Returns files in request order. */
@@ -17,10 +24,29 @@ private[impl] case class PlanningState(
     copy(nextNodeId = nextNodeId + 1) -> nextNodeId.toString
   }
 
+  /** Mark files as cache files. */
+  def markCached(filesToUpdate: Map[PlanFileReference, CacheKey]): PlanningState = {
+    copy(
+      filesRev = filesRev.map { file =>
+        filesToUpdate.get(file.ref) match {
+          case Some(cacheKey) => file.copy(cacheKey = Some(cacheKey))
+          case None           => file
+        }
+      }
+    )
+  }
+
+  /** Add a new cache group. */
+  def withCacheGroup(cacheKeyGroup: CacheKeyGroup): PlanningState = {
+    copy(
+      cacheGroups = cacheKeyGroup :: cacheGroups
+    )
+  }
+
   /** Request writing a file. */
   def writeFile(temporary: Boolean): (PlanningState, PlanFile) = {
     val file = PlanFile(
-      id = PlanFileReference(nextFileReferenceId),
+      ref = PlanFileReference(nextFileReferenceId),
       write = true,
       temporary = temporary,
       fileId = None
@@ -33,7 +59,7 @@ private[impl] case class PlanningState(
   /** Request piping through a file (a file written and read in the same plan). */
   def pipeFile(temporary: Boolean): (PlanningState, PlanFile) = {
     val file = PlanFile(
-      id = PlanFileReference(nextFileReferenceId),
+      ref = PlanFileReference(nextFileReferenceId),
       read = true,
       write = true,
       temporary = temporary,
@@ -47,7 +73,7 @@ private[impl] case class PlanningState(
   /** Request reading a file. */
   def readFile(fileId: String): (PlanningState, PlanFile) = {
     val file = PlanFile(
-      id = PlanFileReference(nextFileReferenceId),
+      ref = PlanFileReference(nextFileReferenceId),
       read = true,
       fileId = Some(fileId)
     )

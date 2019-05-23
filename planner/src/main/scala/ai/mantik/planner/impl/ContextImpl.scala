@@ -54,7 +54,9 @@ private[impl] class ContextImpl(config: Config, repository: Repository, fileRepo
   }
 
   private def mantikArtifactSource(mantikArtifact: MantikArtifact): Source = {
-    mantikArtifact.fileId.map(Source.Loaded).getOrElse(Source.Empty)
+    mantikArtifact.fileId.map { fileId =>
+      Source.Loaded(fileId, ContentTypes.ZipFileContentType)
+    }.getOrElse(Source.Empty)
   }
 
   override def execute[T](action: Action[T]): T = {

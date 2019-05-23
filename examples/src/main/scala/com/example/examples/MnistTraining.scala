@@ -28,5 +28,7 @@ object MnistTraining extends ExampleBase {
     // Mmmm, for a bit better analysis at the end we would need some zip-functionality with expected labels.
     val appliedResult = context.execute(applied.fetch)
     println("Applied:\n" + appliedResult.render())
+
+    println("Stats:\n" + context.execute(stats.fetch))
   }
 }

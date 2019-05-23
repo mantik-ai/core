@@ -46,7 +46,7 @@ object Link {
 
 /**
  * Defines a Dataflow graph.
- * @param T The node data type.
+ * @tparam T The node data type.
  */
 case class Graph[+T](
     nodes: Map[String, Node[T]],
@@ -68,4 +68,6 @@ case class Graph[+T](
 object Graph {
   implicit def graphEncoder[T: Encoder]: ObjectEncoder[Graph[T]] = semiauto.deriveEncoder[Graph[T]]
   implicit def graphDecoder[T: Decoder]: Decoder[Graph[T]] = semiauto.deriveDecoder[Graph[T]]
+
+  def empty[T]: Graph[T] = Graph(Map.empty)
 }

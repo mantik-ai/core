@@ -12,7 +12,7 @@ import akka.http.scaladsl.model.Uri
   *
   * This adapter shouldn't be too complex, otherwise we should think about changing the executor more.
   * */
-private [impl] class JobGraphConverter (isolationSpace: String, files: ExecutionOpenFiles, extraLogins: Seq[DockerLogin]) {
+private [impl] class JobGraphConverter (fileServiceUri: Uri, isolationSpace: String, files: ExecutionOpenFiles, extraLogins: Seq[DockerLogin]) {
 
   /** Translate a graph like the planner creates to a Executor Job. */
   def translateGraphIntoJob(graph: Graph[PlanNodeService]): Job = {
@@ -78,7 +78,7 @@ private [impl] class JobGraphConverter (isolationSpace: String, files: Execution
   def convertDockerContainer(d: PlanNodeService.DockerContainer): ContainerService = {
     val dataUrl = d.data.map { dataFile =>
       val fileGet = files.resolveFileRead(dataFile)
-      Uri(fileGet.path).resolvedAgainst(files.remoteFileServiceUri).toString()
+      Uri(fileGet.path).resolvedAgainst(fileServiceUri).toString()
     }
     val dataProvider = DataProvider(
       url = dataUrl,
@@ -104,7 +104,7 @@ private [impl] class JobGraphConverter (isolationSpace: String, files: Execution
       files.resolveFileRead(node.service.fileReference).path
     }
     Node(
-      ExistingService(files.remoteFileServiceUri.toString()),
+      ExistingService(fileServiceUri.toString()),
       Map(
         resourceName -> nodeResource
       )

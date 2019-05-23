@@ -1,5 +1,7 @@
 package ai.mantik.planner
 
+import java.util.UUID
+
 import ai.mantik.ds.element.Bundle
 
 /** Defines an operation. */
@@ -18,26 +20,44 @@ case object Operation {
   }
 }
 
-/** Represents the way a [[MantikItem]] gets their Payload Data from. */
-sealed trait Source
+/** Represents the way [[MantikItem]](s) gets their Payload Data from. */
+sealed abstract class Source(val resultCount: Int)
 
 object Source {
 
   /** There is no payload. */
-  case object Empty extends Source
+  case object Empty extends Source(0)
 
   /** A fixed location in the file repository. */
-  case class Loaded(fileId: String) extends Source
+  case class Loaded(fileId: String, contentType: String) extends Source(1)
 
   /** A fixed data block. */
-  sealed trait Literal extends Source
+  sealed abstract class Literal extends Source(1)
 
   /** A Literal which contains a bundle. */
-  case class BundleLiteral(content: Bundle) extends Literal
+  case class BundleLiteral(content: Bundle) extends Literal()
 
   /**
    * It's the result of some operation.
    * If projection is > 0, the non main result is used.
    */
-  case class OperationResult(op: Operation, projection: Int = 0) extends Source
+  case class OperationResult(op: Operation) extends Source(op.resultCount)
+
+  /** Projects one of multiple results of the source. */
+  case class Projection(source: Source, projection: Int = 0) extends Source(1) {
+    require(projection >= 0 && projection < source.resultCount)
+  }
+
+  /** A Cached source value. */
+  case class Cached(
+      source: Source
+  ) extends Source(source.resultCount) {
+
+    /** Identifies the source elements. */
+    private[mantik] val cacheGroup: CacheKeyGroup = {
+      (for (_ <- 0 until source.resultCount) yield {
+        UUID.randomUUID()
+      }).toList
+    }
+  }
 }

@@ -28,13 +28,13 @@ class PlannerElements(bridges: Bridges) {
   def literalToPushBundle(literal: Source.Literal, fileReference: PlanFile): PlanOp = {
     literal match {
       case Source.BundleLiteral(content) =>
-        PlanOp.PushBundle(content, fileReference.id)
+        PlanOp.PushBundle(content, fileReference.ref)
     }
   }
 
   /** Creates a [[ResourcePlan]] which saves data from it's sink to a file. */
   def createStoreFileNode(fileReference: PlanFile, contentType: Option[String]): State[PlanningState, ResourcePlan] = {
-    val node = Node.sink(PlanNodeService.File(fileReference.id), contentType)
+    val node = Node.sink(PlanNodeService.File(fileReference.ref), contentType)
     PlanningState.stateChange(_.withNextNodeId) { nodeId =>
       ResourcePlan(
         graph = Graph(
@@ -48,8 +48,8 @@ class PlannerElements(bridges: Bridges) {
   }
 
   /** Creates a [[ResourcePlan]] which loads a file and represents it as output. */
-  def loadFileNode(fileReference: PlanFileReference, expectedContentType: Option[String]): State[PlanningState, ResourcePlan] = {
-    val node = Node.source(PlanNodeService.File(fileReference), expectedContentType)
+  def loadFileNode(fileReference: PlanFileWithContentType): State[PlanningState, ResourcePlan] = {
+    val node = Node.source(PlanNodeService.File(fileReference.ref), Some(fileReference.contentType))
     PlanningState.stateChange(_.withNextNodeId) { nodeId =>
       val graph = Graph(
         nodes = Map(
@@ -77,7 +77,7 @@ class PlannerElements(bridges: Bridges) {
       case None =>
         // directly pipe data
         val fileToUse = file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
-        loadFileNode(fileToUse, Some(ContentTypes.MantikBundleContentType))
+        loadFileNode(PlanFileWithContentType(fileToUse, ContentTypes.MantikBundleContentType))
       case Some(container) =>
 
         val getResource = "get"

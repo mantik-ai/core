@@ -72,6 +72,16 @@ case class DataSet(
       case Right(adapted) => adapted
     }
   }
+
+  /** Returns a dataset, which will be cached.
+    * Note: caching is done lazy. */
+  def cached: DataSet = {
+    source match {
+      case c: Source.Cached => this
+      case _ =>
+        DataSet(Source.Cached(source), mantikfile)
+    }
+  }
 }
 
 object DataSet {

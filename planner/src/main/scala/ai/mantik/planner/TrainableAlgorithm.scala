@@ -20,7 +20,9 @@ case class TrainableAlgorithm(
 
   def functionType: FunctionType = mantikfile.definition.`type`
 
-  def train(trainingData: DataSet): (Algorithm, DataSet) = {
+  /** Train this [[TrainableAlgorithm]] with given trainingData.
+    * @param cached if true, the result will be cached. This is important for if you want to access the training result and stats. */
+  def train(trainingData: DataSet, cached: Boolean = true): (Algorithm, DataSet) = {
     val adapted = trainingData.autoAdaptOrFail(trainingDataType)
 
     val op = Operation.Training(this, adapted)
@@ -30,8 +32,14 @@ case class TrainableAlgorithm(
       case Right(ok) => ok
     }
 
-    val algorithmResult = Algorithm(Source.OperationResult(op), trainedMantikfile)
-    val statsResult = DataSet.natural(Source.OperationResult(op, 1), statType)
+    val result = if (cached){
+      Source.Cached(Source.OperationResult(op))
+    } else {
+      Source.OperationResult(op)
+    }
+
+    val algorithmResult = Algorithm(Source.Projection(result), trainedMantikfile)
+    val statsResult = DataSet.natural(Source.Projection(result, 1), statType)
     (algorithmResult, statsResult)
   }
 }
