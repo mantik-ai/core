@@ -19,6 +19,14 @@ pushd tf/saved_model
 ./build.sh
 popd
 
+pushd tf/train
+./build.sh
+popd
+
+pushd sklearn/simple_learn
+./build.sh
+popd
+
 pushd bridge_debugger
 ./build.sh
 popd

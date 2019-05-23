@@ -21,5 +21,13 @@ python_prepare_pip_build(){
     pipenv lock -r > target/requirements.txt
     cp -r $MANTIK_ROOT/python_shared target/
 
-    sed -i '/python_shared/c\-e ./target/python_shared\' target/requirements.txt
+    sed -i '/python_shared/c\-e ./python_shared\' target/requirements.txt
+}
+
+# Prepares a build in target, including requirements.txt file
+# All python files are moved there, excluding "target" and "example"
+python_build_standard(){
+    mkdir -p parent
+    python_prepare_pip_build
+    cp --parents `find . -name "*.py" -not -path "./target/*" -not -path "./example/*"` target/
 }
