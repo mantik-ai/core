@@ -164,11 +164,13 @@ bridges_publish:
   services:
     - docker:dind
   only:
-    - story/43/binary_format
+    - bug/72/python_bridge_build
     - master
     - tags
   dependencies:
     - bridges_test
+    - bridge_sklearn_test
+    - bridge_tf_train_test
   script:
     - export ENABLE_PUSH=TRUE
     - ./bridge/tf/saved_model/create_docker_images.sh
@@ -191,6 +193,10 @@ bridge_sklearn_test:
     - pipenv install --deploy --dev
     - pipenv run pytest
     - ./smoke_test.sh
+    - ./build.sh
+  artifacts:
+    paths:
+      - bridge/sklearn/simple_learn/target
 
 bridge_tf_train_test:
   stage: test
@@ -206,3 +212,7 @@ bridge_tf_train_test:
     - pip install pipenv
     - pipenv install --deploy --dev
     - pipenv run pytest
+    - ./build.sh
+  artifacts:
+    paths:
+      - bridge/tf/train/target
