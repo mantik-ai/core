@@ -31,11 +31,16 @@ private[impl] class PlanExecutorImpl(
 
   private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
   private val jobPollInterval = Duration.fromNanos(config.getDuration("mantik.planner.jobPollInterval").toNanos)
+  private val fileCache = new FileCache()
+
+  private val openFilesBuilder = new ExecutionOpenFilesBuilder(fileRepository, fileCache)
 
   def execute(plan: Plan): Future[Any] = {
     for {
-      fileServiceUri <- prepareKubernetesFileServiceResult
-      openFiles <- FutureHelper.time(logger, "Open Files")(ExecutionOpenFiles.openFiles(fileServiceUri, fileRepository, plan.files))
+      _ <- prepareKubernetesFileServiceResult
+      openFiles <- FutureHelper.time(logger, "Open Files") {
+        openFilesBuilder.openFiles(plan.cacheGroups, plan.files)
+      }
       result <- executeOp(plan.op)(openFiles)
     } yield result
   }
@@ -56,6 +61,9 @@ private[impl] class PlanExecutorImpl(
       Uri(s"http://${response.name}") // is of format domain:port
     }
   }
+
+  /** Access to the URI of the FileService.*/
+  private def fileServiceUri: Uri = Await.result(prepareKubernetesFileServiceResult, Duration.Inf)
 
   def executeOp(planOp: PlanOp)(implicit files: ExecutionOpenFiles): Future[Any] = {
     planOp match {
@@ -92,10 +100,25 @@ private[impl] class PlanExecutorImpl(
           repository.store(artifact)
         }
       case PlanOp.RunGraph(graph) =>
-        val jobGraphConverter = new JobGraphConverter(isolationSpace, files, dockerConfig.logins)
+        val jobGraphConverter = new JobGraphConverter(fileServiceUri, isolationSpace, files, dockerConfig.logins)
         val job = jobGraphConverter.translateGraphIntoJob(graph)
         FutureHelper.time(logger, s"Executing Job in isolationSpace ${job.isolationSpace}") {
           executeJobAndWaitForReady(job)
+        }
+      case cacheOp: PlanOp.CacheOp =>
+        if (files.cacheHits.contains(cacheOp.cacheGroup)) {
+          logger.debug("Skipping op, because of cache hit")
+          Future.successful(())
+        } else {
+          logger.debug("Executing op, cache miss")
+          executeOp(cacheOp.alternative).map { _ =>
+            cacheOp.files.foreach {
+              case (cacheKey, fileRef) =>
+                val resolved = files.resolveFileId(fileRef)
+                fileCache.add(cacheKey, resolved)
+                ()
+            }
+          }
         }
     }
   }

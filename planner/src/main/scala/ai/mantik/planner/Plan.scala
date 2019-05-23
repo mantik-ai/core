@@ -12,20 +12,33 @@ import ai.mantik.repository.{ MantikDefinition, MantikId, Mantikfile }
  */
 case class Plan(
     op: PlanOp,
-    files: List[PlanFile]
+    files: List[PlanFile],
+    cacheGroups: List[CacheKeyGroup]
 )
 
 /** An Id for a [[PlanFile]] */
 case class PlanFileReference(id: Int) extends AnyVal
 
+object PlanFileReference {
+  import scala.language.implicitConversions
+
+  /** Auto convert integer to plan file reference. */
+  implicit def fromInt(id: Int): PlanFileReference = PlanFileReference(id)
+}
+
 /** Defines a file which will be accessed within the plan. */
 case class PlanFile(
-    id: PlanFileReference,
+    ref: PlanFileReference,
     read: Boolean = false,
     write: Boolean = false,
     fileId: Option[String] = None,
-    temporary: Boolean = false
-)
+    temporary: Boolean = false,
+    cacheKey: Option[CacheKey] = None
+) {
+  override def toString: String = {
+    s"File(ref=${ref},read=${read},write=${write},fileId=${fileId},temp=${temporary},cacheKey=${cacheKey})"
+  }
+}
 
 /**
  * A node in a planning graph.
@@ -62,6 +75,15 @@ object PlanOp {
   case class AddMantikItem(id: MantikId, file: Option[PlanFileReference], mantikfile: Mantikfile[_ <: MantikDefinition]) extends PlanOp
 
   /**
+   * Evaluate the alternative, if any of the given files do not exist.
+   * @param files the files to cache. It's keys form a CacheGroup
+   */
+  case class CacheOp(files: List[(CacheKey, PlanFileReference)], alternative: PlanOp) extends PlanOp {
+    /** Returns the cache group for this operation. */
+    def cacheGroup: CacheKeyGroup = files.map(_._1)
+  }
+
+  /**
    * Run something sequentially, waiting for each other.
    * The result of the last is returned.
    */
@@ -92,13 +114,15 @@ object PlanOp {
     }
   }
 
-  /** Compress a plan op by removing chaings of [[PlanOp.Sequential]]. */
+  /** Compress a plan op by removing chains of [[PlanOp.Sequential]]. */
   def compress(planOp: PlanOp): PlanOp = {
     def subCompress(plan: PlanOp): Seq[PlanOp] = {
       plan match {
         case PlanOp.Empty => Nil
         case PlanOp.Sequential(elements) =>
           elements.flatMap(subCompress)
+        case c: PlanOp.CacheOp =>
+          Seq(c.copy(alternative = compress(c.alternative)))
         case other => Seq(other)
       }
     }

@@ -17,7 +17,7 @@ import ai.mantik.planner
  */
 private[impl] case class ResourcePlan(
     pre: PlanOp = PlanOp.Empty,
-    graph: Graph[PlanNodeService],
+    graph: Graph[PlanNodeService] = Graph.empty,
     inputs: Seq[NodeResourceRef] = Nil,
     outputs: Seq[NodeResourceRef] = Nil
 ) {
@@ -53,8 +53,21 @@ private[impl] case class ResourcePlan(
 
   def outputResource(id: Int): NodeResource = {
     require(id >= 0 && id < outputs.length, "Invalid output id")
-    graph.resolveReference(outputs(id)).getOrElse {
-      throw new planner.Planner.InconsistencyException(s"Output ${outputs(id)} could not be resolved")
+    outputResource(outputs(id))
+  }
+
+  def outputResource(nodeResourceRef: NodeResourceRef): NodeResource = {
+    graph.resolveReference(nodeResourceRef).getOrElse {
+      throw new planner.Planner.InconsistencyException(s"Output ${nodeResourceRef} could not be resolved")
     }._2
+  }
+
+  def merge(other: ResourcePlan): ResourcePlan = {
+    ResourcePlan(
+      pre = PlanOp.combine(pre, other.pre),
+      graph = graph.mergeWith(other.graph),
+      inputs = inputs ++ other.inputs,
+      outputs = outputs ++ other.outputs
+    )
   }
 }

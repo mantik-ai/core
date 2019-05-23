@@ -20,26 +20,26 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
   override def convert[T](action: Action[T]): Plan = {
     val (planningState, planOp) = convertSingleAction(action).run(PlanningState()).value
     val compressed = PlanOp.compress(planOp)
-    Plan(compressed, planningState.files)
+    Plan(compressed, planningState.files, planningState.cacheGroups)
   }
 
   def convertSingleAction[T](action: Action[T]): State[PlanningState, PlanOp] = {
     action match {
       case s: Action.SaveAction =>
-        translateItemPayloadSourceAsOptionalFile(s.item.source, canBeTemporary = false).map {
-          case (preplan, fileStorage) =>
-            PlanOp.seq(
-              preplan,
-              PlanOp.AddMantikItem(s.id, fileStorage, s.item.mantikfile)
-            )
+        translateItemPayloadSourceAsFiles(s.item.source, canBeTemporary = false).map { filesPlan =>
+          val fileRef = filesPlan.fileRefs.headOption
+          PlanOp.seq(
+            filesPlan.preOp,
+            PlanOp.AddMantikItem(s.id, fileRef, s.item.mantikfile)
+          )
         }
       case p: Action.FetchAction =>
-        manifestDataSetAsFile(p.dataSet, canBeTemporary = true).map {
-          case (preplan, fileId) =>
-            PlanOp.seq(
-              preplan,
-              PlanOp.PullBundle(p.dataSet.dataType, fileId)
-            )
+        manifestDataSetAsFile(p.dataSet, canBeTemporary = true).map { filesPlan =>
+          val fileRef = filesPlan.fileRefs.head
+          PlanOp.seq(
+            filesPlan.preOp,
+            PlanOp.PullBundle(p.dataSet.dataType, fileRef)
+          )
         }
     }
   }
@@ -49,26 +49,33 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
    * Note: due to a flaw this will most likely lead to a fragmented PlanOp
    * as we can only load files directly into new nodes.
    */
-  def translateItemPayloadSource(source: Source, expectedContentType: Option[String] = None): State[PlanningState, ResourcePlan] = {
+  def translateItemPayloadSource(source: Source): State[PlanningState, ResourcePlan] = {
     source match {
       case Source.Empty =>
         // No Support yet.
         throw new Planner.NotAvailableException("Empty Source")
       case loaded: Source.Loaded =>
         PlanningState(_.readFile(loaded.fileId)).flatMap { file =>
-          elements.loadFileNode(file.id, expectedContentType)
+          elements.loadFileNode(PlanFileWithContentType(file.ref, loaded.contentType))
         }
       case l: Source.Literal =>
         // Ugly this leads to fragmented plan.
         for {
           fileReference <- PlanningState(_.pipeFile(temporary = true))
-          loader <- elements.loadFileNode(fileReference.id, expectedContentType)
+          loader <- elements.loadFileNode(PlanFileWithContentType(fileReference.ref, ContentTypes.MantikBundleContentType))
         } yield {
           val pusher = elements.literalToPushBundle(l, fileReference)
           loader.prependOp(pusher)
         }
       case a: Source.OperationResult =>
-        translateOperationResult(a.op).map(_.projectOutput(a.projection))
+        translateOperationResult(a.op)
+      case p: Source.Projection =>
+        translateItemPayloadSource(p.source).map(_.projectOutput(p.projection))
+      case c: Source.Cached =>
+        for {
+          filesPlan <- cachedSourceFiles(c, canBeTemporary = true)
+          loader <- filesPlanToResourcePlan(filesPlan)
+        } yield loader
     }
   }
 
@@ -77,49 +84,97 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
    * This is necessary if some item is initialized by a file (e.g. algorithms).
    * @param canBeTemporary if true, the result may also be a temporary file.
    */
-  def translateItemPayloadSourceAsFile(source: Source, canBeTemporary: Boolean): State[PlanningState, (PlanOp, PlanFileReference)] = {
+  def translateItemPayloadSourceAsFiles(source: Source, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
     source match {
-      case Source.Loaded(fileId) =>
+      case Source.Empty =>
+        PlanningState { s =>
+          s -> FilesPlan()
+        }
+      case Source.Loaded(fileId, contentType) =>
         // already available as file
         PlanningState(_.readFile(fileId)).map { fileGet =>
-          (PlanOp.Empty, fileGet.id)
+          FilesPlan(files = IndexedSeq(PlanFileWithContentType(fileGet.ref, contentType)))
         }
       case l: Source.Literal =>
         // We have to go via temporary file
         PlanningState(_.pipeFile(temporary = canBeTemporary)).map { reference =>
           val pushing = elements.literalToPushBundle(l, reference)
-          (pushing, reference.id)
+          FilesPlan(pushing, IndexedSeq(PlanFileWithContentType(reference.ref, ContentTypes.MantikBundleContentType)))
         }
+      case c: Source.Cached =>
+        cachedSourceFiles(c, canBeTemporary)
       case other =>
         translateItemPayloadSource(other).flatMap { operationResult =>
-          resourcePlanToFile(operationResult, canBeTemporary)
+          resourcePlanToFiles(operationResult, canBeTemporary)
         }
     }
   }
 
-  /** Converts a resource plan into a possible temporary file. Note: this leads to a splitted plan, usually. */
-  private def resourcePlanToFile(resourcePlan: ResourcePlan, canBeTemporary: Boolean): State[PlanningState, (PlanOp, PlanFileReference)] = {
-    // Execute the plan and write the result into a file
-    // Which can then be loaded...
+  private def cachedSourceFiles(cachedSource: Source.Cached, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
     for {
-      file <- PlanningState(_.pipeFile(temporary = canBeTemporary))
-      fileNode <- elements.createStoreFileNode(file, resourcePlan.outputResource(0).contentType)
+      opFiles <- translateItemPayloadSourceAsFiles(cachedSource.source, canBeTemporary)
+      _ <- markFileAsCachedFile(opFiles.fileRefs, cachedSource.cacheGroup)
     } yield {
-      val runner = fileNode.application(resourcePlan)
-      elements.sourcePlanToJob(runner) -> file.id
+      val cacheFiles = cachedSource.cacheGroup.zip(opFiles.fileRefs)
+      FilesPlan(
+        PlanOp.CacheOp(
+          cacheFiles, opFiles.preOp
+        ), opFiles.files
+      )
     }
   }
 
-  /** Like [[translateItemPayloadSourceAsFile]] but can also return no file, if we use a Mantikfile without data. */
-  def translateItemPayloadSourceAsOptionalFile(source: Source, canBeTemporary: Boolean): State[PlanningState, (PlanOp, Option[PlanFileReference])] = {
-    source match {
-      case Source.Empty =>
-        State.pure(PlanOp.Empty -> None)
-      case other =>
-        translateItemPayloadSourceAsFile(other, canBeTemporary).map {
-          case (preplan, file) =>
-            preplan -> Some(file)
-        }
+  private def markFileAsCachedFile(files: IndexedSeq[PlanFileReference], cacheKeys: CacheKeyGroup): State[PlanningState, Unit] = {
+    val toCached = files.zip(cacheKeys).toMap
+    PlanningState { state =>
+      val updatedState = state
+        .markCached(toCached)
+        .withCacheGroup(cacheKeys)
+      updatedState -> (())
+    }
+  }
+
+  /**
+   * Converts a [[ResourcePlan]] into a [[FilesPlan]].
+   * Note: this leads to a splitted plan, usually.
+   */
+  private def resourcePlanToFiles(resourcePlan: ResourcePlan, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
+    import cats.implicits._
+
+    resourcePlan.outputs.toList.map { output =>
+      val outputResource = resourcePlan.outputResource(output)
+      for {
+        file <- PlanningState(_.pipeFile(temporary = canBeTemporary))
+        fileNode <- elements.createStoreFileNode(file, outputResource.contentType)
+      } yield {
+        fileNode -> PlanFileWithContentType(file.ref, outputResource.contentType.getOrElse {
+          ContentTypes.MantikBundleContentType // Does this happen?
+        })
+      }
+    }.sequence.map { fileNodeWithFile: List[(ResourcePlan, PlanFileWithContentType)] =>
+      val consumers = fileNodeWithFile.foldLeft(ResourcePlan()) {
+        case (p, (storeFile, _)) =>
+          p.merge(storeFile)
+      }
+      val combinedResourcePlan = consumers.application(resourcePlan)
+      val preOp = elements.sourcePlanToJob(combinedResourcePlan)
+      val filesPlan = FilesPlan(
+        preOp,
+        files = fileNodeWithFile.map(_._2).toIndexedSeq
+      )
+      filesPlan
+    }
+  }
+
+  /** Convert a [[FilesPlan]] to a [[ResourcePlan]]. */
+  private def filesPlanToResourcePlan(filesPlan: FilesPlan): State[PlanningState, ResourcePlan] = {
+    import cats.implicits._
+    filesPlan.files.toList.map { file =>
+      elements.loadFileNode(file)
+    }.sequence.map { fileLoaders =>
+      val fullPlan = fileLoaders.foldLeft(ResourcePlan())(_.merge(_))
+        .prependOp(filesPlan.preOp)
+      fullPlan
     }
   }
 
@@ -145,41 +200,42 @@ private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
 
   /** Manifests an algorithm as a graph, will have one input and one output. */
   def manifestAlgorithm(algorithm: Algorithm): State[PlanningState, ResourcePlan] = {
-    translateItemPayloadSourceAsOptionalFile(algorithm.source, canBeTemporary = true).flatMap {
-      case (preplan, algorithmFile) =>
-        elements.algorithm(algorithm.mantikfile, algorithmFile)
-          .map(_.prependOp(preplan))
+    translateItemPayloadSourceAsFiles(algorithm.source, canBeTemporary = true).flatMap { files =>
+      val algorithmFile = files.fileRefs.headOption
+      elements.algorithm(algorithm.mantikfile, algorithmFile)
+        .map(_.prependOp(files.preOp))
     }
   }
 
   /** Manifest a trainable algorithm as a graph, will have one input and two outputs. */
   def manifestTrainableAlgorithm(trainableAlgorithm: TrainableAlgorithm): State[PlanningState, ResourcePlan] = {
-    translateItemPayloadSourceAsOptionalFile(trainableAlgorithm.source, canBeTemporary = true).flatMap {
-      case (preplan, algorithmFile) =>
-        elements.trainableAlgorithm(trainableAlgorithm.mantikfile, algorithmFile).map(_.prependOp(preplan))
+    translateItemPayloadSourceAsFiles(trainableAlgorithm.source, canBeTemporary = true).flatMap { files =>
+      val algorithmFile = files.fileRefs.headOption
+      elements.trainableAlgorithm(trainableAlgorithm.mantikfile, algorithmFile)
+        .map(_.prependOp(files.preOp))
     }
   }
 
   /** Manifest a data set as a graph with one output. */
   def manifestDataSet(dataSet: DataSet): State[PlanningState, ResourcePlan] = {
     if (dataSet.mantikfile.definition.format == DataSet.NaturalFormatName) {
-      translateItemPayloadSource(dataSet.source, Some(ContentTypes.MantikBundleContentType))
+      translateItemPayloadSource(dataSet.source)
     } else {
-      translateItemPayloadSourceAsOptionalFile(dataSet.source, canBeTemporary = true).flatMap {
-        case (preplan, dataSetFile) =>
-          elements.dataSet(dataSet.mantikfile, dataSetFile).map(_.prependOp(preplan))
+      translateItemPayloadSourceAsFiles(dataSet.source, canBeTemporary = true).flatMap { files =>
+        val dataSetFile = files.fileRefs.headOption
+        elements.dataSet(dataSet.mantikfile, dataSetFile).map(_.prependOp(files.preOp))
       }
     }
   }
 
   /** Manifest a data set as (natural encoded) file. */
-  def manifestDataSetAsFile(dataSet: DataSet, canBeTemporary: Boolean): State[PlanningState, (PlanOp, PlanFileReference)] = {
+  def manifestDataSetAsFile(dataSet: DataSet, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
     if (dataSet.mantikfile.definition.format == DataSet.NaturalFormatName) {
       // We can directly use it's file
-      translateItemPayloadSourceAsFile(dataSet.source, canBeTemporary)
+      translateItemPayloadSourceAsFiles(dataSet.source, canBeTemporary)
     } else {
       manifestDataSet(dataSet).flatMap { resourcePlan =>
-        resourcePlanToFile(resourcePlan, canBeTemporary)
+        resourcePlanToFiles(resourcePlan, canBeTemporary)
       }
     }
   }

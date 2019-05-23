@@ -32,6 +32,10 @@ case class Mantikfile[T <: MantikDefinition](
 
   /** Returns a set of violations. */
   lazy val violations: Seq[String] = definition.violations
+
+  override def toString: String = {
+    s"Mantikfile(${definition.kind},stack=${definition.stack},name=${definition.name})"
+  }
 }
 
 object Mantikfile {

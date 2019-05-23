@@ -11,8 +11,9 @@ import akka.http.scaladsl.model.Uri
 
 class JobGraphConverterSpec extends TestBase {
 
+  val fileServiceUri = Uri("http://file-service:1234")
+
   val files = ExecutionOpenFiles(
-    remoteFileServiceUri = Uri("http://file-service:1234"),
     readFiles = Map(
       PlanFileReference(0) -> FileGetResult("file0", "files/file0", "resource0", None),
       PlanFileReference(1) -> FileGetResult("file1", "files/file1", "resource1", None)
@@ -50,7 +51,7 @@ class JobGraphConverterSpec extends TestBase {
   )
 
   "translateGraphIntoJob" should "work" in {
-    val got = new JobGraphConverter("space1", files, Seq(
+    val got = new JobGraphConverter(fileServiceUri, "space1", files, Seq(
       DockerLogin("repo1", "user1", "password1")
     )).translateGraphIntoJob(inputGraph)
     got shouldBe Job(

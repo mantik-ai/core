@@ -7,64 +7,58 @@ import ai.mantik.ds.{ TabularData, Tensor }
 import ai.mantik.ds.element.{ Bundle, TensorElement }
 import ai.mantik.planner.{ Context, DataSet }
 
-object TrainAlgorithm {
+object TrainAlgorithm extends ExampleBase {
 
-  def main(args: Array[String]): Unit = {
-    val context: Context = Context.local()
-    try {
-      val sampleFile = new File("bridge/sklearn/simple_learn/example/kmeans").toPath
-      context.pushLocalMantikFile(sampleFile)
+  override protected def run(context: Context): Unit = {
+    val sampleFile = new File("bridge/sklearn/simple_learn/example/kmeans").toPath
+    context.pushLocalMantikFile(sampleFile)
 
-      def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
+    def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 
-      val learningData: Bundle = Bundle.build(
-        TabularData(
-          "coordinates" -> Tensor(componentType = Float64, shape = List(2))
-        )
+    val learningData: Bundle = Bundle.build(
+      TabularData(
+        "coordinates" -> Tensor(componentType = Float64, shape = List(2))
       )
-        .row(makeTensor(1, 1))
-        .row(makeTensor(2, 2))
-        .row(makeTensor(1, 2))
-        .row(makeTensor(2, 2))
-        .row(makeTensor(3, 3))
-        .row(makeTensor(3, 4))
-        .row(makeTensor(4, 3))
-        .row(makeTensor(4, 4))
-        .result
+    )
+      .row(makeTensor(1, 1))
+      .row(makeTensor(2, 2))
+      .row(makeTensor(1, 2))
+      .row(makeTensor(2, 2))
+      .row(makeTensor(3, 3))
+      .row(makeTensor(3, 4))
+      .row(makeTensor(4, 3))
+      .row(makeTensor(4, 4))
+      .result
 
-      val kmeans = context.loadTrainableAlgorithm("kmeans")
+    val kmeans = context.loadTrainableAlgorithm("kmeans")
 
-      val (trained, stats) = kmeans.train(DataSet.literal(learningData))
+    val (trained, stats) = kmeans.train(DataSet.literal(learningData))
 
-      context.execute(
-        trained.save("kmeans_trained")
+    context.execute(
+      trained.save("kmeans_trained")
+    )
+
+    val trainedAgain = context.loadTransformation("kmeans_trained")
+
+    val sampleData = Bundle.build(
+      TabularData(
+        "coordinates" -> Tensor(componentType = Float64, shape = List(2))
       )
+    )
+      .row(makeTensor(1, 1))
+      .row(makeTensor(0, 0))
+      .row(makeTensor(4, 4))
+      .result
 
-      val trainedAgain = context.loadTransformation("kmeans_trained")
+    val applied = context.execute(
+      trainedAgain(DataSet.literal(sampleData)).fetch
+    )
 
-      val sampleData = Bundle.build(
-        TabularData(
-          "coordinates" -> Tensor(componentType = Float64, shape = List(2))
-        )
-      )
-        .row(makeTensor(1, 1))
-        .row(makeTensor(0, 0))
-        .row(makeTensor(4, 4))
-        .result
+    println(applied)
 
-      val applied = context.execute(
-        trainedAgain(DataSet.literal(sampleData)).fetch
-      )
-
-      println(applied)
-
-      val statsFetched = context.execute(
-        stats.fetch
-      )
-      println("Stats\n" + statsFetched)
-
-    } finally {
-      context.shutdown()
-    }
+    val statsFetched = context.execute(
+      stats.fetch
+    )
+    println("Stats\n" + statsFetched)
   }
 }

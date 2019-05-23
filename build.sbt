@@ -3,6 +3,7 @@ ThisBuild / version := "0.1-SNAPSHOT"
 ThisBuild / scalaVersion := "2.12.8"
 // ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
 ThisBuild / scalacOptions += "-feature"
+ThisBuild / scalacOptions += "-deprecation"
 ThisBuild / updateOptions := updateOptions.value.withGigahorse(false) // See https://github.com/sbt/sbt/issues/3570
 
 val akkaVersion = "2.5.20"
