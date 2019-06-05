@@ -1,9 +1,12 @@
 package ai.mantik.repository
 
+import ai.mantik.ds.element.SingleElementBundle
+import ai.mantik.repository.meta.{ MetaJson, MetaVariableException }
 import io.circe._
 import io.circe.syntax._
 import io.circe.yaml.syntax._
 import io.circe.yaml.{ parser => YamlParser }
+
 import scala.reflect.ClassTag
 
 /**
@@ -11,7 +14,7 @@ import scala.reflect.ClassTag
  */
 case class Mantikfile[T <: MantikDefinition](
     definition: T,
-    json: Json
+    metaJson: MetaJson
 ) {
 
   /** Returns the definition, if applicable. */
@@ -19,22 +22,42 @@ case class Mantikfile[T <: MantikDefinition](
 
   def cast[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[io.circe.Error, Mantikfile[T]] = {
     definition match {
-      case x: T => Right(Mantikfile[T](x, json))
+      case x: T => Right(Mantikfile[T](x, metaJson))
       case _    => Left(DecodingFailure(s"Expected ${ct.runtimeClass.getSimpleName}, got ${definition.getClass.getSimpleName}", Nil))
     }
   }
 
   /** Returns Yaml code  */
-  def toYaml: String = json.asYaml.spaces2
+  def toYaml: String = toJsonValue.asYaml.spaces2
 
   /** Returns Json code. */
-  def toJson: String = json.spaces2
+  def toJson: String = toJsonValue.spaces2
+
+  /** Returns the json value (before converting to string) */
+  def toJsonValue: Json = metaJson.asJson
 
   /** Returns a set of violations. */
   lazy val violations: Seq[String] = definition.violations
 
   override def toString: String = {
     s"Mantikfile(${definition.kind},stack=${definition.stack},name=${definition.name})"
+  }
+
+  /**
+   * Update Meta Variable Values
+   * @throws MetaVariableException see [[MetaJson.withMetaValues]].
+   */
+  def withMetaValues(values: (String, SingleElementBundle)*): Mantikfile[T] = {
+    val updatedJson = metaJson.withMetaValues(values: _*)
+    val resultCandidate = for {
+      parsed <- Mantikfile.parseMetaJson(updatedJson)
+      castedDefinition = parsed.definition.asInstanceOf[T]
+    } yield Mantikfile(castedDefinition, parsed.metaJson)
+    // parsing errors should not happen much (but is possible, types can go invalid)
+    resultCandidate match {
+      case Left(error)  => throw new MetaVariableException("Could not reparse with changed meta values ", error)
+      case Right(value) => value
+    }
   }
 }
 
@@ -43,7 +66,12 @@ object Mantikfile {
   /** Generates a Mantikfile from pure Definition, automatically serializing to JSON. */
   def pure[T <: MantikDefinition](definition: T): Mantikfile[T] = {
     Mantikfile(
-      definition, (definition: MantikDefinition).asJson
+      definition,
+      MetaJson(
+        metaVariables = Nil,
+        missingMetaVariables = true,
+        sourceJson = (definition: MantikDefinition).asJsonObject
+      )
     )
   }
 
@@ -65,9 +93,14 @@ object Mantikfile {
   }
 
   def parseSingleDefinition(json: Json): Either[io.circe.Error, Mantikfile[MantikDefinition]] = {
-    json.as[MantikDefinition].map { v =>
-      Mantikfile(v, json)
-    }
+    json.as[MetaJson].flatMap(parseMetaJson)
+  }
+
+  def parseMetaJson(metaJson: MetaJson): Either[io.circe.Error, Mantikfile[MantikDefinition]] = {
+    for {
+      applied <- metaJson.appliedJson.left.map { error => DecodingFailure(error, Nil) }
+      definition <- applied.as[MantikDefinition]
+    } yield Mantikfile(definition, metaJson)
   }
 
   /** Generate the mantikfile for a trained algorithm out of a trainable algorithm definition. */
@@ -75,14 +108,15 @@ object Mantikfile {
     val trainedStack = trainable.definition.trainedStack.getOrElse(
       trainable.definition.stack // if no override given, use the same stack
     )
-    val updatedFile = trainable.json.asObject
-      .get.remove("name")
-      .remove("version")
-      .add("stack", Json.fromString(trainedStack))
-      .add("kind", Json.fromString(MantikDefinition.AlgorithmKind))
-
-    Mantikfile.parseSingleDefinition(Json.fromJsonObject(updatedFile))
-      .flatMap(_.cast[AlgorithmDefinition])
+    val updatedJsonObject = trainable.metaJson.withFixedVariables.copy(
+      sourceJson = trainable.metaJson.sourceJson
+        .remove("name")
+        .remove("version")
+        .remove("trainedStack")
+        .add("stack", Json.fromString(trainedStack))
+        .add("kind", Json.fromString(MantikDefinition.AlgorithmKind))
+    )
+    Mantikfile.parseMetaJson(updatedJsonObject).flatMap(_.cast[AlgorithmDefinition])
   }
 
 }

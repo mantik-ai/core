@@ -73,6 +73,10 @@ class Bundle(object):
     @staticmethod
     def decode_json_bundle(json_str):
         parsed = json.loads(json_str)  # Needed for DataType
+        return Bundle.decode_parsed_json_bundle(parsed)
+
+    @staticmethod
+    def decode_parsed_json_bundle(parsed):
         data_type = DataType(parsed.get("type"))
         value = parsed.get("value")
         return Bundle(data_type, value)

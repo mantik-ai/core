@@ -3,6 +3,7 @@ package ai.mantik.ds.element
 import java.nio.file.Path
 
 import ai.mantik.ds._
+import ai.mantik.ds.converter.Cast.findCast
 import ai.mantik.ds.converter.StringPreviewGenerator
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.formats.natural.{ NaturalFormatDescription, NaturalFormatReaderWriter }
@@ -99,6 +100,27 @@ case class SingleElementBundle(
   override def rows: Vector[RootElement] = Vector(SingleElement(element))
 
   override def single: Option[Element] = Some(element)
+
+  /**
+   * Cast this bundle to a new type.
+   * Note: loosing precision is only deducted from the types. It is possible
+   * that a cast is marked as loosing precision but it's not in practice
+   * (e.g. 100.0 (float64)--> 100 (int))
+   * @param allowLoosing if true, it's allowed when the cast looses precision.
+   */
+  def cast(to: DataType, allowLoosing: Boolean = false): Either[String, SingleElementBundle] = {
+    findCast(model, to) match {
+      case Left(error) => Left(error)
+      case Right(c) if !c.loosing || allowLoosing =>
+        try {
+          Right(SingleElementBundle(to, c.op(element)))
+        } catch {
+          case e: Exception =>
+            Left(s"Cast failed ${e.getMessage}")
+        }
+      case Right(c) => Left("Cast would loose precision")
+    }
+  }
 }
 
 /** A  Bundle which contains tabular data. */

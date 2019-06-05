@@ -31,7 +31,14 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
   }
 
   override def encodeObject(bundle: Bundle): JsonObject = {
-    val value = bundle match {
+    Encoded(
+      bundle.model,
+      encodeObjectValue(bundle)
+    ).asJsonObject
+  }
+
+  def encodeObjectValue(bundle: Bundle): Json = {
+    bundle match {
       case t: TabularBundle =>
         val rowEncoder = createRowEncoder(t.model)
         Json.arr(t.rows.map(row => rowEncoder(row)): _*)
@@ -39,11 +46,6 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
         val elementEncoder = createElementEncoder(s.model)
         elementEncoder.apply(s.element)
     }
-
-    Encoded(
-      bundle.model,
-      value
-    ).asJsonObject
   }
 
   /** Deserializes a Bundle from JSON. */

@@ -1,6 +1,6 @@
 package ai.mantik.ds.converter
 
-import ai.mantik.ds.element.{ ImageElement, Primitive, TensorElement, ValueEncoder }
+import ai.mantik.ds.element.{ Bundle, ImageElement, Primitive, SingleElementBundle, TensorElement, ValueEncoder }
 import ai.mantik.ds._
 import ai.mantik.testutils.TestBase
 import akka.util.ByteString
@@ -50,6 +50,18 @@ class CastSpec extends TestBase {
     c2.op(Primitive(-200)) shouldBe Primitive(-200.toDouble)
     c2.canFail shouldBe false
     c2.loosing shouldBe false // 52 bits of precision in float32
+  }
+
+  it should "cast floats to ints" in {
+    val c1 = Cast.findCast(FundamentalType.Float64, FundamentalType.Int32).right.getOrElse(fail)
+    c1.op(Primitive(100.5)) shouldBe Primitive(100)
+    c1.loosing shouldBe true
+    c1.canFail shouldBe false
+
+    val c2 = Cast.findCast(FundamentalType.Float32, FundamentalType.Uint8).right.getOrElse(fail)
+    c2.op(Primitive(100.5f)) shouldBe Primitive(100.toByte)
+    c2.loosing shouldBe true
+    c2.canFail shouldBe false
   }
 
   it should "work for chained conversions" in {
@@ -173,5 +185,8 @@ class CastSpec extends TestBase {
       0, 0, 0, 5,
       0, 0, 0, 6
     )
+  }
+
+  it should "be directly callable" in {
   }
 }

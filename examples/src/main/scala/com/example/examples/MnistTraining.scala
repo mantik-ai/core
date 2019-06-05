@@ -19,6 +19,7 @@ object MnistTraining extends ExampleBase {
     val testDataSet = context.loadDataSet("mnist_test")
 
     val trainAlgorithm = context.loadTrainableAlgorithm("mnist_linear")
+      .withMetaValue("n_epochs", 5)
 
     val (trained, stats) = trainAlgorithm.train(trainDataSet)
 

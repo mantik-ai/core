@@ -10,6 +10,7 @@ case class Algorithm(
 ) extends MantikItem {
 
   override type DefinitionType = AlgorithmDefinition
+  override type OwnType = Algorithm
 
   def functionType: FunctionType = mantikfile.definition.`type`
 
@@ -18,6 +19,12 @@ case class Algorithm(
 
     DataSet.natural(
       Source.OperationResult(Operation.Application(this, adapted)), functionType.output
+    )
+  }
+
+  override protected def withMantikfile(mantikfile: Mantikfile[AlgorithmDefinition]): Algorithm = {
+    copy(
+      mantikfile = mantikfile
     )
   }
 }

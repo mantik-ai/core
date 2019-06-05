@@ -2,7 +2,7 @@ package ai.mantik.planner
 
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{DataType, TabularData}
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{Bundle, SingleElementBundle}
 import ai.mantik.planner.select.{AutoAdapt, Select}
 import ai.mantik.repository.{DataSetDefinition, Mantikfile}
 
@@ -17,6 +17,7 @@ case class DataSet(
 ) extends MantikItem {
 
   override type DefinitionType = DataSetDefinition
+  override type OwnType = DataSet
 
   def dataType: DataType = mantikfile.definition.`type`
 
@@ -81,6 +82,12 @@ case class DataSet(
       case _ =>
         DataSet(Source.Cached(source), mantikfile)
     }
+  }
+
+  override protected def withMantikfile(mantikfile: Mantikfile[DataSetDefinition]): DataSet = {
+    copy(
+      mantikfile = mantikfile
+    )
   }
 }
 

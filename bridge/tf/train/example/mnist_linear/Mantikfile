@@ -5,11 +5,28 @@ trainedStack: tf.saved_model
 directory: code
 kind: trainable
 
+metaVariables:
+    - name: batch_size
+      type: int32
+      value: 128
+    - name: n_epochs
+      type: int32
+      value: 20
+    - name: learning_rate
+      type: float32
+      value: 0.01
+    - name: width
+      type: int32
+      value: 28
+    - name: height
+      type: int32
+      value: 28
+
 trainingType:
     columns:
         image:
             type: tensor
-            shape: [28,28]
+            shape: ["${height}","${width}"]
             componentType: float32
         label: int32
 
@@ -23,7 +40,7 @@ type:
         columns:
             image:
                 type: tensor
-                shape: [28,28]
+                shape: ["${height}","${width}"]
                 componentType: float32
     output:
         columns:

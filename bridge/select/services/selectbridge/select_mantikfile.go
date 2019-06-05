@@ -3,7 +3,6 @@ package selectbridge
 import (
 	"errors"
 	"gl.ambrosys.de/mantik/go_shared/serving"
-	"gl.ambrosys.de/mantik/go_shared/util/yaml"
 	"select/services/selectbridge/runner"
 )
 
@@ -21,7 +20,7 @@ type SelectMantikfile struct {
 
 func ParseSelectMantikfile(data []byte) (*SelectMantikfile, error) {
 	var mf SelectMantikfile
-	err := yaml.Unmarshal(data, &mf)
+	err := serving.UnmarshallMetaYaml(data, &mf)
 	if err != nil {
 		return nil, err
 	}

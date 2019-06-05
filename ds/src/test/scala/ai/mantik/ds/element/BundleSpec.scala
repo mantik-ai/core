@@ -162,4 +162,12 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     val back = json.as[Bundle]
     back shouldBe Right(sampleBundle)
   }
+
+  "cast" should "work" in {
+    Bundle.fundamental(100).cast(FundamentalType.Float64) shouldBe Right(Bundle.fundamental(100.0))
+    Bundle.void.cast(FundamentalType.Int32).left.getOrElse(fail) should include("No cast found")
+    Bundle.fundamental(100).cast(FundamentalType.Float32).left.getOrElse(fail) should include("loose precision")
+    Bundle.fundamental(100).cast(FundamentalType.Float32, allowLoosing = true) shouldBe Right(Bundle.fundamental(100.0f))
+    Bundle.fundamental("Hello").cast(FundamentalType.Int32).left.getOrElse(fail) should include("Cast failed")
+  }
 }

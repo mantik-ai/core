@@ -7,7 +7,9 @@ The Mantikfile describes what a Mantik Artefact (DataSets, Algorithms, ...) is a
 
 They are YAML or JSON Files and contain the following Keys:
 
-- Kind: `dataset`, `algorithm`, `trainable`, defaulting to `algorithm`. Describes what Kind of artefact it is.
+- `kind` (optional) must be either `dataset`, `algorithm`, `trainable`, defaulting to `algorithm`. Describes what Kind of artefact it is.
+- `metaVariables` variables which can be accessed by the bridges and which are interpolated into other values.
+   (See [Meta Variables](#meta-variables))
 
 ## Version Related Fields
 
@@ -132,3 +134,47 @@ type:
     columns:
       label: int32
 ```
+
+### Meta Variables
+
+A Mantik file can contain meta variables. This look like this:
+
+```
+name: my-algorithm
+metaVariables:
+  - name: problemSize
+    type: int32
+    value: 100
+input:
+  columns:
+    x:
+      type: tensor
+      shape: ["${problemSize}"]
+      componentType: float64
+output: float32
+```
+
+The encoding of a simple meta variable is the same as the JSON-Encoding of a single value (See [DataTypes](DataTypes.md))
+plus an extra `name`-Field.
+
+This name can be referenced by a `"${name}"` String inside a Mantikfile's JSON or YAML.
+
+Upon loading, all references will be interpolated, before data types are parsed. In the example
+above the type of x would look like
+
+```
+type: tensor
+shape: [100]
+componentType: float64
+```
+
+This way, an algorithm can have Meta-Variable-specific input and output types.
+ 
+**Fixed Meta Variables**
+
+The planner is allowed to change the value of meta variables. In some cases this is not good
+e.g. if an algorithm is the result of a trained algorithm. For that case, Meta variables
+can have an extra attribute `fix` which accepts a boolen value.
+
+In case of algorithms which are the result of a trainable algorithm, all meta variables
+are automatically fixed.

@@ -112,6 +112,6 @@ class SelectSpec extends TestBase {
     val mantikFile = select.compileToSelectMantikfile().getOrElse(fail)
     mantikFile.definition.stack shouldBe "select"
     val program = Compiler.compile(select).right.getOrElse(fail)
-    mantikFile.json.asObject.get("selectProgram").get.as[SelectProgram] shouldBe Right(program)
+    mantikFile.toJsonValue.asObject.get("selectProgram").get.as[SelectProgram] shouldBe Right(program)
   }
 }
