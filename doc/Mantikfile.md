@@ -1,5 +1,4 @@
-Mantikfile
-==========
+# Mantikfile
 
 The Mantikfile describes what a Mantik Artefact (DataSets, Algorithms, ...) is and how it will be handled by Mantik.
 
@@ -22,7 +21,7 @@ name an artefact under a different name, than what is expressed in Mantikfile (e
 
 ## Directory
 
-Mantikfiles may contain an optional `directory` field which referes to a directory unter the Mantikfile. Upon uploading this 
+Mantikfiles may contain an optional `directory` field which referes to a directory unter the Mantikfile. Upon uploading this
 directory is serialized as ZIP-File and before application, this directory will be decompressed.
 
 ## Other fields
@@ -37,7 +36,7 @@ Each Mantikfile must contain type-related information
 
 A DataSet Mantikfile must contain a field `type` which declares its type.
 
-It must contain a field `format` which maps to a format plugin. 
+It must contain a field `format` which maps to a format plugin.
 
 ### Algorithm
 
@@ -169,7 +168,7 @@ componentType: float64
 ```
 
 This way, an algorithm can have Meta-Variable-specific input and output types.
- 
+
 **Fixed Meta Variables**
 
 The planner is allowed to change the value of meta variables. In some cases this is not good

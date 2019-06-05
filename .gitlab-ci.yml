@@ -216,3 +216,19 @@ bridge_tf_train_test:
   artifacts:
     paths:
       - bridge/tf/train/target
+
+pages:
+  stage: publish
+  image: mquade/python:3.7-slim
+  script:
+    - cd doc
+    - pip install -r requirements.txt
+    - ln -s ../Readme.rst index.rst
+    - sphinx-build -b html . ../public
+  artifacts:
+    paths:
+      - public
+  only:
+    refs:
+      - master
+      - mq/render-docs
