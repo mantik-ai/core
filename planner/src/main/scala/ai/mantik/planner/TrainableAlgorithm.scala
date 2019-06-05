@@ -10,7 +10,7 @@ import ai.mantik.repository.{Mantikfile, TrainableAlgorithmDefinition}
  */
 final case class TrainableAlgorithm(
     source: Source,
-    mantikfile: Mantikfile[TrainableAlgorithmDefinition],
+    private [planner] val mantikfile: Mantikfile[TrainableAlgorithmDefinition],
 ) extends MantikItem {
 
   override type DefinitionType = TrainableAlgorithmDefinition

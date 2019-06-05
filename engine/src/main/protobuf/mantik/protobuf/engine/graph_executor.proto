@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package ai.mantik.engine.protos;
+
+import "mantik/protobuf/engine/ds.proto";
+
+/* Responsible for evaluating the value of graph objects. */
+service GraphExecutorService {
+    /** Evaluates and fetches the content of a dataset. */
+    rpc FetchDataSet(FetchItemRequest) returns (FetchItemResponse) {}
+    /** Evaluates and saves an item to the repository. */
+    rpc SaveItem(SaveItemRequest) returns (SaveItemResponse) {}
+}
+
+message FetchItemRequest {
+    string session_id = 1;
+    string dataset_id = 2;
+    // Requested Encoding
+    BundleEncoding encoding = 3;
+}
+
+message FetchItemResponse {
+    Bundle bundle = 1;
+}
+
+message SaveItemRequest {
+    string session_id = 1;
+    string item_id = 2;
+    // Name under which the item is to be stored (can be name:version)
+    string name = 3;
+}
+
+message SaveItemResponse {
+    // Name under which the item has been saved
+    string name = 1;
+}

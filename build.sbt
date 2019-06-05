@@ -4,13 +4,13 @@ ThisBuild / scalaVersion := "2.12.8"
 // ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
 ThisBuild / scalacOptions += "-feature"
 ThisBuild / scalacOptions += "-deprecation"
-ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats"
+ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats
 ThisBuild / updateOptions := updateOptions.value.withGigahorse(false) // See https://github.com/sbt/sbt/issues/3570
 
 val akkaVersion = "2.5.20"
 val akkaHttpVersion = "10.1.7"
 val scalaTestVersion = "3.0.5"
-val circeVersion = "0.9.3"
+val circeVersion = "0.11.1"
 
 import scalariform.formatter.preferences._
 val scalariformSettings = {
@@ -67,6 +67,7 @@ lazy val ds = (project in file("ds"))
       // Circe
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
+      "io.circe" %% "circe-java8" % circeVersion,
 
       // Akka
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
@@ -116,8 +117,8 @@ lazy val executorApi = (project in file("executor/api"))
       "de.heikoseeberger" %% "akka-http-circe" % "1.25.2",
 
       // Circe
-      "io.circe" %% "circe-generic" % "0.9.3",
-      "io.circe" %% "circe-parser" % "0.9.3",
+      "io.circe" %% "circe-generic" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion,
 
       // SLF4J Api
       "org.slf4j" % "slf4j-api" % "1.7.25",
@@ -194,7 +195,7 @@ lazy val planner = (project in file ("planner"))
 
       // Parboiled (Parsers)
       "org.parboiled" %% "parboiled" % "2.1.5"
-    ),
+    )
   )
   .settings(
     scalariformSettings,
@@ -217,10 +218,47 @@ lazy val examples = (project in file("examples"))
     publishLocal := {}
   )
 
+lazy val engine = (project in file("engine"))
+  .dependsOn(testutils % "test")
+  .dependsOn(planner, repository, executorApi)
+  .settings(
+    name := "engine"
+  )
+  .settings(
+    publishSettings,
+    scalariformSettings
+  )
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    buildInfoKeys := Seq[BuildInfoKey](
+      name,
+      version,
+      scalaVersion,
+      BuildInfoKey("gitVersion", gitVersion),
+      BuildInfoKey("buildNum", buildNum))
+    ,
+    buildInfoPackage := "ai.mantik.engine.buildinfo"
+  )
+  .settings(
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % "1.2.3"
+    )
+  )  
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
+      "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
+      "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
+    ),
+    PB.targets in Compile := Seq(
+      scalapb.gen() -> (sourceManaged in Compile).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
+    )
+  )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, executorApi, executorApp, examples, planner)
+  .aggregate(testutils, ds, executorApi, executorApp, examples, planner, engine)
   .settings(
+    name := "mantik-core",
     publish := {},
     publishLocal := {},
     test := {}

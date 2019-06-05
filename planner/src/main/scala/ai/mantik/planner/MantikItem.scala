@@ -2,7 +2,9 @@ package ai.mantik.planner
 
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.repository.meta.MetaVariableException
-import ai.mantik.repository.{ MantikDefinition, MantikId, Mantikfile }
+import ai.mantik.repository.{ AlgorithmDefinition, ContentTypes, DataSetDefinition, MantikArtifact, MantikDefinition, MantikId, Mantikfile, TrainableAlgorithmDefinition }
+
+import scala.reflect.ClassTag
 
 /**
  * A single Item inside the Planner DSL.
@@ -13,10 +15,13 @@ trait MantikItem {
   type OwnType <: MantikItem
 
   val source: Source
-  val mantikfile: Mantikfile[DefinitionType]
+  private[planner] val mantikfile: Mantikfile[DefinitionType]
 
   /** Save an item back to Mantik. */
   def save(location: MantikId): Action.SaveAction = Action.SaveAction(this, location)
+
+  /** Returns the type's stack. */
+  def stack: String = mantikfile.definition.stack
 
   /**
    * Update Meta Variables.
@@ -38,4 +43,23 @@ trait MantikItem {
 
   /** Override the mantik file (not this can be dangerous). */
   protected def withMantikfile(mantikfile: Mantikfile[DefinitionType]): OwnType
+}
+
+object MantikItem {
+
+  /** Convert a (loaded) [[MantikArtifact]] to a [[MantikItem]]. */
+  private[mantik] def fromMantikArtifact(artifact: MantikArtifact): MantikItem = {
+    val source = artifact.fileId.map { fileId =>
+      Source.Loaded(fileId, ContentTypes.ZipFileContentType)
+    }.getOrElse(Source.Empty)
+
+    def forceExtract[T <: MantikDefinition: ClassTag]: Mantikfile[T] = artifact.mantikfile.cast[T].right.get
+
+    artifact.mantikfile.definition match {
+      case a: AlgorithmDefinition          => Algorithm(source, forceExtract)
+      case d: DataSetDefinition            => DataSet(source, forceExtract)
+      case t: TrainableAlgorithmDefinition => TrainableAlgorithm(source, forceExtract)
+    }
+  }
+
 }

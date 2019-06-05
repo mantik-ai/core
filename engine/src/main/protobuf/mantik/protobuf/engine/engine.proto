@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ai.mantik.engine.protos;
+
+import "google/protobuf/empty.proto";
+
+/** Returns information about the Engine process. */
+service AboutService {
+    rpc Version (google.protobuf.Empty) returns (VersionResponse) {}
+}
+
+/**
+Contains the current Mantik Engine version.
+*/
+message VersionResponse {
+    string version = 1;
+}

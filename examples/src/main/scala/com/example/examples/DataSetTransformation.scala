@@ -26,5 +26,6 @@ object DataSetTransformation extends ExampleBase {
     val result = context.execute(
       transformation(dataset).fetch
     )
+    println(s"Result\n$result")
   }
 }
