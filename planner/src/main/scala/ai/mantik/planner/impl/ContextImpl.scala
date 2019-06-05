@@ -22,54 +22,43 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.reflect.ClassTag
 
-private[impl] class ContextImpl(config: Config, repository: Repository, fileRepository: FileRepository, planner: Planner, planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit ec: ExecutionContext, mat: Materializer) extends Context {
+private[impl] class ContextImpl(config: Config, val repository: Repository, val fileRepository: FileRepository, val planner: Planner, val planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit ec: ExecutionContext, mat: Materializer) extends Context {
   private val logger = LoggerFactory.getLogger(getClass)
 
   private val dbLookupTimeout = Duration.fromNanos(config.getDuration("mantik.planner.dbLookupTimeout").toNanos)
   private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
 
   override def loadDataSet(id: MantikId): DataSet = {
-    val (artifact, mf) = await(repository.getAs[DataSetDefinition](id), dbLookupTimeout)
-    mantik.planner.DataSet(
-      mantikArtifactSource(artifact),
-      mf
-    )
+    load[DataSet](id)
   }
 
   override def loadTransformation(id: MantikId): Algorithm = {
-    val (artifact, mf) = await(repository.getAs[AlgorithmDefinition](id), dbLookupTimeout)
-    mantik.planner.Algorithm(
-      mantikArtifactSource(artifact),
-      mf
-    )
+    load[Algorithm](id)
   }
 
   override def loadTrainableAlgorithm(id: MantikId): TrainableAlgorithm = {
-    val (artifact, mf) = await(repository.getAs[TrainableAlgorithmDefinition](id), dbLookupTimeout)
-    TrainableAlgorithm(
-      mantikArtifactSource(artifact),
-      mf
-    )
+    load[TrainableAlgorithm](id)
   }
 
-  private def mantikArtifactSource(mantikArtifact: MantikArtifact): Source = {
-    mantikArtifact.fileId.map { fileId =>
-      Source.Loaded(fileId, ContentTypes.ZipFileContentType)
-    }.getOrElse(Source.Empty)
+  private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
+    val (artefact, _) = await(repository.getAs[T#DefinitionType](id), dbLookupTimeout)
+    val item = MantikItem.fromMantikArtifact(artefact)
+    item.asInstanceOf[T]
   }
 
   override def execute[T](action: Action[T]): T = {
     val plan = planner.convert(action)
     val result = await(planExecutor.execute(plan), jobTimeout)
-    result.asInstanceOf[T]
+    result
   }
 
   private def await[T](future: Future[T], timeout: FiniteDuration) = {
     Await.result(future, timeout)
   }
 
-  override def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): Unit = {
+  override def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): MantikId = {
     logger.info(s"Pushing local Mantik file...")
     val file = dir.resolve("Mantikfile")
     val fileContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
@@ -98,6 +87,7 @@ private[impl] class ContextImpl(config: Config, repository: Repository, fileRepo
     val artifact = MantikArtifact(mantikfile, fileId, idToUse)
     await(repository.store(artifact), dbLookupTimeout)
     logger.info(s"Storing ${artifact.id} done")
+    idToUse
   }
 
   override def shutdown(): Unit = {
@@ -106,20 +96,22 @@ private[impl] class ContextImpl(config: Config, repository: Repository, fileRepo
 }
 
 object ContextImpl {
+
   def constructForLocalTesting(): Context = {
+    implicit val actorSystem: ActorSystem = ActorSystem()
+    implicit val materializer: Materializer = ActorMaterializer.create(actorSystem)
+    constructForLocalTestingWithAkka(shutdownMethod = () => actorSystem.terminate())
+  }
+
+  def constructForLocalTestingWithAkka(shutdownMethod: () => Unit = () => (()))(implicit actorSystem: ActorSystem, materializer: Materializer): Context = {
     val config = ConfigFactory.load()
     val executorUrl = config.getString("mantik.core.executorUrl")
-    implicit val actorSystem: ActorSystem = ActorSystem()
-    implicit val ec: ExecutionContext = actorSystem.dispatcher
-    implicit val materializer: Materializer = ActorMaterializer.create(actorSystem)
 
+    implicit val ec: ExecutionContext = actorSystem.dispatcher
     val repository = new SimpleInMemoryRepository()
     val fileRepo: FileRepository = new SimpleTempFileRepository(config)
     val bridges: Bridges = Bridges.loadFromConfig(config)
     val planner = new PlannerImpl(bridges)
-    val shutdownMethod: () => Unit = () => {
-      actorSystem.terminate()
-    }
     val executor: Executor = new ExecutorClient(executorUrl)
     val planExecutor = new PlanExecutorImpl(
       config,

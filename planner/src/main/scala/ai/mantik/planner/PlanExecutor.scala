@@ -9,7 +9,7 @@ trait PlanExecutor {
    * Execute a Plan.
    * @return a future to a plans result which can be casted accordingly.
    */
-  def execute(plan: Plan): Future[Any]
+  def execute[T](plan: Plan[T]): Future[T]
 }
 
 object PlanExecutor {

@@ -1,6 +1,7 @@
 package ai.mantik.ds
 
 import io.circe.{ Decoder, Encoder }
+import io.circe.syntax._
 
 import scala.collection.immutable.ListMap
 
@@ -9,7 +10,13 @@ import scala.collection.immutable.ListMap
 // TODO: While ListMap preserve the order (which is good for us) they have bad performance characteristics (Ticket #38)!
 
 /** Describes a single Datatype. */
-sealed trait DataType
+sealed trait DataType {
+
+  /** Returns a JSON String representation of the type. */
+  def toJsonString: String = {
+    (this: DataType).asJson(DataType.encoder).noSpaces
+  }
+}
 
 object DataType {
   implicit lazy val encoder: Encoder[DataType] = DataTypeJsonAdapter.typeEncoder

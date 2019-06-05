@@ -13,7 +13,7 @@ class ConversionNotApplicableException(msg: String) extends IllegalArgumentExcep
 /** Represents a DataSet. */
 case class DataSet(
     source: Source,
-    mantikfile: Mantikfile[DataSetDefinition]
+    private [planner] val mantikfile: Mantikfile[DataSetDefinition]
 ) extends MantikItem {
 
   override type DefinitionType = DataSetDefinition

@@ -10,6 +10,7 @@ Sub Documentation
 
 Directories
 -----------
+- `engine` The main running application, when calls are coming from Python.
 - `bridge` Contains Adapters (Bridges) to Data Formats and Algorithms
 - `ds` Contains Mantik DataTypes and their main serialization format.
 - `examples` Contains Examples

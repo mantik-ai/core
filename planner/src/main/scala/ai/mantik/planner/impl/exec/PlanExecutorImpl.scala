@@ -35,14 +35,14 @@ private[impl] class PlanExecutorImpl(
 
   private val openFilesBuilder = new ExecutionOpenFilesBuilder(fileRepository, fileCache)
 
-  def execute(plan: Plan): Future[Any] = {
+  def execute[T](plan: Plan[T]): Future[T] = {
     for {
       _ <- prepareKubernetesFileServiceResult
       openFiles <- FutureHelper.time(logger, "Open Files") {
         openFilesBuilder.openFiles(plan.cacheGroups, plan.files)
       }
       result <- executeOp(plan.op)(openFiles)
-    } yield result
+    } yield result.asInstanceOf[T]
   }
 
   private lazy val prepareKubernetesFileServiceResult = FutureHelper.time(logger, "Prepare File Service") {

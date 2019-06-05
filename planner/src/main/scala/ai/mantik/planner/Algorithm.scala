@@ -6,7 +6,7 @@ import ai.mantik.repository.{ AlgorithmDefinition, Mantikfile }
 /** Some A => B Transformation Algorithm */
 case class Algorithm(
     source: Source,
-    mantikfile: Mantikfile[AlgorithmDefinition]
+    private[planner] val mantikfile: Mantikfile[AlgorithmDefinition]
 ) extends MantikItem {
 
   override type DefinitionType = AlgorithmDefinition

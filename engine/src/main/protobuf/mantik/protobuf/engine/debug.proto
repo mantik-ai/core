@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package ai.mantik.engine.protos;
+
+/* Service for debugging, won't be available in future. */
+service DebugService {
+    // Add a local directory to the repository
+    // This call is available because the current repository is temporary only
+    rpc AddLocalMantikDirectory (AddLocalMantikDirectoryRequest) returns (AddLocalMantikDirectoryResponse) {}
+}
+
+message AddLocalMantikDirectoryRequest {
+    string directory = 1;
+    string name = 2; // optional
+}
+
+message AddLocalMantikDirectoryResponse {
+    // the name which was used in the end.
+    string name = 1;
+}
