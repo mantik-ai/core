@@ -222,9 +222,7 @@ pages:
   image: mquade/python:3.7-slim
   script:
     - cd doc
-    - pip install -r requirements.txt
-    - ln -s ../Readme.rst index.rst
-    - sphinx-build -b html . ../public
+    - ./build.sh
   artifacts:
     paths:
       - public
