@@ -10,7 +10,7 @@ import ai.mantik.repository.{ MantikDefinition, MantikId, Mantikfile }
  * A plan is something which can be executed. They are created by the [[Planner]]
  * and are executed by the [[PlanExecutor]].
  */
-case class Plan(
+case class Plan[T](
     op: PlanOp,
     files: List[PlanFile],
     cacheGroups: List[CacheKeyGroup]

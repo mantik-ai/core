@@ -13,11 +13,11 @@ import cats.data.State
  *
  * This way it's pure functional and easier to test.
  */
-private[impl] class PlannerImpl(bridges: Bridges) extends Planner {
+private[planner] class PlannerImpl(bridges: Bridges) extends Planner {
 
   val elements = new PlannerElements(bridges)
 
-  override def convert[T](action: Action[T]): Plan = {
+  override def convert[T](action: Action[T]): Plan[T] = {
     val (planningState, planOp) = convertSingleAction(action).run(PlanningState()).value
     val compressed = PlanOp.compress(planOp)
     Plan(compressed, planningState.files, planningState.cacheGroups)

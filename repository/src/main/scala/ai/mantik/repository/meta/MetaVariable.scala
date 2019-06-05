@@ -17,7 +17,7 @@ case class MetaVariable(
     fix: Boolean = false
 ) {
   /** The json encoded value. */
-  lazy val jsonValue: Json = JsonFormat.encodeObjectValue(value)
+  lazy val jsonValue: Json = JsonFormat.serializeBundleValue(value)
 }
 
 object MetaVariable {

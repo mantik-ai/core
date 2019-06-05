@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package ai.mantik.engine.protos;
+
+/* Represents a DS Datatype by just transporting the JSON String. */
+message DataType {
+    string json = 1;
+}
+
+/* The Encoding for a literal. */
+enum BundleEncoding {
+    // Unknown encoding, should not happen
+    ENCODING_UNKNOWN = 0;
+    // Encode as MsgPack without header
+    ENCODING_MSG_PACK = 1;
+    // Encode as JSON without header
+    ENCODING_JSON = 2;
+}
+
+/* A Mantik Bundle */
+message Bundle {
+    /* Mantik DataType. */
+    DataType data_type = 1;
+    /* Encoding used. */
+    BundleEncoding encoding = 2;
+    /* Payload (msgpack, json, depends on encoding)*/
+    bytes encoded = 3;
+}

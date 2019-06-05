@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ai.mantik.engine.protos;
+
+/** Service for session handling. */
+service SessionService {
+    rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {}
+    rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse) {}
+}
+
+message CreateSessionRequest {
+
+}
+
+message CreateSessionResponse {
+    string session_id = 1;
+}
+
+message CloseSessionRequest {
+    string session_id = 1;
+}
+
+message CloseSessionResponse {
+
+}

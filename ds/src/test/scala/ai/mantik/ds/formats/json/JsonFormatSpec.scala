@@ -33,6 +33,16 @@ class JsonFormatSpec extends TestBase {
     JsonFormat.deserializeBundle(serialized) shouldBe Right(tableSample)
   }
 
+  it should "be possible to only serialize the value" in {
+    val serialized = JsonFormat.serializeBundleValue(tableSample)
+    serialized shouldBe Json.arr(
+      Json.arr(Json.fromInt(1), Json.fromString("Hello")),
+      Json.arr(Json.fromInt(2), Json.fromString("World"))
+    )
+    val back = JsonFormat.deserializeBundleValue(tableSample.model, serialized)
+    back shouldBe Right(tableSample)
+  }
+
   it should "have a clean encoding for single values" in {
     val serialized = JsonFormat.serializeBundle(valueSample)
     serialized shouldBe Json.obj(
@@ -40,6 +50,13 @@ class JsonFormatSpec extends TestBase {
       "value" -> Json.fromInt(100)
     )
     JsonFormat.deserializeBundle(serialized) shouldBe Right(valueSample)
+  }
+
+  it should "be possible to only serialize single values" in {
+    val serialized = JsonFormat.serializeBundleValue(valueSample)
+    serialized shouldBe Json.fromInt(100)
+    val back = JsonFormat.deserializeBundleValue(valueSample.model, serialized)
+    back shouldBe Right(valueSample)
   }
 
   it should "work for all primitives" in {

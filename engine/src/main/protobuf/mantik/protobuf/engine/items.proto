@@ -1,0 +1,41 @@
+syntax = "proto3";
+package ai.mantik.engine.protos;
+
+import "mantik/protobuf/engine/ds.proto";
+
+/** Represents a Mantik Item. */
+message MantikItem {
+    ObjectKind kind = 1;
+    oneof item {
+        DataSet dataset = 2;
+        Algorithm algorithm = 3;
+        TrainableAlgorithm trainable_algorithm = 4;
+    }
+}
+
+/* A Dataset item. */
+message DataSet {
+    DataType type = 1;
+    string stack = 2;
+}
+
+/* An algorithm Item. */
+message Algorithm {
+    // TODO: Should we include the DataTypes in here?
+    // This could be incompatible with Meta-Variables...
+    string stack = 1;
+}
+
+/* A Trainable Algorithm Item. */
+message TrainableAlgorithm {
+    // TODO: Should we include the DataTypes in here?
+    // This could be incompatible with Meta-Variables...
+    string stack = 1;
+}
+
+enum ObjectKind {
+    KIND_UNSPECIFIED = 0;
+    KIND_DATASET = 1;
+    KIND_ALGORITHM = 2;
+    KIND_TRAINABLE_ALGORITHM = 3;
+}

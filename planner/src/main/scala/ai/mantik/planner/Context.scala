@@ -3,10 +3,12 @@ package ai.mantik.planner
 import java.nio.file.Path
 
 import ai.mantik.planner.impl.ContextImpl
-import ai.mantik.repository.MantikId
+import ai.mantik.repository.{ FileRepository, MantikId, Repository }
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 
-/** Main Mantik Context, used for accessing local simplified API. */
-trait Context {
+/** Main Mantik Context used as main access points for Scala Apps. */
+trait Context extends CoreComponents {
 
   /** Load a dataset from Mantik. */
   def loadDataSet(id: MantikId): DataSet
@@ -27,8 +29,11 @@ trait Context {
     moreActions.foreach(execute(_))
   }
 
-  /** Push a local mantik file including payload to the repository */
-  def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): Unit
+  /**
+   * Push a local mantik file including payload to the repository
+   * @return Mantik id which was used in the end.
+   */
+  def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): MantikId
 
   /** Shutdown the context. */
   def shutdown(): Unit
@@ -39,5 +44,10 @@ object Context {
   /** Creates a new local context. */
   def local(): Context = {
     ContextImpl.constructForLocalTesting()
+  }
+
+  /** Creates a new local context, when you already have Akka. */
+  def localWithAkka()(implicit actorSystem: ActorSystem, materializer: Materializer): Context = {
+    ContextImpl.constructForLocalTestingWithAkka()
   }
 }

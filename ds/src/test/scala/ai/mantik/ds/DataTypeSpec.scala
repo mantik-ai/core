@@ -208,4 +208,12 @@ class DataTypeSpec extends TestBase {
       json.as[DataType] shouldBe Right(sample)
     }
   }
+
+  "toJsonString" should "work without any extra spaces" in {
+    for {
+      sample <- samples
+    } {
+      sample.toJsonString shouldBe toJson(sample).noSpaces
+    }
+  }
 }

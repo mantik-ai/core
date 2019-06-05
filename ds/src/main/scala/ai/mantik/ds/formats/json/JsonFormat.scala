@@ -30,14 +30,8 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
     Json.fromJsonObject(encodeObject(bundle))
   }
 
-  override def encodeObject(bundle: Bundle): JsonObject = {
-    Encoded(
-      bundle.model,
-      encodeObjectValue(bundle)
-    ).asJsonObject
-  }
-
-  def encodeObjectValue(bundle: Bundle): Json = {
+  /** Encode the bundle value (without type value). */
+  def serializeBundleValue(bundle: Bundle): Json = {
     bundle match {
       case t: TabularBundle =>
         val rowEncoder = createRowEncoder(t.model)
@@ -48,25 +42,38 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
     }
   }
 
+  override def encodeObject(bundle: Bundle): JsonObject = {
+    Encoded(
+      bundle.model,
+      serializeBundleValue(bundle)
+    ).asJsonObject
+  }
+
   /** Deserializes a Bundle from JSON. */
   def deserializeBundle(json: Json): Result[Bundle] = {
-    json.as[Encoded].flatMap { encoded =>
-      encoded.`type` match {
-        case t: TabularData =>
-          val decoder = createRowDecoder(t)
-          encoded.value.asArray match {
-            case None => Left(DecodingFailure("Expected array of values for rows", Nil))
-            case Some(values) =>
-              decodeRows(values, decoder).map { rows =>
-                TabularBundle(t, rows)
-              }
-          }
-        case other =>
-          val decoder = createElementDecoder(other)
-          decoder.decodeJson(encoded.value).map { value =>
-            SingleElementBundle(other, value)
-          }
-      }
+    for {
+      encoded <- json.as[Encoded]
+      valueDecoded <- deserializeBundleValue(encoded.`type`, encoded.value)
+    } yield valueDecoded
+  }
+
+  /** Deserializes a Bundle value from JSON. */
+  def deserializeBundleValue(dataType: DataType, json: Json): Result[Bundle] = {
+    dataType match {
+      case t: TabularData =>
+        val decoder = createRowDecoder(t)
+        json.asArray match {
+          case None => Left(DecodingFailure("Expected array of values for rows", Nil))
+          case Some(values) =>
+            decodeRows(values, decoder).map { rows =>
+              TabularBundle(t, rows)
+            }
+        }
+      case other =>
+        val decoder = createElementDecoder(other)
+        decoder.decodeJson(json).map { value =>
+          SingleElementBundle(other, value)
+        }
     }
   }
 
