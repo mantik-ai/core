@@ -8,7 +8,6 @@ import ai.mantik.planner.{ Context, DataSet }
 
 object DataSetTransformation extends ExampleBase {
 
-
   override protected def run(context: Context): Unit = {
     val sampleFile = new File("bridge/tf/saved_model/test/resources/samples/double_multiply").toPath
     context.pushLocalMantikFile(sampleFile)

@@ -39,6 +39,40 @@ func EncodeBundle(bundle *element.Bundle, backendType serializer.BackendType) ([
 	return b.Bytes(), nil
 }
 
+// Encode a Bundle value (without Header)
+func EncodeBundleValue(bundle *element.Bundle, backendType serializer.BackendType) ([]byte, error) {
+	var b bytes.Buffer
+	var backend, err = serializer.CreateSerializingBackend(backendType, &b)
+	if err != nil {
+		return nil, err
+	}
+	rootSerializer, err := LookupRootElementSerializer(bundle.Type)
+	if err != nil {
+		return nil, err
+	}
+	if bundle.IsTabular() {
+		err = backend.StartTabularValues()
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, r := range bundle.Rows {
+		err = backend.NextRow()
+		if err != nil {
+			return nil, err
+		}
+		err = rootSerializer.Write(backend, r)
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = backend.Finish()
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
 func EncodeBundleToWriter(bundle *element.Bundle, backendType serializer.BackendType, writer io.Writer) error {
 	var backend, err = serializer.CreateSerializingBackend(backendType, writer)
 	if err != nil {

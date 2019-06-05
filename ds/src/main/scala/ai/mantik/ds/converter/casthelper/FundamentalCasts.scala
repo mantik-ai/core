@@ -88,6 +88,9 @@ private[converter] object FundamentalCasts {
     makeCastOp(FundamentalType.Float32, FundamentalType.Float64, false, false)((x => x.toDouble): Float => Double),
     makeCastOp(FundamentalType.Float64, FundamentalType.Float32, true, false)((x => x.toFloat): Double => Float),
 
+    makeCastOp(FundamentalType.Float64, FundamentalType.Int64, loosing = true, canFail = false)((x => x.toLong): Double => Long),
+    makeCastOp(FundamentalType.Float64, FundamentalType.Uint64, loosing = true, canFail = false)((x => x.toLong): Double => Long),
+
     makeCastOp(FundamentalType.Int32, FundamentalType.BoolType, true, false)((x => x != 0): Int => Boolean),
     makeCastOp(FundamentalType.BoolType, FundamentalType.Int32, false, false)((x => if (x) 1 else 0): Boolean => Int),
 

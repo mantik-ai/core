@@ -7,16 +7,18 @@ def train(request: TensorFlowTrainRequest, context: TensorFlowContext):
     train_dataset = request.train_dataset()
     # Meta Variables
 
-    batch_size = context.meta_variable("batch_size", 128)
-    n_epochs = context.meta_variable("n_epochs", 5) # 25
-    learning_rate = context.meta_variable("learning_rate", 0.01)
+    batch_size = context.mantikfile.meta_variables.get_value("batch_size", 128)
+    n_epochs = context.mantikfile.meta_variables.get_value("n_epochs", 5)
+    learning_rate = context.mantikfile.meta_variables.get_value("learning_rate", 0.01)
+    width = context.mantikfile.meta_variables.get_value("width", 28)
+    height = context.mantikfile.meta_variables.get_value("height", 28)
 
     stats = []
     batches = train_dataset.batch(batch_size)
     iterator = batches.make_initializable_iterator()
 
     data_x, data_y = iterator.get_next()
-    model = Model(data_x, data_y, learning_rate)
+    model = Model(data_x, data_y, learning_rate, width, height)
 
     sess = context.session
     sess.run(tf.global_variables_initializer())

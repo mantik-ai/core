@@ -1,6 +1,9 @@
 package ai.mantik.repository
 
+import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.helper.circe.CirceJson
+import ai.mantik.repository.meta.MetaVariable
 import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.testutils.TestBase
 
@@ -244,5 +247,61 @@ class MantikfileSpec extends TestBase {
       ),
       directory = Some("foo")
     )
+  }
+
+  it should "fix meta variables" in {
+    val definition =
+      """
+        |kind: trainable
+        |metaVariables:
+        |  - name: abc
+        |    type: int32
+        |    value: 100
+        |stack: foo1
+        |trainedStack: foo2
+        |type:
+        |  input:
+        |    type: tensor
+        |    shape: ["${abc}"]
+        |    componentType: float32
+        |  output:
+        |    type: tensor
+        |    shape: [2, "${abc}"]
+        |    componentType: float32
+        |trainingType: int32
+        |statType: string
+        |directory: foo
+      """.stripMargin
+    val parsedDefinition = Mantikfile.fromYaml(definition)
+    val mantikfile = parsedDefinition.right.getOrElse(fail).cast[TrainableAlgorithmDefinition].right.get
+    val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
+    casted.metaJson.metaVariables shouldBe List(
+      MetaVariable("abc", Bundle.fundamental(100), fix = true)
+    )
+    val expected =
+      """
+        |kind: algorithm
+        |metaVariables:
+        |  - name: abc
+        |    type: int32
+        |    value: 100
+        |    fix: true
+        |stack: foo2
+        |type:
+        |  input:
+        |    type: tensor
+        |    shape: ["${abc}"]
+        |    componentType: float32
+        |  output:
+        |    type: tensor
+        |    shape: [2, "${abc}"]
+        |    componentType: float32
+        |trainingType: int32
+        |statType: string
+        |directory: foo
+      """.stripMargin
+    val parsedExpected = Mantikfile.fromYaml(expected).getOrElse(fail)
+    casted.toJsonValue shouldBe parsedExpected.toJsonValue
+    casted shouldBe parsedExpected
   }
 }

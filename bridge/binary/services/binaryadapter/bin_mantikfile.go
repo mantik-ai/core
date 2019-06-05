@@ -3,7 +3,7 @@ package binaryadapter
 import (
 	"encoding/json"
 	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/util/yaml"
+	"gl.ambrosys.de/mantik/go_shared/serving"
 )
 
 type FileEntry struct {
@@ -43,6 +43,6 @@ type BinaryMantikfile struct {
 
 func ParseBinaryMantikFile(bytes []byte) (*BinaryMantikfile, error) {
 	var file BinaryMantikfile
-	err := yaml.Unmarshal(bytes, &file)
+	err := serving.UnmarshallMetaYaml(bytes, &file)
 	return &file, err
 }

@@ -94,3 +94,25 @@ type:
 	casted := parsed.(*DataSetMantikfile)
 	assert.Equal(t, ds.FromJsonStringOrPanic(`{"columns":{"x":"int32"}}`), casted.Type.Underlying)
 }
+
+func TestMetaVariables(t *testing.T) {
+	file := `
+kind: dataset
+metaVariables:
+ - name: foo
+   type: int32
+   value: 100
+type:
+  columns:
+    x:
+      type: tensor
+      shape: ["${foo}"]
+      componentType: float32
+`
+	parsed, err := ParseMantikFile([]byte(file))
+	assert.NoError(t, err)
+	assert.Equal(t, "dataset", parsed.Kind())
+	casted := parsed.(*DataSetMantikfile)
+	assert.Equal(t, ds.FromJsonStringOrPanic(`{"columns":{"x":{"type":"tensor","shape":[100],"componentType":"float32"}}}`), casted.Type.Underlying)
+	assert.Equal(t, "foo", parsed.MetaVariables()[0].Name)
+}

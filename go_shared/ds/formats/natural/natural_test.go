@@ -280,3 +280,20 @@ func compareJson(a []byte, b []byte) bool {
 	}
 	return reflect.DeepEqual(aDecoded, bDecoded)
 }
+
+func TestEncodeSingleValue(t *testing.T) {
+	b := builder.PrimitiveBundle(ds.Int32, element.Primitive{int32(5)})
+	r, err := EncodeBundleValue(&b, serializer.BACKEND_JSON)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("5"), r)
+}
+
+func TestEncodeTabularValue(t *testing.T) {
+	sample := `
+		{"type":{"type":"tabular", "columns": {"x": "int32", "y": "string"}},"value": [[1,"Hello"], [2,"World"]]}
+	`
+	bundle, err := DecodeBundle(serializer.BACKEND_JSON, []byte(sample))
+	assert.NoError(t, err)
+	r, err := EncodeBundleValue(bundle, serializer.BACKEND_JSON)
+	assert.Equal(t, []byte(`[[1,"Hello"],[2,"World"]]`), r)
+}

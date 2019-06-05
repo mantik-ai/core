@@ -1,18 +1,20 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.DataType
+import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.repository.{Mantikfile, TrainableAlgorithmDefinition}
 
 /**
  * A trainable algorithm
  */
-case class TrainableAlgorithm(
+final case class TrainableAlgorithm(
     source: Source,
     mantikfile: Mantikfile[TrainableAlgorithmDefinition],
 ) extends MantikItem {
 
   override type DefinitionType = TrainableAlgorithmDefinition
+  override type OwnType = TrainableAlgorithm
 
   def trainingDataType: DataType = mantikfile.definition.trainingType
 
@@ -41,5 +43,12 @@ case class TrainableAlgorithm(
     val algorithmResult = Algorithm(Source.Projection(result), trainedMantikfile)
     val statsResult = DataSet.natural(Source.Projection(result, 1), statType)
     (algorithmResult, statsResult)
+  }
+
+
+  override protected def withMantikfile(mantikfile: Mantikfile[TrainableAlgorithmDefinition]): TrainableAlgorithm = {
+    copy(
+      mantikfile = mantikfile
+    )
   }
 }

@@ -4,6 +4,7 @@ ThisBuild / scalaVersion := "2.12.8"
 // ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
 ThisBuild / scalacOptions += "-feature"
 ThisBuild / scalacOptions += "-deprecation"
+ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats"
 ThisBuild / updateOptions := updateOptions.value.withGigahorse(false) // See https://github.com/sbt/sbt/issues/3570
 
 val akkaVersion = "2.5.20"
@@ -86,7 +87,7 @@ lazy val ds = (project in file("ds"))
     scalariformSettings,
     // Disable parallel test execution
     parallelExecution in Test := false,
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   )
   .settings(publishSettings)
 
@@ -194,7 +195,6 @@ lazy val planner = (project in file ("planner"))
       // Parboiled (Parsers)
       "org.parboiled" %% "parboiled" % "2.1.5"
     ),
-    scalacOptions += "-Ypartial-unification" // Needed for Cats
   )
   .settings(
     scalariformSettings,
