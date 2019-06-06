@@ -23,6 +23,9 @@ trait FileRepository {
   /** Request storing a file (must be requested at first). */
   def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Unit]]]
 
+  /** Delete a file. Returns true, if the file existed. */
+  def deleteFile(id: String): Future[Boolean]
+
   /** Request retrieval of a file. */
   def loadFile(id: String): Future[Source[ByteString, _]]
 
@@ -36,9 +39,7 @@ object FileRepository {
   case class FileStorageResult(
       fileId: String,
       // Relative Path under which the file is available from the server
-      path: String,
-      // Name of the file resource
-      resource: String
+      path: String
   )
 
   /** Result of get file request. */
@@ -46,7 +47,6 @@ object FileRepository {
       fileId: String,
       // Relative Path under which the file is available from the server
       path: String,
-      resource: String,
       contentType: Option[String]
   )
 
