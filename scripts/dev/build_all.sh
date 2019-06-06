@@ -42,6 +42,7 @@ pushd executor/coordinator
 ./build.sh
 popd
 
-
-
-
+echo "Building docs"
+pushd docs
+./build.sh
+popd
