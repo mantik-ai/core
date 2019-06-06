@@ -15,11 +15,11 @@ class JobGraphConverterSpec extends TestBase {
 
   val files = ExecutionOpenFiles(
     readFiles = Map(
-      PlanFileReference(0) -> FileGetResult("file0", "files/file0", "resource0", None),
-      PlanFileReference(1) -> FileGetResult("file1", "files/file1", "resource1", None)
+      PlanFileReference(0) -> FileGetResult("file0", "files/file0", None),
+      PlanFileReference(1) -> FileGetResult("file1", "files/file1", None)
     ),
     writeFiles = Map(
-      PlanFileReference(2) -> FileStorageResult("file2", "files/file2", "resource2")
+      PlanFileReference(2) -> FileStorageResult("file2", "files/file2")
     )
   )
 

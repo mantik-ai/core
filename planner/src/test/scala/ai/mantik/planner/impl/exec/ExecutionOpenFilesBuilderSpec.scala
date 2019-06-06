@@ -31,7 +31,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBase with AkkaSupport {
         val id = nextFileId
         nextFileId += 1
         wasTemporaryWrite = temporary
-        val result = FileRepository.FileStorageResult(id.toString, "path", s"res${id}")
+        val result = FileRepository.FileStorageResult(id.toString, "path")
         writeResults += result
         Future.successful(
           result
@@ -43,7 +43,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBase with AkkaSupport {
           crashingReads -= 1
           return Future.failed(new RuntimeException("Read failed"))
         }
-        val result = FileRepository.FileGetResult(id.toString, "path", s"res${id}", None)
+        val result = FileRepository.FileGetResult(id.toString, "path", None)
         wasOptimisticRead = optimistic
         getResults += result
         Future.successful(
@@ -54,6 +54,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBase with AkkaSupport {
       override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Unit]]] = ???
       override def loadFile(id: String): Future[Source[ByteString, _]] = ???
       override def address(): InetSocketAddress = ???
+      override def deleteFile(id: String): Future[Boolean] = ???
     }
 
     val builder = new ExecutionOpenFilesBuilder(repo, fileCache)

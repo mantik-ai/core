@@ -99,6 +99,7 @@ lazy val repository = (project in file ("repository"))
     name := "repository",
     libraryDependencies ++=Seq(
       "io.circe" %% "circe-yaml" % "0.8.0",
+      "io.circe" %% "circe-java8" % circeVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test
     ),
