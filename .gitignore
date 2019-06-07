@@ -3,3 +3,5 @@ target
 __pycache__
 *.egg-info
 doc/index.rst
+doc/Pipfile*
+/public
