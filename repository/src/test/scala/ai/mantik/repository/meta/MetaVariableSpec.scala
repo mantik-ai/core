@@ -20,7 +20,6 @@ class MetaVariableSpec extends TestBase {
       "fix" -> Json.fromBoolean(true)
     )
 
-    print(m.asJson)
     m.asJson.as[MetaVariable] shouldBe Right(m)
   }
 }

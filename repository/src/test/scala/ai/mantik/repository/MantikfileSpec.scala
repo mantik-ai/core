@@ -4,7 +4,7 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.repository.meta.MetaVariable
-import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.testutils.TestBase
 
 class MantikfileSpec extends TestBase {
@@ -209,7 +209,7 @@ class MantikfileSpec extends TestBase {
     val mantikfile = Mantikfile.fromYaml(definition).right.get.cast[TrainableAlgorithmDefinition].right.get
 
     val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
-    casted.definition shouldBe AlgorithmDefinition (
+    casted.definition shouldBe AlgorithmDefinition(
       stack = "foo1",
       `type` = FunctionType(
         FundamentalType.Int32,
@@ -239,7 +239,7 @@ class MantikfileSpec extends TestBase {
     val mantikfile = Mantikfile.fromYaml(definition).right.get.cast[TrainableAlgorithmDefinition].right.get
 
     val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
-    casted.definition shouldBe AlgorithmDefinition (
+    casted.definition shouldBe AlgorithmDefinition(
       stack = "foo2",
       `type` = FunctionType(
         FundamentalType.Int32,

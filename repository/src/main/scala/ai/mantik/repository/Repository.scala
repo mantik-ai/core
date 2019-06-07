@@ -1,5 +1,8 @@
 package ai.mantik.repository
 
+import ai.mantik.repository.impl.Factory
+import com.typesafe.config.Config
+
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.reflect.ClassTag
 
@@ -21,4 +24,19 @@ trait Repository {
 
   /** Stores a Mantik artefact. */
   def store(mantikArtefact: MantikArtifact): Future[Unit]
+
+  /** Remove an artifact. Returns true if it was found. */
+  def remove(id: MantikId): Future[Boolean]
+
+  /** Shut down the repository. */
+  def shutdown(): Unit = {}
+}
+
+object Repository {
+
+  /**
+   * Create a Repository.
+   * In Future this should be done using DI Ticket #86.
+   */
+  def create(config: Config)(implicit ec: ExecutionContext): Repository = Factory.createRepository(config)
 }

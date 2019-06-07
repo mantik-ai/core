@@ -13,6 +13,7 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.Success
 import ai.mantik.repository.Errors
 import com.typesafe.config.Config
+import org.apache.commons.io.FileUtils
 
 /** Simple local file service, for development, no security at all. */
 class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext)
@@ -119,5 +120,10 @@ class SimpleTempFileRepository(config: Config)(implicit actorSystem: ActorSystem
       }
     }
     Future.successful(result)
+  }
+
+  override def shutdown(): Unit = {
+    super.shutdown()
+    FileUtils.deleteDirectory(directory.toFile)
   }
 }

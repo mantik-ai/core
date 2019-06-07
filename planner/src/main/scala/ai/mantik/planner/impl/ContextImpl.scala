@@ -69,7 +69,7 @@ private[impl] class ContextImpl(config: Config, val repository: Repository, val 
     }
     val idToUse = id.getOrElse {
       val name = mantikfile.definition.name.getOrElse(throw new RuntimeException("Mantikfile has no id and no id is given"))
-      MantikId(name, mantikfile.definition.version)
+      MantikId(name, mantikfile.definition.version.getOrElse(MantikId.DefaultVersion))
     }
     val fileId = mantikfile.definition.directory.map { dataDir =>
       // Uploading File Content
@@ -91,6 +91,8 @@ private[impl] class ContextImpl(config: Config, val repository: Repository, val 
   }
 
   override def shutdown(): Unit = {
+    fileRepository.shutdown()
+    repository.shutdown()
     shutdownHandle()
   }
 }
@@ -108,8 +110,8 @@ object ContextImpl {
     val executorUrl = config.getString("mantik.core.executorUrl")
 
     implicit val ec: ExecutionContext = actorSystem.dispatcher
-    val repository = new SimpleInMemoryRepository()
-    val fileRepo: FileRepository = new SimpleTempFileRepository(config)
+    val repository = Repository.create(config)
+    val fileRepo: FileRepository = FileRepository.createFileRepository(config)
     val bridges: Bridges = Bridges.loadFromConfig(config)
     val planner = new PlannerImpl(bridges)
     val executor: Executor = new ExecutorClient(executorUrl)

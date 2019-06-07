@@ -78,7 +78,7 @@ class MetaJsonSpec extends TestBase {
     val updated = parsed.withMetaValues(
       "bar" -> Bundle.fundamental(false)
     )
-    updated.metaVariables shouldBe List (
+    updated.metaVariables shouldBe List(
       MetaVariable("foo", Bundle.fundamental(5), fix = true),
       MetaVariable("bar", Bundle.fundamental(false), fix = false),
       MetaVariable("zzz", Bundle.fundamental(100))
@@ -86,21 +86,21 @@ class MetaJsonSpec extends TestBase {
   }
 
   it should "throw if a value is fix" in {
-    intercept[MetaVariableException]{
+    intercept[MetaVariableException] {
       parsed.withMetaValues("foo" -> Bundle.fundamental(6))
-    }.getMessage should include ("fix")
+    }.getMessage should include("fix")
   }
 
   it should "throw if a type is wrong" in {
-    intercept[MetaVariableException]{
+    intercept[MetaVariableException] {
       parsed.withMetaValues("bar" -> Bundle.fundamental("invalid"))
-    }.getMessage should include ("Invalid type")
+    }.getMessage should include("Invalid type")
   }
 
   it should "throw if a value is missing" in {
-    intercept[MetaVariableException]{
+    intercept[MetaVariableException] {
       parsed.withMetaValues("boom" -> Bundle.fundamental(100))
-    }.getMessage should include ("not found")
+    }.getMessage should include("not found")
   }
 
   it should "try to adapt types automatically" in {

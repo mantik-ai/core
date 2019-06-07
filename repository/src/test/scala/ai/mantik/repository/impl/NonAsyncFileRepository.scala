@@ -2,10 +2,10 @@ package ai.mantik.repository.impl
 
 import ai.mantik.repository.FileRepository
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
 /** Helper which converts the async API into a sync API for testcases. */
@@ -36,7 +36,6 @@ trait NonAsyncFileRepository extends FileRepository {
     val byteBlobs = await(source.runWith(sink))
     byteBlobs.foldLeft(ByteString.empty)(_ ++ _)
   }
-
 
   private def await[T](f: Future[T]): T = {
     Await.result(f, 10.seconds)

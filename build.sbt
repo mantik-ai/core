@@ -52,7 +52,8 @@ lazy val testutils = (project in file("testutils"))
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion,
       "org.slf4j" % "slf4j-api" % "1.7.25",
-      "ch.qos.logback" % "logback-classic" % "1.2.3"
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "commons-io" % "commons-io" % "2.6",
     ),
     publish := {},
     publishLocal := {}
@@ -101,7 +102,9 @@ lazy val repository = (project in file ("repository"))
       "io.circe" %% "circe-yaml" % "0.8.0",
       "io.circe" %% "circe-java8" % circeVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
+      "org.xerial" % "sqlite-jdbc" % "3.18.0",
+      "io.getquill" %% "quill-jdbc" % "3.2.0"
     ),
     scalariformSettings,
     parallelExecution in Test := false
@@ -257,7 +260,7 @@ lazy val engine = (project in file("engine"))
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, executorApi, executorApp, examples, planner, engine)
+  .aggregate(testutils, ds, executorApi, executorApp, repository, examples, planner, engine)
   .settings(
     name := "mantik-core",
     publish := {},
