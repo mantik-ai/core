@@ -8,8 +8,8 @@ import scala.concurrent.Future
 
 class SimpleInMemoryRepository extends Repository {
 
-  object lock
-  val artefacts = mutable.Map.empty[MantikId, MantikArtifact]
+  private object lock
+  private val artefacts = mutable.Map.empty[MantikId, MantikArtifact]
 
   override def get(id: MantikId): Future[MantikArtifact] = {
     lock.synchronized {
@@ -28,4 +28,9 @@ class SimpleInMemoryRepository extends Repository {
     }
   }
 
+  override def remove(id: MantikId): Future[Boolean] = {
+    lock.synchronized {
+      Future.successful(artefacts.remove(id).isDefined)
+    }
+  }
 }

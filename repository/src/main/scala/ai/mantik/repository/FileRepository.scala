@@ -2,11 +2,14 @@ package ai.mantik.repository
 
 import java.net.InetSocketAddress
 
-import akka.http.scaladsl.model.Uri
+import ai.mantik.repository.impl.Factory
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
+import com.typesafe.config.Config
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 /** Responsible for File Storage. */
 trait FileRepository {
@@ -31,6 +34,9 @@ trait FileRepository {
 
   /** Returns the address of the repository (must be reachable from the executor). */
   def address(): InetSocketAddress
+
+  /** Shutdown the repository. */
+  def shutdown(): Unit = {}
 }
 
 object FileRepository {
@@ -52,4 +58,12 @@ object FileRepository {
 
   /** Content Type for Mantik Bundles. */
   val MantikBundleContentType = "application/x-mantik-bundle"
+
+  /**
+   * Create the FileRepository which is referenced in the config.
+   * In Future this should be done using DI Ticket #86.
+   */
+  def createFileRepository(config: Config)(implicit actorySystem: ActorSystem, materializer: Materializer, ec: ExecutionContext): FileRepository = {
+    Factory.createFileRepository(config)
+  }
 }

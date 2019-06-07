@@ -1,18 +1,17 @@
 package ai.mantik.repository.impl
 
-import ai.mantik.repository.{ContentTypes, Errors, FileRepository}
-import ai.mantik.testutils.{AkkaSupport, TestBase}
+import ai.mantik.repository.{ ContentTypes, Errors, FileRepository }
+import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ContentType, HttpEntity, HttpMethods, HttpRequest, MediaType, Uri}
+import akka.http.scaladsl.model.{ ContentType, HttpEntity, HttpMethods, HttpRequest, MediaType, Uri }
 import akka.http.scaladsl.model.headers.Accept
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
+import com.typesafe.config.{ ConfigFactory, ConfigValueFactory }
 
 import scala.util.Random
 
 abstract class FileRepositorySpecBase extends TestBase with AkkaSupport {
-
 
   protected def config = ConfigFactory.load().withValue(
     "mantik.repository.fileRepository.port", ConfigValueFactory.fromAnyRef(0)
@@ -27,8 +26,6 @@ abstract class FileRepositorySpecBase extends TestBase with AkkaSupport {
 
   protected def createRepo: FileRepoType
 
-  protected def shutdownRepo(repo: FileRepoType)
-
   protected def filePrefix = "/files/"
 
   protected def withRepo[T](f: FileRepoType => T): Unit = {
@@ -36,10 +33,9 @@ abstract class FileRepositorySpecBase extends TestBase with AkkaSupport {
     try {
       f(repo)
     } finally {
-      shutdownRepo(repo)
+      repo.shutdown()
     }
   }
-
 
   protected val testBytes = ByteString {
     val bytes = new Array[Byte](1000)
@@ -47,10 +43,7 @@ abstract class FileRepositorySpecBase extends TestBase with AkkaSupport {
     bytes
   }
 
-
   // Custom Content Type
-
-
 
   protected def rootUri(repo: FileRepoType): Uri = {
     val address = repo.address()
@@ -75,7 +68,6 @@ abstract class FileRepositorySpecBase extends TestBase with AkkaSupport {
 
       val postRequest = HttpRequest(method = HttpMethods.POST, uri = uri)
         .withEntity(HttpEntity(MantikBundleContentType, testBytes))
-
 
       val postResponse = await(Http().singleRequest(
         postRequest
@@ -120,14 +112,13 @@ abstract class FileRepositorySpecBase extends TestBase with AkkaSupport {
       val req = repo.requestAndStoreSync(true, ContentTypes.MantikBundleContentType, testBytes)
       val result = await(repo.deleteFile(req.fileId))
       result shouldBe true
-      intercept[Errors.NotFoundException]{
+      intercept[Errors.NotFoundException] {
         repo.getFileContentSync(req.fileId)
       }
       val nonExistingResult = await(repo.deleteFile("unknown"))
       nonExistingResult shouldBe false
     }
   }
-
 
 }
 

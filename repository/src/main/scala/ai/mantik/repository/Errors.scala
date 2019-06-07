@@ -8,4 +8,7 @@ object Errors {
 
   /** If some item is not the expected type. */
   class WrongTypeException(msg: String) extends RepositoryError(msg)
+
+  /** Something is wrong in the configuration. */
+  class ConfigException(msg: String) extends RepositoryError(msg)
 }

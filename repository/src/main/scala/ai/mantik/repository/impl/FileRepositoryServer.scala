@@ -104,7 +104,7 @@ abstract class FileRepositoryServer(config: Config)(implicit actorSystem: ActorS
   val bindResult = Await.result(Http().bindAndHandle(route, interface, port), 60.seconds)
   logger.info(s"Listening on ${interface}:${boundPort}, external ${address}")
 
-  def shutdown(): Unit = {
+  override def shutdown(): Unit = {
     bindResult.terminate(60.seconds)
   }
 

@@ -2,9 +2,9 @@ package ai.mantik.repository.impl
 
 import java.nio.file.Files
 
-import ai.mantik.repository.{ContentTypes, Errors}
-import ai.mantik.testutils.{FakeClock, TestBase}
-import com.typesafe.config.{Config, ConfigValue, ConfigValueFactory}
+import ai.mantik.repository.{ ContentTypes, Errors }
+import ai.mantik.testutils.{ FakeClock, TestBase }
+import com.typesafe.config.{ Config, ConfigValue, ConfigValueFactory }
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
@@ -12,7 +12,6 @@ import scala.concurrent.duration._
 class LocalFileRepositorySpec extends FileRepositorySpecBase {
 
   val fakeClock = new FakeClock()
-
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
@@ -28,11 +27,11 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
 
   override type FileRepoType = LocalFileRepository with NonAsyncFileRepository
 
-  override protected def createRepo: FileRepoType = new LocalFileRepository(config, fakeClock) with NonAsyncFileRepository
-
-  override protected def shutdownRepo(repo: FileRepoType): Unit = {
-    repo.shutdown()
-    FileUtils.deleteDirectory(repo.directory.toFile)
+  override protected def createRepo: FileRepoType = new LocalFileRepository(config, fakeClock) with NonAsyncFileRepository {
+    override def shutdown(): Unit = {
+      super.shutdown()
+      FileUtils.deleteDirectory(directory.toFile)
+    }
   }
 
   it should "parse timeout config values" in {
@@ -69,7 +68,7 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
 
       fakeClock.setTimeOffset(repo.cleanupTimeout.plus(1.seconds))
       repo.removeTimeoutedFiles()
-      intercept[Errors.NotFoundException]{
+      intercept[Errors.NotFoundException] {
         repo.getFileContentSync(storeResult.fileId)
       }
     }
@@ -85,9 +84,9 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
 
       fakeClock.setTimeOffset(repo.cleanupTimeout.plus(1.seconds))
       repo.removeTimeoutedFiles()
-      repo.listFiles().toSet should not (contain(storeResult.fileId))
+      repo.listFiles().toSet should not(contain(storeResult.fileId))
 
-      intercept[Errors.NotFoundException]{
+      intercept[Errors.NotFoundException] {
         await(repo.storeFile(storeResult.fileId, "somecontenttype"))
       }
     }
@@ -99,7 +98,7 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
       fakeClock.setTimeOffset(repo.cleanupTimeout.plus(1.hour))
       repo.removeTimeoutedFiles()
       repo.getFileContentSync(storeResult.fileId) shouldBe testBytes
-      repo.listFiles().toSet should contain (storeResult.fileId)
+      repo.listFiles().toSet should contain(storeResult.fileId)
     }
   }
 }
