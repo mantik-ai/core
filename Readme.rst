@@ -17,7 +17,7 @@ Content
 Code Structure
 --------------
 - :code:`bridge` Contains Adapters (Bridges) to Data Formats and Algorithms
-- :code:`doc` Contains documentation which can be rendered with [sphinx](https://www.sphinx-doc.org/en/master/usage/quickstart.html).
+- :code:`doc` Contains documentation which can be rendered with `sphinx <https://www.sphinx-doc.org/en/master/usage/quickstart.html>`_.
 - :code:`ds` Contains Mantik DataTypes and their main serialization format.
 - :code:`examples` Contains Examples
 - :code:`executor` Contains the Executor, for executing DAG-Execution Plans
