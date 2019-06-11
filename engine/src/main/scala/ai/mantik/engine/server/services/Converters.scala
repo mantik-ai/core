@@ -24,7 +24,7 @@ import io.circe.parser
 import scala.concurrent.{ ExecutionContext, Future }
 
 /** Converters between Protobuf and Mantik elements. */
-private[services] object Converters {
+private[engine] object Converters {
 
   def encodeMantikItem(mantikItem: MantikItem): ProtoMantikItem = {
     mantikItem match {

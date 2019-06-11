@@ -274,6 +274,8 @@ object Bundle {
   /** Experimental builder for tabular data. */
   def build(tabularData: TabularData): Builder = new Builder(tabularData)
 
+  def buildColumnWise: ColumnWiseBundleBuilder = ColumnWiseBundleBuilder()
+
   /** Build a non-tabular value. */
   def build(nonTabular: DataType, value: Element): SingleElementBundle = {
     require(!nonTabular.isInstanceOf[TabularData], "Builder can only be used for nontabular data")

@@ -136,6 +136,17 @@ class KubernetesJobConverterSpec extends TestBase {
     converter.createImagePullPolicy(Container("foo:other")) shouldBe skuber.Container.PullPolicy.IfNotPresent
   }
 
+  it should "disable pulling if requested" in new SimpleAbEnv {
+    override def config: Config = {
+      super.config.copy(
+        kubernetesDisablePull = true
+      )
+    }
+    converter.createImagePullPolicy(Container("foo")) shouldBe skuber.Container.PullPolicy.Never
+    converter.createImagePullPolicy(Container("foo:latest")) shouldBe skuber.Container.PullPolicy.Never
+    converter.createImagePullPolicy(Container("foo:other")) shouldBe skuber.Container.PullPolicy.Never
+  }
+
   it should "create a coordinator plan" in new SimpleAbEnv {
     converter.coordinatorPlan(ipMapping) shouldBe CoordinatorPlan(
       nodes = Map(

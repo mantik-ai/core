@@ -136,6 +136,9 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) {
   }
 
   def createImagePullPolicy(container: ai.mantik.executor.model.docker.Container): Container.PullPolicy.Value = {
+    if (config.kubernetesDisablePull) {
+      return Container.PullPolicy.Never
+    }
     // Overriding the policy to a similar behaviour to kubernetes default
     container.imageTag match {
       case None           => Container.PullPolicy.Always
