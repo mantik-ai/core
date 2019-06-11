@@ -3,7 +3,7 @@ package ai.mantik.executor.impl
 import java.time.Clock
 
 import ai.mantik.executor.integration.{ IntegrationTestBase, KubernetesTestBase }
-import ai.mantik.executor.testutils.KubernetesIntegrationTest
+import ai.mantik.testutils.tags.IntegrationTest
 import org.scalatest.enablers.Emptiness
 import play.api.libs.json.{ JsObject, Json }
 import skuber.Pod.Phase
@@ -15,7 +15,7 @@ import skuber.json.batch.format._
 
 import scala.concurrent.Future
 
-@KubernetesIntegrationTest
+@IntegrationTest
 class K8sOperationsSpec extends KubernetesTestBase {
 
   trait Env extends super.Env {

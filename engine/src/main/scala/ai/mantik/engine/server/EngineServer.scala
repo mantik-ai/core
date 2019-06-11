@@ -29,7 +29,7 @@ class EngineServer(
 )(implicit config: Config, executionContext: ExecutionContext) {
 
   private val logger = LoggerFactory.getLogger(getClass)
-  private val port = config.getInt("mantik.engine.server.port")
+  val port = config.getInt("mantik.engine.server.port")
   private val interface = config.getString("mantik.engine.server.interface")
 
   private var server: Option[Server] = None

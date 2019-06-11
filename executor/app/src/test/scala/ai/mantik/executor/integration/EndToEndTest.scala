@@ -3,9 +3,9 @@ import ai.mantik.executor.Config
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.executor.model.JobState
 import ai.mantik.executor.server.ExecutorServer
-import ai.mantik.executor.testutils.KubernetesIntegrationTest
+import ai.mantik.testutils.tags.IntegrationTest
 
-@KubernetesIntegrationTest
+@IntegrationTest
 class EndToEndTest extends IntegrationTestBase {
 
   trait Env extends super.Env {

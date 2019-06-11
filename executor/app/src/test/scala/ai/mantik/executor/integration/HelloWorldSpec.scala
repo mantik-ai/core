@@ -3,13 +3,13 @@ package ai.mantik.executor.integration
 import ai.mantik.executor.impl.KubernetesJobConverter
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
-import ai.mantik.executor.testutils.KubernetesIntegrationTest
+import ai.mantik.testutils.tags.IntegrationTest
 import com.typesafe.config.ConfigFactory
 import skuber.{ LabelSelector, ListResource, Pod }
 import skuber.json.format._
 
 /** Says hello to coordinator, sidecar and the sample docker containers. */
-@KubernetesIntegrationTest
+@IntegrationTest
 class HelloWorldSpec extends IntegrationTestBase {
 
   it should "work" in new Env {

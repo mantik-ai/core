@@ -2,11 +2,11 @@ package ai.mantik.executor.integration
 
 import ai.mantik.executor.Errors
 import ai.mantik.executor.model.PublishServiceRequest
-import ai.mantik.executor.testutils.KubernetesIntegrationTest
+import ai.mantik.testutils.tags.IntegrationTest
 import skuber.{ Endpoints, ListResource, Service }
 import skuber.json.format._
 
-@KubernetesIntegrationTest
+@IntegrationTest
 class PublishServiceSpec extends IntegrationTestBase {
 
   it should "allow publishing ip address services" in new Env {

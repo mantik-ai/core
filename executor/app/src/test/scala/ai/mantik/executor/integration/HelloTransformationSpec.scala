@@ -2,9 +2,9 @@ package ai.mantik.executor.integration
 
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.testutils.KubernetesIntegrationTest
+import ai.mantik.testutils.tags.IntegrationTest
 
-@KubernetesIntegrationTest
+@IntegrationTest
 class HelloTransformationSpec extends IntegrationTestBase {
 
   it should "work" in new Env {

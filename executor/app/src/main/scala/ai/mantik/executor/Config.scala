@@ -35,6 +35,7 @@ case class Config(
     interface: String,
     port: Int,
     kubernetesRetryTimes: Int,
+    kubernetesDisablePull: Boolean,
     dockerConfig: DockerConfig,
     enableExistingServiceNodeCollapse: Boolean
 )
@@ -57,6 +58,7 @@ object Config {
       defaultTimeout = c.getDuration("kubernetes.behavior.defaultTimeout"),
       defaultRetryInterval = c.getDuration("kubernetes.behavior.retryInterval"),
       kubernetesRetryTimes = c.getInt("kubernetes.behavior.retryTimes"),
+      kubernetesDisablePull = c.getBoolean("kubernetes.disablePull"),
       interface = c.getString("app.server.interface"),
       port = c.getInt("app.server.port"),
       dockerConfig = dockerConfig,

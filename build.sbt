@@ -58,10 +58,34 @@ lazy val testutils = (project in file("testutils"))
     publish := {},
     publishLocal := {}
   )
-  
 
-lazy val ds = (project in file("ds"))
-  .dependsOn(testutils % "test")
+lazy val IntegrationTest = config("it") extend(Test)
+
+val testSettings = Seq (
+  testOptions in Test := Seq(Tests.Argument(TestFrameworks.ScalaTest, "-l", "ai.mantik.testutils.tags.IntegrationTest")),
+  testOptions in IntegrationTest := Seq(Tests.Argument(TestFrameworks.ScalaTest, "-n", "ai.mantik.testutils.tags.IntegrationTest")),
+  parallelExecution in Test := false,
+  parallelExecution in IntegrationTest := false
+) ++ inConfig(IntegrationTest)(Defaults.testTasks)
+
+// Initializes a sub project with common settings
+def makeProject(directory: String, id: String = "") = {
+  val idToUse = if (id.isEmpty){
+    directory.split("/").last
+  } else {
+    id
+  }
+  sbt.Project(idToUse, file(directory))
+    .dependsOn(testutils % "test")
+    .configs(IntegrationTest)
+    .settings(
+      scalariformSettings,
+      testSettings,
+      addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+    )
+}
+
+lazy val ds = makeProject("ds")
   .settings(
     name := "ds",
     libraryDependencies ++= Seq(
@@ -86,15 +110,10 @@ lazy val ds = (project in file("ds"))
       // SLF4J Api
       "org.slf4j" % "slf4j-api" % "1.7.25"
     ),
-    scalariformSettings,
-    // Disable parallel test execution
-    parallelExecution in Test := false,
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+    publishSettings
   )
-  .settings(publishSettings)
 
-lazy val repository = (project in file ("repository"))
-  .dependsOn(testutils % "test")
+lazy val repository = makeProject("repository")
   .dependsOn(ds)
   .settings(
     name := "repository",
@@ -105,13 +124,10 @@ lazy val repository = (project in file ("repository"))
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "org.xerial" % "sqlite-jdbc" % "3.18.0",
       "io.getquill" %% "quill-jdbc" % "3.2.0"
-    ),
-    scalariformSettings,
-    parallelExecution in Test := false
+    )
   )
 
-lazy val executorApi = (project in file("executor/api"))
-  .dependsOn(testutils % "test")
+lazy val executorApi = makeProject("executor/api", "executorApi")
   .settings(
     name := "executor-api",
     libraryDependencies ++= Seq(
@@ -127,15 +143,11 @@ lazy val executorApi = (project in file("executor/api"))
       // SLF4J Api
       "org.slf4j" % "slf4j-api" % "1.7.25",
     ),
-    scalariformSettings,
-    // Disable parallel test execution
-    parallelExecution in Test := false,
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+    publishSettings
   )
-  .settings(publishSettings)
 
-lazy val executorApp = (project in file("executor/app"))
-  .dependsOn(testutils % "test")
+
+lazy val executorApp = makeProject("executor/app", "executorApp")
   .dependsOn(executorApi)
   .settings(
     name := "executor-app",
@@ -160,13 +172,8 @@ lazy val executorApp = (project in file("executor/app"))
       // Guava
       "com.google.guava" % "guava" % "27.1-jre",
     ),
-    // Disable automatic exection of integration tests
-    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l", "ai.mantik.executor.testutils.KubernetesIntegrationTest"),
-    // Disable parallel test execution
-    parallelExecution in Test := false,
-    scalariformSettings
+    publishSettings
   )
-  .settings(publishSettings)
   .enablePlugins(BuildInfoPlugin)
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](
@@ -189,9 +196,9 @@ lazy val executorApp = (project in file("executor/app"))
     version in Docker := "latest"
   )
 
-lazy val planner = (project in file ("planner"))
-  .dependsOn(testutils % "test")
+lazy val planner = makeProject("planner")
   .dependsOn(ds, executorApi, repository)
+  .dependsOn(executorApp % "test")
   .settings(
     name := "planner",
     libraryDependencies ++= Seq(
@@ -199,38 +206,28 @@ lazy val planner = (project in file ("planner"))
 
       // Parboiled (Parsers)
       "org.parboiled" %% "parboiled" % "2.1.5"
-    )
-  )
-  .settings(
-    scalariformSettings,
+    ),
     publishSettings
   )
 
 
-lazy val examples = (project in file("examples"))
-  .dependsOn(testutils % "test")
+lazy val examples = makeProject("examples")
   .dependsOn(ds, repository, planner)
   .settings(
-    name := "examples"
-  )
-  .settings(
+    name := "examples",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % "1.2.3"
     ),
-    scalariformSettings,
     publish := {},
     publishLocal := {}
   )
 
-lazy val engine = (project in file("engine"))
-  .dependsOn(testutils % "test")
+lazy val engine = makeProject("engine")
   .dependsOn(planner, repository, executorApi)
+  .dependsOn(executorApp % "test")
   .settings(
-    name := "engine"
-  )
-  .settings(
-    publishSettings,
-    scalariformSettings
+    name := "engine",
+    publishSettings
   )
   .enablePlugins(BuildInfoPlugin)
   .settings(
