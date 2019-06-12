@@ -3,8 +3,6 @@ set -e
 MYDIR=`dirname $0`
 cd $MYDIR/../..
 
-set -e
-
 # Assuming minikube is installed properly
 echo "Checking Minikube ..."
 minikube version
@@ -24,14 +22,12 @@ else
     minikube start --memory 8192
 fi
 
-echo "** Stage 0: Docker Images **"
-
-echo "Using docker instance of minikube"
-# This will make all images available directly inside Minikube.
-eval $(minikube docker-env)
-
+echo "** Preparation: Build All **"
 ./scripts/dev/build_all.sh
-./scripts/dev/create_docker_images_all.sh
+
+
+echo "** Stage 0: Docker Images **"
+./scripts/dev/create_docker_images_all.minikube.sh
 
 
 echo "** Stage 1 Executor Integration Tests **"
