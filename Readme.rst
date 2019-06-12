@@ -12,7 +12,7 @@ Content
   Executor Documentation <Executor>
   Executor k8s <Executor.Microk8s>
   Samples <Samples>
-
+  Debugging with Minikube <Minikube>
 
 Code Structure
 --------------
