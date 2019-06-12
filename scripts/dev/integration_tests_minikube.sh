@@ -27,7 +27,7 @@ echo "** Preparation: Build All **"
 
 
 echo "** Stage 0: Docker Images **"
-./scripts/dev/create_docker_images_all.minikube.sh
+./scripts/dev/create_docker_images_all_minikube.sh
 
 
 echo "** Stage 1 Executor Integration Tests **"

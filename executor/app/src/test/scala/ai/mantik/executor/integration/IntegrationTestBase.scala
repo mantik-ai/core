@@ -5,9 +5,14 @@ import java.time.Clock
 import ai.mantik.executor.{ Config, Executor }
 import ai.mantik.executor.impl.{ ExecutorImpl, K8sOperations }
 
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+
 abstract class IntegrationTestBase extends KubernetesTestBase {
 
   private var _executor: ExecutorImpl = _
+
+  override protected val timeout: FiniteDuration = 60.seconds
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
