@@ -1,16 +1,18 @@
-from mantik import Bundle
-from mantik import DataType
+from mantik.types import DataType, Bundle
 import tensorflow as tf
 import numpy as np
+
 
 def bundle_to_dataset(bundle: Bundle, session: tf.Session) -> tf.data.Dataset:
     if bundle.type is None:
         raise Exception("bundle must have data type")
 
-    if not bundle.type.is_tabular():
-        raise Exception("Only tabular bundles supported, type is " + bundle.type.to_json())
+    if not bundle.type.is_tabular:
+        raise Exception(
+            "Only tabular bundles supported, type is " + bundle.type.to_json()
+        )
 
-    columns = bundle.type.column_names()
+    columns = bundle.type.column_names
     column_tensors = []
     for c in columns:
         tensor_converted = __convert_column_to_tensor(bundle, c)
@@ -23,7 +25,7 @@ def __convert_column_to_tensor(bundle: Bundle, column: str) -> tf.Tensor:
     column_type = bundle.type.column_type(column)
     dtype = __dtype(column_type)
 
-    if column_type.sub_type() == "fundamental":
+    if column_type.sub_type == "fundamental":
         base_shape = []
     else:
         base_shape = column_type.representation.get("shape")
@@ -31,14 +33,16 @@ def __convert_column_to_tensor(bundle: Bundle, column: str) -> tf.Tensor:
     values = bundle.flat_column(column)
     return tf.constant(values, dtype=dtype, shape=shape)
 
+
 def __dtype(data_type: DataType):
-    st = data_type.sub_type()
+    st = data_type.sub_type
     if st == "fundamental":
         return dTypeMapping.get(data_type.representation)
     if st != "tensor":
         raise Exception("Only tensors / fundamentals allowed, got {}".format(st))
     componentType = data_type.representation.get("componentType")
     return dTypeMapping.get(componentType)
+
 
 dTypeMapping = {
     "uint8": tf.uint8,
@@ -50,8 +54,9 @@ dTypeMapping = {
     "float32": tf.float32,
     "float64": tf.float64,
     "string": tf.string,
-    "bool": tf.bool
+    "bool": tf.bool,
 }
+
 
 def dataset_to_bundle(dataset: tf.data.Dataset, session: tf.Session) -> Bundle:
     iterator = dataset.make_one_shot_iterator()
@@ -75,11 +80,11 @@ def dataset_to_bundle(dataset: tf.data.Dataset, session: tf.Session) -> Bundle:
                 else:
                     row_builder.append(row)
 
-
             rows.append(row_builder)
     except tf.errors.OutOfRangeError:
         pass
     return Bundle(value=rows)
+
 
 # Reshape a tensor or tuple of tensors into flat values.
 def __reshape_to_flat(t):

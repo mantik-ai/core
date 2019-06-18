@@ -8,7 +8,7 @@ pytest = "*"
 
 [packages]
 scikit-learn = "*"
-mantik = {editable = true,path = "./../../../python_shared"}
+mantik = {editable = true, path = "./../../../python_sdk"}
 
 [requires]
 python_version = "3.7"

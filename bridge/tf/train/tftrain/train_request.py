@@ -1,5 +1,6 @@
 from abc import abstractmethod
-from mantik import Bundle
+from mantik.types import Bundle
+
 
 class TrainRequest:
     """
@@ -11,7 +12,6 @@ class TrainRequest:
         """
         The dataset for Training
         """
-
 
     @abstractmethod
     def finish_training(self, stats: Bundle, export_dir):

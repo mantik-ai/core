@@ -1,4 +1,5 @@
-from mantik import Mantikfile
+from mantik.types import Mantikfile
+
 
 class Context:
     """
@@ -9,4 +10,3 @@ class Context:
     """
     Mantikfile instance
     """
-

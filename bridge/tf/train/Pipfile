@@ -7,7 +7,7 @@ verify_ssl = true
 pytest = "*"
 
 [packages]
-mantik = {editable = true,path = "./../../../python_shared"}
+mantik = {editable = true,path = "./../../../python_sdk"}
 tensorflow = "~=1.13"
 
 [requires]

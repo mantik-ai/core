@@ -2,11 +2,12 @@ import sys
 from threading import Thread
 
 import tensorflow as tf
-from mantik import Bundle
+from mantik.types import Bundle
 
 import tftrain
 from tftrain import TensorFlowTrainRequest
 import traceback
+
 
 class TrainRun:
     """
@@ -16,13 +17,12 @@ class TrainRun:
     # Training State
     train_started: bool = False
     train_finished: bool = False
-    train_failure = None # Error message
+    train_failure = None  # Error message
 
     # Results of training
     train_stats = None
     train_export_dir = None
     train_stats = None
-
 
     def run(self, train_func, request, context: tftrain.TensorFlowContext):
         """
@@ -47,6 +47,7 @@ class TrainRun:
                 traceback.print_exc()
                 e = str(sys.exc_info()[0])
                 self.training_error(e)
+
         thread = Thread(target=runner)
         thread.start()
         self.train_started = True
@@ -69,7 +70,6 @@ class TrainRun:
     def train_ended(self):
         if not self.train_finished:
             self.training_error("Algorithm finished without calling finish_training")
-
 
 
 class TrainRequest(TensorFlowTrainRequest):
@@ -97,4 +97,3 @@ class TrainRequest(TensorFlowTrainRequest):
 
     def finish_training(self, stats: Bundle, export_dir):
         self.runner.finish_training(stats, export_dir)
-

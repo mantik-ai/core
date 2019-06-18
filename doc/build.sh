@@ -10,7 +10,6 @@ else
     RUN=""
 fi
 
-pip install -r requirements.txt
 rm -rf index.rst
 cp ../Readme.rst index.rst
 $RUN sphinx-build -b html . ../public

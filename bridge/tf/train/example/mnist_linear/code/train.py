@@ -1,17 +1,18 @@
 import tensorflow as tf
 from tftrain import TensorFlowContext, TensorFlowTrainRequest
 from model import Model
-from mantik import Bundle
+from mantik.types import Bundle
+
 
 def train(request: TensorFlowTrainRequest, context: TensorFlowContext):
     train_dataset = request.train_dataset()
     # Meta Variables
 
-    batch_size = context.mantikfile.meta_variables.get_value("batch_size", 128)
-    n_epochs = context.mantikfile.meta_variables.get_value("n_epochs", 5)
-    learning_rate = context.mantikfile.meta_variables.get_value("learning_rate", 0.01)
-    width = context.mantikfile.meta_variables.get_value("width", 28)
-    height = context.mantikfile.meta_variables.get_value("height", 28)
+    batch_size = context.mantikfile.meta_variables.get("batch_size", 128)
+    n_epochs = context.mantikfile.meta_variables.get("n_epochs", 5)
+    learning_rate = context.mantikfile.meta_variables.get("learning_rate", 0.01)
+    width = context.mantikfile.meta_variables.get("width", 28)
+    height = context.mantikfile.meta_variables.get("height", 28)
 
     stats = []
     batches = train_dataset.batch(batch_size)
@@ -47,14 +48,15 @@ def train(request: TensorFlowTrainRequest, context: TensorFlowContext):
     accuracy = sess.run(model.accuracy)
     print("Accuracy: {}".format(accuracy))
 
-
     dir = "trained_model"
     model.export(context.session, dir)
     request.finish_training(Bundle(value=stats), dir)
 
 
 def create_local_mnist_dataset() -> tf.data.Dataset:
-    mnist_train, _ = tf.keras.datasets.mnist.load_data()  # Ignore test dataset, Mantik won't give you that too
+    mnist_train, _ = (
+        tf.keras.datasets.mnist.load_data()
+    )  # Ignore test dataset, Mantik won't give you that too
 
     mnist_train_x, mnist_train_y = mnist_train
 
@@ -64,7 +66,7 @@ def create_local_mnist_dataset() -> tf.data.Dataset:
     return train_dataset
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with tf.Session() as sess:
         dataset = create_local_mnist_dataset()
         context = TensorFlowContext.local(sess)

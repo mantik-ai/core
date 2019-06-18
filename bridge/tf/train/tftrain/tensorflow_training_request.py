@@ -1,9 +1,10 @@
-from mantik import Bundle
+from mantik.types import Bundle
 
 from .train_request import TrainRequest
 import tensorflow as tf
 from abc import abstractmethod
 from .tensorflow_conversion import dataset_to_bundle
+
 
 class TensorFlowTrainRequest(TrainRequest):
     """
@@ -32,7 +33,6 @@ class TensorFlowTrainRequest(TrainRequest):
         """
 
         class LocalTensorflowTrainRequest(TensorFlowTrainRequest):
-
             def train_dataset(self) -> tf.data.Dataset:
                 return dataset
 
@@ -49,4 +49,3 @@ class TensorFlowTrainRequest(TrainRequest):
                 self.finish_training(dataset_to_bundle(stats, session), export_dir)
 
         return LocalTensorflowTrainRequest()
-
