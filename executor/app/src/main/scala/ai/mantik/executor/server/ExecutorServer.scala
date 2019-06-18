@@ -2,7 +2,7 @@ package ai.mantik.executor.server
 import ai.mantik.executor.buildinfo.BuildInfo
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.marshalling.Marshal
+import akka.http.scaladsl.marshalling.{ Marshal, ToResponseMarshallable }
 import akka.http.scaladsl.model.{ HttpResponse, ResponseEntity }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.ExceptionHandler
@@ -10,9 +10,10 @@ import akka.stream.Materializer
 import com.typesafe.scalalogging.Logger
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import ai.mantik.executor.{ Config, Errors, Executor }
-import ai.mantik.executor.model.{ Job, PublishServiceRequest }
+import ai.mantik.executor.model.{ DeployServiceRequest, DeployedServicesQuery, Job, PublishServiceRequest }
+import akka.http.scaladsl.unmarshalling.FromRequestUnmarshaller
 
-import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 class ExecutorServer(config: Config, executor: Executor)(implicit actorSystem: ActorSystem, materializer: Materializer) extends FailFastCirceSupport {
@@ -32,14 +33,8 @@ class ExecutorServer(config: Config, executor: Executor)(implicit actorSystem: A
 
   val route =
     concat(
-      path("schedule") {
-        post {
-          entity(as[Job]) { job =>
-            onSuccess(executor.schedule(job)) { jobId =>
-              complete(jobId)
-            }
-          }
-        }
+      postRoute("schedule") {
+        executor.schedule
       },
       path("status") {
         get {
@@ -59,14 +54,35 @@ class ExecutorServer(config: Config, executor: Executor)(implicit actorSystem: A
           }
         }
       },
-      path("publishService") {
-        post {
-          entity(as[PublishServiceRequest]) { request =>
-            onSuccess(executor.publishService(request)) { response =>
-              complete(response)
+      postRoute("publishService") {
+        executor.publishService
+      },
+      path("deployments") {
+        concat(
+          post {
+            entity(as[DeployServiceRequest]) { request =>
+              callService(request)(executor.deployService)
+            }
+          },
+          get {
+            parameterMap { parameters =>
+              val query = DeployedServicesQuery.fromQueryParameters(parameters) match {
+                case Left(error) => throw new IllegalArgumentException(error)
+                case Right(ok)   => ok
+              }
+              callService(query)(executor.queryDeployedServices)
+            }
+          },
+          delete {
+            parameterMap { parameters =>
+              val query = DeployedServicesQuery.fromQueryParameters(parameters) match {
+                case Left(error) => throw new IllegalArgumentException(error)
+                case Right(ok)   => ok
+              }
+              callService(query)(executor.deleteDeployedServices)
             }
           }
-        }
+        )
       },
       path("") {
         get {
@@ -76,6 +92,23 @@ class ExecutorServer(config: Config, executor: Executor)(implicit actorSystem: A
     )
 
   private var openServerBinding: Option[Http.ServerBinding] = None
+
+  /** A Simple POST call which forwards calls to a handler. */
+  private def postRoute[In: FromRequestUnmarshaller, Out](
+    routePath: String
+  )(handler: In => Future[Out])(implicit f: Out => ToResponseMarshallable) = path(routePath) {
+    post {
+      entity(as[In]) { request =>
+        callService(request)(handler)
+      }
+    }
+  }
+
+  private def callService[In, Out](in: In)(handler: In => Future[Out])(implicit f: Out => ToResponseMarshallable) = {
+    onSuccess(handler(in)) { response =>
+      complete(response)
+    }
+  }
 
   /** Start the server (not threadsafe) */
   def start(): Unit = {

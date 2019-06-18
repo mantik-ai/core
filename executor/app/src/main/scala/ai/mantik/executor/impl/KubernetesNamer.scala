@@ -6,11 +6,15 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 /** Helper for naming kubernetes resources, as kubernetes has tight restrictions */
-class KubernetesNamer(id: String, superPrefix: String = "job-") {
+class KubernetesNamer(id: String, superPrefix: String) {
 
   private val prefix = s"${superPrefix}${escapeNodeName(id)}-" // Kubernetes prefix must start with alphanumeric
 
   val jobName = prefix + "job"
+
+  val replicaSetName = prefix + "rs"
+
+  val serviceName = prefix + "service"
 
   val configName = prefix + "config"
 
@@ -23,6 +27,8 @@ class KubernetesNamer(id: String, superPrefix: String = "job-") {
   usedNames.add(jobName)
   usedNames.add(configName)
   usedNames.add(pullSecretName)
+  usedNames.add(replicaSetName)
+  usedNames.add(serviceName)
 
   def podName(nodeName: String): String = {
     lock.synchronized {

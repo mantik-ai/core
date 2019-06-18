@@ -5,8 +5,9 @@ import akka.http.scaladsl.model.HttpRequest
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.executor.integration.HelloWorldSpec
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.{ Config, Errors, Executor }
-import ai.mantik.executor.model.{ Job, JobState, JobStatus, PublishServiceRequest, PublishServiceResponse }
+import ai.mantik.executor.model.{ ContainerService, DeployServiceRequest, DeployServiceResponse, DeployedServicesEntry, DeployedServicesQuery, DeployedServicesResponse, Job, JobState, JobStatus, NodeService, PublishServiceRequest, PublishServiceResponse }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 
 import scala.concurrent.Future
@@ -26,8 +27,30 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
     4456
   )
 
+  private val deployServiceCall = DeployServiceRequest(
+    "service1",
+    "isolation1",
+    ContainerService(
+      Container("Foo")
+    )
+  )
+
+  private val deployedServicesQuery = DeployedServicesQuery(
+    isolationSpace = "isolationSpace",
+    serviceName = Some("serviceName"),
+    serviceId = Some("serviceId")
+  )
+
+  private val deployedServicesResponse = DeployedServicesResponse(
+    List(
+      DeployedServicesEntry("id1", "service1", "http://foobar")
+    )
+  )
+
   trait Env {
     var receivedPublishRequest: PublishServiceRequest = _
+    var receivedDeployServiceRequest: DeployServiceRequest = _
+    var receivedDeployedServicesQuery: DeployedServicesQuery = _
 
     lazy val executorMock = new Executor {
 
@@ -40,6 +63,25 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
         receivedPublishRequest = publishServiceRequest
         Future.successful(PublishServiceResponse("foo:1234"))
+      }
+
+      override def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse] = {
+        receivedDeployServiceRequest = deployServiceRequest
+        Future.successful(DeployServiceResponse("id1", "my.service.name"))
+      }
+
+      override def queryDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[DeployedServicesResponse] = {
+        receivedDeployedServicesQuery = deployedServicesQuery
+        Future.successful(
+          deployedServicesResponse
+        )
+      }
+
+      override def deleteDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[Int] = {
+        receivedDeployedServicesQuery = deployedServicesQuery
+        Future.successful(
+          5
+        )
       }
     }
     lazy val server = new ExecutorServer(config, executorMock)
@@ -72,6 +114,16 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       await(client.status("space", "1234")) shouldBe JobStatus(JobState.Running)
       await(client.publishService(publishCall)).name shouldBe "foo:1234"
       receivedPublishRequest shouldBe publishCall
+
+      await(client.deployService(deployServiceCall)) shouldBe DeployServiceResponse("id1", "my.service.name")
+      receivedDeployServiceRequest shouldBe deployServiceCall
+
+      await(client.queryDeployedServices(deployedServicesQuery)) shouldBe deployedServicesResponse
+      receivedDeployedServicesQuery shouldBe deployedServicesQuery
+
+      receivedDeployedServicesQuery = null
+      await(client.deleteDeployedServices(deployedServicesQuery)) shouldBe 5
+      receivedDeployedServicesQuery shouldBe deployedServicesQuery
     }
   }
 
@@ -94,6 +146,18 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
         Future.failed(internal)
       }
+
+      override def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse] = {
+        Future.failed(internal)
+      }
+
+      override def queryDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[DeployedServicesResponse] = {
+        Future.failed(internal)
+      }
+
+      override def deleteDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[Int] = {
+        Future.failed(internal)
+      }
     }
 
     server.start()
@@ -110,6 +174,15 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       }
       intercept[Errors.InternalException] {
         await(client.publishService(publishCall))
+      }
+      intercept[Errors.InternalException] {
+        await(client.deployService(deployServiceCall))
+      }
+      intercept[Errors.InternalException] {
+        await(client.queryDeployedServices(deployedServicesQuery))
+      }
+      intercept[Errors.InternalException] {
+        await(client.deleteDeployedServices(deployedServicesQuery))
       }
     }
   }

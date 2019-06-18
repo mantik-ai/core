@@ -17,6 +17,7 @@ sealed trait NodeService
  * @param port the port where resources can be found from the main container.
  * @param ioAffine flag, that the service is mainly doing IO, which prefers placement near sources/sinks.
  */
+@JsonCodec
 case class ContainerService(
     main: Container,
     dataProvider: Option[DataProvider] = None,

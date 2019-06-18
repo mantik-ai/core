@@ -1,6 +1,6 @@
 package ai.mantik.executor
 
-import ai.mantik.executor.model.{ Job, JobStatus, PublishServiceRequest, PublishServiceResponse }
+import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, DeployedServicesQuery, DeployedServicesResponse, Job, JobStatus, PublishServiceRequest, PublishServiceResponse }
 
 import scala.concurrent.Future
 
@@ -21,4 +21,20 @@ trait Executor {
    * Note: this only for simplifying local deployments.
    */
   def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse]
+
+  /**
+   * Deploy a single service.
+   */
+  def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse]
+
+  /**
+   * Query for deployed services.
+   */
+  def queryDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[DeployedServicesResponse]
+
+  /**
+   * Delete deployed services.
+   * @return number of services deleted.
+   */
+  def deleteDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[Int]
 }

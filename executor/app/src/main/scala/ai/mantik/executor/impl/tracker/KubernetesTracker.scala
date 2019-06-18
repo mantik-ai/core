@@ -3,7 +3,7 @@ package ai.mantik.executor.impl.tracker
 import akka.actor.{ ActorRef, ActorSystem }
 import com.typesafe.scalalogging.Logger
 import ai.mantik.executor.Config
-import ai.mantik.executor.impl.{ K8sOperations, KubernetesJobConverter }
+import ai.mantik.executor.impl.{ K8sOperations, KubernetesConstants, KubernetesJobConverter }
 import ai.mantik.executor.model.JobState
 import skuber.api.client.KubernetesClient
 import skuber.batch.Job
@@ -30,7 +30,7 @@ class KubernetesTracker(config: Config, ops: K8sOperations)(implicit ec: Executi
   }
 
   def subscribe(job: Job): Unit = {
-    val jobId = job.metadata.labels.get(KubernetesJobConverter.JobIdLabel)
+    val jobId = job.metadata.labels.get(KubernetesConstants.JobIdLabel)
     jobId match {
       case None =>
         logger.warn(s"Cannot add job ${job.namespace}/${job.name}, no jobId label")

@@ -27,7 +27,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
   val longRunningPod = Pod.Spec(
     containers = List(
       Container(
-        name = KubernetesJobConverter.SidecarContainerName,
+        name = KubernetesConstants.SidecarContainerName,
         image = config.sideCar.image,
         args = config.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
       )
@@ -62,6 +62,14 @@ class K8sOperationsSpec extends KubernetesTestBase {
     namespaces3 should contain(myNamespace)
   }
 
+  "getNamespace" should "work" in new Env {
+    val myNamespace = config.namespacePrefix + "-get"
+    await(k8sOperations.getNamespace(myNamespace)) shouldBe empty
+    await(k8sOperations.ensureNamespace(myNamespace))
+    val trial2 = await(k8sOperations.getNamespace(myNamespace))
+    trial2.map(_.name) shouldBe Some(myNamespace)
+  }
+
   "startPodAndGetIpAddress" should "work" in new Env {
     val pod = Pod.apply(
       "pod1", Pod.Spec(
@@ -89,7 +97,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
       "pod1", Pod.Spec(
         containers = List(
           Container(
-            name = KubernetesJobConverter.SidecarContainerName,
+            name = KubernetesConstants.SidecarContainerName,
             image = config.sideCar.image,
             args = config.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
           )
@@ -124,7 +132,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
     val job1 = Job(
       metadata = ObjectMeta(
         name = "job1",
-        labels = Map(KubernetesJobConverter.TrackerIdLabel -> config.podTrackerId)
+        labels = Map(KubernetesConstants.TrackerIdLabel -> config.podTrackerId)
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))
     ).withTemplate(
@@ -135,7 +143,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
     val job2 = Job(
       metadata = ObjectMeta(
         name = "job2",
-        labels = Map(KubernetesJobConverter.TrackerIdLabel -> "other_id")
+        labels = Map(KubernetesConstants.TrackerIdLabel -> "other_id")
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))
     ).withTemplate(
@@ -162,8 +170,8 @@ class K8sOperationsSpec extends KubernetesTestBase {
       metadata = ObjectMeta(
         name = "job1",
         labels = Map(
-          KubernetesJobConverter.JobIdLabel -> "job1",
-          KubernetesJobConverter.TrackerIdLabel -> config.podTrackerId
+          KubernetesConstants.JobIdLabel -> "job1",
+          KubernetesConstants.TrackerIdLabel -> config.podTrackerId
         )
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))

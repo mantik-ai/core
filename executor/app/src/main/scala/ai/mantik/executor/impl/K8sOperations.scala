@@ -12,11 +12,12 @@ import com.typesafe.scalalogging.Logger
 import ai.mantik.executor.Config
 import ai.mantik.executor.Errors.{ InternalException, NotFoundException }
 import play.api.libs.json.{ Format, JsObject }
-import skuber.{ K8SException, LabelSelector, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition }
+import skuber.{ K8SException, LabelSelector, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition, Secret, Service }
 import skuber.api.client.{ KubernetesClient, Status, WatchEvent }
+import skuber.apps.v1.ReplicaSet
 import skuber.batch.Job
 
-import scala.concurrent.{ ExecutionContext, Future, Promise, TimeoutException }
+import scala.concurrent.{ Await, ExecutionContext, Future, Promise, TimeoutException }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 import skuber.json.format._
@@ -26,6 +27,8 @@ import skuber.json.batch.format._
 class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: ExecutionContext, actorSystem: ActorSystem, clock: Clock) {
 
   val logger = Logger(getClass)
+  // this seems to be missing in skuber
+  private implicit val rsListFormat = skuber.json.format.ListResourceFormat[ReplicaSet]
 
   private def namespacedClient(ns: Option[String]): KubernetesClient = {
     ns.map(rootClient.usingNamespace).getOrElse(rootClient)
@@ -139,6 +142,11 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
     }
   }
 
+  /** Returns the namespace if available. */
+  def getNamespace(namespace: String): Future[Option[Namespace]] = {
+    errorHandling(rootClient.getOption[Namespace](namespace))
+  }
+
   /** Try `f` multiple times within a given timeout. */
   private def tryMultipleTimes[T](timeout: FiniteDuration, tryAgainWaitDuration: FiniteDuration)(f: => Future[Option[T]]): Future[T] = {
     val result = Promise[T]
@@ -179,7 +187,8 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       namespacedClient(namespace).listWithOptions[ListResource[skuber.Pod]](
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesJobConverter.TrackerIdLabel, config.podTrackerId)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
+            LabelSelector.IsEqualRequirement(KubernetesConstants.TrackerIdLabel, config.podTrackerId)
           )),
           fieldSelector = Some("status.phase==Pending")
         )
@@ -193,7 +202,8 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       namespacedClient(namespace).listWithOptions[ListResource[Pod]](
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesJobConverter.JobIdLabel, jobId)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
+            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, jobId)
           ))
         )
       ).map(_.items)
@@ -206,7 +216,8 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       namespacedClient(namespace).listWithOptions[ListResource[Job]] {
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesJobConverter.JobIdLabel, jobId)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
+            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, jobId)
           ))
         )
       }.map {
@@ -217,6 +228,68 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
         case x => x.items.headOption
       }
     }
+  }
+
+  /** Looks for services. */
+  def getServices(namespace: Option[String], serviceIdFilter: Option[String], serviceNameFilter: Option[String]): Future[List[Service]] = {
+    errorHandling {
+      namespacedClient(namespace).listSelected[ListResource[Service]] {
+        encodeServiceLabelSelector(serviceIdFilter, serviceNameFilter)
+      }.map(_.items)
+    }
+  }
+
+  /** Delete deployed services and related stuff (Services, ReplicaSets, Secrets). */
+  def deleteDeployedServicesAndRelated(namespace: Option[String], serviceIdFilter: Option[String], serviceNameFilter: Option[String]): Future[Int] = {
+    errorHandling {
+      val c = namespacedClient(namespace)
+      val selector = encodeServiceLabelSelector(serviceIdFilter, serviceNameFilter)
+      val serviceDeletion = c.listSelected[ListResource[Service]](selector).flatMap { services =>
+        if (services.items.length == 0) {
+          logger.debug(s"Found no services matching filter ${serviceIdFilter}/${serviceNameFilter} in namespace ${namespace}")
+        }
+        Future.sequence(services.map { element =>
+          logger.debug(s"Deleting service ${element.name}")
+          c.delete[Service](element.name)
+        }).map { _ => services }
+      }
+      // This fails with 405 somehow ?!
+      // val serviceDeletion = c.deleteAllSelected[ListResource[Service]](selector)
+      val replicaSetDeletion = c.deleteAllSelected[ListResource[ReplicaSet]](selector)
+      val secretDeletion = c.deleteAllSelected[ListResource[Secret]](selector)
+
+      for {
+        services <- serviceDeletion
+        replicas <- replicaSetDeletion
+        secrets <- secretDeletion
+      } yield {
+        val deletedServices = services.items.length
+        val deletedReplicaSets = replicas.items.length
+        if (deletedServices != deletedReplicaSets) {
+          logger.warn(s"Deleted Replica Set Count ${deletedReplicaSets} was != Deleted Service Result ${deletedServices}. Orphaned items?")
+        }
+        logger.debug(s"Deleted ${deletedServices} services with ${secrets.items.length} secrets in ${namespace} serviceIdFilter=${serviceIdFilter} serviceNameFilter=${serviceNameFilter}")
+
+        // do not warn for secrets, some deployed services do not have them...
+        services.items.size
+      }
+    }
+  }
+
+  private def encodeServiceLabelSelector(serviceIdFilter: Option[String], serviceNameFilter: Option[String]): skuber.LabelSelector = {
+    buildLabelSelector(
+      KubernetesConstants.ManagedLabel -> Some(KubernetesConstants.ManagedValue),
+      KubernetesConstants.ServiceIdLabel -> serviceIdFilter,
+      KubernetesConstants.ServiceNameLabel -> serviceNameFilter
+    )
+  }
+
+  private def buildLabelSelector(values: (String, Option[String])*): skuber.LabelSelector = {
+    LabelSelector(
+      values.collect {
+        case (key, Some(value)) => LabelSelector.IsEqualRequirement(key, value)
+      }: _*
+    )
   }
 
   def getManagedNonFinishedJobsForAllNamespaces(): Future[Seq[Job]] = {
@@ -234,7 +307,8 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       namespacedClient(namespace).listWithOptions[ListResource[Job]](
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesJobConverter.TrackerIdLabel, config.podTrackerId)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
+            LabelSelector.IsEqualRequirement(KubernetesConstants.TrackerIdLabel, config.podTrackerId)
           ))
         )
       ).map { jobs =>
@@ -257,7 +331,8 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
     errorHandling {
       namespacedClient(namespace).listSelected[ListResource[skuber.batch.Job]](
         LabelSelector(
-          LabelSelector.IsEqualRequirement(KubernetesJobConverter.JobIdLabel, jobId)
+          LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
+          LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, jobId)
         )
       ).map { jobs =>
           if (jobs.items.length > 1) {
@@ -291,8 +366,8 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       client.listWithOptions[ListResource[Pod]](
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesJobConverter.JobIdLabel, jobId),
-            LabelSelector.IsEqualRequirement(KubernetesJobConverter.RoleName, KubernetesJobConverter.CoordinatorRole)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, jobId),
+            LabelSelector.IsEqualRequirement(KubernetesConstants.RoleName, KubernetesConstants.CoordinatorRole)
           ))
         )
       ).map {
@@ -309,7 +384,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
     val containerNames = for {
       status <- pod.status.toSeq
       ct <- status.containerStatuses
-      if ct.name == KubernetesJobConverter.SidecarContainerName || ct.name == KubernetesJobConverter.CoordinatorContainerName
+      if ct.name == KubernetesConstants.SidecarContainerName || ct.name == KubernetesConstants.CoordinatorContainerName
       if ct.state.exists(_.id == "running")
     } yield ct.name
 

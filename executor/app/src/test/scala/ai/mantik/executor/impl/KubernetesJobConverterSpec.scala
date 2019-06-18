@@ -1,12 +1,9 @@
 package ai.mantik.executor.impl
 
-import java.nio.charset.StandardCharsets
-
 import ai.mantik.executor.Config
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.{ Container, DockerConfig, DockerLogin }
 import ai.mantik.testutils.TestBase
-import io.circe.Json
 import skuber.{ RestartPolicy, Volume }
 import io.circe.syntax._
 
@@ -114,7 +111,8 @@ class KubernetesJobConverterSpec extends TestBase {
         labels shouldBe Map(
           "jobId" -> "job1",
           "trackerId" -> config.podTrackerId,
-          "role" -> KubernetesJobConverter.WorkerRole
+          "role" -> KubernetesConstants.WorkerRole,
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
         )
       }
     }
@@ -127,24 +125,6 @@ class KubernetesJobConverterSpec extends TestBase {
         sidecar.args shouldBe Seq("sidecar_arg", "-url", "http://localhost:8502", "-shutdown")
       }
     }
-  }
-
-  it should "convert nice pull policies" in new SimpleAbEnv {
-    converter.createImagePullPolicy(Container("foo")) shouldBe skuber.Container.PullPolicy.Always
-    converter.createImagePullPolicy(Container("foo:latest")) shouldBe skuber.Container.PullPolicy.Always
-    converter.createImagePullPolicy(Container("foo:master")) shouldBe skuber.Container.PullPolicy.IfNotPresent
-    converter.createImagePullPolicy(Container("foo:other")) shouldBe skuber.Container.PullPolicy.IfNotPresent
-  }
-
-  it should "disable pulling if requested" in new SimpleAbEnv {
-    override def config: Config = {
-      super.config.copy(
-        kubernetesDisablePull = true
-      )
-    }
-    converter.createImagePullPolicy(Container("foo")) shouldBe skuber.Container.PullPolicy.Never
-    converter.createImagePullPolicy(Container("foo:latest")) shouldBe skuber.Container.PullPolicy.Never
-    converter.createImagePullPolicy(Container("foo:other")) shouldBe skuber.Container.PullPolicy.Never
   }
 
   it should "create a coordinator plan" in new SimpleAbEnv {
@@ -172,14 +152,16 @@ class KubernetesJobConverterSpec extends TestBase {
     kubernetesJob.metadata.name shouldBe converter.namer.jobName
     kubernetesJob.metadata.labels shouldBe Map(
       "jobId" -> "job1",
-      "trackerId" -> config.podTrackerId
+      "trackerId" -> config.podTrackerId,
+      KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
     )
     kubernetesJob.spec.get.backoffLimit shouldBe Some(0)
     val podTemplate = kubernetesJob.spec.get.template.get
     podTemplate.metadata.labels shouldBe Map(
       "jobId" -> "job1",
       "trackerId" -> config.podTrackerId,
-      "role" -> KubernetesJobConverter.CoordinatorRole
+      "role" -> KubernetesConstants.CoordinatorRole,
+      KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
     )
     val podSpec = podTemplate.spec.get
     podSpec.restartPolicy shouldBe RestartPolicy.Never
@@ -190,69 +172,6 @@ class KubernetesJobConverterSpec extends TestBase {
     container.volumeMounts shouldBe List(
       Volume.Mount(
         "config-volume", mountPath = "/config"
-      )
-    )
-  }
-
-  "convertNode" should "like data containers" in new SimpleAbEnv {
-    val node = Node.sink(
-      ContainerService(
-        main = Container(
-          image = "repo/runner:latest"
-        ),
-        dataProvider = Some(DataProvider(
-          url = Some("url1"),
-          mantikfile = Some("mf1"),
-          directory = Some("dir1")
-        ))
-      )
-    )
-    val converted = converter.convertNode("A", node)
-    val spec = converted.spec.get
-    spec.containers.size shouldBe 2 // sidecar, main
-    spec.containers.map(_.image) should contain theSameElementsAs Seq("repo/runner:latest", config.sideCar.image)
-    spec.containers.find(_.name == "main").get.volumeMounts.map(_.name) shouldBe List("data")
-    spec.initContainers.size shouldBe 1
-    spec.initContainers.head.image shouldBe "payload_preparer"
-    spec.initContainers.head.args shouldBe List("-url", "url1", "-mantikfile", "bWYx", "-pdir", "dir1")
-    spec.initContainers.head.volumeMounts.map(_.name) shouldBe List("data")
-    spec.volumes.map(_.name) shouldBe List("data")
-    spec.containers.foreach(_.imagePullPolicy shouldBe skuber.Container.PullPolicy.Always)
-
-    withClue("there must be an fsGroup element") {
-      spec.securityContext.flatMap(_.fsGroup) shouldBe Some(1000)
-    }
-  }
-
-  it should "resolve the container image" in new SimpleAbEnv {
-    val node = Node.sink(
-      ContainerService(
-        main = Container(
-          image = "runner"
-        )
-      )
-    )
-    val converted = converter.convertNode("A", node)
-    val mainContainer = converted.spec.get.containers.ensuring(_.size == 2).find(_.name == "main").get
-    mainContainer.image shouldBe "my-repo/runner:mytag"
-  }
-
-  "pullSecrets" should "convert pull screts" in new SimpleAbEnv {
-    val secrets = converter.pullSecret.get
-    secrets.name shouldBe "job-job1-pullsecret"
-    secrets.metadata.labels.get("jobId") shouldBe Some("job1")
-    val value = secrets.data.ensuring(_.size == 1).get(".dockerconfigjson").get
-    val parsed = io.circe.parser.parse(new String(value, StandardCharsets.UTF_8)).right.get
-    parsed shouldBe Json.obj(
-      "auths" -> Json.obj(
-        "repo1" -> Json.obj(
-          "username" -> Json.fromString("user1"),
-          "password" -> Json.fromString("password1")
-        ),
-        "repo2" -> Json.obj(
-          "username" -> Json.fromString("user2"),
-          "password" -> Json.fromString("password2")
-        )
       )
     )
   }
