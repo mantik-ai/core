@@ -1,15 +1,15 @@
 from mantik.bridge import Algorithm
-from mantik import Mantikfile
+from mantik.types import Mantikfile, Bundle
 from tftrain import TensorFlowContext
 import tensorflow as tf
-from mantik import Bundle
 import tftrain
 from train_run import TrainRequest, TrainRun
 import os
 
-class AlgorithmWrapper (Algorithm):
 
-    session: tf.Session # According to docu, the session is threadsafe
+class AlgorithmWrapper(Algorithm):
+
+    session: tf.Session  # According to docu, the session is threadsafe
     context: TensorFlowContext
 
     runner: TrainRun
@@ -18,13 +18,15 @@ class AlgorithmWrapper (Algorithm):
         self.runner = TrainRun()
         self.session = tf.Session()
         import sys
-        sys.path.append(mantikfile.payload_dir())
-        import train # Entry point
+
+        sys.path.append(mantikfile.payload_dir)
+        import train  # Entry point
+
         self.train_func = train.train
         self.context = TensorFlowContext(mantikfile, self.session)
 
         # Override working directory, so that Algorithm is in it's own
-        os.chdir(mantikfile.payload_dir())
+        os.chdir(mantikfile.payload_dir)
 
     def __enter__(self):
         return self
@@ -40,9 +42,11 @@ class AlgorithmWrapper (Algorithm):
         self.runner.run(self.train_func, request, self.context)
         return
 
+    @property
     def is_trained(self) -> bool:
         return self.runner.train_finished
 
+    @property
     def trained_data_dir(self) -> str:
         if not self.runner.train_finished:
             raise Exception("Training not finished")
@@ -50,6 +54,7 @@ class AlgorithmWrapper (Algorithm):
             raise Exception("Training failed ", self.runner.train_failure)
         return self.runner.train_export_dir
 
+    @property
     def training_stats(self) -> Bundle:
         if not self.runner.train_finished:
             raise Exception("Training not finished")
@@ -61,3 +66,5 @@ class AlgorithmWrapper (Algorithm):
     def close(self):
         self.session.close()
 
+    def apply(self, bundle: Bundle) -> Bundle:
+        pass

@@ -1,6 +1,7 @@
 import tensorflow as tf
 from .context import Context
-from mantik import Mantikfile
+from mantik.types import Mantikfile
+
 
 class TensorFlowContext(Context):
     session: tf.Session
@@ -21,6 +22,7 @@ class TensorFlowContext(Context):
         """
         # Assuning that script is started from data directory
         mf = Mantikfile.load("../Mantikfile")
+
         class LocalContext(TensorFlowContext):
             def __init__(self):
                 TensorFlowContext.__init__(self, mf, session)

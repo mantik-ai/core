@@ -19,9 +19,9 @@ python_prepare_pip_build(){
 
     mkdir -p target
     pipenv lock -r > target/requirements.txt
-    cp -r $MANTIK_ROOT/python_shared target/
+    cp -r $MANTIK_ROOT/python_sdk target/
 
-    sed -i '/python_shared/c\-e ./python_shared\' target/requirements.txt
+    sed -i '/python_sdk/c\-e ./python_sdk\' target/requirements.txt
 }
 
 # Prepares a build in target, including requirements.txt file
@@ -29,5 +29,5 @@ python_prepare_pip_build(){
 python_build_standard(){
     mkdir -p parent
     python_prepare_pip_build
-    cp --parents `find . -name "*.py" -not -path "./target/*" -not -path "./example/*"` target/
+    cp -p `find . -name "*.py" -not -path "./target/*" -not -path "./example/*"` target/
 }

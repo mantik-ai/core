@@ -1,12 +1,13 @@
 import tensorflow as tf
 from tftrain import TensorFlowContext, TensorFlowTrainRequest
 
+
 def train(request: TensorFlowTrainRequest, context: TensorFlowContext):
     input_dataset = request.train_dataset()
     print(input_dataset)
 
-    left = input_dataset.map(lambda a,b: a)
-    right = input_dataset.map(lambda a,b: b)
+    left = input_dataset.map(lambda a, b: a)
+    right = input_dataset.map(lambda a, b: b)
 
     left_iter = left.batch(1).make_initializable_iterator()
     right_iter = right.batch(1).make_initializable_iterator()
@@ -39,7 +40,7 @@ def train(request: TensorFlowTrainRequest, context: TensorFlowContext):
     request.finish_training_with_dataset(result_dataset, "my_export_dir")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with tf.Session() as sess:
         dataset = tf.data.Dataset.from_tensor_slices(
             (tf.random_uniform([10]), tf.random_uniform([10]))

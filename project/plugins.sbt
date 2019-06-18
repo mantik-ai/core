@@ -7,3 +7,5 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.21")
 libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "compilerplugin" % "0.9.0-M6"
 )
+
+addSbtPlugin("au.com.onegeek" %% "sbt-dotenv" % "2.0.117")

@@ -20,7 +20,7 @@ test_go_shared:
     paths:
       - vendor/go_path/
 
-test_python_shared:
+test_python_sdk:
   stage: test
   image: python:3.7-stretch
   variables:
@@ -30,9 +30,9 @@ test_python_shared:
       - .cache/pip
       - venv/
   script:
-    - cd python_shared
+    - cd python_sdk
     - pip install pipenv
-    - pipenv install --deploy --dev
+    - pipenv install -r requirements-dev.txt
     - pipenv run pytest
 
 test_executor_go:

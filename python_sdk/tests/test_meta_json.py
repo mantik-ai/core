@@ -1,0 +1,107 @@
+from mantik.types import parse_and_decode_meta_json, parse_and_decode_meta_yaml, decode_meta_json
+import json
+
+
+def test_decode_meta_json_primitives():
+    json_values = [
+        "null",
+        "true",
+        "false",
+        "[]",
+        "{}",
+        '"Hello"',
+        "1",
+        "5.5",
+        "[1,2,3]",
+        '{"Hello":"World","How":"Nice"}',
+    ]
+    for v in json_values:
+        # Plain values
+        parsed = json.loads(v)
+        decoded = decode_meta_json(parsed)
+        assert decoded == parsed
+
+        # Wrapped in Objects
+        in_object = '{"x":' + v + "}"
+        parsed = json.loads(in_object)
+        decoded = decode_meta_json(parsed)
+        assert decoded == parsed
+
+
+def test_parse_meta_json():
+    sample = """
+    {"metaVariables": [
+        {
+            "name": "foo",
+            "type": "int32",
+            "value": 123
+        },
+        {
+            "name": "bar",
+            "type": "bool",
+            "value": true,
+            "fix": true
+        }
+    ], 
+    "a": "${foo}",
+    "b": ["${bar}", "x", "$${escaped}"]
+    }
+    """
+    expected = """
+    {"metaVariables": [
+        {
+            "name": "foo",
+            "type": "int32",
+            "value": 123
+        },
+        {
+            "name": "bar",
+            "type": "bool",
+            "value": true,
+            "fix": true
+        }
+    ], 
+    "a": 123,
+    "b": [true, "x", "${escaped}"]
+    }
+    """
+    decoded = parse_and_decode_meta_json(sample)
+    expected = json.loads(expected)
+    assert decoded == expected
+
+
+def test_ignore_meta_block():
+    bogus = """
+    {"metaVariables": [
+        {
+            "name": "foo",
+            "value": 123,
+            "type": "int32",
+            "unknown": "${foo}"
+        }
+    ]}
+    """
+    decoded = parse_and_decode_meta_json(bogus)
+    expected = json.loads(bogus)
+    assert decoded == expected
+
+
+def test_decode_meta_yaml():
+    yaml = """
+metaVariables:
+  - name: foo
+    value: 123
+    type: int32
+x: ${foo}   
+    """
+    expected = """
+    {
+        "metaVariables":[
+            {"name":"foo", "value": 123, "type": "int32"}
+        ],
+        "x": 123
+    }
+    """
+    decoded = parse_and_decode_meta_yaml(yaml)
+    parsed_expected = json.loads(expected)
+    assert decoded == parsed_expected

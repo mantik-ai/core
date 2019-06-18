@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 class Model:
 
     # Formular: Y' = (X matmul w) + b
@@ -10,14 +11,22 @@ class Model:
         self.width = width
         self.height = height
         self.points = width * height
-        self.w = tf.Variable(tf.random_normal(shape=[self.points, 10], stddev=0.01), name="weights")
+        self.w = tf.Variable(
+            tf.random_normal(shape=[self.points, 10], stddev=0.01), name="weights"
+        )
         self.b = tf.Variable(tf.zeros([1, 10]), name="bias")
         prepared_x = self.prepare_x(X)
         self.logits = tf.matmul(prepared_x, self.w) + self.b
-        self.entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=y_logits)
+        self.entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
+            logits=self.logits, labels=y_logits
+        )
         self.loss = tf.reduce_mean(self.entropy)
-        self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(self.loss)
-        self.accuracy, self.accuracy_op = tf.metrics.accuracy(labels=Y, predictions=tf.argmax(self.logits, axis=1))
+        self.optimizer = tf.train.GradientDescentOptimizer(
+            learning_rate=learning_rate
+        ).minimize(self.loss)
+        self.accuracy, self.accuracy_op = tf.metrics.accuracy(
+            labels=Y, predictions=tf.argmax(self.logits, axis=1)
+        )
 
     def prepare_x(self, x):
         return tf.reshape(x, shape=[-1, self.points])
@@ -32,15 +41,12 @@ class Model:
 
         graph2 = tf.Graph()
         with graph2.as_default():
-            xp = tf.placeholder(tf.float32, shape=[None, self.height, self.width], name="image")
+            xp = tf.placeholder(
+                tf.float32, shape=[None, self.height, self.width], name="image"
+            )
             xp_reshaped = self.prepare_x(xp)
             logits = tf.matmul(xp_reshaped, tf.constant(w_value)) + tf.constant(b_value)
             y = tf.dtypes.cast(tf.math.argmax(logits, axis=1), tf.uint8)
             tf.saved_model.simple_save(
-                sess,
-                directory,
-                inputs={"x": xp},
-                outputs={"y": y}
+                sess, directory, inputs={"x": xp}, outputs={"y": y}
             )
-
-
