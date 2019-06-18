@@ -1,6 +1,6 @@
 package ai.mantik.executor.integration
 
-import ai.mantik.executor.impl.KubernetesJobConverter
+import ai.mantik.executor.impl.{ KubernetesConstants, KubernetesJobConverter }
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.testutils.tags.IntegrationTest
@@ -26,7 +26,7 @@ class HelloWorldSpec extends IntegrationTestBase {
         val namespacedClient = kubernetesClient.usingNamespace(config.namespacePrefix + "helloworld")
         val pods = await(namespacedClient.listSelected[ListResource[skuber.Pod]](
           LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesJobConverter.TrackerIdLabel, config.podTrackerId)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.TrackerIdLabel, config.podTrackerId)
           )
         ))
         pods.size shouldBe 3 // A, B and Coordinator

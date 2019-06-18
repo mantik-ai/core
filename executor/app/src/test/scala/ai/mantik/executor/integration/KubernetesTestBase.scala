@@ -5,7 +5,7 @@ import java.time.Clock
 import ai.mantik.executor.{ Config, Executor }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import org.scalatest.time.{ Millis, Span }
-import skuber.{ ConfigMap, ListResource, Namespace, Pod }
+import skuber.{ ConfigMap, ListResource, Namespace, Pod, Service }
 import skuber.api.client.KubernetesClient
 import skuber.batch.Job
 import skuber.json.format._
@@ -15,6 +15,8 @@ import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 abstract class KubernetesTestBase extends TestBase with AkkaSupport {
+
+  override protected val timeout: FiniteDuration = 30.seconds
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(
     timeout = scaled(Span(30000, Millis)),
@@ -26,7 +28,7 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
     podTrackerId = "mantik-executor",
     podPullImageTimeout = 3.seconds,
     checkPodInterval = 1.second,
-    defaultTimeout = 10.seconds,
+    defaultTimeout = 30.seconds,
     defaultRetryInterval = 1.second,
     interface = "localhost",
     port = 15001,
@@ -56,6 +58,7 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
       await(namespaced.deleteAll[ListResource[ConfigMap]]())
       await(namespaced.deleteAll[ListResource[Pod]]())
       await(namespaced.deleteAll[ListResource[Job]]())
+      // await(namespaced.deleteAll[ListResource[Service]]()) // error 405 ?!
       await(_kubernetesClient.delete[Namespace](namespace, gracePeriodSeconds = 0))
     }
     pendingNamespaces.foreach { namespace =>

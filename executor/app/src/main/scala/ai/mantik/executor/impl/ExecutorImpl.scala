@@ -6,7 +6,7 @@ import java.util.UUID
 
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.impl.tracker.KubernetesTracker
-import ai.mantik.executor.model.{ GraphAnalysis, Job, JobState, JobStatus, PublishServiceRequest, PublishServiceResponse }
+import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, DeployedServicesEntry, DeployedServicesQuery, DeployedServicesResponse, GraphAnalysis, Job, JobState, JobStatus, PublishServiceRequest, PublishServiceResponse }
 import ai.mantik.executor.{ Config, Errors, Executor }
 import akka.actor.{ ActorSystem, Cancellable }
 import com.google.common.net.InetAddresses
@@ -162,6 +162,96 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
     }
   }
 
+  override def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse] = {
+    val serviceId = UUID.randomUUID().toString
+    val namespace = namespaceForIsolationSpace(deployServiceRequest.isolationSpace)
+    val converter = new KubernetesServiceConverter(config, serviceId, deployServiceRequest)
+    val maybePullSecret = converter.pullSecret
+    val replicaSet = converter.replicaSet
+    val service = converter.service
+
+    for {
+      _ <- ops.ensureNamespace(namespace)
+      _ <- ops.maybeCreate(Some(namespace), maybePullSecret)
+      _ <- ops.create(Some(namespace), replicaSet)
+      _ <- ops.create(Some(namespace), service)
+    } yield {
+      logger.info(s"Deployed ${deployServiceRequest.serviceName} as ${serviceId} under ${converter.serviceUrl} in namespace ${namespace}")
+      DeployServiceResponse(
+        serviceId,
+        converter.serviceUrl
+      )
+    }
+  }
+
+  override def queryDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[DeployedServicesResponse] = {
+    val namespace = namespaceForIsolationSpace(deployedServicesQuery.isolationSpace)
+    ops.getNamespace(namespace).flatMap {
+      case None =>
+        logger.debug(s"Namespace ${namespace} doesn't exist, returning 0 services")
+        Future.successful(DeployedServicesResponse(Nil))
+      case Some(_) =>
+        ops.getServices(
+          Some(namespace),
+          serviceIdFilter = deployedServicesQuery.serviceId,
+          serviceNameFilter = deployedServicesQuery.serviceName
+        ).map { services =>
+            val entries = services.map { service =>
+              DeployedServicesEntry(
+                serviceId = service.metadata.labels.getOrElse(KubernetesConstants.ServiceIdLabel, {
+                  logger.error(s"Found a service without service id: ${namespace}/${service.name}")
+                  ""
+                }),
+                serviceName = service.metadata.labels.getOrElse(KubernetesConstants.ServiceNameLabel, {
+                  logger.error(s"Found a service without service name: ${namespace}/${service.name}")
+                  ""
+                }),
+                serviceUrl = s"http://${service.name}"
+              )
+            }
+            DeployedServicesResponse(
+              entries
+            )
+          }
+    }
+  }
+
+  override def deleteDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[Int] = {
+    val namespace = namespaceForIsolationSpace(deployedServicesQuery.isolationSpace)
+    ops.getNamespace(namespace).flatMap {
+      case None =>
+        logger.debug(s"Namespace ${namespace} not found, no services deleted")
+        Future.successful(0)
+      case Some(_) =>
+        ops.deleteDeployedServicesAndRelated(
+          Some(namespace),
+          serviceIdFilter = deployedServicesQuery.serviceId,
+          serviceNameFilter = deployedServicesQuery.serviceName
+        )
+      /*
+        val deleteServiceCall = ops.deleteServices(
+          Some(namespace),
+          serviceNameFilter = deployedServicesQuery.serviceName,
+          serviceIdFilter = deployedServicesQuery.serviceId
+        )
+        val deleteReplicaSetFuture = ops.deleteReplicaSets(
+          Some(namespace),
+          serviceNameFilter = deployedServicesQuery.serviceName,
+          serviceIdFilter = deployedServicesQuery.serviceId
+        )
+        for {
+          deleteServiceResult <- deleteServiceCall
+          deleteReplicaSetResult <- deleteReplicaSetFuture
+        } yield {
+          if (deleteReplicaSetResult != deleteServiceResult) {
+            logger.warn(s"Deleted Replica Set Count ${deleteReplicaSetResult} was != Deleted Service Result ${deleteServiceResult}. Orphaned items?")
+          }
+          deleteServiceResult
+        }
+         */
+    }
+  }
+
   override def logs(isolationSpace: String, id: String): Future[String] = {
     val namespace = namespaceForIsolationSpace(isolationSpace)
     ops.getJobLog(Some(namespace), id)
@@ -170,7 +260,7 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
   private val checkPodCancellation = config.checkPodInterval match {
     case f: FiniteDuration =>
       actorSystem.scheduler.schedule(f, f)(checkPods())
-    case _ => // nothign
+    case _ => // nothing
       Cancellable.alreadyCancelled
   }
 
@@ -194,7 +284,7 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
   }
 
   private def handleBrokenImagePod(pod: Pod): Unit = {
-    val maybeJobId = pod.metadata.labels.get(KubernetesJobConverter.JobIdLabel)
+    val maybeJobId = pod.metadata.labels.get(KubernetesConstants.JobIdLabel)
     logger.info(s"Detected broken image in ${pod.namespace}/${pod.name}, jobId=${maybeJobId}")
     logger.info(s"Deleting Pod...")
     ops.delete[Pod](Some(pod.namespace), pod.name)
