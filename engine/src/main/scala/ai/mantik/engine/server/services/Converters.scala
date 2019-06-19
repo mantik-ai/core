@@ -7,10 +7,11 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.engine.protos.items.MantikItem.Item
 import ai.mantik.engine.protos.items.ObjectKind
-import ai.mantik.planner.{ Algorithm, DataSet, MantikItem, TrainableAlgorithm }
+import ai.mantik.planner.{ Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
 import ai.mantik.engine.protos.items.{ ObjectKind, MantikItem => ProtoMantikItem }
 import ai.mantik.engine.protos.items.{ Algorithm => ProtoAlgorithm }
 import ai.mantik.engine.protos.items.{ DataSet => ProtoDataSet }
+import ai.mantik.engine.protos.items.{ Pipeline => ProtoPipeline }
 import ai.mantik.engine.protos.items.{ TrainableAlgorithm => ProtoTrainableAlgorithm }
 import ai.mantik.engine.protos.ds.{ BundleEncoding, Bundle => ProtoBundle, DataType => ProtoDataType }
 import com.google.protobuf.{ ByteString => ProtoByteString }
@@ -31,7 +32,11 @@ private[engine] object Converters {
       case a: Algorithm => ProtoMantikItem(
         kind = ObjectKind.KIND_ALGORITHM,
         item = Item.Algorithm(
-          ProtoAlgorithm(a.stack)
+          ProtoAlgorithm(
+            a.stack,
+            inputType = Some(encodeDataType(a.functionType.input)),
+            outputType = Some(encodeDataType(a.functionType.output))
+          )
         ))
       case d: DataSet => ProtoMantikItem(
         kind = ObjectKind.KIND_DATASET,
@@ -46,7 +51,20 @@ private[engine] object Converters {
         kind = ObjectKind.KIND_TRAINABLE_ALGORITHM,
         item = Item.TrainableAlgorithm(
           ProtoTrainableAlgorithm(
-            stack = t.stack
+            stack = t.stack,
+            trainingType = Some(encodeDataType(t.trainingDataType)),
+            statType = Some(encodeDataType(t.statType)),
+            inputType = Some(encodeDataType(t.functionType.input)),
+            outputType = Some(encodeDataType(t.functionType.output))
+          )
+        )
+      )
+      case p: Pipeline => ProtoMantikItem(
+        kind = ObjectKind.KIND_PIPELINE,
+        item = Item.Pipeline(
+          ProtoPipeline(
+            inputType = Some(encodeDataType(p.functionType.input)),
+            outputType = Some(encodeDataType(p.functionType.output))
           )
         )
       )
@@ -93,11 +111,10 @@ private[engine] object Converters {
       case BundleEncoding.ENCODING_MSG_PACK =>
         encodeBundleMsgPack(bundle)
       case BundleEncoding.ENCODING_JSON =>
-        val dataTypeString = bundle.model.toJsonString
         val jsonValue = JsonFormat.serializeBundleValue(bundle).noSpaces
         Future.successful(
           ProtoBundle(
-            Some(ProtoDataType(dataTypeString)),
+            Some(encodeDataType(bundle.model)),
             encoding = BundleEncoding.ENCODING_JSON,
             encoded = ProtoByteString.copyFrom(jsonValue, StandardCharsets.UTF_8)
           )
@@ -109,13 +126,16 @@ private[engine] object Converters {
 
   private def encodeBundleMsgPack(bundle: Bundle)(implicit ec: ExecutionContext, materializer: Materializer): Future[ProtoBundle] = {
     bundle.encode(false).runWith(Sink.seq).map { byteBlobs =>
-      val dataTypeString = bundle.model.toJsonString
       ProtoBundle(
-        Some(ProtoDataType(dataTypeString)),
+        Some(encodeDataType(bundle.model)),
         encoding = BundleEncoding.ENCODING_MSG_PACK,
         encoded = encodeByteString(byteBlobs)
       )
     }
+  }
+
+  def encodeDataType(dataType: DataType): ProtoDataType = {
+    ProtoDataType(dataType.toJsonString)
   }
 
   def decodeDataType(dataType: ProtoDataType): DataType = {

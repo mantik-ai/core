@@ -46,7 +46,7 @@ private[impl] case class ResourcePlan(
     ResourcePlan(
       pre = PlanOp.combine(pre, argument.pre),
       graph = graph.mergeWith(argument.graph).addLinks(extraLinks: _*),
-      inputs = inputs.drop(argument.outputs.size),
+      inputs = argument.inputs ++ inputs.drop(argument.outputs.size),
       outputs = outputs
     )
   }

@@ -42,6 +42,11 @@ case class Select(
     }
   }
 
+  /** Convert the selection back to an equivalent statement. */
+  def toSelectStatement: String = {
+    SqlSelectFormatter.formatSql(this)
+  }
+
   /**
    * Compile select statement to a select mantikfile.
    * @return either an error or a mantikfile which can execute the selection.

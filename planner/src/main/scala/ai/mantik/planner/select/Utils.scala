@@ -4,6 +4,7 @@ private[select] object Utils {
 
   /** Combines a list of Either values into a single either value with list of values.. */
   def flatEither[L, T](in: List[Either[L, T]]): Either[L, List[T]] = {
+    // TODO: Replace with Cats.
     val builder = List.newBuilder[T]
     val it = in.iterator
     while (it.hasNext) {

@@ -12,7 +12,14 @@ object AutoAdapt {
     if (from.dataType == expected) {
       return Right(from)
     }
-    val fromTabular = from.dataType match {
+    autoSelect(from.dataType, expected).map { select =>
+      from.select(select)
+    }
+  }
+
+  /** Automatically generates a select statement for converting data types. */
+  def autoSelect(from: DataType, expected: DataType): Either[String, Select] = {
+    val fromTabular = from match {
       case t: TabularData => t
       case _              => return Left("Can only auto adapt tabular data")
     }
@@ -20,9 +27,7 @@ object AutoAdapt {
       case t: TabularData => t
       case _              => return Left("Can only auto adapt tabular data")
     }
-    autoSelect(fromTabular, toTabular).map { select =>
-      from.select(select)
-    }
+    autoSelect(fromTabular, toTabular)
   }
 
   /** Generates a select statement from a from tabular to a target tabular data type */

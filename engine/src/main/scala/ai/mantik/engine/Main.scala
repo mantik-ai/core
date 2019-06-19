@@ -23,7 +23,7 @@ object Main {
     implicit val ec: ExecutionContext = actorSystem.dispatcher
     val config = ConfigFactory.load()
 
-    val context = Context.localWithAkka()
+    val context = Context.localWithAkka(config)
     try {
       val server = EngineFactory.makeEngineServer(config, context)
       server.start()

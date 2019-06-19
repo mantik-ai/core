@@ -26,7 +26,7 @@ class SimpleAlgorithmSpec extends IntegrationTestBase {
         .result
     )
 
-    val transformation = context.loadTransformation("double_multiply")
+    val transformation = context.loadAlgorithm("double_multiply")
     val result = context.execute(
       transformation(dataset).fetch
     )

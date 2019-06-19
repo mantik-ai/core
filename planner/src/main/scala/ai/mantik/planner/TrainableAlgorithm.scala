@@ -35,20 +35,20 @@ final case class TrainableAlgorithm(
     }
 
     val result = if (cached){
-      Source.Cached(Source.OperationResult(op))
+      PayloadSource.Cached(PayloadSource.OperationResult(op))
     } else {
-      Source.OperationResult(op)
+      PayloadSource.OperationResult(op)
     }
 
-    val algorithmResult = Algorithm(Source.Projection(result), trainedMantikfile)
-    val statsResult = DataSet.natural(Source.Projection(result, 1), statType)
+    val algorithmResult = new Algorithm(Source.constructed(PayloadSource.Projection(result)), trainedMantikfile)
+    val statsResult = DataSet.natural(Source.constructed(PayloadSource.Projection(result, 1)), statType)
     (algorithmResult, statsResult)
   }
 
 
   override protected def withMantikfile(mantikfile: Mantikfile[TrainableAlgorithmDefinition]): TrainableAlgorithm = {
-    copy(
-      mantikfile = mantikfile
+    TrainableAlgorithm(
+      source.derive, mantikfile
     )
   }
 }

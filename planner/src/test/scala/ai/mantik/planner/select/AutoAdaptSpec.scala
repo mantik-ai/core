@@ -1,7 +1,7 @@
 package ai.mantik.planner.select
 
 import ai.mantik.ds.{DataType, FundamentalType, TabularData}
-import ai.mantik.planner.{DataSet, Source}
+import ai.mantik.planner.{DataSet, DefinitionSource, PayloadSource, Source}
 import ai.mantik.repository.{ContentTypes, DataSetDefinition, Mantikfile}
 import ai.mantik.testutils.TestBase
 
@@ -20,7 +20,7 @@ class AutoAdaptSpec extends TestBase {
   private def makeDs(dt: DataType): DataSet = {
     // DataSet source is not important here.
     DataSet(
-      Source.Loaded("someId", ContentTypes.ZipFileContentType),
+      Source (DefinitionSource.Loaded("item1234"), PayloadSource.Loaded("someId", ContentTypes.ZipFileContentType)),
       Mantikfile.pure(DataSetDefinition(format = "someformat", `type` = dt))
     )
   }
@@ -34,7 +34,7 @@ class AutoAdaptSpec extends TestBase {
     val ds1 = makeDs(type1)
     val adapted = AutoAdapt.autoAdapt(ds1, type2).right.getOrElse(fail)
     adapted.dataType shouldBe type2
-    adapted.source shouldBe an[Source.OperationResult]
+    adapted.payloadSource shouldBe an[PayloadSource.OperationResult]
   }
 
   "autoSelect" should "select single renamings" in {

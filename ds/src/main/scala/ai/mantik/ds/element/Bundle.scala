@@ -90,6 +90,12 @@ sealed trait Bundle {
    * This works only for Bundles which are not tabular.
    */
   def single: Option[Element]
+
+  /**
+   * Convert a tabular bundle into a single element bundle by inserting a wrapped tabular element.
+   * SingleElementBundles are not touched.
+   */
+  def toSingleElementBundle: SingleElementBundle
 }
 
 /** A Bundle which contains a single element. */
@@ -121,6 +127,8 @@ case class SingleElementBundle(
       case Right(c) => Left("Cast would loose precision")
     }
   }
+
+  override def toSingleElementBundle: SingleElementBundle = this
 }
 
 /** A  Bundle which contains tabular data. */
@@ -130,12 +138,7 @@ case class TabularBundle(
 ) extends Bundle {
   override def single: Option[Element] = None
 
-  /**
-   * Convert a tabular bundle into a single element bundle by inserting a wrapped tabular element.
-   * Note: this is in most cases practical, as tabular bundles are more efficient to encode.
-   * However during JSON Serialization/Deserialization this can be practical.
-   */
-  def toSingleElementBundle: SingleElementBundle = SingleElementBundle(model, EmbeddedTabularElement(rows))
+  override def toSingleElementBundle: SingleElementBundle = SingleElementBundle(model, EmbeddedTabularElement(rows))
 }
 
 object Bundle {

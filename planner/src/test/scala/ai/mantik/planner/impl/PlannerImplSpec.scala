@@ -19,6 +19,21 @@ class PlannerImplSpec extends TestBase {
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
       f.run(PlanningState()).value
     }
+
+    val algorithm1 = Algorithm(
+      Source(DefinitionSource.Loaded("algo1:version1"),PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+    )
+    val dataset1 = DataSet(
+      Source(DefinitionSource.Loaded("dataset1:version1"), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1
+    )
+
+    // Create a Source for loaded Items
+    def makeLoadedSource(file: String, contentType: String = ContentTypes.MantikBundleContentType, mantikId: MantikId = "item1234"): Source = {
+      Source(
+        DefinitionSource.Loaded(mantikId),
+        PayloadSource.Loaded(file, contentType)
+      )
+    }
   }
 
   private val lit = Bundle.build(
@@ -32,14 +47,14 @@ class PlannerImplSpec extends TestBase {
   "translateItemPayloadSource" should "not work on missing files" in new Env {
     intercept[Planner.NotAvailableException]{
       runWithEmptyState(planner.translateItemPayloadSource(
-        Source.Empty
+        PayloadSource.Empty
       ))
     }
   }
 
   it should "provide a file when there is a file source" in new Env {
     val (state, source) = runWithEmptyState(planner.translateItemPayloadSource(
-      Source.Loaded("file1", "ContentType")
+      PayloadSource.Loaded("file1", "ContentType")
     ))
     state.files shouldBe List(
       PlanFile(PlanFileReference(1), fileId = Some("file1"), read = true)
@@ -63,7 +78,7 @@ class PlannerImplSpec extends TestBase {
 
   it should "convert a literal to a file and provide it as stream if given" in new Env {
     val (state, source) = runWithEmptyState(planner.translateItemPayloadSource(
-      Source.BundleLiteral(lit)
+      PayloadSource.BundleLiteral(lit)
     ))
     state.files shouldBe List(
       PlanFile(PlanFileReference(1), write = true, read = true, temporary = true)
@@ -88,10 +103,10 @@ class PlannerImplSpec extends TestBase {
 
   it should "project results of operations" in new Env {
     val (state, source) = runWithEmptyState(planner.translateItemPayloadSource(
-      Source.OperationResult(
+      PayloadSource.OperationResult(
         Operation.Application(
-          Algorithm(Source.Loaded("algo1", ContentTypes.ZipFileContentType), TestItems.algorithm1),
-          DataSet(Source.Loaded("dataset1", ContentTypes.MantikBundleContentType), TestItems.dataSet1)
+          algorithm1,
+          dataset1
         )
       )
     ))
@@ -127,7 +142,7 @@ class PlannerImplSpec extends TestBase {
   }
 
   "translateItemPayloadSourceAsFiles" should "convert a file load" in new Env {
-    val (state, opFiles) = runWithEmptyState(planner.translateItemPayloadSourceAsFiles(Source.Loaded("file1", ContentTypes.ZipFileContentType), canBeTemporary = true))
+    val (state, opFiles) = runWithEmptyState(planner.translateItemPayloadSourceAsFiles(PayloadSource.Loaded("file1", ContentTypes.ZipFileContentType), canBeTemporary = true))
     state.files shouldBe List(
       PlanFile(PlanFileReference(1), read = true, fileId = Some("file1"))
     )
@@ -139,10 +154,10 @@ class PlannerImplSpec extends TestBase {
     for {
       temp <- Seq(false, true)
     } {
-      val source = Source.OperationResult(
+      val source = PayloadSource.OperationResult(
         Operation.Application(
-          Algorithm(Source.Loaded("algo1", ContentTypes.ZipFileContentType), TestItems.algorithm1),
-          DataSet(Source.Loaded("dataset1", ContentTypes.MantikBundleContentType), TestItems.dataSet1)
+          algorithm1,
+          dataset1
         )
       )
       val (state, opFiles) = runWithEmptyState(planner.translateItemPayloadSourceAsFiles(
@@ -190,7 +205,7 @@ class PlannerImplSpec extends TestBase {
 
   it should "support empty" in new Env {
     val (state, files) = runWithEmptyState(planner.translateItemPayloadSourceAsFiles(
-      Source.Empty, canBeTemporary = true
+      PayloadSource.Empty, canBeTemporary = true
     ))
     state shouldBe PlanningState()
     files.preOp shouldBe PlanOp.Empty
@@ -199,7 +214,7 @@ class PlannerImplSpec extends TestBase {
 
   "manifestDataSet" should "convert a simple literal source" in new Env {
     val sourcePlan = runWithEmptyState(planner.manifestDataSet(
-      DataSet.natural(Source.BundleLiteral(lit), lit.model)
+      DataSet.literal(lit)
     ))._2
 
     sourcePlan.pre shouldBe PlanOp.PushBundle(lit, PlanFileReference(1))
@@ -216,10 +231,7 @@ class PlannerImplSpec extends TestBase {
 
   it should "convert a load natural source" in new Env {
     val ds = DataSet.natural(
-      Source.Loaded(
-        "file1", ContentTypes.MantikBundleContentType
-      ),
-      lit.model
+      makeLoadedSource("file1"), lit.model
     )
 
     val sourcePlan = runWithEmptyState(planner.manifestDataSet(
@@ -240,10 +252,9 @@ class PlannerImplSpec extends TestBase {
     sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
   }
 
-  it should "manifest a literal" in new Env {
-    // TODO: This is not a literal?
+  it should "manifest a simple loaded item" in new Env {
     val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
-      DataSet(Source.Loaded("file1", ContentTypes.MantikBundleContentType), TestItems.dataSet1)
+      DataSet(makeLoadedSource("file1"), TestItems.dataSet1)
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -264,7 +275,8 @@ class PlannerImplSpec extends TestBase {
 
   it should "also manifest a bridged dataset" in new Env {
     val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
-      DataSet(Source.Loaded("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2)
+      DataSet(
+        makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2)
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -284,7 +296,7 @@ class PlannerImplSpec extends TestBase {
   }
 
   it should "manifest the result of an algorithm" in new Env {
-    val ds1 = DataSet(Source.Loaded("1", ContentTypes.MantikBundleContentType), Mantikfile.pure(DataSetDefinition(
+    val ds1 = DataSet(makeLoadedSource("1"), Mantikfile.pure(DataSetDefinition(
       format = DataSet.NaturalFormatName, `type` = TabularData("x" -> FundamentalType.Int32)
     )))
     val algo1 = Mantikfile.pure(AlgorithmDefinition(
@@ -294,7 +306,7 @@ class PlannerImplSpec extends TestBase {
         output = TabularData("y" -> FundamentalType.Int32)
       )
     ))
-    val algorithm = Algorithm(Source.Loaded("2", ContentTypes.ZipFileContentType), algo1)
+    val algorithm = Algorithm(makeLoadedSource("2", ContentTypes.ZipFileContentType), algo1)
     val applied = algorithm.apply(ds1)
 
     val (state, sourcePlan) = runWithEmptyState(planner.manifestDataSet(
@@ -333,7 +345,7 @@ class PlannerImplSpec extends TestBase {
 
   "manifestTrainableAlgorithm" should "manifest a trainable algorithm" in new Env {
     val (state, sourcePlan) = runWithEmptyState(planner.manifestTrainableAlgorithm(
-      TrainableAlgorithm(Source.Loaded("file1", ContentTypes.ZipFileContentType), TestItems.learning1)
+      TrainableAlgorithm(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.learning1)
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -359,7 +371,7 @@ class PlannerImplSpec extends TestBase {
 
   "manifestAlgorithm" should "manifest an algorithm" in new Env {
     val (state, sourcePlan) = runWithEmptyState(planner.manifestAlgorithm(
-      Algorithm(Source.Loaded("file1", ContentTypes.ZipFileContentType), TestItems.algorithm1)
+      Algorithm(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.algorithm1)
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -380,7 +392,7 @@ class PlannerImplSpec extends TestBase {
 
   "manifestDataSetAsFile" should "return a literal" in new Env {
     val (state, opFiles) = runWithEmptyState(planner.manifestDataSetAsFile(
-      DataSet(Source.Loaded("file1", ContentTypes.MantikBundleContentType), TestItems.dataSet1), canBeTemporary = true
+      DataSet(makeLoadedSource("file1", ContentTypes.MantikBundleContentType), TestItems.dataSet1), canBeTemporary = true
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -390,7 +402,7 @@ class PlannerImplSpec extends TestBase {
 
   it should "also manifest a bridged dataset" in new Env {
     val (state, opFiles) = runWithEmptyState(planner.manifestDataSetAsFile(
-      DataSet(Source.Loaded("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2), canBeTemporary = true
+      DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2), canBeTemporary = true
     ))
     state.files shouldBe List(
       PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")),
@@ -424,7 +436,7 @@ class PlannerImplSpec extends TestBase {
   "convert" should "convert a simple save action" in new Env {
     val plan = planner.convert(
       Action.SaveAction(
-        DataSet.natural(Source.BundleLiteral(lit), lit.model), "item1"
+        DataSet.literal(lit), "item1"
       )
     )
 
@@ -445,10 +457,58 @@ class PlannerImplSpec extends TestBase {
     )
   }
 
+  it should "also convert dependent operations in save actions" in new Env {
+    val algorithm2 = Algorithm(
+      Source(
+        DefinitionSource.Constructed(),
+        PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
+      ), TestItems.algorithm1
+    )
+    val pipeline = Pipeline.build(
+      algorithm2
+    )
+    val plan = planner.convert(
+      Action.SaveAction(
+        pipeline, "pipe1"
+      )
+    )
+    plan.op shouldBe PlanOp.seq(
+      PlanOp.AddMantikItem(
+        pipeline.resolved.steps.head.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm,
+        Some(PlanFileReference(1)),
+        pipeline.resolved.steps.head.algorithm.mantikfile
+      ),
+      PlanOp.AddMantikItem(
+        MantikId("pipe1"),
+        None,
+        pipeline.mantikfile
+      )
+    )
+  }
+
+  it should "not convert dependent operations, if they are plain loaded" in new Env {
+    // the algorithm is already existant (DefinitionSource.Loaded())
+    // so there do not have to be a 2nd copy.
+    val pipeline = Pipeline.build(
+      algorithm1
+    )
+    val plan = planner.convert(
+      Action.SaveAction(
+        pipeline, "pipe1"
+      )
+    )
+
+    plan.op shouldBe PlanOp.AddMantikItem(
+      MantikId("pipe1"),
+      None,
+      pipeline.mantikfile
+    )
+  }
+
   it should "convert a simple fetch operation" in new Env {
     val plan = planner.convert(
       Action.FetchAction(
-        DataSet.natural(Source.BundleLiteral(lit), lit.model)
+        DataSet.literal(lit)
       )
     )
     plan.files shouldBe List(
@@ -461,7 +521,7 @@ class PlannerImplSpec extends TestBase {
   }
 
   it should "also work if it has to convert a executed dataset" in new Env {
-    val inner = DataSet(Source.Loaded("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2)
+    val inner = DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2)
     val plan = planner.convert(
       Action.FetchAction (
         inner
@@ -494,7 +554,7 @@ class PlannerImplSpec extends TestBase {
     val c = b.select("select y as z")
     val plan = planner.convert(c.fetch)
     plan.op.asInstanceOf[PlanOp.Sequential].plans.size shouldBe 3 // cached(pushing, calculation), calculation 2 and pulling
-    val cacheKey = b.source.asInstanceOf[Source.Cached].cacheGroup.head
+    val cacheKey = b.payloadSource.asInstanceOf[PayloadSource.Cached].cacheGroup.head
     plan.files.size shouldBe 3 // push, cache, calculation
     plan.files shouldBe List(
       PlanFile(PlanFileReference(1), read = true, write = true, temporary = true),
@@ -525,7 +585,7 @@ class PlannerImplSpec extends TestBase {
   it should "level up temporary files to non temporary ones, if the file is saved at the end" in new Env {
     val a = DataSet.literal(lit)
     val b = a.select("select x as y").cached
-    val cacheKey = b.source.asInstanceOf[Source.Cached].cacheGroup.head
+    val cacheKey = b.payloadSource.asInstanceOf[PayloadSource.Cached].cacheGroup.head
     val action = b.save("foo1")
     val plan = planner.convert(action)
     plan.files shouldBe List(
@@ -539,7 +599,7 @@ class PlannerImplSpec extends TestBase {
   }
 
   it should "automatically cache training outputs" in new Env {
-    val trainable = TrainableAlgorithm(Source.Loaded("file1", ContentTypes.ZipFileContentType), TestItems.learning1)
+    val trainable = TrainableAlgorithm(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.learning1)
     val trainData = DataSet.literal(Bundle.fundamental(5))
     val (trained, stats) = trainable.train(trainData)
 

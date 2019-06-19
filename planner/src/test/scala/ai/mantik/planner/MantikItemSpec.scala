@@ -7,7 +7,7 @@ import ai.mantik.testutils.TestBase
 class MantikItemSpec extends TestBase {
 
   lazy val sample = Algorithm(
-    Source.Loaded("1", ContentTypes.ZipFileContentType),
+    Source.constructed(PayloadSource.Loaded("1", ContentTypes.ZipFileContentType)),
     Mantikfile.fromYaml(
       """
         |stack: stack1
@@ -26,7 +26,8 @@ class MantikItemSpec extends TestBase {
     sample.mantikfile.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(123)
     val after = sample.withMetaValue("x", 100)
     after.mantikfile.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(100)
-    after.source shouldBe sample.source
+    after.payloadSource shouldBe sample.payloadSource
+    after.source.definition shouldBe an[DefinitionSource.Derived]
     after.mantikfile.definition shouldBe an[AlgorithmDefinition]
   }
 }

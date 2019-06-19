@@ -6,6 +6,7 @@ import ai.mantik.planner.impl.ContextImpl
 import ai.mantik.repository.{ FileRepository, MantikId, Repository }
 import akka.actor.ActorSystem
 import akka.stream.Materializer
+import com.typesafe.config.Config
 
 /** Main Mantik Context used as main access points for Scala Apps. */
 trait Context extends CoreComponents {
@@ -13,11 +14,14 @@ trait Context extends CoreComponents {
   /** Load a dataset from Mantik. */
   def loadDataSet(id: MantikId): DataSet
 
-  /** Load a Transformation from Mantik. */
-  def loadTransformation(id: MantikId): Algorithm
+  /** Load a Algorithm from Mantik. */
+  def loadAlgorithm(id: MantikId): Algorithm
 
   /** Load a Trainable Algorithm. */
   def loadTrainableAlgorithm(id: MantikId): TrainableAlgorithm
+
+  /** Load a Pipeline. */
+  def loadPipeline(id: MantikId): Pipeline
 
   /** Execute an Action. */
   def execute[T](action: Action[T]): T
@@ -47,7 +51,7 @@ object Context {
   }
 
   /** Creates a new local context, when you already have Akka. */
-  def localWithAkka()(implicit actorSystem: ActorSystem, materializer: Materializer): Context = {
-    ContextImpl.constructForLocalTestingWithAkka()
+  def localWithAkka(config: Config)(implicit actorSystem: ActorSystem, materializer: Materializer): Context = {
+    ContextImpl.constructForLocalTestingWithAkka(config)
   }
 }

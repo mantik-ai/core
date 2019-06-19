@@ -6,6 +6,7 @@ import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.repository.meta.MetaVariable
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.testutils.TestBase
+import io.circe.Json
 
 class MantikfileSpec extends TestBase {
 
@@ -171,6 +172,59 @@ class MantikfileSpec extends TestBase {
         directory = Some("foo")
       )
     )
+  }
+
+  it should "parse Pipelines" in {
+    val definition =
+      """kind: pipeline
+        |name: pipeline1
+        |steps:
+        |  - algorithm: "algo1:v1"
+        |    description: We like this step
+        |  - algorithm: "algo2"
+        |    metaVariables:
+        |      - name: abc
+        |        value: 123
+        |  - select: "select i"
+        |type:
+        |  input:
+        |    columns:
+        |      x: int32
+        |  output:
+        |    columns:
+        |      y: int32
+      """.stripMargin
+    val mantikfile = Mantikfile.fromYaml(definition) match {
+      case Left(e)  => fail(e.getMessage)
+      case Right(v) => v
+    }
+    mantikfile.definitionAs[PipelineDefinition] shouldBe Right(
+      PipelineDefinition(
+        name = Some("pipeline1"),
+        `type` = Some(OptionalFunctionType(
+          input = Some(TabularData("x" -> FundamentalType.Int32)),
+          output = Some(TabularData("y" -> FundamentalType.Int32))
+        )),
+        steps = List(
+          PipelineStep.AlgorithmStep(
+            description = Some("We like this step"),
+            algorithm = "algo1:v1"
+          ),
+          PipelineStep.AlgorithmStep(
+            algorithm = "algo2",
+            metaVariables = Some(List(
+              PipelineStep.MetaVariableSetting("abc", Json.fromInt(123))
+            ))
+          ),
+          PipelineStep.SelectStep(
+            "select i"
+          )
+        )
+      )
+    )
+    val asJson = mantikfile.toJsonValue
+    val parsedAgain = Mantikfile.parseSingleDefinition(asJson).right.getOrElse(fail)
+    parsedAgain.definition shouldBe mantikfile.definition
   }
 
   it should "contain the raw JSON" in {

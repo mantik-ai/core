@@ -20,7 +20,7 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport {
     val config = ConfigFactory.load()
       .withValue("mantik.repository.type", ConfigValueFactory.fromAnyRef("temp"))
     embeddedExecutor = new ExecutorForIntegrationTests()
-    context = Context.localWithAkka()
+    context = Context.localWithAkka(config)
     engineServer = EngineFactory.makeEngineServer(config, context)
     engineServer.start()
     engineClient = new EngineClient(s"localhost:${engineServer.port}")

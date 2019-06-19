@@ -55,6 +55,6 @@ abstract class TrialDependentCodec[T] extends ObjectEncoder[T] with Decoder[T] {
         case Left(_)      => // try next
       }
     }
-    Left(DecodingFailure(s"No matching decoder found", Nil))
+    Left(DecodingFailure(s"No matching decoder found", c.history))
   }
 }

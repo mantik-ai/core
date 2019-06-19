@@ -47,21 +47,15 @@ case class DataSet(
     if (select.inputType != dataType) {
       throw new IllegalArgumentException("Select statement is for a different data type and not applicable")
     }
-    val mantikFile = select.compileToSelectMantikfile() match {
-      case Left(error) => throw new FeatureNotSupported(s"Could not compile select ${error}")
-      case Right(ok) => ok
-    }
+    val algorithm = Algorithm.fromSelect(select)
 
-    val source = Source.OperationResult(
+    val payloadSource = PayloadSource.OperationResult(
       Operation.Application(
-        Algorithm(
-          Source.Empty,
-          mantikFile
-        ),
+        algorithm,
         this
       ),
     )
-    DataSet.natural(source, select.resultingType)
+    DataSet.natural(Source.constructed(payloadSource), select.resultingType)
   }
 
   /** Tries to auto convert this data set to another data type.
@@ -77,16 +71,20 @@ case class DataSet(
   /** Returns a dataset, which will be cached.
     * Note: caching is done lazy. */
   def cached: DataSet = {
-    source match {
-      case c: Source.Cached => this
+    payloadSource match {
+      case c: PayloadSource.Cached => this
       case _ =>
-        DataSet(Source.Cached(source), mantikfile)
+        val updatedSource = Source(
+          DefinitionSource.Derived(source.definition),
+          PayloadSource.Cached(source.payload)
+        )
+        new DataSet(updatedSource, mantikfile)
     }
   }
 
   override protected def withMantikfile(mantikfile: Mantikfile[DataSetDefinition]): DataSet = {
-    copy(
-      mantikfile = mantikfile
+    DataSet(
+      source.derive, mantikfile
     )
   }
 }
@@ -95,7 +93,7 @@ object DataSet {
 
   def literal(bundle: Bundle): DataSet = {
     natural(
-      Source.BundleLiteral(bundle), bundle.model
+      Source.constructed(PayloadSource.BundleLiteral(bundle)), bundle.model
     )
   }
 

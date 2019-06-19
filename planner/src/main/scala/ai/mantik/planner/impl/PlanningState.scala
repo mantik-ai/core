@@ -1,6 +1,6 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.planner.{ CacheKey, CacheKeyGroup, PlanFile, PlanFileReference, Source }
+import ai.mantik.planner.{ CacheKey, CacheKeyGroup, PlanFile, PlanFileReference, PayloadSource }
 import cats.data.State
 
 /**
@@ -105,5 +105,10 @@ object PlanningState {
    */
   def apply[T](f: PlanningState => (PlanningState, T)): State[PlanningState, T] = {
     State(f)
+  }
+
+  /** A Non-state-changing function. */
+  def pure[T](f: => T): State[PlanningState, T] = {
+    State.pure(f)
   }
 }

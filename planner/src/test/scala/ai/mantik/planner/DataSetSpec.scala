@@ -11,8 +11,8 @@ class DataSetSpec extends TestBase {
 
   "cached" should "return a cached variant of the DataSet" in {
     val cached = sample.cached
-    val cachedSource = cached.source.asInstanceOf[Source.Cached]
-    cachedSource.source shouldBe sample.source
+    val cachedSource = cached.payloadSource.asInstanceOf[PayloadSource.Cached]
+    cachedSource.source shouldBe sample.payloadSource
     cached.mantikfile shouldBe sample.mantikfile
   }
 
