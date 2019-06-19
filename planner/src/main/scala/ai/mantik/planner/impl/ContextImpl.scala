@@ -34,7 +34,7 @@ private[impl] class ContextImpl(config: Config, val repository: Repository, val 
     load[DataSet](id)
   }
 
-  override def loadTransformation(id: MantikId): Algorithm = {
+  override def loadAlgorithm(id: MantikId): Algorithm = {
     load[Algorithm](id)
   }
 
@@ -42,9 +42,14 @@ private[impl] class ContextImpl(config: Config, val repository: Repository, val 
     load[TrainableAlgorithm](id)
   }
 
+  override def loadPipeline(id: MantikId): Pipeline = {
+    load[Pipeline](id)
+  }
+
   private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
-    val (artefact, _) = await(repository.getAs[T#DefinitionType](id), dbLookupTimeout)
-    val item = MantikItem.fromMantikArtifact(artefact)
+    val (artifact, hull) = await(repository.getWithHull(id), dbLookupTimeout)
+    artifact.forceMantikfileCast[T#DefinitionType]
+    val item = MantikItem.fromMantikArtifact(artifact, hull)
     item.asInstanceOf[T]
   }
 
@@ -102,11 +107,11 @@ object ContextImpl {
   def constructForLocalTesting(): Context = {
     implicit val actorSystem: ActorSystem = ActorSystem()
     implicit val materializer: Materializer = ActorMaterializer.create(actorSystem)
-    constructForLocalTestingWithAkka(shutdownMethod = () => actorSystem.terminate())
+    val config = ConfigFactory.load()
+    constructForLocalTestingWithAkka(config, shutdownMethod = () => actorSystem.terminate())
   }
 
-  def constructForLocalTestingWithAkka(shutdownMethod: () => Unit = () => (()))(implicit actorSystem: ActorSystem, materializer: Materializer): Context = {
-    val config = ConfigFactory.load()
+  def constructForLocalTestingWithAkka(config: Config, shutdownMethod: () => Unit = () => (()))(implicit actorSystem: ActorSystem, materializer: Materializer): Context = {
     val executorUrl = config.getString("mantik.core.executorUrl")
 
     implicit val ec: ExecutionContext = actorSystem.dispatcher

@@ -25,9 +25,9 @@ class PlannerElements(bridges: Bridges) {
   }
 
   /** Converts a Literal into a push plan. */
-  def literalToPushBundle(literal: Source.Literal, fileReference: PlanFile): PlanOp = {
+  def literalToPushBundle(literal: PayloadSource.Literal, fileReference: PlanFile): PlanOp = {
     literal match {
-      case Source.BundleLiteral(content) =>
+      case PayloadSource.BundleLiteral(content) =>
         PlanOp.PushBundle(content, fileReference.ref)
     }
   }

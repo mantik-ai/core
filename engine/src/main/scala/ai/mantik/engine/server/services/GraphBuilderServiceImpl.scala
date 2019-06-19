@@ -1,9 +1,10 @@
 package ai.mantik.engine.server.services
 
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, CacheRequest, GetRequest, LiteralRequest, NodeResponse, SelectRequest, TrainRequest, TrainResponse }
+import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, NodeResponse, SelectRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager }
-import ai.mantik.planner.{ Algorithm, DataSet, MantikItem, TrainableAlgorithm }
+import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
 import ai.mantik.repository.Errors
 import akka.stream.Materializer
 
@@ -14,11 +15,11 @@ class GraphBuilderServiceImpl(sessionManager: SessionManager[Session])(implicit 
   override def get(request: GetRequest): Future[NodeResponse] = {
     for {
       session <- sessionManager.get(request.sessionId)
-      artifact <- session.components.repository.get(request.name).recover {
+      (artifact, hull) <- session.components.repository.getWithHull(request.name).recover {
         case _: Errors.NotFoundException => throw new ArtefactNotFoundException(request.name)
       }
     } yield {
-      val mantikItem = MantikItem.fromMantikArtifact(artifact)
+      val mantikItem = MantikItem.fromMantikArtifact(artifact, hull)
       placeInGraph(session, mantikItem)
     }
   }
@@ -34,7 +35,7 @@ class GraphBuilderServiceImpl(sessionManager: SessionManager[Session])(implicit 
   override def algorithmApply(request: ApplyRequest): Future[NodeResponse] = {
     for {
       session <- sessionManager.get(request.sessionId)
-      algorithm = session.getItemAs[Algorithm](request.algorithmId)
+      algorithm = session.getItemAs[ApplicableMantikItem](request.algorithmId)
       dataset = session.getItemAs[DataSet](request.datasetId)
     } yield {
       val result = algorithm.apply(dataset) // TODO: This can fail, catch me!
@@ -87,6 +88,23 @@ class GraphBuilderServiceImpl(sessionManager: SessionManager[Session])(implicit 
     } yield {
       val selected = dataset.select(request.selectQuery)
       placeInGraph(session, selected)
+    }
+  }
+
+  override def buildPipeline(request: BuildPipelineRequest): Future[NodeResponse] = {
+    for {
+      session <- sessionManager.get(request.sessionId)
+    } yield {
+      val steps: Seq[Pipeline.PipelineBuildStep] = request.steps.map { step =>
+        step.step match {
+          case Step.AlgorithmId(algorithmId) => Pipeline.PipelineBuildStep.AlgorithmBuildStep(session.getItemAs[Algorithm](algorithmId))
+          case Step.Select(statement)        => Pipeline.PipelineBuildStep.SelectBuildStep(statement)
+          case other                         => throw new IllegalArgumentException(s"Unexpected step ${other.getClass.getSimpleName}")
+        }
+      }
+      val inputType = request.inputType.map(Converters.decodeDataType)
+      val pipeline = Pipeline.buildFromSteps(steps, inputType)
+      placeInGraph(session, pipeline)
     }
   }
 }

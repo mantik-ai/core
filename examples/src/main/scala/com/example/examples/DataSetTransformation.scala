@@ -22,7 +22,7 @@ object DataSetTransformation extends ExampleBase {
         .row(2.0).result
     )
 
-    val transformation = context.loadTransformation("double_multiply")
+    val transformation = context.loadAlgorithm("double_multiply")
     val result = context.execute(
       transformation(dataset).fetch
     )

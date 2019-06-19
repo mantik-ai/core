@@ -14,12 +14,22 @@ class SelectBuilderSpec extends TestBase {
 
   val emptyInput = TabularData()
 
+  // Test encoding to SQL and back yields the same result.
+  private def testReparsable(select: Select): Unit = {
+    val selectStatement = select.toSelectStatement
+    withClue(s"Re-Serialized ${selectStatement} should be parseable"){
+      val parsed = Select.parse(select.inputType, selectStatement)
+      parsed shouldBe Right(select)
+    }
+  }
+
   it should "support select *" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT *")
     got shouldBe Right(
       Select(simpleInput)
     )
     got.right.get.resultingType shouldBe simpleInput
+    testReparsable(got.forceRight)
   }
 
   it should "support selecting a single" in {
@@ -36,6 +46,7 @@ class SelectBuilderSpec extends TestBase {
     got.right.get.resultingType shouldBe TabularData(
       "y" -> FundamentalType.StringType
     )
+    testReparsable(got.forceRight)
   }
 
   it should "support selecting multiple" in {
@@ -54,6 +65,7 @@ class SelectBuilderSpec extends TestBase {
       "y" -> FundamentalType.StringType,
       "x" -> FundamentalType.Int32
     )
+    testReparsable(got.forceRight)
   }
 
   it should "support simple casts" in {
@@ -76,6 +88,7 @@ class SelectBuilderSpec extends TestBase {
     got.right.get.resultingType shouldBe TabularData(
       "x" -> FundamentalType.Int64
     )
+    testReparsable(got.forceRight)
   }
 
   it should "support simple constants" in {
@@ -99,6 +112,7 @@ class SelectBuilderSpec extends TestBase {
     got shouldBe Right(
       expected
     )
+    testReparsable(got.forceRight)
   }
 
   it should "support simple filters" in {
@@ -119,6 +133,7 @@ class SelectBuilderSpec extends TestBase {
       )
     )
     got shouldBe Right(expected)
+    testReparsable(got.forceRight)
   }
 
   it should "support simple filters II" in {
@@ -135,6 +150,7 @@ class SelectBuilderSpec extends TestBase {
       )
     )
     got shouldBe Right(expected)
+    testReparsable(got.forceRight)
   }
 
   it should "support simple combined filters" in {
@@ -159,5 +175,6 @@ class SelectBuilderSpec extends TestBase {
       )
     )
     got shouldBe Right(expected)
+    testReparsable(got.forceRight)
   }
 }

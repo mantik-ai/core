@@ -34,6 +34,26 @@ class ResourcePlanSpec extends TestBase {
     )
   )
 
+  val algorithm2 = ResourcePlan (
+    pre = PlanOp.seq(pusher2),
+    graph = Graph (
+      Map(
+        "2" -> Node(
+          PlanNodeService.DockerContainer(Container("bar"), None, TestItems.algorithm1),
+          resources = Map (
+            "inout" -> NodeResource(ResourceType.Transformer)
+          )
+        )
+      )
+    ),
+    inputs = Seq(
+      NodeResourceRef("2", "inout")
+    ),
+    outputs = Seq(
+      NodeResourceRef("2", "inout")
+    )
+  )
+
   val multiOutput = ResourcePlan(
     pre = PlanOp.seq(pusher),
     graph = Graph (
@@ -205,6 +225,38 @@ class ResourcePlanSpec extends TestBase {
       outputs = Seq(
         NodeResourceRef("1", "out1"),
         NodeResourceRef("1", "out2")
+      )
+    )
+  }
+
+  it should "be possible to chain algorithms using applications" in {
+    val result = algorithm2.application(algorithm)
+    result shouldBe ResourcePlan (
+      pre = PlanOp.seq(pusher2, pusher),
+      graph = Graph (
+        Map(
+          "1" -> Node(
+            PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
+            resources = Map (
+              "inout" -> NodeResource(ResourceType.Transformer)
+            )
+          ),
+          "2" -> Node(
+            PlanNodeService.DockerContainer(Container("bar"), None, TestItems.algorithm1),
+            resources = Map (
+              "inout" -> NodeResource(ResourceType.Transformer)
+            )
+          )
+        ),
+        links = Seq(
+          Link(NodeResourceRef("1", "inout"), NodeResourceRef("2", "inout"))
+        )
+      ),
+      inputs = Seq(
+        NodeResourceRef("1", "inout")
+      ),
+      outputs = Seq(
+        NodeResourceRef("2", "inout")
       )
     )
   }

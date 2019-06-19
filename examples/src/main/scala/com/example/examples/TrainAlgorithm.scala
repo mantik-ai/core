@@ -38,7 +38,7 @@ object TrainAlgorithm extends ExampleBase {
       trained.save("kmeans_trained")
     )
 
-    val trainedAgain = context.loadTransformation("kmeans_trained")
+    val trainedAgain = context.loadAlgorithm("kmeans_trained")
 
     val sampleData = Bundle.build(
       TabularData(

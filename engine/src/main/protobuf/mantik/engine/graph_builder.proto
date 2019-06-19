@@ -9,7 +9,7 @@ import "mantik/engine/items.proto";
 service GraphBuilderService {
     /** Loads a new node from the repository. */
     rpc Get (GetRequest) returns (NodeResponse) {}
-    /** Applies an algorithm to a dataset. */
+    /** Applies an algorithm (or pipeline) to a dataset. */
     rpc AlgorithmApply(ApplyRequest) returns (NodeResponse) {}
     /** Trains an algorithm with a dataset. */
     rpc Train(TrainRequest) returns (TrainResponse) {}
@@ -19,6 +19,8 @@ service GraphBuilderService {
     rpc Cached(CacheRequest) returns (NodeResponse) {}
     /** Run a select query on the dataset item. */
     rpc Select(SelectRequest) returns (NodeResponse) {}
+    /** Build a pipeline from Algorithms. */
+    rpc BuildPipeline(BuildPipelineRequest) returns (NodeResponse){}
 }
 
 message GetRequest {
@@ -71,5 +73,22 @@ message SelectRequest {
     string dataset_id = 2;
     // Select query like 'select x as y'
     string select_query = 3;
+}
+
+// Request for Building a Pipeline
+message BuildPipelineRequest {
+    string session_id = 1;
+    // Steps for the pipeline
+    repeated BuildPipelineStep steps = 2;
+    // Optional input type (required if the first step is a SELECT-Statement)
+    DataType input_type = 3;
+}
+
+// A Single step for BuildPipelineRequest
+message BuildPipelineStep {
+    oneof step {
+        string select = 1;
+        string algorithm_id = 2;
+    }
 }
 

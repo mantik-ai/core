@@ -12,12 +12,15 @@ trait Repository {
   /** Retrieves a Mantik artefact. */
   def get(id: MantikId): Future[MantikArtifact]
 
-  /** Retriebes a Mantik artefact and checks the type. */
-  def getAs[T <: MantikDefinition: ClassTag](id: MantikId)(implicit ex: ExecutionContext): Future[(MantikArtifact, Mantikfile[T])] = {
-    get(id).flatMap { artefact =>
-      artefact.mantikfile.cast[T] match {
-        case Left(error) => Future.failed(new Errors.WrongTypeException(error.getMessage))
-        case Right(ok)   => Future.successful(artefact -> ok)
+  /** Returns a Mantik artefact and all its referenced items. */
+  def getWithHull(id: MantikId)(implicit ec: ExecutionContext): Future[(MantikArtifact, Seq[MantikArtifact])] = {
+    get(id).flatMap { artifact =>
+      val referenced = artifact.mantikfile.definition.referencedItems
+      val othersFuture = Future.sequence(referenced.map { subId =>
+        get(subId)
+      })
+      othersFuture.map { others =>
+        artifact -> others
       }
     }
   }
