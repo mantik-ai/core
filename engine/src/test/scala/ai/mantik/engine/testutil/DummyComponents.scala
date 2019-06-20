@@ -1,7 +1,9 @@
 package ai.mantik.engine.testutil
 
+import java.time.Clock
+
 import ai.mantik.planner.{ CoreComponents, Plan, PlanExecutor, Planner }
-import ai.mantik.repository.impl.{ SimpleInMemoryRepository, SimpleTempFileRepository }
+import ai.mantik.repository.impl.{ LocalFileRepository, LocalRepository }
 import ai.mantik.repository.{ FileRepository, Repository }
 import akka.actor.ActorSystem
 import akka.stream.Materializer
@@ -16,9 +18,9 @@ class DummyComponents(implicit ec: ExecutionContext, materializer: Materializer,
     "mantik.repository.fileRepository.port", ConfigValueFactory.fromAnyRef(0)
   )
 
-  override lazy val fileRepository = new SimpleTempFileRepository(config)
+  override lazy val fileRepository = LocalFileRepository.createTemporary(config, Clock.systemUTC())
 
-  override lazy val repository: Repository = new SimpleInMemoryRepository()
+  override lazy val repository: Repository = LocalRepository.createTemporary(config)
 
   override lazy val planner: Planner = Planner.create(config)
 

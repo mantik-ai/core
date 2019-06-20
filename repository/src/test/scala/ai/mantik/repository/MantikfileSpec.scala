@@ -2,7 +2,6 @@ package ai.mantik.repository
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.repository.meta.MetaVariable
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.testutils.TestBase
@@ -32,27 +31,31 @@ class MantikfileSpec extends TestBase {
     """.stripMargin
 
   it should "parse an easy Mantikfile" in {
-    Mantikfile.fromYaml(sample).right.get.definitionAs[AlgorithmDefinition] shouldBe Right(
-      AlgorithmDefinition(
-        author = Some("John Doe"),
-        authorEmail = Some("john.doe@example.com"),
-        name = Some("super_duper_algorithm"),
-        version = Some("0.1"),
-        stack = "tensorflow1.6",
-        directory = Some("my_dir"),
-        `type` = FunctionType(FundamentalType.Uint8, FundamentalType.StringType)
-      )
+    val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](sample).forceRight
+
+    mf.definition shouldBe AlgorithmDefinition(
+      stack = "tensorflow1.6",
+      directory = Some("my_dir"),
+      `type` = FunctionType(FundamentalType.Uint8, FundamentalType.StringType)
+    )
+
+    mf.header shouldBe MantikHeader(
+      author = Some("John Doe"),
+      authorEmail = Some("john.doe@example.com"),
+      name = Some("super_duper_algorithm"),
+      version = Some("0.1"),
     )
   }
 
   it should "parse a minimal file" in {
-    Mantikfile.fromYaml(minimalFile).right.get.definitionAs[AlgorithmDefinition] shouldBe Right(
-      AlgorithmDefinition(
-        name = Some("My Mini Algorithm"),
-        stack = "foobar",
-        directory = Some("mydir"),
-        `type` = FunctionType(FundamentalType.BoolType, FundamentalType.BoolType)
-      )
+    val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](minimalFile).forceRight
+    mf.definition shouldBe AlgorithmDefinition(
+      stack = "foobar",
+      directory = Some("mydir"),
+      `type` = FunctionType(FundamentalType.BoolType, FundamentalType.BoolType)
+    )
+    mf.header shouldBe MantikHeader(
+      name = Some("My Mini Algorithm")
     )
   }
 
@@ -81,34 +84,17 @@ class MantikfileSpec extends TestBase {
           |  input: int8
           |  output: int8
         """.stripMargin
-      Mantikfile.fromYaml(code).right.get.definitionAs[AlgorithmDefinition].right.get shouldBe AlgorithmDefinition(
-        name = Some("Foo"),
-        version = Some("0.1"),
+      val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](code).forceRight
+      mf.definition shouldBe AlgorithmDefinition(
         stack = "bla",
         directory = Some("dir"),
         `type` = FunctionType(FundamentalType.Uint8, FundamentalType.Uint8)
       )
+      mf.header shouldBe MantikHeader(
+        name = Some("Foo"),
+        version = Some("0.1")
+      )
     }
-  }
-
-  it should "validate names in a second step" in {
-    val mantikFile = Mantikfile.fromYaml(sample).right.get.definitionAs[AlgorithmDefinition].right.get
-    mantikFile.name shouldBe Some("super_duper_algorithm")
-    mantikFile.violations shouldBe empty
-
-    val other =
-      """name: Illegal Name
-        |version: "0.1 ILLEGAL"
-        |stack: bla
-        |directory: dir
-        |type:
-        |  input: string
-        |  output: string
-      """.stripMargin
-    val parsed = Mantikfile.fromYaml(other).right.get.definitionAs[AlgorithmDefinition].right.get
-    parsed.name shouldBe Some("Illegal Name")
-    parsed.version shouldBe Some("0.1 ILLEGAL")
-    parsed.violations should contain theSameElementsAs Seq("Invalid Name", "Invalid Version")
   }
 
   it should "parse dataset definitions" in {
@@ -126,20 +112,20 @@ class MantikfileSpec extends TestBase {
         |    "x": int32
         |    "y": string
       """.stripMargin
-    val mantikfile = Mantikfile.fromYaml(definition).right.get
-    mantikfile.definitionAs[DataSetDefinition] shouldBe Right(
-      DataSetDefinition(
-        name = Some("dataset1"),
-        version = Some("0.1"),
-        author = Some("Superman"),
-        authorEmail = Some("me@example.com"),
+    val mantikfile = Mantikfile.fromYamlWithType[DataSetDefinition](definition).forceRight
+    mantikfile.definition shouldBe DataSetDefinition(
         directory = Some("my_dir"),
         format = "binary",
         `type` = TabularData(
           "x" -> FundamentalType.Int32,
           "y" -> FundamentalType.StringType
         )
-      )
+    )
+    mantikfile.header shouldBe MantikHeader(
+      name = Some("dataset1"),
+      version = Some("0.1"),
+      author = Some("Superman"),
+      authorEmail = Some("me@example.com")
     )
   }
 
@@ -158,10 +144,8 @@ class MantikfileSpec extends TestBase {
         |statType: string
         |directory: foo
       """.stripMargin
-    val mantikfile = Mantikfile.fromYaml(definition).right.get
-    mantikfile.definitionAs[TrainableAlgorithmDefinition] shouldBe Right(
-      TrainableAlgorithmDefinition(
-        name = Some("train1"),
+    val mantikfile = Mantikfile.fromYamlWithType[TrainableAlgorithmDefinition](definition).forceRight
+    mantikfile.definition shouldBe TrainableAlgorithmDefinition(
         stack = "foo1",
         `type` = FunctionType(
           FundamentalType.Int32,
@@ -170,7 +154,9 @@ class MantikfileSpec extends TestBase {
         trainingType = FundamentalType.Int32,
         statType = FundamentalType.StringType,
         directory = Some("foo")
-      )
+    )
+    mantikfile.header shouldBe MantikHeader(
+      name = Some("train1")
     )
   }
 
@@ -194,13 +180,9 @@ class MantikfileSpec extends TestBase {
         |    columns:
         |      y: int32
       """.stripMargin
-    val mantikfile = Mantikfile.fromYaml(definition) match {
-      case Left(e)  => fail(e.getMessage)
-      case Right(v) => v
-    }
-    mantikfile.definitionAs[PipelineDefinition] shouldBe Right(
+    val mantikfile = Mantikfile.fromYamlWithType[PipelineDefinition](definition).forceRight
+    mantikfile.definition shouldBe
       PipelineDefinition(
-        name = Some("pipeline1"),
         `type` = Some(OptionalFunctionType(
           input = Some(TabularData("x" -> FundamentalType.Int32)),
           output = Some(TabularData("y" -> FundamentalType.Int32))
@@ -220,7 +202,9 @@ class MantikfileSpec extends TestBase {
             "select i"
           )
         )
-      )
+    )
+    mantikfile.header shouldBe MantikHeader(
+      name = Some("pipeline1")
     )
     val asJson = mantikfile.toJsonValue
     val parsedAgain = Mantikfile.parseSingleDefinition(asJson).right.getOrElse(fail)

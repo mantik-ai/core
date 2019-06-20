@@ -9,26 +9,7 @@ import scala.util.matching.Regex
 
 /** A Basic Mantik Definition (algorithms, datasets, etc...) */
 sealed trait MantikDefinition {
-  def author: Option[String]
-  def authorEmail: Option[String]
-  def name: Option[String]
-  def version: Option[String]
   def directory: Option[String]
-
-  /** Returns violation. */
-  def violations: Seq[String] = {
-    name.map(MantikDefinition.nameViolations).getOrElse(Nil) ++
-      version.map(MantikDefinition.versionViolations).getOrElse(Nil)
-  }
-
-  /** Check for no violations or throw an [[InvalidMantikDefinitionException]]. */
-  @throws[InvalidMantikDefinitionException]
-  def validateOrThrow(): Unit = {
-    val v = violations
-    if (v.nonEmpty) {
-      throw new InvalidMantikDefinitionException(v.mkString(","))
-    }
-  }
 
   def kind: String
 
@@ -85,10 +66,6 @@ object MantikDefinition extends DiscriminatorDependentCodec[MantikDefinition] {
 /** An Algorithm Definition inside a Mantikfile. */
 case class AlgorithmDefinition(
     // common
-    author: Option[String] = None,
-    authorEmail: Option[String] = None,
-    name: Option[String] = None,
-    version: Option[String] = None,
     directory: Option[String] = None,
     // specific
     stack: String,
@@ -100,10 +77,6 @@ case class AlgorithmDefinition(
 /** A DataSet definition inside a Mantikfile */
 case class DataSetDefinition(
     // common
-    author: Option[String] = None,
-    authorEmail: Option[String] = None,
-    name: Option[String] = None,
-    version: Option[String] = None,
     directory: Option[String] = None,
     // specific
     format: String,
@@ -116,10 +89,6 @@ case class DataSetDefinition(
 
 case class TrainableAlgorithmDefinition(
     // common
-    author: Option[String] = None,
-    authorEmail: Option[String] = None,
-    name: Option[String] = None,
-    version: Option[String] = None,
     directory: Option[String] = None,
     // specific
     stack: String,
@@ -136,11 +105,6 @@ case class TrainableAlgorithmDefinition(
  * executed after each other.
  */
 case class PipelineDefinition(
-    // common
-    author: Option[String] = None,
-    authorEmail: Option[String] = None,
-    name: Option[String] = None,
-    version: Option[String] = None,
     // Note: the type is optional,
     `type`: Option[OptionalFunctionType] = None,
     steps: List[PipelineStep]

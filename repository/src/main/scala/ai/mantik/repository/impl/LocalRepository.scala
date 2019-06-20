@@ -1,13 +1,15 @@
 package ai.mantik.repository.impl
 
 import java.io.File
+import java.nio.file.Files
 
 import ai.mantik.repository.impl.LocalRepositoryDb.DbMantikArtifact
 import ai.mantik.repository.{ Errors, MantikArtifact, MantikId, Mantikfile, Repository }
-import com.typesafe.config.Config
+import com.typesafe.config.{ Config, ConfigValueFactory }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import io.circe.parser
+import org.apache.commons.io.FileUtils
 import org.slf4j.LoggerFactory
 
 /** A local repository for artifacts based upon Sqlite. */
@@ -20,7 +22,7 @@ class LocalRepository(config: Config)(implicit ec: ExecutionContext) extends Rep
   // On servers it's not advisable to use Sqlite anyway.
 
   val directory = new File(
-    config.getString("mantik.repository.artifactRepository.local.directory")
+    config.getString(LocalRepository.DirectoryConfigKey)
   ).toPath
   val dbFile = directory.resolve("items.db")
   logger.info(s"Initializing in ${dbFile}")
@@ -121,5 +123,20 @@ class LocalRepository(config: Config)(implicit ec: ExecutionContext) extends Rep
       version = a.id.version,
       fileId = a.fileId
     )
+  }
+}
+
+object LocalRepository {
+
+  val DirectoryConfigKey = "mantik.repository.artifactRepository.local.directory"
+
+  def createTemporary(config: Config)(implicit ec: ExecutionContext): LocalRepository = {
+    val tempDir = Files.createTempDirectory("mantik_db")
+    val derivedConfig = config.withValue(DirectoryConfigKey, ConfigValueFactory.fromAnyRef(tempDir.toString))
+    new LocalRepository(derivedConfig) {
+      override def shutdown(): Unit = {
+        FileUtils.deleteDirectory(directory.toFile)
+      }
+    }
   }
 }
