@@ -11,7 +11,6 @@ import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.PlanExecutorImpl
 import ai.mantik.repository._
-import ai.mantik.repository.impl.{ SimpleInMemoryRepository, SimpleTempFileRepository }
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaTypes
 import akka.stream.scaladsl.FileIO
@@ -73,8 +72,7 @@ private[impl] class ContextImpl(config: Config, val repository: Repository, val 
       case Right(ok)   => ok
     }
     val idToUse = id.getOrElse {
-      val name = mantikfile.definition.name.getOrElse(throw new RuntimeException("Mantikfile has no id and no id is given"))
-      MantikId(name, mantikfile.definition.version.getOrElse(MantikId.DefaultVersion))
+      mantikfile.header.id.getOrElse(throw new RuntimeException("Mantikfile has no id and no id is given"))
     }
     val fileId = mantikfile.definition.directory.map { dataDir =>
       // Uploading File Content

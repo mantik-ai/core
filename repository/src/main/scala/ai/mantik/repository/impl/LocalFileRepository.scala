@@ -38,9 +38,12 @@ import scala.collection.JavaConverters._
  *
  * Temporary files are cleaned up periodically. This should scale to some 1000 files but not more.
  */
-class LocalFileRepository(config: Config, clock: Clock)(implicit val actorSystem: ActorSystem, ec: ExecutionContext, materializer: Materializer) extends FileRepositoryServer(config) {
+class LocalFileRepository(config: Config, clock: Clock, val directory: Path)(implicit val actorSystem: ActorSystem, ec: ExecutionContext, materializer: Materializer) extends FileRepositoryServer(config) {
 
-  val directory = new File(subConfig.getString("local.directory")).toPath
+  def this(config: Config, clock: Clock)(implicit actorSystem: ActorSystem, ec: ExecutionContext, materializer: Materializer) {
+    this(config, clock, new File(config.getString("mantik.repository.fileRepository.local.directory")).toPath)
+  }
+
   logger.info(s"Initializing Local File Repository in directory ${directory}")
 
   val cleanupInterval = Duration.fromNanos(subConfig.getDuration("local.cleanupInterval").toNanos)
@@ -236,4 +239,13 @@ object LocalFileRepository {
 
   import io.circe.java8.time._
   implicit val metaDataFormat: Encoder[FileMetaData] with Decoder[FileMetaData] = CirceJson.makeSimpleCodec[FileMetaData]
+
+  def createTemporary(config: Config, clock: Clock)(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext): LocalFileRepository = {
+    return new LocalFileRepository(config, clock, Files.createTempDirectory("mantik_simple_storage")) {
+      override def shutdown(): Unit = {
+        super.shutdown()
+        FileUtils.deleteDirectory(directory.toFile)
+      }
+    }
+  }
 }

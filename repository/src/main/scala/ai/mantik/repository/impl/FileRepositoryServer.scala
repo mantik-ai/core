@@ -82,7 +82,7 @@ abstract class FileRepositoryServer(config: Config)(implicit actorSystem: ActorS
         }
     }, path("") {
       get {
-        complete("Mantik SimpleTempFileRepository")
+        complete("Mantik File Repository")
       }
     }
   )

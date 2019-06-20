@@ -14,7 +14,8 @@ import scala.reflect.ClassTag
  */
 case class Mantikfile[T <: MantikDefinition](
     definition: T,
-    metaJson: MetaJson
+    metaJson: MetaJson,
+    header: MantikHeader
 ) {
 
   /** Returns the definition, if applicable. */
@@ -22,7 +23,7 @@ case class Mantikfile[T <: MantikDefinition](
 
   def cast[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[io.circe.Error, Mantikfile[T]] = {
     definition match {
-      case x: T => Right(Mantikfile[T](x, metaJson))
+      case x: T => Right(Mantikfile[T](x, metaJson, header))
       case _    => Left(DecodingFailure(s"Expected ${ct.runtimeClass.getSimpleName}, got ${definition.getClass.getSimpleName}", Nil))
     }
   }
@@ -36,11 +37,8 @@ case class Mantikfile[T <: MantikDefinition](
   /** Returns the json value (before converting to string) */
   def toJsonValue: Json = metaJson.asJson
 
-  /** Returns a set of violations. */
-  lazy val violations: Seq[String] = definition.violations
-
   override def toString: String = {
-    s"Mantikfile(${definition.kind},stack=${definition.stack},name=${definition.name})"
+    s"Mantikfile(${definition.kind},stack=${definition.stack},name=${header.name})"
   }
 
   /**
@@ -52,7 +50,7 @@ case class Mantikfile[T <: MantikDefinition](
     val resultCandidate = for {
       parsed <- Mantikfile.parseMetaJson(updatedJson)
       castedDefinition = parsed.definition.asInstanceOf[T]
-    } yield Mantikfile(castedDefinition, parsed.metaJson)
+    } yield Mantikfile(castedDefinition, parsed.metaJson, parsed.header)
     // parsing errors should not happen much (but is possible, types can go invalid)
     resultCandidate match {
       case Left(error)  => throw new MetaVariableException("Could not reparse with changed meta values ", error)
@@ -71,7 +69,8 @@ object Mantikfile {
         metaVariables = Nil,
         missingMetaVariables = true,
         sourceJson = (definition: MantikDefinition).asJsonObject
-      )
+      ),
+      header = MantikHeader()
     )
   }
 
@@ -84,10 +83,9 @@ object Mantikfile {
   }
 
   /** Parse a YAML File, expecting a single definition only. */
-  def fromSingleYamlWithType[T <: MantikDefinition](content: String)(implicit classTag: ClassTag[T]): Either[io.circe.Error, Mantikfile[T]] = {
+  def fromYamlWithType[T <: MantikDefinition](content: String)(implicit classTag: ClassTag[T]): Either[io.circe.Error, Mantikfile[T]] = {
     for {
-      json <- parser.parse(content)
-      parsed <- parseSingleDefinition(json)
+      parsed <- fromYaml(content)
       casted <- parsed.cast[T]
     } yield casted
   }
@@ -100,7 +98,8 @@ object Mantikfile {
     for {
       applied <- metaJson.appliedJson.left.map { error => DecodingFailure(error, Nil) }
       definition <- applied.as[MantikDefinition]
-    } yield Mantikfile(definition, metaJson)
+      header <- applied.as[MantikHeader]
+    } yield Mantikfile(definition, metaJson, header)
   }
 
   /** Generate the mantikfile for a trained algorithm out of a trainable algorithm definition. */

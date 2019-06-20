@@ -447,8 +447,6 @@ class PlannerImplSpec extends TestBase {
         Some(PlanFileReference(1)),
         Mantikfile.pure(
           DataSetDefinition(
-            name = None,
-            version = None,
             format = "natural",
             `type` = lit.model
           )

@@ -32,8 +32,9 @@ private[repository] object Factory {
   def createFileRepository(config: Config)(implicit actorySystem: ActorSystem, materializer: Materializer, ec: ExecutionContext): FileRepository = {
     getRepoType(config) match {
       case TempType =>
-        logger.info("Creating SimpleTempFileRepository")
-        new SimpleTempFileRepository(config)
+        logger.info("Creating Temporary File Repository")
+        val clock = Clock.systemUTC()
+        LocalFileRepository.createTemporary(config, clock)
       case LocalType =>
         val clock = Clock.systemUTC()
         logger.info("Creating LocalFileRepository")
@@ -45,8 +46,8 @@ private[repository] object Factory {
   def createRepository(config: Config)(implicit ec: ExecutionContext): Repository = {
     getRepoType(config) match {
       case TempType =>
-        logger.info("Creating SimpleInMemoryRepository")
-        new SimpleInMemoryRepository()
+        logger.info("Creating In Memory Repository")
+        LocalRepository.createTemporary(config)
       case LocalType =>
         logger.info("Creating LocalRepository")
         new LocalRepository(config)
