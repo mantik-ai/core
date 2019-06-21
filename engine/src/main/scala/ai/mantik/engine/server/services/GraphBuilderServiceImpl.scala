@@ -4,13 +4,14 @@ import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, NodeResponse, SelectRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager }
+import ai.mantik.planner.repository.Errors
+import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
-import ai.mantik.repository.Errors
 import akka.stream.Materializer
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class GraphBuilderServiceImpl(sessionManager: SessionManager[Session])(implicit ec: ExecutionContext, materializer: Materializer) extends GraphBuilderService {
+class GraphBuilderServiceImpl(sessionManager: SessionManager[Session])(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService {
 
   override def get(request: GetRequest): Future[NodeResponse] = {
     for {

@@ -2,8 +2,8 @@ package ai.mantik.planner
 
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.elements.{AlgorithmDefinition, Mantikfile}
 import ai.mantik.planner.select.Select
-import ai.mantik.repository.{ AlgorithmDefinition, Mantikfile }
 
 /** Some A => B Transformation Algorithm */
 case class Algorithm(

@@ -1,15 +1,16 @@
 package ai.mantik.engine.server.services
 
+import ai.mantik.elements.MantikId
 import ai.mantik.engine.protos.graph_executor.{ FetchItemRequest, FetchItemResponse, SaveItemRequest, SaveItemResponse }
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
 import ai.mantik.engine.session.{ ItemNotFoundException, ItemWrongTypeException, Session, SessionManager }
 import ai.mantik.planner.DataSet
-import ai.mantik.repository.MantikId
+import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.stream.Materializer
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class GraphExecutorServiceImpl(sessionManager: SessionManager[Session])(implicit ec: ExecutionContext, materializer: Materializer) extends GraphExecutorService {
+class GraphExecutorServiceImpl(sessionManager: SessionManager[Session])(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphExecutorService {
 
   override def fetchDataSet(request: FetchItemRequest): Future[FetchItemResponse] = {
     for {

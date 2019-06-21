@@ -1,11 +1,8 @@
 package ai.mantik.engine
 
 import ai.mantik.engine.buildinfo.BuildInfo
-import ai.mantik.engine.server.EngineServer
-import ai.mantik.engine.server.services.{ AboutServiceImpl, DebugServiceImpl, GraphBuilderServiceImpl, GraphExecutorServiceImpl, SessionServiceImpl }
-import ai.mantik.engine.session.{ Session, SessionManager }
-import ai.mantik.planner.{ Context, CoreComponents, PlanExecutor, Planner }
-import ai.mantik.repository.{ FileRepository, Repository }
+import ai.mantik.planner.Context
+import ai.mantik.planner.utils.AkkaRuntime
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
@@ -22,10 +19,11 @@ object Main {
     implicit val materializer = ActorMaterializer()
     implicit val ec: ExecutionContext = actorSystem.dispatcher
     val config = ConfigFactory.load()
+    implicit val akkaRuntime = AkkaRuntime.fromRunning()
 
-    val context = Context.localWithAkka(config)
+    val context = Context.localWithAkka()
     try {
-      val server = EngineFactory.makeEngineServer(config, context)
+      val server = EngineFactory.makeEngineServer(context)
       server.start()
       server.waitUntilFinished()
     } catch {

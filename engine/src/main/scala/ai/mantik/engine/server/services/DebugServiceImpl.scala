@@ -2,10 +2,10 @@ package ai.mantik.engine.server.services
 
 import java.io.File
 
+import ai.mantik.elements.MantikId
 import ai.mantik.engine.protos.debug.{ AddLocalMantikDirectoryRequest, AddLocalMantikDirectoryResponse }
 import ai.mantik.engine.protos.debug.DebugServiceGrpc.DebugService
 import ai.mantik.planner.Context
-import ai.mantik.repository.MantikId
 
 import scala.concurrent.Future
 

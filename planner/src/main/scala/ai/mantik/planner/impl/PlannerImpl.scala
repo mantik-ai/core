@@ -1,10 +1,11 @@
 package ai.mantik.planner.impl
 
+import ai.mantik.elements.{ MantikId, PipelineStep }
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.pipelines.ResolvedPipelineStep
-import ai.mantik.repository.{ ContentTypes, MantikId, PipelineStep }
+import ai.mantik.planner.repository.ContentTypes
 import cats.data.State
 import cats.implicits._
 

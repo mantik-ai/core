@@ -2,9 +2,11 @@ package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData, Tensor }
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.elements
+import ai.mantik.elements.PipelineStep.MetaVariableSetting
+import ai.mantik.elements.{ AlgorithmDefinition, MantikId, Mantikfile, OptionalFunctionType, PipelineDefinition, PipelineStep }
+import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
-import ai.mantik.repository.PipelineStep.MetaVariableSetting
-import ai.mantik.repository.{ AlgorithmDefinition, ContentTypes, MantikId, Mantikfile, OptionalFunctionType, PipelineDefinition, PipelineStep }
 import ai.mantik.testutils.TestBase
 import io.circe.Json
 
@@ -27,7 +29,7 @@ class PipelineResolverSpec extends TestBase {
   val algorithm2 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
     Mantikfile.pure(
-      AlgorithmDefinition(
+      elements.AlgorithmDefinition(
         stack = "stack1",
         `type` = FunctionType(
           input = TabularData("y" -> FundamentalType.StringType),

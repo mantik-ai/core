@@ -1,9 +1,9 @@
 package ai.mantik.planner
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver, ResolvedPipeline }
-import ai.mantik.repository.{ MantikId, Mantikfile, PipelineDefinition }
 import EitherUtils._
 import ai.mantik.ds.DataType
+import ai.mantik.elements.{ Mantikfile, PipelineDefinition }
 
 /**
  * A Pipeline, like an algorithm but resembles the combination of multiple algorithms after each other.

@@ -1,8 +1,8 @@
 package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.elements.PipelineStep
 import ai.mantik.planner.Algorithm
-import ai.mantik.repository.PipelineStep
 
 /**
  * A Resolved pipeline.

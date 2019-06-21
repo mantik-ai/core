@@ -4,6 +4,7 @@ import ai.mantik.engine.EngineFactory
 import ai.mantik.engine.server.EngineServer
 import ai.mantik.executor.ExecutorForIntegrationTests
 import ai.mantik.planner.Context
+import ai.mantik.planner.utils.AkkaRuntime
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import com.typesafe.config.{ ConfigFactory, ConfigValueFactory }
 
@@ -20,8 +21,9 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport {
     val config = ConfigFactory.load()
       .withValue("mantik.repository.type", ConfigValueFactory.fromAnyRef("temp"))
     embeddedExecutor = new ExecutorForIntegrationTests()
-    context = Context.localWithAkka(config)
-    engineServer = EngineFactory.makeEngineServer(config, context)
+    implicit val akkaRuntime = AkkaRuntime.fromRunning(config)
+    context = Context.localWithAkka()
+    engineServer = EngineFactory.makeEngineServer(context)
     engineServer.start()
     engineClient = new EngineClient(s"localhost:${engineServer.port}")
   }

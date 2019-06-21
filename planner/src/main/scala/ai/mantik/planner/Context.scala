@@ -2,8 +2,9 @@ package ai.mantik.planner
 
 import java.nio.file.Path
 
+import ai.mantik.elements.MantikId
 import ai.mantik.planner.impl.ContextImpl
-import ai.mantik.repository.{ FileRepository, MantikId, Repository }
+import ai.mantik.planner.utils.AkkaRuntime
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.typesafe.config.Config
@@ -51,7 +52,7 @@ object Context {
   }
 
   /** Creates a new local context, when you already have Akka. */
-  def localWithAkka(config: Config)(implicit actorSystem: ActorSystem, materializer: Materializer): Context = {
-    ContextImpl.constructForLocalTestingWithAkka(config)
+  def localWithAkka()(implicit akkaRuntime: AkkaRuntime): Context = {
+    ContextImpl.constructForLocalTestingWithAkka()
   }
 }

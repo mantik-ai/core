@@ -1,7 +1,8 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.repository.{ AlgorithmDefinition, ContentTypes, Mantikfile }
+import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile }
+import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.testutils.TestBase
 
 class MantikItemSpec extends TestBase {

@@ -3,7 +3,7 @@ package ai.mantik.planner
 import java.util.UUID
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.repository.MantikId
+import ai.mantik.elements.MantikId
 
 /** Defines where a MantikItem comes from. */
 case class Source(

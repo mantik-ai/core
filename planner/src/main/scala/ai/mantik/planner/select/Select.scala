@@ -4,10 +4,10 @@ import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile }
 import ai.mantik.planner.select.builder.SelectBuilder
 import ai.mantik.planner.select.run.SelectRunner
 import ai.mantik.planner.select.run.Compiler
-import ai.mantik.repository.{ AlgorithmDefinition, Mantikfile }
 
 import scala.collection.immutable.ListMap
 

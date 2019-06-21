@@ -1,11 +1,12 @@
 package ai.mantik.planner.impl
 
 import ai.mantik
+import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, Mantikfile, TrainableAlgorithmDefinition}
 import ai.mantik.executor.model._
 import ai.mantik.planner
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
-import ai.mantik.repository._
+import ai.mantik.planner.repository.ContentTypes
 import cats.data.State
 
 /**
@@ -14,7 +15,7 @@ import cats.data.State
  */
 class PlannerElements(bridges: Bridges) {
 
-  import ContentTypes._
+  import ai.mantik.planner.repository.ContentTypes._
 
   /** Converts a plan to a job. */
   def sourcePlanToJob(sourcePlan: ResourcePlan): PlanOp = {

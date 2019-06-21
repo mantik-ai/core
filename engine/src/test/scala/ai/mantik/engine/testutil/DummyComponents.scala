@@ -2,25 +2,20 @@ package ai.mantik.engine.testutil
 
 import java.time.Clock
 
+import ai.mantik.planner.repository.{ FileRepository, Repository }
 import ai.mantik.planner.{ CoreComponents, Plan, PlanExecutor, Planner }
-import ai.mantik.repository.impl.{ LocalFileRepository, LocalRepository }
-import ai.mantik.repository.{ FileRepository, Repository }
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import com.typesafe.config.{ ConfigFactory, ConfigValueFactory }
+import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalRepository }
+import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
+import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 import org.apache.commons.io.FileUtils
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 
-class DummyComponents(implicit ec: ExecutionContext, materializer: Materializer, actorSystem: ActorSystem) extends CoreComponents {
-  private lazy val config = ConfigFactory.load().withValue(
-    // use a random port
-    "mantik.repository.fileRepository.port", ConfigValueFactory.fromAnyRef(0)
-  )
+class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with CoreComponents {
 
-  override lazy val fileRepository = LocalFileRepository.createTemporary(config, Clock.systemUTC())
+  override lazy val fileRepository = LocalFileRepository.createTemporary()
 
-  override lazy val repository: Repository = LocalRepository.createTemporary(config)
+  override lazy val repository: Repository = LocalRepository.createTemporary()
 
   override lazy val planner: Planner = Planner.create(config)
 

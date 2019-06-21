@@ -6,11 +6,9 @@ import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.DockerConfig
 import ai.mantik.planner._
 import ai.mantik.planner.impl.FutureHelper
-import ai.mantik.repository.{ FileRepository, MantikArtifact, Repository }
-import akka.actor.ActorSystem
+import ai.mantik.planner.repository.{ FileRepository, MantikArtifact, Repository }
+import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.http.scaladsl.model.Uri
-import akka.stream.Materializer
-import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import io.circe.syntax._
 
@@ -19,12 +17,11 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 
 /** Responsible for executing plans. */
 private[impl] class PlanExecutorImpl(
-    config: Config,
     fileRepository: FileRepository,
     repository: Repository, executor: Executor,
     isolationSpace: String,
     dockerConfig: DockerConfig
-)(implicit ec: ExecutionContext, actorSystem: ActorSystem, materializer: Materializer) extends PlanExecutor {
+)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
 
   private val logger = LoggerFactory.getLogger(getClass)
   logger.info(s"Initializing PlanExecutor")
