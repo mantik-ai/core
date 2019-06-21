@@ -1,9 +1,10 @@
 package ai.mantik.planner.select
 
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.repository.meta.MetaJson
+import ai.mantik.elements
+import ai.mantik.elements.{ AlgorithmDefinition, MantikDefinition, MantikHeader, Mantikfile }
+import ai.mantik.elements.meta.MetaJson
 import ai.mantik.planner.select.run.SelectProgram
-import ai.mantik.repository.{ AlgorithmDefinition, MantikDefinition, MantikHeader, Mantikfile }
 import io.circe.syntax._
 
 /** A Mantikfile which is compatible with the select bridge. */
@@ -13,7 +14,7 @@ case class SelectMantikfileBuilder(
 ) {
 
   def definition: AlgorithmDefinition = {
-    AlgorithmDefinition(
+    elements.AlgorithmDefinition(
       stack = "select",
       `type` = `type`
     )

@@ -3,10 +3,12 @@ package ai.mantik.planner.impl
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.elements
+import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, MantikId, Mantikfile, PipelineStep}
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner._
-import ai.mantik.repository._
+import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.testutils.TestBase
 import cats.data.State
 
@@ -446,7 +448,7 @@ class PlannerImplSpec extends TestBase {
         MantikId("item1"),
         Some(PlanFileReference(1)),
         Mantikfile.pure(
-          DataSetDefinition(
+          elements.DataSetDefinition(
             format = "natural",
             `type` = lit.model
           )

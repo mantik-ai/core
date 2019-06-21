@@ -3,9 +3,9 @@ package ai.mantik.planner.impl.exec
 import ai.mantik.executor.model.docker.{ Container, DockerLogin }
 import ai.mantik.executor.model.{ ContainerService, DataProvider, ExecutorModelDefaults, ExistingService, Graph, Job, Link, Node, NodeResource, NodeResourceRef, ResourceType }
 import ai.mantik.planner.impl.TestItems
+import ai.mantik.planner.repository.ContentTypes
+import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.planner.{ PlanFileReference, PlanNodeService }
-import ai.mantik.repository.ContentTypes
-import ai.mantik.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.testutils.TestBase
 import akka.http.scaladsl.model.Uri
 

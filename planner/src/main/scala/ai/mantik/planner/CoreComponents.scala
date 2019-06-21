@@ -1,6 +1,6 @@
 package ai.mantik.planner
 
-import ai.mantik.repository.{ FileRepository, Repository }
+import ai.mantik.planner.repository.{ FileRepository, Repository }
 
 /** Encapsulates access to the core components of Mantik. */
 trait CoreComponents {

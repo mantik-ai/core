@@ -3,7 +3,7 @@ package ai.mantik.planner
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.repository.{Mantikfile, TrainableAlgorithmDefinition}
+import ai.mantik.elements.{Mantikfile, TrainableAlgorithmDefinition}
 
 /**
  * A trainable algorithm

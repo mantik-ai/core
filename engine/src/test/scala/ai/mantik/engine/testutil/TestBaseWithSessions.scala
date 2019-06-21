@@ -1,9 +1,8 @@
 package ai.mantik.engine.testutil
 
 import ai.mantik.engine.session.{ Session, SessionManager }
-import ai.mantik.testutils.{ AkkaSupport, TestBase }
 
-abstract class TestBaseWithSessions extends TestBase with AkkaSupport {
+abstract class TestBaseWithSessions extends TestBaseWithAkkaRuntime {
 
   protected var components: DummyComponents = _
   protected var sessionManager: SessionManager[Session] = _

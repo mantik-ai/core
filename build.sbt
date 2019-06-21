@@ -113,18 +113,14 @@ lazy val ds = makeProject("ds")
     publishSettings
   )
 
-lazy val repository = makeProject("repository")
+lazy val elements = makeProject("elements")
   .dependsOn(ds)
   .settings(
-    name := "repository",
-    libraryDependencies ++=Seq(
-      "io.circe" %% "circe-yaml" % "0.8.0",
-      "io.circe" %% "circe-java8" % circeVersion,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
-      "org.xerial" % "sqlite-jdbc" % "3.18.0",
-      "io.getquill" %% "quill-jdbc" % "3.2.0"
-    )
+    name := "elements",
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-yaml" % "0.8.0"
+    ),
+    publishSettings
   )
 
 lazy val executorApi = makeProject("executor/api", "executorApi")
@@ -197,7 +193,7 @@ lazy val executorApp = makeProject("executor/app", "executorApp")
   )
 
 lazy val planner = makeProject("planner")
-  .dependsOn(ds, executorApi, repository)
+  .dependsOn(ds, elements, executorApi)
   .dependsOn(executorApp % "test")
   .settings(
     name := "planner",
@@ -205,14 +201,19 @@ lazy val planner = makeProject("planner")
       "org.typelevel" %% "cats-core" % "1.6.0",
 
       // Parboiled (Parsers)
-      "org.parboiled" %% "parboiled" % "2.1.5"
+      "org.parboiled" %% "parboiled" % "2.1.5",
+
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
+      "org.xerial" % "sqlite-jdbc" % "3.18.0",
+      "io.getquill" %% "quill-jdbc" % "3.2.0"
     ),
     publishSettings
   )
 
 
 lazy val examples = makeProject("examples")
-  .dependsOn(ds, repository, planner)
+  .dependsOn(planner)
   .settings(
     name := "examples",
     libraryDependencies ++= Seq(
@@ -223,7 +224,7 @@ lazy val examples = makeProject("examples")
   )
 
 lazy val engine = makeProject("engine")
-  .dependsOn(planner, repository, executorApi)
+  .dependsOn(planner, executorApi)
   .dependsOn(executorApp % "test")
   .settings(
     name := "engine",
@@ -257,7 +258,7 @@ lazy val engine = makeProject("engine")
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, executorApi, executorApp, repository, examples, planner, engine)
+  .aggregate(testutils, ds, elements, executorApi, executorApp, examples, planner, engine)
   .settings(
     name := "mantik-core",
     publish := {},

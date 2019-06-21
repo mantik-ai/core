@@ -2,10 +2,12 @@ package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.elements
+import ai.mantik.elements.PipelineStep.{ AlgorithmStep, SelectStep }
+import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile, PipelineStep }
+import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.select.Select
 import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
-import ai.mantik.repository.PipelineStep.{ AlgorithmStep, SelectStep }
-import ai.mantik.repository.{ AlgorithmDefinition, ContentTypes, Mantikfile, PipelineStep }
 import ai.mantik.testutils.TestBase
 
 class PipelineBuilderSpec extends TestBase {
@@ -27,7 +29,7 @@ class PipelineBuilderSpec extends TestBase {
   val algorithm2 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
     Mantikfile.pure(
-      AlgorithmDefinition(
+      elements.AlgorithmDefinition(
         stack = "stack1",
         `type` = FunctionType(
           input = TabularData("y" -> FundamentalType.StringType),

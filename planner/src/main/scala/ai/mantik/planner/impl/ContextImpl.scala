@@ -5,12 +5,14 @@ import java.nio.file.{ Files, Path }
 
 import ai.mantik
 import ai.mantik.ds.helper.ZipUtils
+import ai.mantik.elements.{ MantikId, Mantikfile }
 import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.PlanExecutorImpl
-import ai.mantik.repository._
+import ai.mantik.planner.repository.{ FileRepository, MantikArtifact, Repository }
+import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaTypes
 import akka.stream.scaladsl.FileIO
@@ -23,7 +25,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.reflect.ClassTag
 
-private[impl] class ContextImpl(config: Config, val repository: Repository, val fileRepository: FileRepository, val planner: Planner, val planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit ec: ExecutionContext, mat: Materializer) extends Context {
+private[impl] class ContextImpl(val repository: Repository, val fileRepository: FileRepository, val planner: Planner, val planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Context {
   private val logger = LoggerFactory.getLogger(getClass)
 
   private val dbLookupTimeout = Duration.fromNanos(config.getDuration("mantik.planner.dbLookupTimeout").toNanos)
@@ -103,28 +105,30 @@ private[impl] class ContextImpl(config: Config, val repository: Repository, val 
 object ContextImpl {
 
   def constructForLocalTesting(): Context = {
-    implicit val actorSystem: ActorSystem = ActorSystem()
-    implicit val materializer: Materializer = ActorMaterializer.create(actorSystem)
-    val config = ConfigFactory.load()
-    constructForLocalTestingWithAkka(config, shutdownMethod = () => actorSystem.terminate())
+    implicit val akkaRuntime = AkkaRuntime.createNew()
+    constructForLocalTestingWithAkka(
+      shutdownMethod = () => akkaRuntime.actorSystem.terminate()
+    )
   }
 
-  def constructForLocalTestingWithAkka(config: Config, shutdownMethod: () => Unit = () => (()))(implicit actorSystem: ActorSystem, materializer: Materializer): Context = {
-    val executorUrl = config.getString("mantik.core.executorUrl")
+  def constructForLocalTestingWithAkka(shutdownMethod: () => Unit = () => (()))(implicit akkaRuntime: AkkaRuntime): Context = {
+    val executorUrl = akkaRuntime.config.getString("mantik.core.executorUrl")
 
-    implicit val ec: ExecutionContext = actorSystem.dispatcher
-    val repository = Repository.create(config)
-    val fileRepo: FileRepository = FileRepository.createFileRepository(config)
-    val bridges: Bridges = Bridges.loadFromConfig(config)
+    implicit val ec: ExecutionContext = akkaRuntime.executionContext
+    val repository = Repository.create()
+    val fileRepo: FileRepository = FileRepository.createFileRepository()
+    val bridges: Bridges = Bridges.loadFromConfig(akkaRuntime.config)
     val planner = new PlannerImpl(bridges)
-    val executor: Executor = new ExecutorClient(executorUrl)
+    val executor: Executor = new ExecutorClient(executorUrl)(
+      akkaRuntime.actorSystem,
+      akkaRuntime.materializer
+    )
     val planExecutor = new PlanExecutorImpl(
-      config,
       fileRepo,
       repository,
       executor,
       "local",
       bridges.dockerConfig)
-    new ContextImpl(config, repository, fileRepo, planner, planExecutor, shutdownMethod)
+    new ContextImpl(repository, fileRepo, planner, planExecutor, shutdownMethod)
   }
 }

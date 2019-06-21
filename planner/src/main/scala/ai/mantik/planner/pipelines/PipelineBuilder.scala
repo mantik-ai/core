@@ -1,9 +1,10 @@
 package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.DataType
+import ai.mantik.elements
+import ai.mantik.elements.{ MantikId, Mantikfile, OptionalFunctionType, PipelineDefinition, PipelineStep }
 import ai.mantik.planner.Pipeline.PipelineBuildStep
 import ai.mantik.planner.{ Algorithm, DefinitionSource, MantikItem, Pipeline, Source }
-import ai.mantik.repository.{ MantikId, Mantikfile, OptionalFunctionType, PipelineDefinition, PipelineStep }
 
 private[planner] object PipelineBuilder {
 
@@ -64,7 +65,7 @@ private[planner] object PipelineBuilder {
         PipelineStep.SelectStep(statement) -> None
     }
 
-    val pipelineDefinition = PipelineDefinition(
+    val pipelineDefinition = elements.PipelineDefinition(
       steps = steps.map(_._1).toList,
       `type` = Some(
         OptionalFunctionType(

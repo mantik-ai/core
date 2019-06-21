@@ -3,14 +3,16 @@ package ai.mantik.engine.server.services
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
+import ai.mantik.{ elements, planner }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, Mantikfile, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, SelectRequest, TrainRequest }
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager, SessionNotFoundException }
 import ai.mantik.engine.testutil.{ DummyComponents, TestBaseWithSessions }
+import ai.mantik.planner.repository.MantikArtifact
 import ai.mantik.planner.{ Algorithm, DataSet, PayloadSource, Pipeline }
-import ai.mantik.repository.{ AlgorithmDefinition, DataSetDefinition, MantikArtifact, Mantikfile, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 
 class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
@@ -29,7 +31,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       id = "Dataset1"
     )
     val dataset2 = MantikArtifact(
-      Mantikfile.pure(DataSetDefinition(format = DataSet.NaturalFormatName, `type` = TabularData(
+      Mantikfile.pure(elements.DataSetDefinition(format = DataSet.NaturalFormatName, `type` = TabularData(
         "x" -> FundamentalType.Int32
       ))),
       fileId = Some("1234"),
@@ -240,7 +242,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
   trait EnvForPipeline extends PlainEnv {
     val algorithm1 = MantikArtifact(
-      Mantikfile.pure(AlgorithmDefinition(
+      Mantikfile.pure(elements.AlgorithmDefinition(
         stack = "stack1",
         `type` = FunctionType(
           input = TabularData(

@@ -3,8 +3,9 @@ package ai.mantik.planner
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{DataType, TabularData}
 import ai.mantik.ds.element.{Bundle, SingleElementBundle}
+import ai.mantik.elements
+import ai.mantik.elements.{DataSetDefinition, Mantikfile}
 import ai.mantik.planner.select.{AutoAdapt, Select}
-import ai.mantik.repository.{DataSetDefinition, Mantikfile}
 
 /** A DataSet cannot be automatically converted to an expected type. */
 class ConversionNotApplicableException(msg: String) extends IllegalArgumentException(msg)
@@ -100,7 +101,7 @@ object DataSet {
   /** Creates a natural data source, with serialized data coming direct from a flow. */
   private[planner] def natural(source: Source, dataType: DataType): DataSet = {
     DataSet(source, Mantikfile.pure(
-      DataSetDefinition(
+      elements.DataSetDefinition(
         format = NaturalFormatName,
         `type` = dataType
       )

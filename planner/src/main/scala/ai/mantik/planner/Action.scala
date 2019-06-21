@@ -1,7 +1,7 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.repository.MantikId
+import ai.mantik.elements.MantikId
 
 /**
  * An Action is something the user requests to be executed.

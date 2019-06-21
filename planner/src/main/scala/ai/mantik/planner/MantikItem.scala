@@ -2,9 +2,10 @@ package ai.mantik.planner
 
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, MantikDefinition, MantikId, Mantikfile, PipelineDefinition, TrainableAlgorithmDefinition }
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver }
-import ai.mantik.repository.meta.MetaVariableException
-import ai.mantik.repository.{ AlgorithmDefinition, ContentTypes, DataSetDefinition, MantikArtifact, MantikDefinition, MantikId, Mantikfile, PipelineDefinition, TrainableAlgorithmDefinition }
+import ai.mantik.elements.meta.MetaVariableException
+import ai.mantik.planner.repository.{ ContentTypes, MantikArtifact }
 
 import scala.reflect.ClassTag
 
@@ -40,7 +41,8 @@ trait MantikItem {
 
   /**
    * Update Meta Variables.
-   * @throws MetaVariableException (see [[ai.mantik.repository.meta.MetaJson.withMetaValues]])
+   *
+   * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]])
    */
   def withMetaValues(values: (String, SingleElementBundle)*): OwnType = {
     val updatedMantikfile = mantikfile.withMetaValues(values: _*)
@@ -50,7 +52,8 @@ trait MantikItem {
   /**
    * Convenience function to udpate a single meta value.
    * Types are matched automatically if possible
-   * @throws MetaVariableException (see [[ai.mantik.repository.meta.MetaJson.withMetaValues]]
+   *
+   * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]]
    */
   def withMetaValue[T: ValueEncoder](name: String, value: T): OwnType = {
     withMetaValues(name -> Bundle.fundamental(value))

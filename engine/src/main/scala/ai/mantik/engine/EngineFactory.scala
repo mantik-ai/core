@@ -3,12 +3,9 @@ package ai.mantik.engine
 import ai.mantik.engine.server.EngineServer
 import ai.mantik.engine.server.services.{ AboutServiceImpl, DebugServiceImpl, GraphBuilderServiceImpl, GraphExecutorServiceImpl, SessionServiceImpl }
 import ai.mantik.engine.session.{ Session, SessionManager }
+import ai.mantik.planner.repository.{ FileRepository, Repository }
+import ai.mantik.planner.utils.AkkaRuntime
 import ai.mantik.planner.{ Context, CoreComponents, PlanExecutor, Planner }
-import ai.mantik.repository.{ FileRepository, Repository }
-import akka.stream.Materializer
-import com.typesafe.config.Config
-
-import scala.concurrent.ExecutionContext
 
 /**
  * Builds and initializes the Engine process.
@@ -17,8 +14,9 @@ import scala.concurrent.ExecutionContext
 object EngineFactory {
 
   /** Build an Engine Server. */
-  def makeEngineServer(config: Config, context: Context)(implicit ec: ExecutionContext, materializer: Materializer): EngineServer = {
-    implicit val implicitConfig = config
+  def makeEngineServer(context: Context)(implicit akkaRuntime: AkkaRuntime): EngineServer = {
+    implicit val implicitConfig = akkaRuntime.config
+    implicit val ec = akkaRuntime.executionContext
     val sessionManager = new SessionManager[Session]({ id =>
       new Session(id, createViewForSession(context))
     })

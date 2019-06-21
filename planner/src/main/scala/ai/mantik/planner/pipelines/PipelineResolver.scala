@@ -3,11 +3,11 @@ package ai.mantik.planner.pipelines
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ DataType, TabularData }
+import ai.mantik.elements.PipelineStep.MetaVariableSetting
+import ai.mantik.elements.{ MantikId, Mantikfile, PipelineDefinition, PipelineStep }
 import ai.mantik.planner.{ Algorithm, MantikItem }
 import ai.mantik.planner.select.Select
-import ai.mantik.repository.PipelineStep.MetaVariableSetting
-import ai.mantik.repository.meta.MetaVariableException
-import ai.mantik.repository.{ MantikId, Mantikfile, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.meta.MetaVariableException
 
 /** Resolves pipelines, figures out types and applies Meta Variables. */
 private[planner] object PipelineResolver {

@@ -2,9 +2,9 @@ package ai.mantik.planner
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
+import ai.mantik.elements.{ MantikDefinition, MantikId, Mantikfile }
 import ai.mantik.executor.model.Graph
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.repository.{ MantikDefinition, MantikId, Mantikfile }
 
 /**
  * A plan is something which can be executed. They are created by the [[Planner]]

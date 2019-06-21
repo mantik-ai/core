@@ -2,9 +2,10 @@ package ai.mantik.planner.impl
 
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.elements
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, Mantikfile, TrainableAlgorithmDefinition }
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.planner.bridge.{ AlgorithmBridge, BridgeList, Bridges, FormatBridge, TrainableAlgorithmBridge }
-import ai.mantik.repository.{ AlgorithmDefinition, DataSetDefinition, MantikDefinition, Mantikfile, TrainableAlgorithmDefinition }
 
 object TestItems {
 
@@ -27,7 +28,7 @@ object TestItems {
   )
 
   val dataSet2 = Mantikfile.pure(
-    DataSetDefinition(
+    elements.DataSetDefinition(
       format = "format1",
       `type` = FundamentalType.StringType
     )

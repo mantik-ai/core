@@ -1,8 +1,9 @@
 package ai.mantik.planner.select
 
 import ai.mantik.ds.{DataType, FundamentalType, TabularData}
+import ai.mantik.elements.{DataSetDefinition, Mantikfile}
+import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{DataSet, DefinitionSource, PayloadSource, Source}
-import ai.mantik.repository.{ContentTypes, DataSetDefinition, Mantikfile}
 import ai.mantik.testutils.TestBase
 
 class AutoAdaptSpec extends TestBase {
