@@ -163,9 +163,8 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
   }
 
   override def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse] = {
-    val serviceId = UUID.randomUUID().toString
     val namespace = namespaceForIsolationSpace(deployServiceRequest.isolationSpace)
-    val converter = new KubernetesServiceConverter(config, serviceId, deployServiceRequest)
+    val converter = new KubernetesServiceConverter(config, deployServiceRequest)
     val maybePullSecret = converter.pullSecret
     val replicaSet = converter.replicaSet
     val service = converter.service
@@ -174,12 +173,13 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
       _ <- ops.ensureNamespace(namespace)
       _ <- ops.maybeCreate(Some(namespace), maybePullSecret)
       _ <- ops.create(Some(namespace), replicaSet)
-      _ <- ops.create(Some(namespace), service)
+      usedService <- ops.create(Some(namespace), service)
     } yield {
-      logger.info(s"Deployed ${deployServiceRequest.serviceName} as ${serviceId} under ${converter.serviceUrl} in namespace ${namespace}")
+      val serviceUrl = s"http://${usedService.name}"
+      logger.info(s"Deployed ${deployServiceRequest.serviceId} as ${deployServiceRequest.serviceId} under ${serviceUrl} in namespace ${namespace}")
       DeployServiceResponse(
-        serviceId,
-        converter.serviceUrl
+        serviceName = usedService.name,
+        url = serviceUrl
       )
     }
   }
@@ -193,19 +193,17 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
       case Some(_) =>
         ops.getServices(
           Some(namespace),
-          serviceIdFilter = deployedServicesQuery.serviceId,
-          serviceNameFilter = deployedServicesQuery.serviceName
+          serviceIdFilter = deployedServicesQuery.serviceId
         ).map { services =>
             val entries = services.map { service =>
-              DeployedServicesEntry(
-                serviceId = service.metadata.labels.getOrElse(KubernetesConstants.ServiceIdLabel, {
+              val serviceId = KubernetesNamer.decodeLabelValueNoCrashing(
+                service.metadata.labels.getOrElse(KubernetesConstants.ServiceIdLabel, {
                   logger.error(s"Found a service without service id: ${namespace}/${service.name}")
                   ""
-                }),
-                serviceName = service.metadata.labels.getOrElse(KubernetesConstants.ServiceNameLabel, {
-                  logger.error(s"Found a service without service name: ${namespace}/${service.name}")
-                  ""
-                }),
+                }
+                ))
+              DeployedServicesEntry(
+                serviceId = serviceId,
                 serviceUrl = s"http://${service.name}"
               )
             }
@@ -225,30 +223,8 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
       case Some(_) =>
         ops.deleteDeployedServicesAndRelated(
           Some(namespace),
-          serviceIdFilter = deployedServicesQuery.serviceId,
-          serviceNameFilter = deployedServicesQuery.serviceName
-        )
-      /*
-        val deleteServiceCall = ops.deleteServices(
-          Some(namespace),
-          serviceNameFilter = deployedServicesQuery.serviceName,
           serviceIdFilter = deployedServicesQuery.serviceId
         )
-        val deleteReplicaSetFuture = ops.deleteReplicaSets(
-          Some(namespace),
-          serviceNameFilter = deployedServicesQuery.serviceName,
-          serviceIdFilter = deployedServicesQuery.serviceId
-        )
-        for {
-          deleteServiceResult <- deleteServiceCall
-          deleteReplicaSetResult <- deleteReplicaSetFuture
-        } yield {
-          if (deleteReplicaSetResult != deleteServiceResult) {
-            logger.warn(s"Deleted Replica Set Count ${deleteReplicaSetResult} was != Deleted Service Result ${deleteServiceResult}. Orphaned items?")
-          }
-          deleteServiceResult
-        }
-         */
     }
   }
 

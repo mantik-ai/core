@@ -29,6 +29,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
 
   private val deployServiceCall = DeployServiceRequest(
     "service1",
+    Some("serviceName"),
     "isolation1",
     ContainerService(
       Container("Foo")
@@ -37,13 +38,12 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
 
   private val deployedServicesQuery = DeployedServicesQuery(
     isolationSpace = "isolationSpace",
-    serviceName = Some("serviceName"),
     serviceId = Some("serviceId")
   )
 
   private val deployedServicesResponse = DeployedServicesResponse(
     List(
-      DeployedServicesEntry("id1", "service1", "http://foobar")
+      DeployedServicesEntry("id1", "http://foobar")
     )
   )
 
@@ -67,7 +67,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
 
       override def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse] = {
         receivedDeployServiceRequest = deployServiceRequest
-        Future.successful(DeployServiceResponse("id1", "my.service.name"))
+        Future.successful(DeployServiceResponse("my", "my.service.name"))
       }
 
       override def queryDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[DeployedServicesResponse] = {
@@ -115,7 +115,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       await(client.publishService(publishCall)).name shouldBe "foo:1234"
       receivedPublishRequest shouldBe publishCall
 
-      await(client.deployService(deployServiceCall)) shouldBe DeployServiceResponse("id1", "my.service.name")
+      await(client.deployService(deployServiceCall)) shouldBe DeployServiceResponse("my", "my.service.name")
       receivedDeployServiceRequest shouldBe deployServiceCall
 
       await(client.queryDeployedServices(deployedServicesQuery)) shouldBe deployedServicesResponse

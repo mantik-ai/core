@@ -4,7 +4,7 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
 import ai.mantik.{ elements, planner }
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, Mantikfile, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, SelectRequest, TrainRequest }
@@ -28,19 +28,22 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val dataset1 = MantikArtifact(
       Mantikfile.pure(DataSetDefinition(format = DataSet.NaturalFormatName, `type` = FundamentalType.Int32)),
       fileId = Some("1234"),
-      id = "Dataset1"
+      id = "Dataset1",
+      itemId = ItemId.generate()
     )
     val dataset2 = MantikArtifact(
       Mantikfile.pure(elements.DataSetDefinition(format = DataSet.NaturalFormatName, `type` = TabularData(
         "x" -> FundamentalType.Int32
       ))),
       fileId = Some("1234"),
-      id = "Dataset2"
+      id = "Dataset2",
+      itemId = ItemId.generate()
     )
     val algorithm1 = MantikArtifact(
       Mantikfile.pure(AlgorithmDefinition(stack = "stack1", `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))),
       fileId = Some("1236"),
-      id = "Algorithm1"
+      id = "Algorithm1",
+      itemId = ItemId.generate()
     )
     val trainable1 = MantikArtifact(
       Mantikfile.pure(
@@ -56,7 +59,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         )
       ),
       fileId = Some("5000"),
-      id = "Trainable1"
+      id = "Trainable1",
+      itemId = ItemId.generate()
     )
     val pipeline1 = MantikArtifact(
       Mantikfile.pure(
@@ -67,7 +71,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         )
       ),
       fileId = None,
-      id = "Pipeline1"
+      id = "Pipeline1",
+      itemId = ItemId.generate()
     )
     await(components.repository.store(dataset1))
     await(components.repository.store(dataset2))
@@ -254,7 +259,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         )
       )),
       fileId = Some("1236"),
-      id = "Algorithm1"
+      id = "Algorithm1",
+      itemId = ItemId.generate()
     )
     await(components.repository.store(algorithm1))
     val algorithm1Item = await(graphBuilder.get(GetRequest(session1.id, algorithm1.id.toString)))

@@ -26,7 +26,7 @@ class DeployServiceSpec extends IntegrationTestBase {
       )
     )
     val response = await(executor.deployService(deployRequest))
-    response.serviceId shouldNot be(empty)
+    response.serviceName shouldNot be(empty)
     response.url shouldNot be(empty)
 
     // we can now use the URL in a job.
@@ -73,6 +73,7 @@ class DeployServiceSpec extends IntegrationTestBase {
     val isolationSpace = "deploy-spec2"
     val deployRequest = DeployServiceRequest(
       "service1",
+      Some("name1"),
       isolationSpace = isolationSpace,
       nodeService = ContainerService(
         main = Container(
@@ -81,7 +82,7 @@ class DeployServiceSpec extends IntegrationTestBase {
       )
     )
     val response = await(executor.deployService(deployRequest))
-    response.serviceId shouldNot be(empty)
+    response.serviceName shouldNot be(empty)
     response.url shouldNot be(empty)
 
     val queryResponse1 = await(executor.queryDeployedServices(
@@ -89,7 +90,7 @@ class DeployServiceSpec extends IntegrationTestBase {
     ))
 
     queryResponse1.services shouldBe List(
-      DeployedServicesEntry(response.serviceId, "service1", response.url)
+      DeployedServicesEntry("service1", response.url)
     )
 
     // different namesapce
@@ -97,12 +98,6 @@ class DeployServiceSpec extends IntegrationTestBase {
       DeployedServicesQuery("other-space")
     ))
     queryResponse2.services shouldBe empty
-
-    // different name
-    val queryResponse3 = await(executor.queryDeployedServices(
-      DeployedServicesQuery(isolationSpace, serviceName = Some("other"))
-    ))
-    queryResponse3.services shouldBe empty
 
     // different id
     val queryResponse4 = await(executor.queryDeployedServices(
@@ -112,7 +107,7 @@ class DeployServiceSpec extends IntegrationTestBase {
 
     // over specified (but matching)
     val queryResponse5 = await(executor.queryDeployedServices(
-      DeployedServicesQuery(isolationSpace, serviceId = Some(response.serviceId), serviceName = Some("service1"))
+      DeployedServicesQuery(isolationSpace, serviceId = Some("service1"))
     ))
     queryResponse5 shouldBe queryResponse1
   }
@@ -128,7 +123,7 @@ class DeployServiceSpec extends IntegrationTestBase {
 
     def secretCount(): Int = {
       // there is also one default token secret inside minikube.
-      await(nsClient.list[ListResource[Secret]]()).count(_.metadata.labels.contains(KubernetesConstants.ServiceNameLabel))
+      await(nsClient.list[ListResource[Secret]]()).count(_.metadata.labels.contains(KubernetesConstants.TrackerIdLabel))
     }
 
     val deployRequest = DeployServiceRequest(
@@ -152,11 +147,11 @@ class DeployServiceSpec extends IntegrationTestBase {
     )
 
     val response = await(executor.deployService(deployRequest))
-    response.serviceId shouldNot be(empty)
+    response.serviceName shouldNot be(empty)
     response.url shouldNot be(empty)
 
     val response2 = await(executor.deployService(deployRequest2))
-    response2.serviceId shouldNot be(empty)
+    response2.serviceName shouldNot be(empty)
     response2.url shouldNot be(empty)
 
     replicaSetCount() shouldBe 2
@@ -167,7 +162,7 @@ class DeployServiceSpec extends IntegrationTestBase {
     ))
 
     queryResponse1.services.map(_.serviceId) should contain theSameElementsAs Seq(
-      response.serviceId, response2.serviceId
+      "service1", "service2"
     )
 
     // non existing isolation space
@@ -178,20 +173,8 @@ class DeployServiceSpec extends IntegrationTestBase {
     ))
     deleteResponse1 shouldBe 0
 
-    // service name exists
-    val deleteResponse2 = await(executor.deleteDeployedServices(
-      DeployedServicesQuery(
-        isolationSpace,
-        serviceName = Some("service1")
-      )
-    ))
-    deleteResponse2 shouldBe 1
-
-    val existing = await(executor.queryDeployedServices(DeployedServicesQuery(isolationSpace)))
-    existing.services.map(_.serviceId) shouldBe Seq(response2.serviceId)
-
-    replicaSetCount() shouldBe 1
-    secretCount() shouldBe 1
+    replicaSetCount() shouldBe 2
+    secretCount() shouldBe 2
 
     // not existing id
     val deleteResponse3 = await(executor.deleteDeployedServices(
@@ -206,10 +189,21 @@ class DeployServiceSpec extends IntegrationTestBase {
     val deleteResponse4 = await(executor.deleteDeployedServices(
       DeployedServicesQuery(
         isolationSpace,
-        serviceId = Some(response2.serviceId)
+        serviceId = Some("service2")
       )
     ))
     deleteResponse4 shouldBe 1
+
+    replicaSetCount() shouldBe 1
+    secretCount() shouldBe 1
+
+    // all
+    val deleteResponse5 = await(executor.deleteDeployedServices(
+      DeployedServicesQuery(
+        isolationSpace
+      )
+    ))
+    deleteResponse5 shouldBe 1
 
     await(executor.queryDeployedServices(DeployedServicesQuery(isolationSpace))).services shouldBe empty
     replicaSetCount() shouldBe 0

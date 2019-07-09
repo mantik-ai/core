@@ -20,6 +20,17 @@ object TestItems {
     )
   )
 
+  val algorithm2 = Mantikfile.pure(
+    AlgorithmDefinition(
+      stack = "algorithm_stack1",
+      `type` = FunctionType(
+        input = FundamentalType.StringType,
+        output = FundamentalType.Float32
+      ),
+      directory = Some("dir2")
+    )
+  )
+
   val dataSet1 = Mantikfile.pure(
     DataSetDefinition(
       format = "natural",

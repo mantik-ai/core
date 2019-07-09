@@ -10,9 +10,6 @@ object KubernetesConstants {
   /** Label used to save the label id in Kubernetes Resources. */
   val TrackerIdLabel = "trackerId"
 
-  /** Label used to save the service name in Kubernetes Resources. */
-  val ServiceNameLabel = "serviceName"
-
   /** Label used to mark items which are managed by Mantik. */
   val ManagedLabel = "app.kubernetes.io/managed-by" // see  https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 

@@ -2,7 +2,7 @@ package ai.mantik.planner
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ MantikDefinition, MantikId, Mantikfile }
+import ai.mantik.elements.{ ItemId, MantikDefinition, MantikId, Mantikfile }
 import ai.mantik.executor.model.Graph
 import ai.mantik.executor.model.docker.Container
 
@@ -72,7 +72,15 @@ object PlanOp {
   case class PullBundle(dataType: DataType, fileReference: PlanFileReference) extends PlanOp
 
   /** Add some mantik item. */
-  case class AddMantikItem(id: MantikId, file: Option[PlanFileReference], mantikfile: Mantikfile[_ <: MantikDefinition]) extends PlanOp
+  case class AddMantikItem(id: MantikId, item: MantikItem, file: Option[PlanFileReference]) extends PlanOp
+
+  /** Deploy an algorithm. */
+  case class DeployAlgorithm(
+      container: PlanNodeService.DockerContainer,
+      serviceId: String,
+      serviceNameHint: Option[String],
+      item: MantikItem
+  ) extends PlanOp
 
   /**
    * Evaluate the alternative, if any of the given files do not exist.
@@ -88,6 +96,9 @@ object PlanOp {
    * The result of the last is returned.
    */
   case class Sequential(plans: Seq[PlanOp]) extends PlanOp
+
+  /** Plan Op which just returns a fixed value. */
+  case class Const(value: AnyRef) extends PlanOp
 
   /** Convenience method for constructing Sequential Plans. */
   def seq(plans: PlanOp*): Sequential = Sequential(plans)

@@ -1,6 +1,9 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.planner.{ CacheKey, CacheKeyGroup, PlanFile, PlanFileReference, PayloadSource }
+import ai.mantik.elements.ItemId
+import ai.mantik.planner.impl.PlanningState.ItemStored
+import ai.mantik.planner.repository.ContentTypes
+import ai.mantik.planner.{ CacheKey, CacheKeyGroup, DataSet, MantikItem, PayloadSource, PlanFile, PlanFileReference }
 import cats.data.State
 
 /**
@@ -8,12 +11,14 @@ import cats.data.State
  * @param nextNodeId the next available node id.
  * @param nextFileReferenceId the next available file reference id
  * @param filesRev requested files (reverse).
+ * @param stored items which were stored within the plan.
  */
 private[impl] case class PlanningState(
     private val nextNodeId: Int = 1,
     private val nextFileReferenceId: Int = 1,
     private val filesRev: List[PlanFile] = Nil, // reverse requested files
-    cacheGroups: List[CacheKeyGroup] = Nil
+    cacheGroups: List[CacheKeyGroup] = Nil,
+    private val stored: Map[ItemId, PlanningState.ItemStored] = Map.empty
 ) {
 
   /** Returns files in request order. */
@@ -81,9 +86,63 @@ private[impl] case class PlanningState(
       nextFileReferenceId = nextFileReferenceId + 1, filesRev = file :: filesRev
     ) -> file
   }
+
+  /** Add an item to the stored values. */
+  def withItemStored(itemId: ItemId, storage: PlanningState.ItemStored): PlanningState = {
+    copy(
+      stored = stored + (itemId -> storage)
+    )
+  }
+
+  /**
+   * Figures out the stored payload of an item.
+   * This can either be already persistent storage, or it was
+   * added in an earlier stage.
+   */
+  def itemStorage(item: MantikItem): (PlanningState, Option[ItemStored]) = {
+    stored.get(item.itemId) match {
+      case Some(already) =>
+        // is stored inside the state
+        this -> Some(already)
+      case None =>
+        // maybe it's already stored in the item?
+        val state = item.state.get
+        if (state.isStored) {
+          // it is stored, access the payoad, if it has some...
+          state.payloadFile match {
+            case Some(payloadFile) =>
+              val (nextState, file) = readFile(payloadFile)
+              val contentType = itemPayloadContentType(item)
+              val fileWithContentType = PlanFileWithContentType(file.ref, contentType)
+              nextState -> Some(ItemStored(payload = Some(fileWithContentType)))
+            case None =>
+              // item is stored, but has no payload file
+              this -> Some(ItemStored(payload = None))
+          }
+        } else {
+          // not yet stored
+          this -> None
+        }
+    }
+  }
+
+  private def itemPayloadContentType(item: MantikItem): String = {
+    // TODO: We need a better place for this distinguishment
+    // Also the format content type may be runtime specific.
+    item match {
+      case ds: DataSet if ds.stack == DataSet.NaturalFormatName =>
+        ContentTypes.MantikBundleContentType
+      case _ => ContentTypes.ZipFileContentType
+    }
+  }
 }
 
-object PlanningState {
+private[impl] object PlanningState {
+
+  /** Information about an item which was stored within the plan. */
+  case class ItemStored(
+      payload: Option[PlanFileWithContentType]
+  )
 
   /**
    * Helper for declaring a state changing function.

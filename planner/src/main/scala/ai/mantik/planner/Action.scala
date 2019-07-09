@@ -19,4 +19,10 @@ object Action {
 
   /** Something is going to be saved. */
   case class SaveAction(item: MantikItem, id: MantikId) extends Action[Unit]
+
+  /**
+   * Deploy some item.
+   * Returns the URL under which it was deployed.
+   */
+  case class Deploy(item: MantikItem, name: Option[String]) extends Action[DeploymentState]
 }

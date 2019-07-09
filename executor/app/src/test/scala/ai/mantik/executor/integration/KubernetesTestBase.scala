@@ -2,16 +2,12 @@ package ai.mantik.executor.integration
 
 import java.time.Clock
 
-import ai.mantik.executor.{ Config, Executor }
+import ai.mantik.executor.impl.KubernetesCleaner
+import ai.mantik.executor.Config
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import org.scalatest.time.{ Millis, Span }
-import skuber.{ ConfigMap, ListResource, Namespace, Pod, Service }
 import skuber.api.client.KubernetesClient
-import skuber.batch.Job
-import skuber.json.format._
-import skuber.json.batch.format._
 
-import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 abstract class KubernetesTestBase extends TestBase with AkkaSupport {
@@ -41,39 +37,13 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
     super.beforeAll()
     _kubernetesClient = skuber.k8sInit(actorSystem, materializer)
     implicit val clock = Clock.systemUTC()
-    deleteKubernetesContent()
+    val cleaner = new KubernetesCleaner(_kubernetesClient, config)
+    cleaner.deleteKubernetesContent()
   }
 
   override protected def afterAll(): Unit = {
     _kubernetesClient.close
     super.afterAll()
-  }
-
-  private def deleteKubernetesContent(): Unit = {
-    val pendingNamespaces = await(_kubernetesClient.getNamespaceNames).filter(_.startsWith(config.namespacePrefix))
-
-    pendingNamespaces.foreach { namespace =>
-      logger.info(s"Deleting namespace ${namespace}")
-      val namespaced = _kubernetesClient.usingNamespace(namespace)
-      await(namespaced.deleteAll[ListResource[ConfigMap]]())
-      await(namespaced.deleteAll[ListResource[Pod]]())
-      await(namespaced.deleteAll[ListResource[Job]]())
-      // await(namespaced.deleteAll[ListResource[Service]]()) // error 405 ?!
-      await(_kubernetesClient.delete[Namespace](namespace, gracePeriodSeconds = 0))
-    }
-    pendingNamespaces.foreach { namespace =>
-      waitForNamespaceDeletion(namespace)
-    }
-  }
-
-  @tailrec
-  private def waitForNamespaceDeletion(namespace: String): Unit = {
-    val namespaces = await(_kubernetesClient.getNamespaceNames)
-    if (namespaces.contains(namespace)) {
-      logger.info(s"Namespace ${namespace} still exists, waiting")
-      Thread.sleep(1000)
-      waitForNamespaceDeletion(namespace)
-    }
   }
 
   protected trait Env {

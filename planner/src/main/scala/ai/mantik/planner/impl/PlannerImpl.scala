@@ -31,13 +31,8 @@ private[planner] class PlannerImpl(bridges: Bridges) extends Planner {
     action match {
       case s: Action.SaveAction =>
         storeDependentItems(s.item).flatMap { dependentStoreAction =>
-          translateItemPayloadSourceAsFiles(s.item.payloadSource, canBeTemporary = false).map { filesPlan =>
-            val fileRef = filesPlan.fileRefs.headOption
-            PlanOp.seq(
-              dependentStoreAction,
-              filesPlan.preOp,
-              PlanOp.AddMantikItem(s.id, fileRef, s.item.mantikfile)
-            )
+          storeSingleItem(s.item, s.id).map { filesPlan =>
+            PlanOp.seq(dependentStoreAction, filesPlan.preOp)
           }
         }
       case p: Action.FetchAction =>
@@ -48,13 +43,40 @@ private[planner] class PlannerImpl(bridges: Bridges) extends Planner {
             PlanOp.PullBundle(p.dataSet.dataType, fileRef)
           )
         }
+      case d: Action.Deploy =>
+        d.item match {
+          case a: Algorithm =>
+            deployAlgorithm(a, d.name)
+          case other =>
+            throw new InconsistencyException(s"Can only deploy algorithms, got ${other.getClass.getSimpleName}")
+        }
+    }
+  }
+
+  /** Store an item and also returns the file referencing to it. */
+  def storeSingleItem(item: MantikItem, id: MantikId): State[PlanningState, FilesPlan] = {
+    translateItemPayloadSourceAsFiles(item.payloadSource, canBeTemporary = false).flatMap { filesPlan =>
+      val file = filesPlan.files.headOption
+      val fileRef = file.map(_.ref)
+      val itemStored = PlanningState.ItemStored(payload = file)
+      PlanningState.apply { state =>
+        val updatedState = state.withItemStored(item.itemId, itemStored)
+        val combinedOps = PlanOp.seq(
+          filesPlan.preOp,
+          PlanOp.AddMantikItem(id, item, fileRef)
+        )
+        updatedState -> FilesPlan(
+          combinedOps,
+          file.toIndexedSeq
+        )
+      }
     }
   }
 
   private def storeDependentItems(item: MantikItem): State[PlanningState, PlanOp] = {
     dependentItems(item).map {
       case (mantikId, item) =>
-        if (item.mantikId.contains(mantikId)) {
+        if (item.state.get.isStored && item.mantikId == mantikId) {
           // nothing to save
           // already loaded under this name
           PlanningState.pure(PlanOp.Empty: PlanOp)
@@ -76,6 +98,50 @@ private[planner] class PlannerImpl(bridges: Bridges) extends Planner {
             as.algorithm -> algorithm
         }
       case _ => Nil
+    }
+  }
+
+  private def deployAlgorithm(algorithm: Algorithm, nameHint: Option[String]): State[PlanningState, PlanOp] = {
+    // already deployed?
+    algorithm.state.get.deployment match {
+      case Some(existing) => return PlanningState.pure(PlanOp.Const(existing))
+      case None           => // continue
+    }
+
+    // Item must be present inside the database
+    // Then it can be deployed directly.
+
+    ensureItemStored(algorithm).map { filePlan =>
+      val file = filePlan.files.headOption
+      val container = elements.algorithmContainer(algorithm.mantikfile, file.map(_.ref))
+      val serviceId = algorithm.itemId.toString
+      val op = PlanOp.DeployAlgorithm(
+        container,
+        serviceId,
+        nameHint,
+        algorithm
+      )
+      PlanOp.seq(
+        filePlan.preOp,
+        op
+      )
+    }
+  }
+
+  /** Ensure that the item is stored inside the database. */
+  def ensureItemStored(item: MantikItem): State[PlanningState, FilesPlan] = {
+    PlanningState(_.itemStorage(item)).flatMap {
+      case None =>
+        // not yet stored
+        storeSingleItem(item, item.mantikId)
+      case Some(stored) =>
+        // already stored
+        PlanningState.pure {
+          FilesPlan(
+            PlanOp.Empty,
+            stored.payload.toIndexedSeq
+          )
+        }
     }
   }
 

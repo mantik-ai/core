@@ -20,4 +20,26 @@ class KubernetesNamerSpec extends TestBase {
     namer.podName("Config") shouldBe "prefix-id1-config1"
     namer.podName("config") shouldBe "prefix-id1-config0"
   }
+
+  it should "escape labels" in {
+    val pairs = Seq(
+      "" -> "",
+      "AbC120d" -> "AbC120d",
+      "my.domain" -> "my.domain",
+      "." -> "Z002e",
+      "Z" -> "Z_",
+      "Z." -> "Z_.",
+      "Z/" -> "Z__002f",
+      "__" -> "Z005f_005f",
+      "Z_." -> "Z__005f."
+    )
+    pairs.foreach {
+      case (from, to) =>
+        KubernetesNamer.encodeLabelValue(from) shouldBe to
+    }
+    pairs.foreach {
+      case (from, to) =>
+        KubernetesNamer.decodeLabelValue(to) shouldBe from
+    }
+  }
 }

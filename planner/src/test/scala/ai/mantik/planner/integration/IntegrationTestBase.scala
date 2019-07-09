@@ -1,5 +1,6 @@
 package ai.mantik.planner.integration
 
+import ai.mantik.executor.impl.KubernetesCleaner
 import ai.mantik.executor.{ Config, ExecutorForIntegrationTests }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import ai.mantik.planner.Context
@@ -18,6 +19,12 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport {
     embeddedExecutor = new ExecutorForIntegrationTests()
     implicit val runtime = AkkaRuntime.fromRunning(config)
     context = Context.localWithAkka()
+    scrapKubernetes()
+  }
+
+  private def scrapKubernetes(): Unit = {
+    val cleaner = new KubernetesCleaner(embeddedExecutor.kubernetesClient, embeddedExecutor.executorConfig)
+    cleaner.deleteKubernetesContent()
   }
 
   override protected def afterAll(): Unit = {

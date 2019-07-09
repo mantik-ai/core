@@ -5,19 +5,16 @@ import java.nio.file.{ Files, Path }
 
 import ai.mantik
 import ai.mantik.ds.helper.ZipUtils
-import ai.mantik.elements.{ MantikId, Mantikfile }
+import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
 import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.PlanExecutorImpl
-import ai.mantik.planner.repository.{ FileRepository, MantikArtifact, Repository }
+import ai.mantik.planner.repository.{ Errors, FileRepository, MantikArtifact, Repository }
 import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
-import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaTypes
 import akka.stream.scaladsl.FileIO
-import akka.stream.{ ActorMaterializer, Materializer }
-import com.typesafe.config.{ Config, ConfigFactory }
 import org.apache.commons.io.FileUtils
 import org.slf4j.LoggerFactory
 
@@ -49,7 +46,10 @@ private[impl] class ContextImpl(val repository: Repository, val fileRepository: 
 
   private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
     val (artifact, hull) = await(repository.getWithHull(id), dbLookupTimeout)
-    artifact.forceMantikfileCast[T#DefinitionType]
+    artifact.mantikfile.definitionAs[T#DefinitionType] match {
+      case Left(error) => throw new Errors.WrongTypeException("Wrong item type", error)
+      case _           => // ok
+    }
     val item = MantikItem.fromMantikArtifact(artifact, hull)
     item.asInstanceOf[T]
   }
@@ -76,6 +76,7 @@ private[impl] class ContextImpl(val repository: Repository, val fileRepository: 
     val idToUse = id.getOrElse {
       mantikfile.header.id.getOrElse(throw new RuntimeException("Mantikfile has no id and no id is given"))
     }
+    val itemId = ItemId.generate()
     val fileId = mantikfile.definition.directory.map { dataDir =>
       // Uploading File Content
       val resolved = dir.resolve(dataDir)
@@ -89,7 +90,7 @@ private[impl] class ContextImpl(val repository: Repository, val fileRepository: 
       tempFile.toFile.delete()
       fileStorage.fileId
     }
-    val artifact = MantikArtifact(mantikfile, fileId, idToUse)
+    val artifact = MantikArtifact(mantikfile, fileId, idToUse, itemId)
     await(repository.store(artifact), dbLookupTimeout)
     logger.info(s"Storing ${artifact.id} done")
     idToUse

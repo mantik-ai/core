@@ -8,15 +8,10 @@ import skuber.apps.v1.ReplicaSet
 /** Converts Service Deployments */
 class KubernetesServiceConverter(
   config: Config,
-  id: String,
   deployServiceRequest: DeployServiceRequest,
 ) extends KubernetesConverter (
-  config, id, deployServiceRequest.extraLogins, "service-", KubernetesConstants.ServiceIdLabel
+  config, deployServiceRequest.serviceId, deployServiceRequest.extraLogins, "service-", KubernetesConstants.ServiceIdLabel
 ){
-
-  override protected lazy val defaultLabels: Map[String, String] = super.defaultLabels ++ Map (
-    KubernetesConstants.ServiceNameLabel -> deployServiceRequest.serviceName
-  )
 
   /** The kubernetes Replica Set definition. */
   lazy val replicaSet: ReplicaSet = {
@@ -28,7 +23,7 @@ class KubernetesServiceConverter(
       spec = Some(ReplicaSet.Spec(
         selector = LabelSelector(
           LabelSelector.IsEqualRequirement(
-            KubernetesConstants.ServiceIdLabel, id
+            KubernetesConstants.ServiceIdLabel, KubernetesNamer.encodeLabelValue(id)
           )
         ),
         template = podTemplateSpec
@@ -51,13 +46,18 @@ class KubernetesServiceConverter(
   lazy val service: Service  = {
     Service(
       metadata = ObjectMeta(
-        name = namer.serviceName,
+        name = if (deployServiceRequest.nameHint.isDefined) {
+          ""
+        } else {
+          namer.serviceName
+        },
+        generateName = deployServiceRequest.nameHint.getOrElse(""),
         labels = defaultLabels
       ),
       spec = Some(
         Service.Spec(
           selector = Map(
-            KubernetesConstants.ServiceIdLabel -> id
+            KubernetesConstants.ServiceIdLabel -> KubernetesNamer.encodeLabelValue(id)
           ),
           ports = List(
             Service.Port(
@@ -69,8 +69,6 @@ class KubernetesServiceConverter(
       )
     )
   }
-
-  lazy val serviceUrl = s"http://${service.name}"
 
   lazy val podSpec: Pod.Spec = {
     convertNodeSpec(deployServiceRequest.nodeService, withSideCar = false)

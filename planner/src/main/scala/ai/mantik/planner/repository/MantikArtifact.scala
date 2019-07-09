@@ -1,20 +1,22 @@
 package ai.mantik.planner.repository
 
-import ai.mantik.elements.{ MantikDefinition, MantikId, Mantikfile }
+import java.time.Instant
 
-import scala.reflect.ClassTag
+import ai.mantik.elements.{ ItemId, MantikDefinition, MantikId, Mantikfile }
 
 /** A Mantik Artefact. */
 case class MantikArtifact(
     mantikfile: Mantikfile[_ <: MantikDefinition],
     fileId: Option[String],
-    id: MantikId
-) {
-  /** Force a mantik file cast. */
-  def forceMantikfileCast[T <: MantikDefinition: ClassTag]: Mantikfile[T] = {
-    mantikfile.cast[T] match {
-      case Left(error) => throw new Errors.WrongTypeException(error.getMessage)
-      case Right(ok)   => ok
-    }
-  }
-}
+    id: MantikId,
+    itemId: ItemId,
+    deploymentInfo: Option[DeploymentInfo] = None
+)
+
+/** Deployment Information as being stored in the [[Repository]]. */
+case class DeploymentInfo(
+    name: String,
+    url: String,
+    timestamp: Instant
+)
+

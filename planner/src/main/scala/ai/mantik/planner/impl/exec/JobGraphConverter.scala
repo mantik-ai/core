@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.executor.model.docker.DockerLogin
-import ai.mantik.executor.model.{ContainerService, DataProvider, ExistingService, Graph, Job, Link, Node, NodeResource, NodeResourceRef, NodeService, ResourceType}
+import ai.mantik.executor.model.{ContainerService, DataProvider, DeployServiceRequest, ExistingService, Graph, Job, Link, Node, NodeResource, NodeResourceRef, NodeService, ResourceType}
 import ai.mantik.planner.PlanNodeService
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import akka.http.scaladsl.model.Uri
@@ -72,6 +72,18 @@ private [impl] class JobGraphConverter (fileServiceUri: Uri, isolationSpace: Str
     graph.links.map { link =>
       link.copy(from = updateResource(link.from), to = updateResource(link.to))
     }
+  }
+
+
+  def createDeployServiceRequest(serviceId: String, serviceNameHint: Option[String], container: PlanNodeService.DockerContainer): DeployServiceRequest = {
+    val convertedContainer = convertDockerContainer(container)
+    DeployServiceRequest(
+      serviceId,
+      serviceNameHint,
+      isolationSpace,
+      nodeService = convertedContainer,
+      extraLogins
+    )
   }
 
   /** Convert a docker node to that way the executor expects. */

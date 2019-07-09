@@ -2,6 +2,7 @@ package ai.mantik.planner.repository.impl
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.sql.Timestamp
 import java.util.UUID
 
 import org.apache.commons.io.IOUtils
@@ -10,7 +11,7 @@ import org.apache.commons.io.IOUtils
  * Contains the Database Adapter for the local Repository.
  */
 private[impl] class LocalRepositoryDb(dbFile: Path) {
-  import LocalRepositoryDb.DbMantikArtifact
+  import LocalRepositoryDb._
 
   val quill = new QuillSqlite(dbFile)
 
@@ -22,14 +23,33 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
 
   import quill.context._
 
-  /** Quill Query Schema for accessing artifacts. */
-  val artifacts = quote {
-    querySchema[DbMantikArtifact](
-      "mantik_artifact",
+  val names = quote {
+    querySchema[DbMantikName](
+      "mantik_name",
       _.id -> "id",
       _.name -> "name",
       _.version -> "version",
-      _.mantikfile -> "mantikfile"
+      _.currentItemId -> "current_item_id"
+    )
+  }
+
+  val deployments = quote {
+    querySchema[DbDeploymentInfo](
+      ("mantik_deployment_info"),
+      _.itemId -> "item_id",
+      _.name -> "name",
+      _.url -> "url",
+      _.timestamp -> "timestamp"
+    )
+  }
+
+  /** Quill Query Schema for accessing artifacts. */
+  val items = quote {
+    querySchema[DbMantikItem](
+      "mantik_item",
+      _.itemId -> "item_id",
+      _.mantikfile -> "mantikfile",
+      _.fileId -> "file_id"
     )
   }
 
@@ -40,13 +60,25 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
 }
 
 private[impl] object LocalRepositoryDb {
-  // Item stored in the database
-  case class DbMantikArtifact(
+
+  case class DbMantikName(
       id: UUID = UUID.randomUUID(),
       name: String,
       version: String,
+      currentItemId: String
+  )
+
+  // Item stored in the database
+  case class DbMantikItem(
+      itemId: String,
       mantikfile: String,
       fileId: Option[String]
   )
 
+  case class DbDeploymentInfo(
+      itemId: String,
+      name: String,
+      url: String,
+      timestamp: java.util.Date
+  )
 }

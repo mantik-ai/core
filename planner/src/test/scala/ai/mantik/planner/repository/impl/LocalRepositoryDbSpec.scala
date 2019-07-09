@@ -1,6 +1,7 @@
 package ai.mantik.planner.repository.impl
 
-import ai.mantik.planner.repository.impl.LocalRepositoryDb.DbMantikArtifact
+import ai.mantik.elements.ItemId
+import ai.mantik.planner.repository.impl.LocalRepositoryDb.DbMantikItem
 import ai.mantik.testutils.{ TempDirSupport, TestBase }
 
 class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
@@ -15,9 +16,8 @@ class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
     }
   }
 
-  val sampleItem = DbMantikArtifact(
-    name = "foo",
-    version = "version",
+  val sampleItem = DbMantikItem(
+    itemId = ItemId.generate().toString,
     fileId = Some("1"),
     mantikfile = "blabla"
   )
@@ -27,20 +27,20 @@ class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
       import db.quill.context._
       val items = db.quill.context.run(
         quote {
-          db.artifacts
+          db.items
         }
       )
       items shouldBe empty
 
       db.quill.context.run {
         quote {
-          db.artifacts.insert(lift(sampleItem))
+          db.items.insert(lift(sampleItem))
         }
       }
 
       val back = db.quill.context.run(
         quote {
-          db.artifacts
+          db.items
         }
       )
 
@@ -55,7 +55,7 @@ class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
           import db2.quill.context._
           db2.quill.context.run(
             quote {
-              db2.artifacts
+              db2.items
             }
           )
         }
@@ -63,7 +63,7 @@ class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
           import db1.quill.context._
           db1.quill.context.run(
             quote {
-              db1.artifacts.insert(lift(sampleItem))
+              db1.items.insert(lift(sampleItem))
             }
           )
         }
@@ -71,7 +71,7 @@ class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
           import db2.quill.context._
           db2.quill.context.run(
             quote {
-              db2.artifacts
+              db2.items
             }
           ) shouldBe List(sampleItem)
         }

@@ -8,8 +8,7 @@ import io.circe.generic.{ JsonCodec, semiauto }
 /** Query for deployed services. */
 case class DeployedServicesQuery(
     isolationSpace: String,
-    serviceId: Option[String] = None,
-    serviceName: Option[String] = None
+    serviceId: Option[String] = None
 ) {
 
   /** Convert the query into a http query parameter list. */
@@ -44,7 +43,6 @@ case class DeployedServicesResponse(
 @JsonCodec
 case class DeployedServicesEntry(
     serviceId: String,
-    serviceName: String,
     serviceUrl: String
 )
 
