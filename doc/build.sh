@@ -2,7 +2,7 @@
 set -e
 if [ -x "$(command -v pipenv)" ]; then
     echo "Using pipenv..."
-    pipenv install # automatically uses requirements.txt
+    pipenv --python 3 install # automatically uses requirements.txt
     RUN="pipenv run"
 else
     echo "Using Pip..."

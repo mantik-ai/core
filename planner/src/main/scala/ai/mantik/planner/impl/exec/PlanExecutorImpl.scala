@@ -6,7 +6,7 @@ import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.DockerConfig
 import ai.mantik.planner._
 import ai.mantik.planner.impl.FutureHelper
-import ai.mantik.planner.repository.{ FileRepository, MantikArtifact, Repository }
+import ai.mantik.planner.repository.{ DeploymentInfo, FileRepository, MantikArtifact, Repository }
 import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.http.scaladsl.model.Uri
 import org.slf4j.LoggerFactory
@@ -90,11 +90,20 @@ private[impl] class PlanExecutorImpl(
             source.runWith(sink)
           }
         }
-      case PlanOp.AddMantikItem(id, fileReference, mantikfile) =>
+      case PlanOp.AddMantikItem(id, item, fileReference) =>
+        // TODO: Support for adding without Id.
         val fileId = fileReference.map(files.resolveFileId)
-        val artifact = MantikArtifact(mantikfile, fileId, id)
+        val mantikfile = item.mantikfile
+        val artifact = MantikArtifact(mantikfile, fileId, id, item.itemId)
         FutureHelper.time(logger, s"Adding Mantik Item $id") {
-          repository.store(artifact)
+          repository.store(artifact).map { _ =>
+            item.state.update { state =>
+              state.copy(
+                isStored = true,
+                mantikId = Some(id)
+              )
+            }
+          }
         }
       case PlanOp.RunGraph(graph) =>
         val jobGraphConverter = new JobGraphConverter(fileServiceUri, isolationSpace, files, dockerConfig.logins)
@@ -117,6 +126,27 @@ private[impl] class PlanExecutorImpl(
             }
           }
         }
+      case da: PlanOp.DeployAlgorithm =>
+        FutureHelper.time(logger, s"Deploying Algorithm ${da.item.mantikId} -> ${da.serviceId}/${da.serviceNameHint}") {
+          val jobGraphConverter = new JobGraphConverter(fileServiceUri, isolationSpace, files, dockerConfig.logins)
+          val deployServiceRequest = jobGraphConverter.createDeployServiceRequest(da.serviceId, da.serviceNameHint, da.container)
+
+          for {
+            response <- executor.deployService(deployServiceRequest)
+            deploymentState = DeploymentState(name = response.serviceName, url = response.url)
+            _ = da.item.state.update(_.copy(deployment = Some(deploymentState: DeploymentState)))
+            deploymentInfo = DeploymentInfo(
+              name = deploymentState.name,
+              url = deploymentState.url,
+              timestamp = akkaRuntime.clock.instant()
+            )
+            _ <- repository.setDeploymentInfo(da.item.itemId, Some(deploymentInfo))
+          } yield {
+            deploymentState
+          }
+        }
+      case c: PlanOp.Const =>
+        Future.successful(c.value)
     }
   }
 

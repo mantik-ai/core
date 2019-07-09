@@ -1,10 +1,13 @@
 package ai.mantik.planner.repository.impl
 
 import java.nio.file.{ Files, Path }
+import java.util.Properties
 
 import ai.mantik.planner.repository.Errors
 import com.typesafe.config.ConfigFactory
+import com.zaxxer.hikari.{ HikariConfig, HikariDataSource }
 import io.getquill.{ JdbcContextConfig, SnakeCase, SqliteJdbcContext }
+import org.sqlite.SQLiteConfig
 
 import scala.collection.JavaConverters._
 
@@ -32,13 +35,23 @@ class QuillSqlite(dbFile: Path) {
       case e: Exception =>
         throw new Errors.RepositoryError("Could not create directory", e)
     }
-    val config = ConfigFactory.parseMap(
-      Map(
-        "driverClassName" -> "org.sqlite.JDBC",
-        "jdbcUrl" -> s"jdbc:sqlite:${dbFile.toAbsolutePath.toString}"
-      ).asJava
+    val dataSource = createDataSource()
+    new SqliteJdbcContext(SnakeCase, dataSource)
+  }
+
+  private def createDataSource(): HikariDataSource = {
+    // Building Data source by Hand, because [[JdbcContextConfig]]
+    // has no way of enabling foreign_keys.
+    val defaults = new Properties()
+    defaults.setProperty("driverClassName", "org.sqlite.JDBC")
+    defaults.setProperty("jdbcUrl", s"jdbc:sqlite:${dbFile.toAbsolutePath.toString}")
+    val hikariConfig = new HikariConfig(defaults)
+
+    hikariConfig.addDataSourceProperty(
+      "foreign_keys", "true"
     )
-    new SqliteJdbcContext(SnakeCase, new JdbcContextConfig(config))
+    val hikariDataSource = new HikariDataSource(hikariConfig)
+    hikariDataSource
   }
 
   /**

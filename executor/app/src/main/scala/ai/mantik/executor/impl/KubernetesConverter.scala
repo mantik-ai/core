@@ -21,9 +21,9 @@ class KubernetesConverter(
   protected[impl] val namer = new KubernetesNamer(id, superPrefix)
 
   protected def defaultLabels = Map(
-    idLabel -> id,
-    KubernetesConstants.TrackerIdLabel -> config.podTrackerId,
-    KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+    idLabel -> KubernetesNamer.encodeLabelValue(id),
+    KubernetesConstants.TrackerIdLabel -> KubernetesNamer.encodeLabelValue(config.podTrackerId),
+    KubernetesConstants.ManagedLabel -> KubernetesNamer.encodeLabelValue(KubernetesConstants.ManagedValue)
   )
 
   /** Returns docker secrets for getting images, if needed. */

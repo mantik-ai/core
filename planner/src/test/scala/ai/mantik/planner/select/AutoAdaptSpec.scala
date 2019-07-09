@@ -1,7 +1,7 @@
 package ai.mantik.planner.select
 
 import ai.mantik.ds.{DataType, FundamentalType, TabularData}
-import ai.mantik.elements.{DataSetDefinition, Mantikfile}
+import ai.mantik.elements.{DataSetDefinition, ItemId, Mantikfile}
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{DataSet, DefinitionSource, PayloadSource, Source}
 import ai.mantik.testutils.TestBase
@@ -21,7 +21,7 @@ class AutoAdaptSpec extends TestBase {
   private def makeDs(dt: DataType): DataSet = {
     // DataSet source is not important here.
     DataSet(
-      Source (DefinitionSource.Loaded("item1234"), PayloadSource.Loaded("someId", ContentTypes.ZipFileContentType)),
+      Source (DefinitionSource.Loaded("item1234", ItemId.generate()), PayloadSource.Loaded("someId", ContentTypes.ZipFileContentType)),
       Mantikfile.pure(DataSetDefinition(format = "someformat", `type` = dt))
     )
   }

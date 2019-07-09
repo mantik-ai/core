@@ -2,10 +2,11 @@ package ai.mantik.planner
 
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, MantikDefinition, MantikId, Mantikfile, PipelineDefinition, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikId, Mantikfile, PipelineDefinition, TrainableAlgorithmDefinition }
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver }
 import ai.mantik.elements.meta.MetaVariableException
-import ai.mantik.planner.repository.{ ContentTypes, MantikArtifact }
+import ai.mantik.planner.repository.{ ContentTypes, Errors, MantikArtifact }
+import ai.mantik.planner.utils.AtomicReference
 
 import scala.reflect.ClassTag
 
@@ -22,7 +23,20 @@ trait MantikItem {
   /** Returns where the item payload comes from. */
   private[mantik] def payloadSource: PayloadSource = source.payload
   /** Returns the item's Mantikfile with definition. */
-  private[planner] val mantikfile: Mantikfile[DefinitionType]
+  private[planner] def mantikfile: Mantikfile[DefinitionType]
+
+  /** The state of the mantik Item. */
+  private[planner] val state: AtomicReference[MantikItemState] = new AtomicReference({
+    val (mantikId, loaded): (Option[MantikId], Boolean) = source.definition match {
+      case DefinitionSource.Loaded(mantikId, _) => Some(mantikId) -> true
+      case _                                    => None -> false
+    }
+    val file = source.payload match {
+      case PayloadSource.Loaded(fileId, _) => Some(fileId)
+      case _                               => None
+    }
+    MantikItemState(mantikId, loaded, file)
+  })
 
   /** Save an item back to Mantik. */
   def save(location: MantikId): Action.SaveAction = Action.SaveAction(this, location)
@@ -31,12 +45,19 @@ trait MantikItem {
   def stack: String = mantikfile.definition.stack
 
   /**
-   * Returns the [[MantikId]] of the item if it was directly loaded.
-   * Returns None if the item was modified or derived.
+   * Returns the [[MantikId]] of the Item. This can be anonymous.
+   * Note: this doesn't mean that the item is stored.
    */
-  def mantikId: Option[MantikId] = source.definition match {
-    case DefinitionSource.Loaded(id) => Some(id)
-    case _                           => None
+  def mantikId: MantikId = {
+    state.get.mantikId.getOrElse(itemId.asAnonymousMantikId)
+  }
+
+  /**
+   * Returns the [[ItemId]] of the item. This is a new value if the item was not loaded.
+   */
+  lazy val itemId: ItemId = source.definition match {
+    case l: DefinitionSource.Loaded => l.itemId
+    case _                          => ItemId.generate()
   }
 
   /**
@@ -90,13 +111,13 @@ object MantikItem {
     }.getOrElse(PayloadSource.Empty)
 
     val source = Source(
-      DefinitionSource.Loaded(artifact.id),
+      DefinitionSource.Loaded(artifact.id, artifact.itemId),
       payloadSource
     )
 
     def forceExtract[T <: MantikDefinition: ClassTag]: Mantikfile[T] = artifact.mantikfile.cast[T].right.get
 
-    artifact.mantikfile.definition match {
+    val item = artifact.mantikfile.definition match {
       case a: AlgorithmDefinition          => Algorithm(source, forceExtract)
       case d: DataSetDefinition            => DataSet(source, forceExtract)
       case t: TrainableAlgorithmDefinition => TrainableAlgorithm(source, forceExtract)
@@ -106,6 +127,21 @@ object MantikItem {
         }.toMap
         PipelineBuilder.buildOrFailFromMantikfile(source.definition, forceExtract, referenced)
     }
+
+    artifact.deploymentInfo.foreach { deploymentInfo =>
+      item.state.update {
+        _.copy(
+          deployment = Some(
+            DeploymentState(
+              name = deploymentInfo.name,
+              url = deploymentInfo.url
+            )
+          )
+        )
+      }
+    }
+
+    item
   }
 
 }

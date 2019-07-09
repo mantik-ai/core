@@ -1,9 +1,8 @@
 package ai.mantik.planner.repository
 
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.{ ItemId, MantikId }
 import ai.mantik.planner.repository.impl.Factory
 import ai.mantik.planner.utils.{ AkkaRuntime, Component }
-import com.typesafe.config.Config
 
 import scala.concurrent.Future
 
@@ -28,6 +27,14 @@ trait Repository extends Component {
 
   /** Stores a Mantik artefact. */
   def store(mantikArtefact: MantikArtifact): Future[Unit]
+
+  /**
+   * Update the deployment state.
+   * @param itemId item to update
+   * @param state new deployment state, can be empty if not deployed
+   * @return true if the item was found and updated.
+   */
+  def setDeploymentInfo(itemId: ItemId, state: Option[DeploymentInfo]): Future[Boolean]
 
   /** Remove an artifact. Returns true if it was found. */
   def remove(id: MantikId): Future[Boolean]

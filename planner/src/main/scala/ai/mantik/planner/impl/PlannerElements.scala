@@ -109,15 +109,11 @@ class PlannerElements(bridges: Bridges) {
 
   /** Generates the plan for an algorithm which runtime data may come from a file. */
   def algorithm(mantikfile: Mantikfile[AlgorithmDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
-    val bridge = bridges.algorithmBridge(mantikfile.definition.stack).getOrElse {
-      throw new Planner.AlgorithmStackNotSupportedException(s"Stack ${mantikfile.definition.stack} not supported")
-    }
     val applyResource = "apply"
 
+    val container = algorithmContainer(mantikfile, file)
     val node = Node(
-      PlanNodeService.DockerContainer(
-        bridge.container, data = file, mantikfile
-      ),
+      container,
       Map(
         applyResource -> NodeResource(ResourceType.Transformer, Some(MantikBundleContentType)),
       )
@@ -135,6 +131,16 @@ class PlannerElements(bridges: Bridges) {
         outputs = Seq(NodeResourceRef(nodeId, applyResource))
       )
     }
+  }
+
+  /** Generates the algorithm container for an Algorithm. */
+  def algorithmContainer(mantikfile: Mantikfile[AlgorithmDefinition], file: Option[PlanFileReference]): PlanNodeService.DockerContainer = {
+    val bridge = bridges.algorithmBridge(mantikfile.definition.stack).getOrElse {
+      throw new Planner.AlgorithmStackNotSupportedException(s"Stack ${mantikfile.definition.stack} not supported")
+    }
+    PlanNodeService.DockerContainer(
+      bridge.container, data = file, mantikfile
+    )
   }
 
   /** Generates the plan for a trainable algorithm. */

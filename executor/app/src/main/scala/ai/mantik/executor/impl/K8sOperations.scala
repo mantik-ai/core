@@ -188,7 +188,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
             LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
-            LabelSelector.IsEqualRequirement(KubernetesConstants.TrackerIdLabel, config.podTrackerId)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.TrackerIdLabel, KubernetesNamer.encodeLabelValue(config.podTrackerId))
           )),
           fieldSelector = Some("status.phase==Pending")
         )
@@ -203,7 +203,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
             LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
-            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, jobId)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, KubernetesNamer.encodeLabelValue(jobId))
           ))
         )
       ).map(_.items)
@@ -217,7 +217,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
             LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
-            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, jobId)
+            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, KubernetesNamer.encodeLabelValue(jobId))
           ))
         )
       }.map {
@@ -231,22 +231,22 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
   }
 
   /** Looks for services. */
-  def getServices(namespace: Option[String], serviceIdFilter: Option[String], serviceNameFilter: Option[String]): Future[List[Service]] = {
+  def getServices(namespace: Option[String], serviceIdFilter: Option[String]): Future[List[Service]] = {
     errorHandling {
       namespacedClient(namespace).listSelected[ListResource[Service]] {
-        encodeServiceLabelSelector(serviceIdFilter, serviceNameFilter)
+        encodeServiceLabelSelector(serviceIdFilter)
       }.map(_.items)
     }
   }
 
   /** Delete deployed services and related stuff (Services, ReplicaSets, Secrets). */
-  def deleteDeployedServicesAndRelated(namespace: Option[String], serviceIdFilter: Option[String], serviceNameFilter: Option[String]): Future[Int] = {
+  def deleteDeployedServicesAndRelated(namespace: Option[String], serviceIdFilter: Option[String]): Future[Int] = {
     errorHandling {
       val c = namespacedClient(namespace)
-      val selector = encodeServiceLabelSelector(serviceIdFilter, serviceNameFilter)
+      val selector = encodeServiceLabelSelector(serviceIdFilter)
       val serviceDeletion = c.listSelected[ListResource[Service]](selector).flatMap { services =>
         if (services.items.length == 0) {
-          logger.debug(s"Found no services matching filter ${serviceIdFilter}/${serviceNameFilter} in namespace ${namespace}")
+          logger.debug(s"Found no services matching filter ${serviceIdFilter} in namespace ${namespace}")
         }
         Future.sequence(services.map { element =>
           logger.debug(s"Deleting service ${element.name}")
@@ -268,7 +268,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
         if (deletedServices != deletedReplicaSets) {
           logger.warn(s"Deleted Replica Set Count ${deletedReplicaSets} was != Deleted Service Result ${deletedServices}. Orphaned items?")
         }
-        logger.debug(s"Deleted ${deletedServices} services with ${secrets.items.length} secrets in ${namespace} serviceIdFilter=${serviceIdFilter} serviceNameFilter=${serviceNameFilter}")
+        logger.debug(s"Deleted ${deletedServices} services with ${secrets.items.length} secrets in ${namespace} serviceIdFilter=${serviceIdFilter}")
 
         // do not warn for secrets, some deployed services do not have them...
         services.items.size
@@ -276,18 +276,17 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
     }
   }
 
-  private def encodeServiceLabelSelector(serviceIdFilter: Option[String], serviceNameFilter: Option[String]): skuber.LabelSelector = {
+  private def encodeServiceLabelSelector(serviceIdFilter: Option[String]): skuber.LabelSelector = {
     buildLabelSelector(
       KubernetesConstants.ManagedLabel -> Some(KubernetesConstants.ManagedValue),
-      KubernetesConstants.ServiceIdLabel -> serviceIdFilter,
-      KubernetesConstants.ServiceNameLabel -> serviceNameFilter
+      KubernetesConstants.ServiceIdLabel -> serviceIdFilter
     )
   }
 
   private def buildLabelSelector(values: (String, Option[String])*): skuber.LabelSelector = {
     LabelSelector(
       values.collect {
-        case (key, Some(value)) => LabelSelector.IsEqualRequirement(key, value)
+        case (key, Some(value)) => LabelSelector.IsEqualRequirement(key, KubernetesNamer.encodeLabelValue(value))
       }: _*
     )
   }

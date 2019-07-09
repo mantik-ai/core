@@ -1,5 +1,7 @@
 package ai.mantik.planner
 
+import java.util.UUID
+
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{AlgorithmDefinition, Mantikfile}
@@ -23,6 +25,11 @@ case class Algorithm(
       mantikfile = mantikfile
     )
   }
+
+  /** Deploy the algorithm. */
+  def deploy(name: Option[String] = None): Action.Deploy = Action.Deploy(
+    this, name
+  )
 }
 
 object Algorithm {

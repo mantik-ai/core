@@ -10,10 +10,13 @@ import skuber.Service.Port
 class KubernetesServiceConverterSpec extends TestBase {
 
   trait Env {
-    val config = Config()
-    val id = "Id1"
-    val serviceRequest = DeployServiceRequest(
-      "myservice",
+    lazy val config = Config()
+    lazy val serviceId = "service1IdÄ" // something to escape inside!
+    lazy val serviceIdEscaped = KubernetesNamer.encodeLabelValue(serviceId)
+    lazy val nameHint: Option[String] = Some("candidate")
+    lazy val serviceRequest = DeployServiceRequest(
+      serviceId,
+      nameHint,
       "isospace",
       ContainerService(
         Container("foo1"),
@@ -22,18 +25,19 @@ class KubernetesServiceConverterSpec extends TestBase {
         ))
       )
     )
-    val converter = new KubernetesServiceConverter(
+    lazy val converter = new KubernetesServiceConverter(
       config,
-      id,
       serviceRequest
     )
   }
 
   "service" should "be ok" in new Env {
     val labels = converter.service.metadata.labels
-    labels(KubernetesConstants.ServiceIdLabel) shouldBe id
-    labels(KubernetesConstants.ServiceNameLabel) shouldBe "myservice"
+    labels(KubernetesConstants.ServiceIdLabel) shouldBe serviceIdEscaped
     labels(KubernetesConstants.TrackerIdLabel) shouldBe config.podTrackerId
+
+    converter.service.name shouldBe empty
+    converter.service.metadata.generateName shouldBe nameHint.get
 
     val serviceSpec = converter.service.spec.get
     serviceSpec.ports shouldBe List(
@@ -41,19 +45,24 @@ class KubernetesServiceConverterSpec extends TestBase {
     )
 
     serviceSpec.selector shouldBe Map(
-      KubernetesConstants.ServiceIdLabel -> id
+      KubernetesConstants.ServiceIdLabel -> serviceIdEscaped
     )
+  }
+
+  it should "not have a name if there is a name hint" in new Env {
+    override lazy val nameHint = None
+    val service = converter.service
+    service.name shouldBe converter.namer.serviceName
   }
 
   "replicaSet" should "be ok" in new Env {
     val rs = converter.replicaSet
-    rs.name shouldBe "service-id1-rs"
+    rs.name shouldBe "service-service1id-rs"
     val labels = rs.metadata.labels
-    labels(KubernetesConstants.ServiceIdLabel) shouldBe id
-    labels(KubernetesConstants.ServiceNameLabel) shouldBe "myservice"
+    labels(KubernetesConstants.ServiceIdLabel) shouldBe serviceIdEscaped
     labels(KubernetesConstants.TrackerIdLabel) shouldBe config.podTrackerId
     rs.spec.get.selector shouldBe LabelSelector(
-      LabelSelector.IsEqualRequirement(KubernetesConstants.ServiceIdLabel, id)
+      LabelSelector.IsEqualRequirement(KubernetesConstants.ServiceIdLabel, serviceIdEscaped)
     )
   }
 
@@ -61,8 +70,7 @@ class KubernetesServiceConverterSpec extends TestBase {
     val podTemplate = converter.podTemplateSpec
 
     val labels = podTemplate.metadata.labels
-    labels(KubernetesConstants.ServiceIdLabel) shouldBe id
-    labels(KubernetesConstants.ServiceNameLabel) shouldBe "myservice"
+    labels(KubernetesConstants.ServiceIdLabel) shouldBe serviceIdEscaped
     labels(KubernetesConstants.TrackerIdLabel) shouldBe config.podTrackerId
   }
 

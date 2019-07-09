@@ -55,10 +55,7 @@ private[planner] object PipelineBuilder {
 
     val steps: Seq[(PipelineStep, Option[Algorithm])] = highLevelSteps.map {
       case PipelineBuildStep.AlgorithmBuildStep(algorithm) =>
-        // A real algorithm
-        val id = algorithm.mantikId.getOrElse {
-          MantikId.randomGenerated()
-        }
+        val id = algorithm.mantikId
         PipelineStep.AlgorithmStep(algorithm = id) -> Some(algorithm)
       case PipelineBuildStep.SelectBuildStep(statement) =>
         // A select statement

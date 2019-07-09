@@ -4,7 +4,7 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.elements
-import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, MantikId, Mantikfile, PipelineStep}
+import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikId, Mantikfile, PipelineStep}
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner._
@@ -23,18 +23,26 @@ class PlannerImplSpec extends TestBase {
     }
 
     val algorithm1 = Algorithm(
-      Source(DefinitionSource.Loaded("algo1:version1"),PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+      Source(DefinitionSource.Loaded("algo1:version1", ItemId.generate()),PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
     )
     val dataset1 = DataSet(
-      Source(DefinitionSource.Loaded("dataset1:version1"), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1
+      Source(DefinitionSource.Loaded("dataset1:version1", ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1
     )
 
     // Create a Source for loaded Items
     def makeLoadedSource(file: String, contentType: String = ContentTypes.MantikBundleContentType, mantikId: MantikId = "item1234"): Source = {
       Source(
-        DefinitionSource.Loaded(mantikId),
+        DefinitionSource.Loaded(mantikId, ItemId.generate()),
         PayloadSource.Loaded(file, contentType)
       )
+    }
+
+    def splitOps(op: PlanOp): Seq[PlanOp] = {
+      op match {
+        case PlanOp.Sequential(parts) => parts
+        case PlanOp.Empty => Nil
+        case other => Seq(other)
+      }
     }
   }
 
@@ -45,6 +53,39 @@ class PlannerImplSpec extends TestBase {
   )
     .row(1)
     .result
+
+  "storeSingleItem" should "store an item" in new Env {
+    val ds = DataSet.literal(lit)
+    val (state, result) = runWithEmptyState(planner.storeSingleItem(ds, MantikId("foobar")))
+    splitOps(result.preOp).find(_.isInstanceOf[PlanOp.AddMantikItem]).get shouldBe PlanOp.AddMantikItem(
+      MantikId("foobar"), ds, Some(PlanFileReference(1))
+    )
+    result.files.head.ref shouldBe PlanFileReference(1)
+    state.files.head.ref shouldBe PlanFileReference(1)
+    state.itemStorage(ds)._2.get.payload.get.ref shouldBe PlanFileReference(1)
+    ds.state.get.isStored shouldBe false // items are NOT updated by Planner
+  }
+
+  "ensureItemStored" should "do nothing if the item is alrady stored" in new Env {
+    // dataset is already stored
+    val (state, result) = runWithEmptyState(planner.ensureItemStored(dataset1))
+    result.preOp shouldBe PlanOp.Empty
+    result.fileRefs.head shouldBe PlanFileReference(1)
+  }
+
+  it should "store the item if not yet stored" in new Env {
+    val ds = DataSet.literal(lit)
+    val (state, result) = runWithEmptyState(planner.ensureItemStored(ds))
+    splitOps(result.preOp).find(_.isInstanceOf[PlanOp.AddMantikItem]) shouldBe defined
+    result.fileRefs.head shouldBe PlanFileReference(1)
+
+    withClue("It should not lead to a change if the item is stored twice"){
+      val (state2, result2) = planner.ensureItemStored(ds).run(state).value
+      result2.preOp shouldBe PlanOp.Empty
+      result2.fileRefs.head shouldBe PlanFileReference(1)
+      state2 shouldBe state
+    }
+  }
 
   "translateItemPayloadSource" should "not work on missing files" in new Env {
     intercept[Planner.NotAvailableException]{
@@ -435,10 +476,29 @@ class PlannerImplSpec extends TestBase {
     opFiles.fileRefs shouldBe List(PlanFileReference(2))
   }
 
+  "manifestPipeline" should "manifest a pipeline" in new Env {
+    val algorithm2 = Algorithm(
+      Source(
+        DefinitionSource.Constructed(),
+        PayloadSource.Loaded("algo2", ContentTypes.ZipFileContentType)
+      ), TestItems.algorithm2
+    )
+    val pipeline = Pipeline.build(
+      algorithm1,
+      algorithm2
+    )
+
+    val (state, pipe) = runWithEmptyState(planner.manifestPipeline(pipeline))
+    pipe.inputs.size shouldBe 1
+    pipe.outputs.size shouldBe 1
+    pipe.graph.nodes.size shouldBe 2
+  }
+
   "convert" should "convert a simple save action" in new Env {
+    val item = DataSet.literal(lit)
     val plan = planner.convert(
       Action.SaveAction(
-        DataSet.literal(lit), "item1"
+        item, "item1"
       )
     )
 
@@ -446,13 +506,7 @@ class PlannerImplSpec extends TestBase {
       PlanOp.PushBundle(lit, PlanFileReference(1)),
       PlanOp.AddMantikItem(
         MantikId("item1"),
-        Some(PlanFileReference(1)),
-        Mantikfile.pure(
-          elements.DataSetDefinition(
-            format = "natural",
-            `type` = lit.model
-          )
-        )
+        item, Some(PlanFileReference(1)),
       )
     )
   }
@@ -472,16 +526,17 @@ class PlannerImplSpec extends TestBase {
         pipeline, "pipe1"
       )
     )
+    val algorithmName = pipeline.resolved.steps.head.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm
     plan.op shouldBe PlanOp.seq(
       PlanOp.AddMantikItem(
-        pipeline.resolved.steps.head.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm,
+        algorithmName,
+        algorithm2,
         Some(PlanFileReference(1)),
-        pipeline.resolved.steps.head.algorithm.mantikfile
       ),
       PlanOp.AddMantikItem(
         MantikId("pipe1"),
+        pipeline,
         None,
-        pipeline.mantikfile
       )
     )
   }
@@ -498,11 +553,12 @@ class PlannerImplSpec extends TestBase {
       )
     )
 
-    plan.op shouldBe PlanOp.AddMantikItem(
-      MantikId("pipe1"),
-      None,
-      pipeline.mantikfile
-    )
+    plan.op shouldBe
+      PlanOp.AddMantikItem(
+        MantikId("pipe1"),
+        pipeline,
+        None
+      )
   }
 
   it should "convert a simple fetch operation" in new Env {
@@ -546,6 +602,23 @@ class PlannerImplSpec extends TestBase {
     val plan = planner.convert(action)
     plan.op.asInstanceOf[PlanOp.Sequential].plans.size shouldBe 3 // pushing, calculation and pulling
     plan.files.size shouldBe 2 // push file, calculation
+  }
+
+  it should "convert a deploy action algorithm action" in new Env {
+    val deployAction = algorithm1.deploy() // algorithm1 is loaded, so it doesn't have to be stored.
+    val plan = planner.convert(deployAction)
+    plan.op shouldBe an[PlanOp.DeployAlgorithm]
+  }
+
+  it should "save a non-loaded algorithm first" in new Env {
+    val algorithm2 = Algorithm(
+      Source(DefinitionSource.Constructed(),PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+    )
+    val deployAction = algorithm2.deploy()
+    val plan = planner.convert(deployAction)
+    val ops = plan.op.asInstanceOf[PlanOp.Sequential].plans
+    ops.find(_.isInstanceOf[PlanOp.AddMantikItem]) shouldBe defined
+    ops.find(_.isInstanceOf[PlanOp.DeployAlgorithm]) shouldBe defined
   }
 
   "caching" should "cache simple values in files" in new Env {
@@ -593,7 +666,7 @@ class PlannerImplSpec extends TestBase {
       PlanFile(PlanFileReference(2), read = true, write = true, temporary = false, cacheKey = Some(cacheKey))
     )
     val parts = plan.op.asInstanceOf[PlanOp.Sequential].plans
-    parts.size shouldBe 2 // CacheOp, AddMantikItem
+    parts.size shouldBe  2 // CacheOp, AddMantikItem
     parts.head shouldBe an[PlanOp.CacheOp]
     parts(1) shouldBe an[PlanOp.AddMantikItem]
   }

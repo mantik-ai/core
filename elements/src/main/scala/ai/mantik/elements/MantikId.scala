@@ -5,7 +5,11 @@ import java.util.UUID
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 
-/** Identifies a [[MantikArtifact]]. */
+/**
+ * Identifies a Mantik Artifact.
+ *
+ * @param name of the Mantik artifact. If it starts with @ it refers to a [[ItemId]].
+ */
 case class MantikId(
     name: String,
     version: String = MantikId.DefaultVersion
@@ -20,7 +24,7 @@ case class MantikId(
   }
 
   /** Returns true if the Mantik Id is generated. */
-  def isGenerated: Boolean = name.startsWith(MantikId.GeneratedPrefix)
+  def isAnonymous: Boolean = name.startsWith(MantikId.AnonymousPrefix)
 }
 
 object MantikId {
@@ -29,8 +33,8 @@ object MantikId {
   /** If no version is given, this version is accessed. */
   val DefaultVersion = "latest"
 
-  /** Prefix for Auto Generated Mantik Ids. */
-  val GeneratedPrefix = "@"
+  /** Prefix for Anonymous Mantik Ids. */
+  val AnonymousPrefix = "@"
 
   /** Automatic conversion from strings. */
   implicit def fromString(s: String): MantikId = {
@@ -49,14 +53,7 @@ object MantikId {
     }
   }
 
-  /**
-   * Returns a Random generated Mantik Id.
-   * This is used when objects build from combined Items are stored.
-   */
-  def randomGenerated(): MantikId = {
-    val name = GeneratedPrefix + UUID.randomUUID()
-    MantikId(name)
-  }
+  def anonymous(itemId: ItemId): MantikId = MantikId(AnonymousPrefix + itemId.toString)
 
   /** Encodes a mantik id within a string. */
   implicit val mantikIdCodec: Encoder[MantikId] with Decoder[MantikId] = new Encoder[MantikId] with Decoder[MantikId] {

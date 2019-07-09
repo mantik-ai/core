@@ -9,14 +9,16 @@ import io.circe.generic.JsonCodec
  * After successful deployment the service will keep running
  * and is reachable by a URL.
  *
- * @param serviceName a user specified id.
+ * @param serviceId a user specified id.
+ * @param nameHint a hint for the service name, must be a valid DNS Name.
  * @param isolationSpace isolation space.
  * @param nodeService the service definition.
  * @param extraLogins extra logins for docker usage.
  */
 @JsonCodec
 case class DeployServiceRequest(
-    serviceName: String,
+    serviceId: String,
+    nameHint: Option[String] = None,
     isolationSpace: String,
     nodeService: ContainerService,
     extraLogins: Seq[DockerLogin] = Nil
@@ -25,12 +27,12 @@ case class DeployServiceRequest(
 /**
  * Response for [[DeployServiceRequest]].
  *
- * @param serviceId internal service id uder which the service was deployed.
+ * @param serviceName the (probably internal) name under which the service was deployed.
  * @param url URL under which the service was deployed. Internal only.
  */
 @JsonCodec
 case class DeployServiceResponse(
-    serviceId: String,
+    serviceName: String,
     url: String
 )
 
