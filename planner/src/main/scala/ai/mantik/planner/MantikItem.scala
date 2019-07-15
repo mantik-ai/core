@@ -100,6 +100,11 @@ trait ApplicableMantikItem extends MantikItem {
       functionType.output
     )
   }
+
+  /** Deploy the item. */
+  def deploy(ingressName: Option[String] = None, nameHint: Option[String] = None): Action.Deploy = Action.Deploy(
+    this, nameHint = nameHint, ingressName = ingressName
+  )
 }
 
 object MantikItem {
@@ -134,7 +139,8 @@ object MantikItem {
           deployment = Some(
             DeploymentState(
               name = deploymentInfo.name,
-              url = deploymentInfo.url
+              internalUrl = deploymentInfo.internalUrl,
+              externalUrl = deploymentInfo.externalUrl
             )
           )
         )

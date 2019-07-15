@@ -2,7 +2,7 @@ package ai.mantik.planner.select
 
 import ai.mantik.ds.converter.Cast
 import ai.mantik.ds.{ DataType, TabularData }
-import ai.mantik.planner.DataSet
+import ai.mantik.planner.{ Algorithm, DataSet }
 
 /** Automatically generates select based adapters for [[DataSet]] */
 object AutoAdapt {
@@ -28,6 +28,11 @@ object AutoAdapt {
       case _              => return Left("Can only auto adapt tabular data")
     }
     autoSelect(fromTabular, toTabular)
+  }
+
+  /** Automatically generates a select algorithm, converting data types. */
+  def autoSelectAlgorithm(from: DataType, expected: DataType): Either[String, Algorithm] = {
+    autoSelect(from, expected).map(Algorithm.fromSelect)
   }
 
   /** Generates a select statement from a from tabular to a target tabular data type */

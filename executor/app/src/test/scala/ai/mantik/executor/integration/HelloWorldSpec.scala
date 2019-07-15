@@ -23,7 +23,7 @@ class HelloWorldSpec extends IntegrationTestBase {
 
     withClue("All pods should end now") {
       eventually {
-        val namespacedClient = kubernetesClient.usingNamespace(config.namespacePrefix + "helloworld")
+        val namespacedClient = kubernetesClient.usingNamespace(config.kubernetes.namespacePrefix + "helloworld")
         val pods = await(namespacedClient.listSelected[ListResource[skuber.Pod]](
           LabelSelector(
             LabelSelector.IsEqualRequirement(KubernetesConstants.TrackerIdLabel, config.podTrackerId)

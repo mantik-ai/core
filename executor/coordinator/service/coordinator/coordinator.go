@@ -69,6 +69,20 @@ func (c *Coordinator) logPlan() {
 		log.Printf("  - %s : %s", name, n.Str())
 	}
 	log.Printf("Flow Count: %d", len(c.plan.Flows))
+	for id, flow := range c.plan.Flows {
+		log.Printf("  Flow %d (len=%d)", id, len(flow))
+		for subId, ref := range flow {
+			log.Printf("  - %d (node %s -> %s (%s))", subId, ref.Node, ref.Resource, optionalString(ref.ContentType))
+		}
+	}
+}
+
+func optionalString(s *string) string {
+	if s == nil {
+		return "<nil>"
+	} else {
+		return *s
+	}
 }
 
 func (c *Coordinator) Run() error {

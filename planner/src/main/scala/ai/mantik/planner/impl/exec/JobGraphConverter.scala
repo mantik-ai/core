@@ -81,7 +81,7 @@ private [impl] class JobGraphConverter (fileServiceUri: Uri, isolationSpace: Str
       serviceId,
       serviceNameHint,
       isolationSpace,
-      nodeService = convertedContainer,
+      service = convertedContainer,
       extraLogins
     )
   }

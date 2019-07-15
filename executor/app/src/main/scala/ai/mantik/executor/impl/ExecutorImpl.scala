@@ -14,7 +14,7 @@ import com.typesafe.scalalogging.Logger
 import skuber.{ Endpoints, ObjectMeta, Pod, Service }
 import skuber.json.batch.format._
 import skuber.json.format._
-
+import skuber.json.ext.format._
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -26,6 +26,9 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
 ) extends Executor {
   val logger = Logger(getClass)
   val tracker = new KubernetesTracker(config, ops)
+
+  val kubernetesHost = ops.clusterServer.authority.host.address()
+  logger.info(s"Initializing with kubernetes at address ${kubernetesHost}")
 
   override def schedule(job: Job): Future[String] = {
     val jobId = UUID.randomUUID().toString
@@ -62,7 +65,7 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
 
   private def namespaceForIsolationSpace(isolationSpace: String): String = {
     // TODO: Escape invalid characters.
-    config.namespacePrefix + isolationSpace
+    config.kubernetes.namespacePrefix + isolationSpace
   }
 
   override def status(isolationSpace: String, id: String): Future[JobStatus] = {
@@ -164,7 +167,7 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
 
   override def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse] = {
     val namespace = namespaceForIsolationSpace(deployServiceRequest.isolationSpace)
-    val converter = new KubernetesServiceConverter(config, deployServiceRequest)
+    val converter = new KubernetesServiceConverter(config, deployServiceRequest, kubernetesHost)
     val maybePullSecret = converter.pullSecret
     val replicaSet = converter.replicaSet
     val service = converter.service
@@ -174,12 +177,18 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
       _ <- ops.maybeCreate(Some(namespace), maybePullSecret)
       _ <- ops.create(Some(namespace), replicaSet)
       usedService <- ops.create(Some(namespace), service)
+      maybeIngress = converter.ingress(usedService.name)
+      _ <- maybeIngress.map { ingress =>
+        ops.create(Some(namespace), ingress)
+      }.getOrElse(Future.successful(()))
     } yield {
       val serviceUrl = s"http://${usedService.name}"
-      logger.info(s"Deployed ${deployServiceRequest.serviceId} as ${deployServiceRequest.serviceId} under ${serviceUrl} in namespace ${namespace}")
+      val ingressUrl = converter.ingressExternalUrl
+      logger.info(s"Deployed ${deployServiceRequest.serviceId} as ${service.name} under ${serviceUrl} in namespace ${namespace}, ingress=${ingressUrl}")
       DeployServiceResponse(
         serviceName = usedService.name,
-        url = serviceUrl
+        url = serviceUrl,
+        externalUrl = ingressUrl
       )
     }
   }
@@ -233,7 +242,7 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
     ops.getJobLog(Some(namespace), id)
   }
 
-  private val checkPodCancellation = config.checkPodInterval match {
+  private val checkPodCancellation = config.kubernetes.checkPodInterval match {
     case f: FiniteDuration =>
       actorSystem.scheduler.schedule(f, f)(checkPods())
     case _ => // nothing
@@ -247,7 +256,7 @@ class ExecutorImpl(config: Config, ops: K8sOperations)(
   }
 
   private def checkBrokenImagePods(timestamp: Instant): Unit = {
-    val borderTime = timestamp.minusSeconds(config.podPullImageTimeout.toSeconds)
+    val borderTime = timestamp.minusSeconds(config.kubernetes.podPullImageTimeout.toSeconds)
     ops.getAllManagedPendingPods().foreach { pendingPods =>
       pendingPods.foreach {
         case (namespaceName, pendingPods) =>

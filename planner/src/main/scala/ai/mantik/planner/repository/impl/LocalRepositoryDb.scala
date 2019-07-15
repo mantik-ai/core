@@ -38,7 +38,8 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
       ("mantik_deployment_info"),
       _.itemId -> "item_id",
       _.name -> "name",
-      _.url -> "url",
+      _.internalUrl -> "internal_url",
+      _.externalUrl -> "external_url",
       _.timestamp -> "timestamp"
     )
   }
@@ -78,7 +79,8 @@ private[impl] object LocalRepositoryDb {
   case class DbDeploymentInfo(
       itemId: String,
       name: String,
-      url: String,
+      internalUrl: String,
+      externalUrl: Option[String],
       timestamp: java.util.Date
   )
 }

@@ -10,11 +10,14 @@ import io.circe.syntax._
 class KubernetesJobConverterSpec extends TestBase {
 
   trait Env {
-    def config = Config().copy(
+    private val oldConfig = Config()
+    def config = oldConfig.copy(
       sideCar = Container("my_sidecar", Seq("sidecar_arg")),
       coordinator = Container("my_coordinator", Seq("coordinator_arg")),
       payloadPreparer = Container("payload_preparer"),
-      namespacePrefix = "systemtest-",
+      kubernetes = oldConfig.kubernetes.copy(
+        namespacePrefix = "systemtest-",
+      ),
       podTrackerId = "mantik-executor",
       dockerConfig = DockerConfig(
         defaultImageTag = Some("mytag"),
@@ -168,7 +171,7 @@ class KubernetesJobConverterSpec extends TestBase {
     podSpec.containers.size shouldBe 1
     val container = podSpec.containers.head
     container.image shouldBe config.coordinator.image
-    container.args shouldBe config.coordinator.parameters ++ List("-planFile", "/config/plan")
+    container.args shouldBe config.coordinator.parameters ++ List("-plan", "@/config/plan")
     container.volumeMounts shouldBe List(
       Volume.Mount(
         "config-volume", mountPath = "/config"

@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
+	"coordinator/service/cli"
 	"coordinator/service/coordinator"
 	"coordinator/service/protocol"
 	"coordinator/service/rpc_utils"
 	"coordinator/service/sidecar"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 )
 
@@ -78,7 +77,6 @@ func main() {
 
 	coordinatorOptions := flag.NewFlagSet("coordinator", flag.ExitOnError)
 	coordinatorPlan := coordinatorOptions.String("plan", "", fmt.Sprintf("Plan for coordinator as JSON, otherwise read from %s environment variable", CoordinatorPlanEnv))
-	coordinatorPlanFile := coordinatorOptions.String("planFile", "", "Pass a plan as file")
 	coordinatorAddress := coordinatorOptions.String("address", "", fmt.Sprintf("Address of the coordinator (otherwise read IP from %s and add port)", CoordinatorIpEnv))
 	addSettings(coordinatorOptions)
 
@@ -91,30 +89,10 @@ func main() {
 	switch command {
 	case "coordinator":
 		coordinatorOptions.Parse(os.Args[2:])
-		if len(*coordinatorPlan) == 0 {
-			if len(*coordinatorPlanFile) > 0 {
-				// Load plan from file..
-				fileContent, err := ioutil.ReadFile(*coordinatorPlanFile)
-				if err != nil {
-					println("Could not read plan file", *coordinatorPlanFile, "error:", err.Error())
-					os.Exit(RcInvalidArgument)
-				}
-				fileAsString := string(fileContent)
-				coordinatorPlan = &fileAsString
-			} else {
-				plan, found := os.LookupEnv(CoordinatorPlanEnv)
-				if !found {
-					println("No plan given, either set", CoordinatorPlanEnv, "or pass it with --plan")
-					os.Exit(RcInvalidArgument)
-				}
-				coordinatorPlan = &plan
-			}
-		}
 		var plan coordinator.Plan
-		err := json.Unmarshal([]byte(*coordinatorPlan), &plan)
+		err := cli.ParseJsonFile("plan", *coordinatorPlan, CoordinatorPlanEnv, &plan)
 		if err != nil {
 			println("Could not parse coordinator plan", err.Error())
-			println("Invalid JSON", *coordinatorPlan)
 			os.Exit(RcInvalidPlan)
 		}
 

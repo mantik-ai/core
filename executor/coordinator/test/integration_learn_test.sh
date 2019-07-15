@@ -37,7 +37,7 @@ LEARNER_SIDECAR=$!
 
 export COORDINATOR_IP="127.0.0.1"
 
-./target/coordinator coordinator -port 50505 -planFile test/learn_plan.json &
+./target/coordinator coordinator -port 50505 -plan @test/learn_plan.json &
 COORDINATOR=$!
 
 cleanup() {

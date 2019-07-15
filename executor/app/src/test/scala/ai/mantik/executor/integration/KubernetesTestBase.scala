@@ -19,16 +19,18 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
     interval = scaled(Span(500, Millis))
   )
 
+  private val oldConfig = Config()
   val config = Config().copy(
-    namespacePrefix = "systemtest-",
+    kubernetes = oldConfig.kubernetes.copy(
+      namespacePrefix = "systemtest-",
+      podPullImageTimeout = 3.seconds,
+      checkPodInterval = 1.second,
+      defaultTimeout = 30.seconds,
+      defaultRetryInterval = 1.second,
+    ),
     podTrackerId = "mantik-executor",
-    podPullImageTimeout = 3.seconds,
-    checkPodInterval = 1.second,
-    defaultTimeout = 30.seconds,
-    defaultRetryInterval = 1.second,
     interface = "localhost",
-    port = 15001,
-    kubernetesRetryTimes = 3
+    port = 15001
   )
 
   protected var _kubernetesClient: KubernetesClient = _

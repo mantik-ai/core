@@ -14,5 +14,17 @@ object EitherUtils {
     }
   }
 
+  /** Extension for Either where the left value is an error string. */
+  class StringErrorEither[R](in: Either[String, R]) {
+    def force: R = {
+      in match {
+        case Left(error)  => throw new NoSuchElementException(s"Got left with error message ${error}")
+        case Right(value) => value
+      }
+    }
+  }
+
   implicit def toThrowableEither[L <: Throwable, R](in: Either[L, R]): ThrowableEitherExt[L, R] = new ThrowableEitherExt[L, R](in)
+
+  implicit def toStringErrorEither[R](in: Either[String, R]): StringErrorEither[R] = new StringErrorEither[R](in)
 }

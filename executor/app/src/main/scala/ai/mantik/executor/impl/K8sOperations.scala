@@ -11,17 +11,20 @@ import akka.util.ByteString
 import com.typesafe.scalalogging.Logger
 import ai.mantik.executor.Config
 import ai.mantik.executor.Errors.{ InternalException, NotFoundException }
+import akka.http.scaladsl.model.Uri
 import play.api.libs.json.{ Format, JsObject }
 import skuber.{ K8SException, LabelSelector, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition, Secret, Service }
 import skuber.api.client.{ KubernetesClient, Status, WatchEvent }
 import skuber.apps.v1.ReplicaSet
 import skuber.batch.Job
+import skuber.ext.Ingress
 
 import scala.concurrent.{ Await, ExecutionContext, Future, Promise, TimeoutException }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 import skuber.json.format._
 import skuber.json.batch.format._
+import skuber.json.ext.format._
 
 /** Wraps Kubernetes Operations */
 class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: ExecutionContext, actorSystem: ActorSystem, clock: Clock) {
@@ -43,6 +46,14 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
         }
       }
     }.map(_.toMap)
+  }
+
+  /**
+   * Figures out the name/ip of Kubernetes we are talking to.
+   * (For ingress interpolation)
+   */
+  def clusterServer: Uri = {
+    Uri(rootClient.clusterServer)
   }
 
   /** Start a Pod and return it's IP Address. */
@@ -124,7 +135,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       }
     }
 
-    tryMultipleTimes(config.defaultTimeout, config.defaultRetryInterval)(tryFunction())
+    tryMultipleTimes(config.kubernetes.defaultTimeout, config.kubernetes.defaultRetryInterval)(tryFunction())
   }
 
   /** Ensure the existence of a namespace, and returns a kubernetes client for this namespace. */
@@ -257,18 +268,19 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       // val serviceDeletion = c.deleteAllSelected[ListResource[Service]](selector)
       val replicaSetDeletion = c.deleteAllSelected[ListResource[ReplicaSet]](selector)
       val secretDeletion = c.deleteAllSelected[ListResource[Secret]](selector)
-
+      val ingressDeletion = c.deleteAllSelected[ListResource[Ingress]](selector)
       for {
         services <- serviceDeletion
         replicas <- replicaSetDeletion
         secrets <- secretDeletion
+        ingresses <- ingressDeletion
       } yield {
         val deletedServices = services.items.length
         val deletedReplicaSets = replicas.items.length
         if (deletedServices != deletedReplicaSets) {
           logger.warn(s"Deleted Replica Set Count ${deletedReplicaSets} was != Deleted Service Result ${deletedServices}. Orphaned items?")
         }
-        logger.debug(s"Deleted ${deletedServices} services with ${secrets.items.length} secrets in ${namespace} serviceIdFilter=${serviceIdFilter}")
+        logger.debug(s"Deleted ${deletedServices} services (ingress=${ingresses.size}, secrets=${secrets.items.length}) in ${namespace} serviceIdFilter=${serviceIdFilter}")
 
         // do not warn for secrets, some deployed services do not have them...
         services.items.size
@@ -436,11 +448,11 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
         case Success(value) =>
           response.trySuccess(value)
         case Failure(e) if remaining <= 0 =>
-          logger.warn(s"K8S Operation failed, tried ${config.kubernetesRetryTimes}")
+          logger.warn(s"K8S Operation failed, tried ${config.kubernetes.retryTimes}")
           response.tryFailure(e)
         case Failure(s: K8SException) if s.status.code.contains(500) && retryAfterSeconds(s.status).nonEmpty =>
           val retryValue = retryAfterSeconds(s.status).get
-          val seconds = Math.min(Math.max(1, retryValue), config.defaultTimeout.toSeconds)
+          val seconds = Math.min(Math.max(1, retryValue), config.kubernetes.defaultTimeout.toSeconds)
           logger.warn(s"K8S Operation failed with 500+retry ${retryValue}, will try again in ${seconds} seconds.")
           actorSystem.scheduler.scheduleOnce(seconds.seconds) {
             tryAgain(remaining - 1)
@@ -450,7 +462,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       }
     }
 
-    tryAgain(config.kubernetesRetryTimes)
+    tryAgain(config.kubernetes.retryTimes)
     response.future
   }
 }

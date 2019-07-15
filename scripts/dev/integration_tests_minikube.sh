@@ -19,7 +19,8 @@ else
     minikube delete # this should return 0 if not existant
 
     echo "Starting Minikube ..."
-    minikube start --memory 8192
+    minikube start --memory 8192  --no-vtx-check
+    minikube addons enable ingress
 fi
 
 echo "** Preparation: Build All **"

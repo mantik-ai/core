@@ -21,6 +21,9 @@ $DOCKER_CALL run -t --rm coordinator help
 echo "Building Helper"
 $DOCKER_CALL build -t payload_preparer -f Dockerfile_preparer .
 
+echo "Building Pipeline Controller"
+$DOCKER_CALL build --build-arg input_executable=target/pipeline_controller -t pipeline_controller .
+
 # Creating Sample Containers
 echo "Building Sample Sink"
 $DOCKER_CALL build --build-arg input_executable=target/executor_sample_sink_linux   -t executor_sample_sink .
@@ -33,6 +36,7 @@ $DOCKER_CALL build --build-arg input_executable=target/executor_sample_transform
 
 docker_push coordinator
 docker_push payload_preparer
+docker_push pipeline_controller
 docker_push executor_sample_sink
 docker_push executor_sample_source
 docker_push executor_sample_learner

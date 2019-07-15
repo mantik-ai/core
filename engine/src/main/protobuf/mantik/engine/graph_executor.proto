@@ -10,6 +10,8 @@ service GraphExecutorService {
     rpc FetchDataSet(FetchItemRequest) returns (FetchItemResponse) {}
     /** Evaluates and saves an item to the repository. */
     rpc SaveItem(SaveItemRequest) returns (SaveItemResponse) {}
+    /** Deploys an Item to the cluster. */
+    rpc DeployItem(DeployItemRequest) returns (DeployItemResponse) {}
 }
 
 message FetchItemRequest {
@@ -33,4 +35,22 @@ message SaveItemRequest {
 message SaveItemResponse {
     // Name under which the item has been saved
     string name = 1;
+}
+
+message DeployItemRequest {
+    string session_id = 1;
+    string item_id = 2;
+    // Ingress name for the item (required for Pipelines, also only supported there yet)
+    string ingress_name = 3;
+    // A Hint for the Service Name (not required)
+    string name_hint = 4;
+}
+
+message DeployItemResponse {
+    // Service name used in the end
+    string name = 1;
+    // Internal URL (inside the Cluster)
+    string internal_url = 2;
+    // External URL (only valid if an ingress is set)
+    string external_url = 3;
 }

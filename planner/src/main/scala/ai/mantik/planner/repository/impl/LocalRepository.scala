@@ -115,7 +115,8 @@ class LocalRepository(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
         val converted = DbDeploymentInfo(
           itemId = itemId.toString,
           name = info.name,
-          url = info.url,
+          internalUrl = info.internalUrl,
+          externalUrl = info.externalUrl,
           timestamp = new Timestamp(info.timestamp.toEpochMilli)
         )
 
@@ -189,7 +190,8 @@ class LocalRepository(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
       deploymentInfo = maybeDeployed.map { depl =>
         DeploymentInfo(
           name = depl.name,
-          url = depl.url,
+          internalUrl = depl.internalUrl,
+          externalUrl = depl.externalUrl,
           timestamp = depl.timestamp.toInstant
         )
       }

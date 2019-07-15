@@ -45,13 +45,14 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
 
   val deploymentInfo1 = DeploymentInfo(
     name = "name1",
-    url = "url1",
+    internalUrl = "url1",
+    externalUrl = Some("external_url1"),
     timestamp = FakeClock.DefaultTime
   )
 
   val deploymentInfo2 = DeploymentInfo(
     name = "name2",
-    url = "url2",
+    internalUrl = "url2",
     timestamp = FakeClock.DefaultTime.plus(1, ChronoUnit.HOURS)
   )
 

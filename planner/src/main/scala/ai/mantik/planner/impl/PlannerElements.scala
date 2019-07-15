@@ -1,6 +1,5 @@
 package ai.mantik.planner.impl
 
-import ai.mantik
 import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, Mantikfile, TrainableAlgorithmDefinition}
 import ai.mantik.executor.model._
 import ai.mantik.planner
@@ -11,7 +10,6 @@ import cats.data.State
 
 /**
  * Raw Elements in Plan Construction.
- * Class should have no side effects (except nodeIdGenerator).
  */
 class PlannerElements(bridges: Bridges) {
 

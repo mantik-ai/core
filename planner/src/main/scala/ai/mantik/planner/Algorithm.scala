@@ -25,11 +25,6 @@ case class Algorithm(
       mantikfile = mantikfile
     )
   }
-
-  /** Deploy the algorithm. */
-  def deploy(name: Option[String] = None): Action.Deploy = Action.Deploy(
-    this, name
-  )
 }
 
 object Algorithm {

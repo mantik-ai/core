@@ -140,6 +140,25 @@ func TestServingJson(t *testing.T) {
 	})
 }
 
+func TestErrorReturning(t * testing.T){
+	algorithm := test.CreateFailingAlgorithm(ds.Int32, ds.Int32, errors.New("Boom"))
+	server, err := CreateServerForExecutable(algorithm, ":0")
+	assert.NoError(t, err)
+	err = server.Listen()
+	assert.NoError(t, err)
+	defer server.Close()
+	go func() {
+		server.Serve()
+	}()
+	sample := bytes.NewBufferString("100")
+	url := fmt.Sprintf("http://localhost:%d", server.ListenPort)
+	response, err := http.Post(url+"/apply", MimeJson, sample)
+	assert.NoError(t, err)
+	content, _ := ioutil.ReadAll(response.Body)
+	assert.NotEmpty(t, string(content))
+	assert.Equal(t, 500, response.StatusCode)
+}
+
 func TestServingMsgPack(t *testing.T) {
 	f := CreateFixture(t)
 	defer f.Close()

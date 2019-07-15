@@ -22,7 +22,6 @@ class TrainRun:
     # Results of training
     train_stats = None
     train_export_dir = None
-    train_stats = None
 
     def run(self, train_func, request, context: tftrain.TensorFlowContext):
         """
