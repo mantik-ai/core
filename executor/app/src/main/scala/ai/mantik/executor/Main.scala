@@ -27,7 +27,7 @@ object Main extends App {
     logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
     logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
     logger.info(s"Node collapsing:     ${config.enableExistingServiceNodeCollapse}")
-    logger.info(s"Disable Pull:        ${config.kubernetesDisablePull}")
+    logger.info(s"Disable Pull:        ${config.kubernetes.disablePull}")
     server.start()
   } catch {
     case e: Exception =>

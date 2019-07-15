@@ -1,11 +1,14 @@
 package ai.mantik.planner.impl.exec
 
+import ai.mantik
 import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.DockerConfig
+import ai.mantik.planner
 import ai.mantik.planner._
 import ai.mantik.planner.impl.FutureHelper
+import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
 import ai.mantik.planner.repository.{ DeploymentInfo, FileRepository, MantikArtifact, Repository }
 import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.http.scaladsl.model.Uri
@@ -133,11 +136,11 @@ private[impl] class PlanExecutorImpl(
 
           for {
             response <- executor.deployService(deployServiceRequest)
-            deploymentState = DeploymentState(name = response.serviceName, url = response.url)
-            _ = da.item.state.update(_.copy(deployment = Some(deploymentState: DeploymentState)))
+            deploymentState = DeploymentState(name = response.serviceName, internalUrl = response.url)
+            _ = da.item.state.update(_.copy(deployment = Some(deploymentState)))
             deploymentInfo = DeploymentInfo(
               name = deploymentState.name,
-              url = deploymentState.url,
+              internalUrl = deploymentState.internalUrl,
               timestamp = akkaRuntime.clock.instant()
             )
             _ <- repository.setDeploymentInfo(da.item.itemId, Some(deploymentInfo))
@@ -145,9 +148,61 @@ private[impl] class PlanExecutorImpl(
             deploymentState
           }
         }
+      case dp: PlanOp.DeployPipeline =>
+        FutureHelper.time(logger, s"Deploying Pipeline ${dp.item.mantikId}/${dp.item.itemId}") {
+          // TODO: It would be better if the Planner would generate the runtime definition
+          // but it doesn't has access to the internal URLs until the moment all sub components are deployed.
+          // See issue #94.
+          val runtimeDefinition = buildPipelineRuntimeDefinition(dp).asJson
+
+          val request = DeployServiceRequest(
+            serviceId = dp.serviceId,
+            nameHint = dp.serviceNameHint,
+            isolationSpace = isolationSpace,
+            service = DeployableService.Pipeline(runtimeDefinition),
+            extraLogins = dockerConfig.logins,
+            ingress = dp.ingress
+          )
+          for {
+            response <- executor.deployService(request)
+            deploymentState = DeploymentState(name = response.serviceName, internalUrl = response.url, externalUrl = response.externalUrl)
+            _ = dp.item.state.update(_.copy(deployment = Some(deploymentState)))
+            deploymentInfo = DeploymentInfo(
+              name = deploymentState.name,
+              internalUrl = deploymentState.internalUrl,
+              timestamp = akkaRuntime.clock.instant()
+            )
+            _ <- repository.setDeploymentInfo(dp.item.itemId, Some(deploymentInfo))
+          } yield {
+            deploymentState
+          }
+        }
       case c: PlanOp.Const =>
         Future.successful(c.value)
     }
+  }
+
+  private def buildPipelineRuntimeDefinition(dp: PlanOp.DeployPipeline): PipelineRuntimeDefinition = {
+    def extractStep(algorithm: Algorithm): PipelineRuntimeDefinition.Step = {
+      val url = algorithm.state.get.deployment match {
+        case None    => throw new planner.Planner.InconsistencyException("Required sub algorithm not deployed")
+        case Some(d) => d.internalUrl
+      }
+      val applyResource = "apply"
+      val fullUrl = Uri(applyResource).resolvedAgainst(url).toString()
+      val resultType = algorithm.functionType.output
+      PipelineRuntimeDefinition.Step(
+        fullUrl,
+        resultType
+      )
+    }
+    val steps = dp.steps.map(extractStep)
+    val inputType = dp.item.functionType.input
+    PipelineRuntimeDefinition(
+      name = dp.item.mantikId.toString,
+      steps,
+      inputType = inputType
+    )
   }
 
   private def executeJobAndWaitForReady(job: Job): Future[Unit] = {

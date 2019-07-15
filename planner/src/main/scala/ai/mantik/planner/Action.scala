@@ -22,7 +22,7 @@ object Action {
 
   /**
    * Deploy some item.
-   * Returns the URL under which it was deployed.
+   * Returns the deployment state of the item.
    */
-  case class Deploy(item: MantikItem, name: Option[String]) extends Action[DeploymentState]
+  case class Deploy(item: MantikItem, nameHint: Option[String] = None, ingressName: Option[String] = None) extends Action[DeploymentState]
 }

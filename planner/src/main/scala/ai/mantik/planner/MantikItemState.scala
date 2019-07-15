@@ -20,5 +20,6 @@ case class MantikItemState(
 /** Deployment information of one [[MantikItem]]. */
 case class DeploymentState(
     name: String,
-    url: String
+    internalUrl: String,
+    externalUrl: Option[String] = None
 )

@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.elements.ItemId
-import ai.mantik.planner.impl.PlanningState.ItemStored
+import ai.mantik.planner.impl.PlanningState.{ ItemDeployed, ItemStored }
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{ CacheKey, CacheKeyGroup, DataSet, MantikItem, PayloadSource, PlanFile, PlanFileReference }
 import cats.data.State
@@ -18,7 +18,8 @@ private[impl] case class PlanningState(
     private val nextFileReferenceId: Int = 1,
     private val filesRev: List[PlanFile] = Nil, // reverse requested files
     cacheGroups: List[CacheKeyGroup] = Nil,
-    private val stored: Map[ItemId, PlanningState.ItemStored] = Map.empty
+    private val stored: Map[ItemId, PlanningState.ItemStored] = Map.empty,
+    private val deployed: Map[ItemId, PlanningState.ItemDeployed] = Map.empty
 ) {
 
   /** Returns files in request order. */
@@ -108,7 +109,7 @@ private[impl] case class PlanningState(
         // maybe it's already stored in the item?
         val state = item.state.get
         if (state.isStored) {
-          // it is stored, access the payoad, if it has some...
+          // it is stored, access the payload, if it has some...
           state.payloadFile match {
             case Some(payloadFile) =>
               val (nextState, file) = readFile(payloadFile)
@@ -124,6 +125,35 @@ private[impl] case class PlanningState(
           this -> None
         }
     }
+  }
+
+  /**
+   * Figures out, if an item is deployed, either before or within this plan.
+   */
+  def itemDeployed(item: MantikItem): Option[ItemDeployed] = {
+    deployed.get(item.itemId) match {
+      case Some(already) =>
+        // already deployed
+        Some(already)
+      case None =>
+        // maybe it's already deployed?
+        val state = item.state.get
+        state.deployment match {
+          case Some(deployment) =>
+            // ok, deployed in advance
+            Some(ItemDeployed())
+          case None =>
+            // not yet deployed
+            None
+        }
+    }
+  }
+
+  /** Add a deployment state to the item. */
+  def withItemDeployed(item: ItemId, deploy: ItemDeployed): PlanningState = {
+    copy(
+      deployed = deployed + (item -> deploy)
+    )
   }
 
   private def itemPayloadContentType(item: MantikItem): String = {
@@ -144,6 +174,10 @@ private[impl] object PlanningState {
       payload: Option[PlanFileWithContentType]
   )
 
+  /** Information about an item which was deployed within the plan. */
+  case class ItemDeployed( // no data yet
+  )
+
   /**
    * Helper for declaring a state changing function.
    * @param f the method which changes the state and returns the result
@@ -155,6 +189,14 @@ private[impl] object PlanningState {
       val (nextState, element) = f(state)
       nextState -> g(element)
     }
+  }
+
+  /** Examines the current state and forward calls to next state change. */
+  def flat[T](f: PlanningState => State[PlanningState, T]): State[PlanningState, T] = {
+    for {
+      state <- State.get[PlanningState]
+      next <- f(state)
+    } yield next
   }
 
   /**

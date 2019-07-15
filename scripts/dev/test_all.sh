@@ -23,6 +23,10 @@ pushd tf/saved_model
 ./test.sh
 popd
 
+pushd tf/train
+./test.sh
+popd
+
 pushd "select"
 ./test.sh
 popd

@@ -54,6 +54,7 @@ lazy val testutils = (project in file("testutils"))
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "commons-io" % "commons-io" % "2.6",
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
     ),
     publish := {},
     publishLocal := {}
@@ -158,7 +159,7 @@ lazy val executorApp = makeProject("executor/app", "executorApp")
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
 
       // Kubernetes Client
-      "io.skuber" %% "skuber" % "2.1.0",
+      "io.skuber" %% "skuber" % "2.2.0",
 
       // Logging
       "ch.qos.logback" % "logback-classic" % "1.2.3",

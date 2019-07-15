@@ -46,7 +46,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
   )
 
   "ensureNamespace" should "work" in new Env {
-    val myNamespace = config.namespacePrefix + "-ensure"
+    val myNamespace = config.kubernetes.namespacePrefix + "-ensure"
     val namespaces = await(kubernetesClient.getNamespaceNames)
     namespaces should not contain myNamespace
     val client1 = await(k8sOperations.ensureNamespace(myNamespace))
@@ -63,7 +63,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
   }
 
   "getNamespace" should "work" in new Env {
-    val myNamespace = config.namespacePrefix + "-get"
+    val myNamespace = config.kubernetes.namespacePrefix + "-get"
     await(k8sOperations.getNamespace(myNamespace)) shouldBe empty
     await(k8sOperations.ensureNamespace(myNamespace))
     val trial2 = await(k8sOperations.getNamespace(myNamespace))
@@ -84,7 +84,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
       )
     )
     val pod2 = pod.copy(metadata = pod.metadata.copy(name = "pod2"))
-    val ns = config.namespacePrefix + "startpod"
+    val ns = config.kubernetes.namespacePrefix + "startpod"
     val client = await(k8sOperations.ensureNamespace(ns))
     val result = await(k8sOperations.startPodsAndGetIpAdresses(Some(ns), Seq(pod, pod2)))
     result.size shouldBe 2
@@ -105,7 +105,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
         restartPolicy = RestartPolicy.Never
       )
     )
-    val ns = config.namespacePrefix + "cancel"
+    val ns = config.kubernetes.namespacePrefix + "cancel"
     await(k8sOperations.ensureNamespace(ns))
     val pod = await(k8sOperations.create(Some(ns), podSpec))
     val namespaced = kubernetesClient.usingNamespace(ns)
@@ -125,7 +125,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
   }
 
   "getManagedNonFinishedJobs" should "return managed jobs" in new Env {
-    val ns = config.namespacePrefix + "managed"
+    val ns = config.kubernetes.namespacePrefix + "managed"
     await(k8sOperations.ensureNamespace(ns))
     await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
 
@@ -162,7 +162,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
   }
 
   it should "not return finished jobs" in new Env {
-    val ns = config.namespacePrefix + "managed2"
+    val ns = config.kubernetes.namespacePrefix + "managed2"
     await(k8sOperations.ensureNamespace(ns))
     await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
 

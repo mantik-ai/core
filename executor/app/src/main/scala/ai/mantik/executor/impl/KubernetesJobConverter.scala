@@ -99,7 +99,7 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) extends Ku
                     Container(
                       name = KubernetesConstants.CoordinatorContainerName,
                       image = config.coordinator.image,
-                      args = (config.coordinator.parameters ++ Seq("-planFile", "/config/plan")).toList,
+                      args = (config.coordinator.parameters ++ Seq("-plan", "@/config/plan")).toList,
                       volumeMounts = List(
                         Volume.Mount(
                           "config-volume", mountPath = "/config"

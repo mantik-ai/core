@@ -11,11 +11,14 @@ import io.circe.Json
 class KubernetesConverterSpec extends TestBase {
 
   trait Env {
-    def config = Config().copy(
+    private val oldConfig = Config()
+    def config = oldConfig.copy(
       sideCar = Container("my_sidecar", Seq("sidecar_arg")),
       coordinator = Container("my_coordinator", Seq("coordinator_arg")),
       payloadPreparer = Container("payload_preparer"),
-      namespacePrefix = "systemtest-",
+      kubernetes = oldConfig.kubernetes.copy(
+        namespacePrefix = "systemtest-"
+      ),
       podTrackerId = "mantik-executor",
       dockerConfig = DockerConfig(
         defaultImageTag = Some("mytag"),
@@ -46,8 +49,11 @@ class KubernetesConverterSpec extends TestBase {
 
   it should "disable pulling if requested" in new Env {
     override def config: Config = {
+      val before = super.config
       super.config.copy(
-        kubernetesDisablePull = true
+        kubernetes = before.kubernetes.copy(
+          disablePull = true
+        )
       )
     }
     converter.createImagePullPolicy(Container("foo")) shouldBe skuber.Container.PullPolicy.Never

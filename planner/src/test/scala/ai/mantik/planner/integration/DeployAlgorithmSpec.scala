@@ -15,7 +15,7 @@ class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
       doubleMultiply.deploy()
     )
     result.name shouldNot be(empty)
-    result.url shouldNot be(empty)
+    result.internalUrl shouldNot be(empty)
     doubleMultiply.state.get.deployment shouldBe Some(result)
 
     withClue("Deploying again will lead to a no op and same result") {
@@ -26,8 +26,8 @@ class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
 
   it should "accept a service name hint" in new EnvWithAlgorithm {
     doubleMultiply.state.get.deployment shouldBe empty
-    val result = context.execute(doubleMultiply.deploy(name = Some("coolname")))
-    result.url should include("coolname")
+    val result = context.execute(doubleMultiply.deploy(nameHint = Some("coolname")))
+    result.internalUrl should include("coolname")
     result.name should include("coolname")
     doubleMultiply.state.get.deployment shouldBe Some(result)
   }
@@ -53,7 +53,7 @@ class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
     trained.state.get.deployment shouldBe None
     val result = context.execute(trained.deploy())
     result.name shouldNot be(empty)
-    result.url shouldNot be(empty)
+    result.internalUrl shouldNot be(empty)
     trained.state.get.isStored shouldBe true
     trained.state.get.deployment shouldBe Some(result)
   }

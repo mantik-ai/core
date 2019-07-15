@@ -82,6 +82,15 @@ object PlanOp {
       item: MantikItem
   ) extends PlanOp
 
+  /** Deploy a Pipeline. */
+  case class DeployPipeline(
+      item: Pipeline,
+      serviceId: String,
+      serviceNameHint: Option[String],
+      ingress: Option[String],
+      steps: Seq[Algorithm]
+  ) extends PlanOp
+
   /**
    * Evaluate the alternative, if any of the given files do not exist.
    * @param files the files to cache. It's keys form a CacheGroup

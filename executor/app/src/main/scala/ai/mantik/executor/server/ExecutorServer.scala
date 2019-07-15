@@ -15,6 +15,7 @@ import akka.http.scaladsl.unmarshalling.FromRequestUnmarshaller
 
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 class ExecutorServer(config: Config, executor: Executor)(implicit actorSystem: ActorSystem, materializer: Materializer) extends FailFastCirceSupport {
 
@@ -110,10 +111,13 @@ class ExecutorServer(config: Config, executor: Executor)(implicit actorSystem: A
     }
   }
 
+  // Timeout for initializing and de-initializing HTTP Server
+  private val HttpUpDownTimeout = 60.seconds
+
   /** Start the server (not threadsafe) */
   def start(): Unit = {
     val bindingFuture = Http().bindAndHandle(route, config.interface, config.port)
-    val result = Await.result(bindingFuture, config.defaultTimeout)
+    val result = Await.result(bindingFuture, HttpUpDownTimeout)
     logger.info(s"Listening on ${config.interface}:${config.port}")
     require(openServerBinding.isEmpty)
     openServerBinding = Some(result)
@@ -123,7 +127,7 @@ class ExecutorServer(config: Config, executor: Executor)(implicit actorSystem: A
   def stop(): Unit = {
     require(openServerBinding.isDefined)
     openServerBinding.foreach { binding =>
-      Await.result(binding.terminate(config.defaultTimeout), config.defaultTimeout)
+      Await.result(binding.terminate(HttpUpDownTimeout), HttpUpDownTimeout)
     }
     openServerBinding = None
   }

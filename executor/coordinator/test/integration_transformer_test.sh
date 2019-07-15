@@ -31,7 +31,7 @@ TRANSFORMER_SIDECAR=$!
 
 export COORDINATOR_IP="127.0.0.1"
 
-./target/coordinator coordinator -port 50505 -planFile test/transformer_plan.json &
+./target/coordinator coordinator -port 50505 -plan @test/transformer_plan.json &
 COORDINATOR=$!
 
 cleanup() {

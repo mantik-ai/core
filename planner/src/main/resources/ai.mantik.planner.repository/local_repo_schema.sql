@@ -17,8 +17,12 @@ CREATE TABLE IF NOT EXISTS mantik_item (
 -- Holds the deployment info for a item id
 CREATE TABLE IF NOT EXISTS mantik_deployment_info (
     item_id VARCHAR PRIMARY KEY,
+    -- Name of the service
     name VARCHAR NOT NULL,
-    url VARCHAR NOT NULL,
+    -- URL inside the execution context
+    internal_url VARCHAR NOT NULL,
+    -- External URL, if an ingress service is activated
+    external_url VARCHAR,
     timestamp TIMESTAMP,
     FOREIGN KEY (item_id) REFERENCES mantik_item(item_id)
 );

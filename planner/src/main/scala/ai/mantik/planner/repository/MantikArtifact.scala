@@ -16,7 +16,8 @@ case class MantikArtifact(
 /** Deployment Information as being stored in the [[Repository]]. */
 case class DeploymentInfo(
     name: String,
-    url: String,
+    internalUrl: String,
+    externalUrl: Option[String] = None,
     timestamp: Instant
 )
 

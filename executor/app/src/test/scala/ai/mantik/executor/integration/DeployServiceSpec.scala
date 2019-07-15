@@ -19,7 +19,7 @@ class DeployServiceSpec extends IntegrationTestBase {
     val deployRequest = DeployServiceRequest(
       "service1",
       isolationSpace = isolationSpace,
-      nodeService = ContainerService(
+      service = ContainerService(
         main = Container(
           image = "executor_sample_transformer"
         )
@@ -75,7 +75,7 @@ class DeployServiceSpec extends IntegrationTestBase {
       "service1",
       Some("name1"),
       isolationSpace = isolationSpace,
-      nodeService = ContainerService(
+      service = ContainerService(
         main = Container(
           image = "executor_sample_transformer"
         )
@@ -114,7 +114,7 @@ class DeployServiceSpec extends IntegrationTestBase {
 
   it should "allow service deletion" in new Env {
     val isolationSpace = "deploy-spec3"
-    val ns = config.namespacePrefix + isolationSpace
+    val ns = config.kubernetes.namespacePrefix + isolationSpace
     val nsClient = kubernetesClient.usingNamespace(ns)
 
     def replicaSetCount(): Int = {
@@ -129,7 +129,7 @@ class DeployServiceSpec extends IntegrationTestBase {
     val deployRequest = DeployServiceRequest(
       "service1",
       isolationSpace = isolationSpace,
-      nodeService = ContainerService(
+      service = ContainerService(
         main = Container(
           image = "executor_sample_transformer"
         )
@@ -139,7 +139,7 @@ class DeployServiceSpec extends IntegrationTestBase {
     val deployRequest2 = DeployServiceRequest(
       "service2",
       isolationSpace = isolationSpace,
-      nodeService = ContainerService(
+      service = ContainerService(
         main = Container(
           image = "executor_sample_transformer"
         )

@@ -5,12 +5,13 @@ import org.slf4j.LoggerFactory
 import skuber.api.client.KubernetesClient
 import skuber.{ ConfigMap, ListResource, Namespace, Pod }
 import skuber.batch.Job
+import skuber.ext.Ingress
 
 import scala.annotation.tailrec
 import scala.concurrent.{ Await, Future }
 import skuber.json.format._
 import skuber.json.batch.format._
-
+import skuber.json.ext.format._
 import scala.concurrent.duration._
 
 /** Helper for deleting Kubernetes content. Used for Integration Tests. */
@@ -21,7 +22,7 @@ private[mantik] class KubernetesCleaner(rootClient: KubernetesClient, config: Co
   /** Delete all managed Kubernetes content. For Integration Tests. */
   def deleteKubernetesContent(): Unit = {
     logger.info("Deleting Kubernetes Content...")
-    val pendingNamespaces = await(rootClient.getNamespaceNames).filter(_.startsWith(config.namespacePrefix))
+    val pendingNamespaces = await(rootClient.getNamespaceNames).filter(_.startsWith(config.kubernetes.namespacePrefix))
 
     pendingNamespaces.foreach { namespace =>
       logger.info(s"Deleting namespace ${namespace}")
@@ -29,6 +30,7 @@ private[mantik] class KubernetesCleaner(rootClient: KubernetesClient, config: Co
       await(namespaced.deleteAll[ListResource[ConfigMap]]())
       await(namespaced.deleteAll[ListResource[Pod]]())
       await(namespaced.deleteAll[ListResource[Job]]())
+      await(namespaced.deleteAll[ListResource[Ingress]]())
       // await(namespaced.deleteAll[ListResource[Service]]()) // error 405 ?!
       await(rootClient.delete[Namespace](namespace, gracePeriodSeconds = 0))
     }

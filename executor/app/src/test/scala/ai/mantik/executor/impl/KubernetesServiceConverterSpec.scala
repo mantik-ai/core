@@ -2,15 +2,24 @@ package ai.mantik.executor.impl
 
 import ai.mantik.executor.Config
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{ ContainerService, DataProvider, DeployServiceRequest, ExecutorModelDefaults }
+import ai.mantik.executor.model.{ ContainerService, DataProvider, DeployServiceRequest, DeployableService, ExecutorModelDefaults }
 import ai.mantik.testutils.TestBase
-import skuber.{ LabelSelector, RestartPolicy }
+import io.circe.Json
+import skuber.{ EnvVar, LabelSelector, RestartPolicy }
 import skuber.Service.Port
+import skuber.ext.Ingress
 
 class KubernetesServiceConverterSpec extends TestBase {
 
   trait Env {
-    lazy val config = Config()
+    val defaultConfig = Config()
+    lazy val kubernetesConfig = defaultConfig.kubernetes.copy(
+      ingressSubPath = Some("/${name}/bar"),
+      ingressRemoteUrl = "http://${kubernetesHost}/${name}/bar"
+    )
+    lazy val config = Config().copy(
+      kubernetes = kubernetesConfig
+    )
     lazy val serviceId = "service1IdÄ" // something to escape inside!
     lazy val serviceIdEscaped = KubernetesNamer.encodeLabelValue(serviceId)
     lazy val nameHint: Option[String] = Some("candidate")
@@ -23,11 +32,13 @@ class KubernetesServiceConverterSpec extends TestBase {
         dataProvider = Some(DataProvider(
           url = Some("http://my_data")
         ))
-      )
+      ),
+      ingress = Some("ingress1")
     )
     lazy val converter = new KubernetesServiceConverter(
       config,
-      serviceRequest
+      serviceRequest,
+      "192.168.1.2"
     )
   }
 
@@ -81,5 +92,92 @@ class KubernetesServiceConverterSpec extends TestBase {
 
   it should "set RestartPolicy to always" in new Env {
     converter.podSpec.restartPolicy shouldBe RestartPolicy.Always
+  }
+
+  "ingress" should "work in a simple example" in new Env {
+    val ingress = converter.ingress("service1").get
+    ingress.name shouldBe "ingress1"
+    val labels = ingress.metadata.labels
+    labels(KubernetesConstants.ServiceIdLabel) shouldBe serviceIdEscaped
+    labels(KubernetesConstants.TrackerIdLabel) shouldBe config.podTrackerId
+    val ingressSpec = ingress.spec.get
+    ingressSpec shouldBe Ingress.Spec(
+      rules = List(
+        Ingress.Rule(
+          None,
+          http = Ingress.HttpRule(
+            paths = List(
+              Ingress.Path(
+                path = "/ingress1/bar",
+                backend = Ingress.Backend(
+                  serviceName = "service1",
+                  servicePort = 80
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    converter.ingressExternalUrl shouldBe Some("http://192.168.1.2/ingress1/bar")
+  }
+
+  it should "work in a non-path example" in new Env {
+    override lazy val kubernetesConfig = defaultConfig.kubernetes.copy(
+      ingressSubPath = None,
+      ingressRemoteUrl = "http://${kubernetesHost}/${name}/bar"
+    )
+    val ingress = converter.ingress("service1").get
+    val ingressSpec = ingress.spec.get
+    ingressSpec shouldBe Ingress.Spec(
+      backend = Some(
+        Ingress.Backend(
+          serviceName = "service1",
+          servicePort = 80
+        )
+      )
+    )
+  }
+
+  it should "not create an ingress if not wanted" in new Env {
+    override lazy val serviceRequest = DeployServiceRequest(
+      serviceId,
+      nameHint,
+      "isospace",
+      ContainerService(
+        Container("foo1"),
+        dataProvider = Some(DataProvider(
+          url = Some("http://my_data")
+        ))
+      )
+    )
+    converter.ingress("service1") shouldBe None
+    converter.ingressExternalUrl shouldBe None
+  }
+
+  "pipelines" should "also be supported" in new Env {
+    override lazy val serviceRequest = DeployServiceRequest(
+      serviceId,
+      nameHint,
+      "isospace",
+      service = DeployableService.Pipeline(
+        pipeline = Json.fromString("some json"),
+        port = 1234
+      )
+    )
+    val ps = converter.podSpec
+    ps.restartPolicy shouldBe RestartPolicy.Always
+
+    val container = ps.containers.ensuring(_.size == 1).head
+    container.name shouldBe "controller"
+    container.image shouldBe config.pipelineController.image
+    container.args shouldBe List(
+      "-port", "1234"
+    )
+    container.env shouldBe List(
+      EnvVar(
+        "PIPELINE", "\"some json\""
+      )
+    )
   }
 }

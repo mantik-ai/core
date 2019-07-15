@@ -125,6 +125,11 @@ func GenerateTypedStreamHandler(
 			return
 		}
 		applied, err := handler(elements)
+		if err != nil {
+			log.Printf("Handler returned an error %s", err.Error())
+			sendError(w, 500, "Internal Server Error")
+			return
+		}
 		outputEncoder(element.CreateSliceStreamReader(applied), w, r)
 	}
 	return result, nil
