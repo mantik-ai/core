@@ -38,4 +38,6 @@ curl -f -X POST -d '[[[1,2]]]' localhost:8502/apply
 echo "Shutting down"
 curl -f  -X POST localhost:8502/admin/quit
 
+rm -rf example/kmeans/code/model.pickle # This file often harms in other testcases
+
 wait $SERVER_PID

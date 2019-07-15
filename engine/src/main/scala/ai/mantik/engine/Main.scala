@@ -18,7 +18,6 @@ object Main {
     implicit val actorSystem = ActorSystem()
     implicit val materializer = ActorMaterializer()
     implicit val ec: ExecutionContext = actorSystem.dispatcher
-    val config = ConfigFactory.load()
     implicit val akkaRuntime = AkkaRuntime.fromRunning()
 
     val context = Context.localWithAkka()

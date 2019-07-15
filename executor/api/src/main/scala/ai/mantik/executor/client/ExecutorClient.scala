@@ -11,7 +11,8 @@ import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, D
 import ai.mantik.executor.{ Errors, Executor }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.duration._
 
 /** Akka based client for the Executor. */
 class ExecutorClient(url: Uri)(implicit actorSystem: ActorSystem, mat: Materializer) extends Executor with FailFastCirceSupport {
@@ -50,6 +51,12 @@ class ExecutorClient(url: Uri)(implicit actorSystem: ActorSystem, mat: Materiali
   override def deleteDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[Int] = {
     val req = buildRequest(HttpMethods.DELETE, "deployments", deployedServicesQuery.toQueryParameters)
     executeRequest[Int](req)
+  }
+
+  override def nameAndVersion: String = {
+    val req = buildRequest(HttpMethods.GET, "version")
+    val res = executeRequest[String](req)
+    Await.result(res, 10.seconds)
   }
 
   private def buildRequest(method: HttpMethod, path: String, queryArgs: Seq[(String, String)] = Nil): HttpRequest = {

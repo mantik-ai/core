@@ -11,6 +11,7 @@ val akkaVersion = "2.5.20"
 val akkaHttpVersion = "10.1.7"
 val scalaTestVersion = "3.0.5"
 val circeVersion = "0.11.1"
+val slf4jVersion = "1.7.25"
 
 import scalariform.formatter.preferences._
 val scalariformSettings = {
@@ -51,7 +52,7 @@ lazy val testutils = (project in file("testutils"))
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion,
-      "org.slf4j" % "slf4j-api" % "1.7.25",
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "commons-io" % "commons-io" % "2.6",
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
@@ -109,7 +110,7 @@ lazy val ds = makeProject("ds")
       "org.msgpack" % "msgpack-core" % "0.8.16",
 
       // SLF4J Api
-      "org.slf4j" % "slf4j-api" % "1.7.25"
+      "org.slf4j" % "slf4j-api" % slf4jVersion
     ),
     publishSettings
   )
@@ -138,16 +139,15 @@ lazy val executorApi = makeProject("executor/api", "executorApi")
       "io.circe" %% "circe-parser" % circeVersion,
 
       // SLF4J Api
-      "org.slf4j" % "slf4j-api" % "1.7.25",
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
     ),
     publishSettings
   )
 
-
-lazy val executorApp = makeProject("executor/app", "executorApp")
+lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubernetes")
   .dependsOn(executorApi)
   .settings(
-    name := "executor-app",
+    name := "executor-kubernetes",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
@@ -165,10 +165,28 @@ lazy val executorApp = makeProject("executor/app", "executorApp")
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-      
+
       // Guava
       "com.google.guava" % "guava" % "27.1-jre",
     ),
+    publishSettings
+  )
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    buildInfoKeys := Seq[BuildInfoKey](
+      name,
+      version,
+      scalaVersion,
+      BuildInfoKey("gitVersion", gitVersion),
+      BuildInfoKey("buildNum", buildNum))
+    ,
+    buildInfoPackage := "ai.mantik.executor.kubernetes.buildinfo"
+  )
+
+lazy val executorApp = makeProject("executor/app", "executorApp")
+  .dependsOn(executorKubernetes)
+  .settings(
+    name := "executor-app",
     publishSettings
   )
   .enablePlugins(BuildInfoPlugin)
@@ -259,7 +277,7 @@ lazy val engine = makeProject("engine")
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, elements, executorApi, executorApp, examples, planner, engine)
+  .aggregate(testutils, ds, elements, executorApi, executorKubernetes, executorApp, examples, planner, engine)
   .settings(
     name := "mantik-core",
     publish := {},
