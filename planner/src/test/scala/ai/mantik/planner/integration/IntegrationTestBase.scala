@@ -1,11 +1,10 @@
 package ai.mantik.planner.integration
 
-import ai.mantik.executor.impl.KubernetesCleaner
-import ai.mantik.executor.{ Config, ExecutorForIntegrationTests }
+import ai.mantik.executor.kubernetes.{ ExecutorForIntegrationTests, KubernetesCleaner }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import ai.mantik.planner.Context
 import ai.mantik.planner.utils.AkkaRuntime
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.time.{ Millis, Span }
 
 import scala.concurrent.duration._
@@ -14,7 +13,7 @@ import scala.concurrent.duration._
 abstract class IntegrationTestBase extends TestBase with AkkaSupport {
 
   protected var embeddedExecutor: ExecutorForIntegrationTests = _
-  protected val config = ConfigFactory.load()
+  override protected lazy val typesafeConfig: Config = ConfigFactory.load("systemtest.conf")
   protected var context: Context = _
 
   override protected val timeout: FiniteDuration = 30.seconds
@@ -26,8 +25,8 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    embeddedExecutor = new ExecutorForIntegrationTests()
-    implicit val runtime = AkkaRuntime.fromRunning(config)
+    embeddedExecutor = new ExecutorForIntegrationTests(typesafeConfig)
+    implicit val runtime = AkkaRuntime.fromRunning(typesafeConfig)
     context = Context.localWithAkka()
     scrapKubernetes()
   }
