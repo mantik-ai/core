@@ -74,7 +74,7 @@ abstract class FileRepositoryServer(implicit runtime: AkkaRuntime) extends Compo
                 HttpEntity(mediaType, fileSource)
               )
             case Failure(e: Errors.NotFoundException) =>
-              logger.warn(s"File ${id} not found")
+              logger.warn(s"File ${id} not found (http requested)")
               complete(404, "File not found")
             case Failure(other) =>
               logger.error("Error on requesting file", other)

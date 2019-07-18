@@ -1,16 +1,23 @@
 package com.example.examples
 
+import ai.mantik.engine.EngineClient
 import ai.mantik.planner.Context
+import ai.mantik.planner.utils.AkkaRuntime
 
 /** Implements boiler plate for local mantik sample applications. */
 abstract class ExampleBase {
 
   def main(args: Array[String]): Unit = {
-    val localContext = Context.local()
+    implicit val akkaRuntime = AkkaRuntime.createNew()
     try {
-      run(localContext)
+      val engineClient = EngineClient.create()
+      try {
+        run(engineClient.plannerContext)
+      } finally {
+        engineClient.shutdown()
+      }
     } finally {
-      localContext.shutdown()
+      akkaRuntime.shutdown()
     }
   }
 

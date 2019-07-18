@@ -1,0 +1,86 @@
+syntax = "proto3";
+package ai.mantik.planner.repository.protos;
+import "mantik/repository/types.proto";
+import "google/protobuf/empty.proto";
+
+service FileRepositoryService {
+    // Request storage of a file
+    rpc RequestFileStorage(RequestFileStorageRequest) returns (RequestFileStorageResponse){}
+
+    // Request loading a file (doesn't load, but returns path etc.)
+    rpc RequestFileGet(RequestFileGetRequest) returns (RequestFileGetResponse){}
+
+    // Store a file
+    rpc StoreFile(stream StoreFileRequest) returns (StoreFileResponse){}
+
+    // Delete a file
+    rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse){}
+
+    // Load a file content
+    rpc LoadFile(LoadFileRequest) returns (stream LoadFileResponse){}
+
+    // Figures out the Adress of the HTTP Backend
+    rpc Address(google.protobuf.Empty) returns (AddressResponse){}
+}
+
+message RequestFileStorageRequest {
+    bool temporary = 1;
+}
+
+message RequestFileStorageResponse {
+    // id of the file
+    string file_id = 1;
+    // relative path under which the file is available on the HTTP server
+    string path = 2;
+}
+
+message RequestFileGetRequest {
+    // id of the file
+    string file_id = 1;
+    // also return the file if it doesn't yet have any content
+    bool optimistic = 2;
+}
+
+message RequestFileGetResponse {
+    // id of the file
+    string file_id = 1;
+    // path of the file
+    string path = 2;
+    // content type of the file (if yet clear)
+    string content_type = 3;
+}
+
+message StoreFileRequest {
+    // id of the file (only need to be present in first call)
+    string file_id = 1;
+    // content type (only need to be present in first call)
+    string content_type = 2;
+    // byte chunk (can be repeated)
+    bytes chunk = 3;
+}
+
+message StoreFileResponse {
+    // currently empty
+}
+
+message DeleteFileRequest {
+    string file_id = 1;
+}
+
+message DeleteFileResponse {
+    // true if the file existed
+    bool existed = 1;
+}
+
+message AddressResponse {
+    string host = 1;
+    int32 port = 2;
+}
+
+message LoadFileRequest {
+    string file_id = 1;
+}
+
+message LoadFileResponse {
+    bytes chunk = 1;
+}

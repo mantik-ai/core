@@ -46,6 +46,7 @@ the sidecar where to put data around.
 
 ## Running
 
+- Note: as of Ticket #95, the Executor will be embedded into the Engine.
 
 - Skuber (Scala Kubernetes Client Library) will look for a local Kubernetes Configuration in `$HOME/.kube/config` which should be present in the case of
   Minikube.

@@ -43,16 +43,3 @@ trait Context extends CoreComponents {
   /** Shutdown the context. */
   def shutdown(): Unit
 }
-
-object Context {
-
-  /** Creates a new local context. */
-  def local(): Context = {
-    ContextImpl.constructForLocalTesting()
-  }
-
-  /** Creates a new local context, when you already have Akka. */
-  def localWithAkka()(implicit akkaRuntime: AkkaRuntime): Context = {
-    ContextImpl.constructForLocalTestingWithAkka()
-  }
-}

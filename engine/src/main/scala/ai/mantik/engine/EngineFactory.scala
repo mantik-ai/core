@@ -3,6 +3,10 @@ package ai.mantik.engine
 import ai.mantik.engine.server.EngineServer
 import ai.mantik.engine.server.services.{ AboutServiceImpl, DebugServiceImpl, GraphBuilderServiceImpl, GraphExecutorServiceImpl, SessionServiceImpl }
 import ai.mantik.engine.session.{ Session, SessionManager }
+import ai.mantik.executor.kubernetes.KubernetesExecutor
+import ai.mantik.executor.server.{ ExecutorServer, ServerConfig }
+import ai.mantik.planner.impl.ContextImpl
+import ai.mantik.planner.repository.rpc.{ FileRepositoryServiceImpl, RepositoryServiceImpl }
 import ai.mantik.planner.repository.{ FileRepository, Repository }
 import ai.mantik.planner.utils.AkkaRuntime
 import ai.mantik.planner.{ Context, CoreComponents, PlanExecutor, Planner }
@@ -11,7 +15,32 @@ import ai.mantik.planner.{ Context, CoreComponents, PlanExecutor, Planner }
  * Builds and initializes the Engine process.
  * To be used as long as there is no DI #86
  */
-object EngineFactory {
+private[engine] object EngineFactory {
+
+  def makeEngineContext()(implicit akkaRuntime: AkkaRuntime): Context = {
+    val fileRepository = FileRepository.createFileRepository()
+    val repository = Repository.create()
+    val executor = KubernetesExecutor.create(akkaRuntime.config)(
+      akkaRuntime.actorSystem,
+      akkaRuntime.clock,
+      akkaRuntime.materializer,
+      akkaRuntime.executionContext
+    )
+    val executorServerConfig = ServerConfig.fromTypesafe(akkaRuntime.config)
+    val executorServer = new ExecutorServer(executorServerConfig, executor)(
+      akkaRuntime.actorSystem,
+      akkaRuntime.materializer
+    )
+    executorServer.start()
+    ContextImpl.constructWithComponents(
+      repository,
+      fileRepository,
+      executor,
+      shutdownMethod = () => {
+        executorServer.stop()
+      }
+    )
+  }
 
   /** Build an Engine Server. */
   def makeEngineServer(context: Context)(implicit akkaRuntime: AkkaRuntime): EngineServer = {
@@ -25,12 +54,16 @@ object EngineFactory {
     val graphBuilderService = new GraphBuilderServiceImpl(sessionManager)
     val graphExecutorService = new GraphExecutorServiceImpl(sessionManager)
     val debugService = new DebugServiceImpl(context)
+    val repositoryService = new RepositoryServiceImpl(context.repository)
+    val fileRepositoryService = new FileRepositoryServiceImpl(context.fileRepository)
     val server = new EngineServer(
       aboutService,
       sessionService,
       graphBuilderService,
       graphExecutorService,
-      debugService
+      debugService,
+      repositoryService,
+      fileRepositoryService
     )
     server
   }

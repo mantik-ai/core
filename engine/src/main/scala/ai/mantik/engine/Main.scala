@@ -15,12 +15,9 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     logger.info(s"Initializing Mantik Engine ${BuildInfo}")
-    implicit val actorSystem = ActorSystem()
-    implicit val materializer = ActorMaterializer()
-    implicit val ec: ExecutionContext = actorSystem.dispatcher
-    implicit val akkaRuntime = AkkaRuntime.fromRunning()
+    implicit val akkaRuntime = AkkaRuntime.createNew()
 
-    val context = Context.localWithAkka()
+    val context = EngineFactory.makeEngineContext()
     try {
       val server = EngineFactory.makeEngineServer(context)
       server.start()

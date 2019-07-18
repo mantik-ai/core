@@ -47,14 +47,18 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime {
 
   // Custom Content Type
 
-  protected def rootUri(repo: FileRepoType): Uri = {
+  protected def fileUri(repo: FileRepoType): Uri = {
+    Uri(filePrefix).resolvedAgainst(rootUri(repo))
+  }
+
+  protected def rootUri(repo: FileRepository): Uri = {
     val address = repo.address()
-    Uri(s"http://localhost:${address.getPort}${filePrefix}")
+    Uri(s"http://localhost:${address.getPort}")
   }
 
   it should "return 200 on root paths" in {
     withRepo { repo =>
-      val response = await(Http().singleRequest(HttpRequest(uri = rootUri(repo))))
+      val response = await(Http().singleRequest(HttpRequest(uri = fileUri(repo))))
       response.status.intValue() shouldBe 200
       val response2 = await(Http().singleRequest(HttpRequest(uri = s"http://localhost:${repo.address().getPort}")))
       response2.status.intValue() shouldBe 200
@@ -66,7 +70,7 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime {
       val s = await(repo.requestFileStorage(true))
       s.path shouldBe s"files/${s.fileId}"
 
-      val uri = Uri(s.fileId).resolvedAgainst(rootUri(repo))
+      val uri = Uri(s.fileId).resolvedAgainst(fileUri(repo))
 
       val postRequest = HttpRequest(method = HttpMethods.POST, uri = uri)
         .withEntity(HttpEntity(MantikBundleContentType, testBytes))
@@ -98,6 +102,30 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime {
 
       val source = await(repo.loadFile(s.fileId))
       val bytes = collectByteSource(source)
+      bytes shouldBe testBytes
+    }
+  }
+
+  it should "know optimistic storage" in {
+    withRepo { repo =>
+      val info = await(repo.requestFileStorage(true))
+
+      intercept[Errors.NotFoundException] {
+        repo.getFileSync(info.fileId, optimistic = false)
+      }
+      val getFileResponse = withClue("No exception expected here") {
+        repo.getFileSync(info.fileId, optimistic = true)
+      }
+      // now store some content
+      repo.storeFileSync(info.fileId, ContentTypes.MantikBundleContentType, testBytes)
+
+      val uri = Uri(getFileResponse.path).resolvedAgainst(rootUri(repo))
+      val getRequest = HttpRequest(uri = uri).addHeader(
+        Accept(MantikBundleContentType.mediaType)
+      )
+      val getResponse = await(Http().singleRequest(getRequest))
+      getResponse.status.intValue() shouldBe 200
+      val bytes = collectByteSource(getResponse.entity.dataBytes)
       bytes shouldBe testBytes
     }
   }

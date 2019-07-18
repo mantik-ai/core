@@ -85,6 +85,8 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
 
       saveMeta(id, meta)
 
+      logger.debug(s"Requested storage of new file ${id}")
+
       FileStorageResult(
         fileId = id,
         path = makePath(id)
@@ -97,6 +99,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       val fileMeta = loadMeta(id)
       val fileExits = fileName(id).toFile.isFile()
       if (!optimistic && !fileExits) {
+        logger.info(s"File ${id} is not existing and request is not optimistic")
         throw new Errors.NotFoundException(s"File ${id} is not yet written")
       }
       FileGetResult(
@@ -159,7 +162,9 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     val metaJson = try {
       FileUtils.readFileToString(metaFileName(id).toFile, StandardCharsets.UTF_8)
     } catch {
-      case e: FileNotFoundException => throw new Errors.NotFoundException("ID not found")
+      case e: FileNotFoundException =>
+        logger.debug(s"File ${id} not found when loading meta data")
+        throw new Errors.NotFoundException(s"File with id ${id} not found")
     }
     val parsed = parser.parse(metaJson).flatMap(_.as[FileMetaData]) match {
       case Left(error) => throw new RuntimeException("Could not parse Metadata", error)

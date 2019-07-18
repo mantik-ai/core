@@ -3,6 +3,7 @@ package ai.mantik.planner.integration
 import ai.mantik.executor.kubernetes.{ ExecutorForIntegrationTests, KubernetesCleaner }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import ai.mantik.planner.Context
+import ai.mantik.planner.impl.ContextImpl
 import ai.mantik.planner.utils.AkkaRuntime
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.time.{ Millis, Span }
@@ -27,7 +28,7 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport {
     super.beforeAll()
     embeddedExecutor = new ExecutorForIntegrationTests(typesafeConfig)
     implicit val runtime = AkkaRuntime.fromRunning(typesafeConfig)
-    context = Context.localWithAkka()
+    context = ContextImpl.constructForLocalTestingWithAkka()
     scrapKubernetes()
   }
 
