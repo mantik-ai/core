@@ -6,10 +6,11 @@ import ai.mantik.elements.MantikId
 import ai.mantik.engine.protos.debug.{ AddLocalMantikDirectoryRequest, AddLocalMantikDirectoryResponse }
 import ai.mantik.engine.protos.debug.DebugServiceGrpc.DebugService
 import ai.mantik.planner.Context
+import javax.inject.Inject
 
 import scala.concurrent.Future
 
-class DebugServiceImpl(context: Context) extends DebugService {
+class DebugServiceImpl @Inject() (context: Context) extends DebugService {
 
   override def addLocalMantikDirectory(request: AddLocalMantikDirectoryRequest): Future[AddLocalMantikDirectoryResponse] = {
     val mantikId = if (request.name.isEmpty) {

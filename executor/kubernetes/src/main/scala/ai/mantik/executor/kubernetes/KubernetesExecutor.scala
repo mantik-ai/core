@@ -10,9 +10,8 @@ import ai.mantik.executor.kubernetes.tracker.KubernetesTracker
 import ai.mantik.executor.model._
 import ai.mantik.executor.{ Errors, Executor }
 import akka.actor.{ ActorSystem, Cancellable }
-import akka.stream.Materializer
 import com.google.common.net.InetAddresses
-import com.typesafe.scalalogging.Logger
+import javax.inject.{ Inject, Provider, Singleton }
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
@@ -80,7 +79,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
         throw new NotFoundException(s"Job ${id} not found in isolationSpace ${isolationSpace}")
       case Some(job) =>
         job.status.map { status =>
-          logger.info(s"Decoding job state ${status}")
+          logger.trace(s"Decoding job state ${status}")
           status.active match {
             case Some(a) if a > 0 => JobStatus(JobState.Running)
             case _ =>
@@ -90,13 +89,13 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
                   status.succeeded match {
                     case Some(x) if x > 0 => JobStatus(JobState.Finished)
                     case _ =>
-                      logger.warn(s"Could not decode ${status}")
-                      JobStatus(JobState.Running)
+                      logger.debug(s"Could not decode ${status}, probably pending")
+                      JobStatus(JobState.Pending)
                   }
               }
           }
         }.getOrElse {
-          logger.info(s"No job state found for ${id} in ${namespace}, probably pending")
+          logger.debug(s"No job state found for ${id} in ${namespace}, probably pending")
           JobStatus(
             state = JobState.Pending
           )
@@ -255,7 +254,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   private def checkPods(): Unit = {
-    logger.debug("Checking Pods")
+    logger.trace("Checking Pods")
     val timestamp = clock.instant()
     checkBrokenImagePods(timestamp)
   }
@@ -308,7 +307,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       val isPending = status.phase.contains(Pod.Phase.Pending)
       val isMissingContainerImage = status.containerStatuses.exists(containerIsMissingImage)
       val isReachedTimeout = status.startTime.exists(reachedTimeout)
-      logger.debug(s"${pod.name} pending=${isPending} isMissingContainerImage=${isMissingContainerImage} isReachedTimeout=${isReachedTimeout}")
+      logger.trace(s"${pod.name} pending=${isPending} isMissingContainerImage=${isMissingContainerImage} isReachedTimeout=${isReachedTimeout}")
       isPending && isMissingContainerImage && isReachedTimeout
     }
   }
@@ -320,15 +319,11 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   override def nameAndVersion: String = s"KubernetesExecutor ${BuildInfo.version}  (${BuildInfo.gitVersion}-${BuildInfo.buildNum})"
 }
 
-object KubernetesExecutor {
+class KubernetesExecutorProvider @Inject() (implicit akkaRuntime: AkkaRuntime) extends Provider[KubernetesExecutor] {
 
-  /** Create a Kubernetes executor by initializing all components. */
-  def create(typesafeConfig: com.typesafe.config.Config)(
-    implicit
-    akkaRuntime: AkkaRuntime
-  ): KubernetesExecutor = {
+  override def get(): KubernetesExecutor = {
     import ai.mantik.componently.AkkaHelper._
-    val config = Config.fromTypesafeConfig(typesafeConfig)
+    val config = Config.fromTypesafeConfig(akkaRuntime.config)
     val kubernetesClient = skuber.k8sInit
     val k8sOperations = new K8sOperations(config, kubernetesClient)
     val executor = new KubernetesExecutor(config, k8sOperations)

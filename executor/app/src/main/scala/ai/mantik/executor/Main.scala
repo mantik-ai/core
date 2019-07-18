@@ -1,13 +1,11 @@
 package ai.mantik.executor
 
-import java.time.Clock
-
 import ai.mantik.componently.AkkaRuntime
+import ai.mantik.componently.di.AkkaModule
 import ai.mantik.executor.buildinfo.BuildInfo
-import ai.mantik.executor.kubernetes.{ KubernetesExecutor }
 import com.typesafe.scalalogging.Logger
 import ai.mantik.executor.server.{ ExecutorServer, ServerConfig }
-import com.typesafe.config.ConfigFactory
+import com.google.inject.{ Guice, Injector }
 
 object Main extends App {
   val logger = Logger(getClass)
@@ -15,7 +13,11 @@ object Main extends App {
 
   implicit val akkaRuntime = AkkaRuntime.createNew()
   try {
-    val executor = KubernetesExecutor.create(akkaRuntime.config)
+    val injector = Guice.createInjector(
+      new AkkaModule(),
+      new ExecutorModule()
+    )
+    val executor = injector.getInstance(classOf[Executor])
     val serverConfig = ServerConfig.fromTypesafe(akkaRuntime.config)
     val server = new ExecutorServer(serverConfig, executor)
     logger.info("Starting Executor Server")

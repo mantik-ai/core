@@ -1,15 +1,15 @@
 package ai.mantik.engine
 
+import ai.mantik.componently.di.AkkaModule
 import ai.mantik.componently.{ AkkaRuntime, Component }
 import ai.mantik.engine.protos.engine.AboutServiceGrpc.AboutServiceBlockingStub
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderServiceBlockingStub
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorServiceBlockingStub
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionServiceBlockingStub
 import ai.mantik.planner.Context
-import ai.mantik.planner.impl.ContextImpl
-import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryServiceStub
-import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryServiceStub
-import ai.mantik.planner.repository.rpc.{ FileRepositoryClientImpl, RepositoryClientImpl }
+import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.{ FileRepositoryService, FileRepositoryServiceStub }
+import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.{ RepositoryService, RepositoryServiceStub }
+import com.google.inject.{ AbstractModule, Guice }
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
 import io.grpc.Status.Code
@@ -36,14 +36,28 @@ class EngineClient(address: String)(implicit val akkaRuntime: AkkaRuntime) exten
   val sessionService = new SessionServiceBlockingStub(channel)
   val graphBuilder = new GraphBuilderServiceBlockingStub(channel)
   val graphExecutor = new GraphExecutorServiceBlockingStub(channel)
-  val repository = new RepositoryClientImpl(new RepositoryServiceStub(channel))
-  val fileRepository = new FileRepositoryClientImpl(new FileRepositoryServiceStub(channel))
-  val executor = ContextImpl.constructExecutorClient()
+  val repositoryServiceStub = new RepositoryServiceStub(channel)
+  val fileRepositoryServiceStub = new FileRepositoryServiceStub(channel)
 
-  val plannerContext: Context = ContextImpl.constructWithComponents(repository, fileRepository, executor)
+  /** Create a new context for Scala Applications. */
+  def createContext(): Context = {
+    val injector = Guice.createInjector(
+      new AkkaModule(),
+      new EngineModule(isClient = true),
+      createClientServiceModule()
+    )
+    injector.getInstance(classOf[Context])
+  }
+
+  /** Create a Guice module which contains the needed gRpc clients to talk to the engine server. */
+  private def createClientServiceModule(): AbstractModule = new AbstractModule {
+    override def configure(): Unit = {
+      bind(classOf[RepositoryService]).toInstance(repositoryServiceStub)
+      bind(classOf[FileRepositoryService]).toInstance(fileRepositoryServiceStub)
+    }
+  }
 
   override def shutdown(): Unit = {
-    plannerContext.shutdown()
     channel.shutdownNow()
   }
 }

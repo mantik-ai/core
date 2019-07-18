@@ -7,10 +7,11 @@ import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExec
 import ai.mantik.engine.session.{ ItemNotFoundException, ItemWrongTypeException, Session, SessionManager }
 import ai.mantik.planner.{ ApplicableMantikItem, DataSet }
 import akka.stream.Materializer
+import javax.inject.Inject
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class GraphExecutorServiceImpl(sessionManager: SessionManager[Session])(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphExecutorService {
+class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphExecutorService {
 
   override def fetchDataSet(request: FetchItemRequest): Future[FetchItemResponse] = {
     for {

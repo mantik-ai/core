@@ -4,10 +4,11 @@ import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.{ Errors, Repository }
 import ai.mantik.planner.repository.protos.repository.{ GetItemRequest, GetItemResponse, GetItemWithHullResponse, RemoveRequest, RemoveResponse, SetDeploymentInfoRequest, SetDeploymentInfoResponse, StoreRequest, StoreResponse }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
+import javax.inject.Inject
 
 import scala.concurrent.Future
 
-class RepositoryServiceImpl(repository: Repository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with RepositoryService {
+class RepositoryServiceImpl @Inject() (repository: Repository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with RepositoryService {
   override def get(request: GetItemRequest): Future[GetItemResponse] = {
     errorHandling {
       val mantikId = Conversions.decodeMantikId(request.mantikId)

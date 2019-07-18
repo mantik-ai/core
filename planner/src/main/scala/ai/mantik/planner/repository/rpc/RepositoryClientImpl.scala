@@ -7,10 +7,12 @@ import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Re
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
 import io.grpc.Status.Code
 import io.grpc.{ Status, StatusRuntimeException }
+import javax.inject.{ Inject, Singleton }
 
 import scala.concurrent.Future
 
-class RepositoryClientImpl(service: RepositoryService)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Repository {
+@Singleton
+class RepositoryClientImpl @Inject() (service: RepositoryService)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Repository {
   override def get(id: MantikId): Future[MantikArtifact] = {
     decodeErrors {
       service.get(GetItemRequest(Conversions.encodeMantikId(id))).map { response =>

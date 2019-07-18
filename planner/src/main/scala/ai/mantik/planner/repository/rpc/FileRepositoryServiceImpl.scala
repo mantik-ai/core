@@ -9,12 +9,13 @@ import akka.stream.scaladsl.{ Keep, Sink, Source }
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
 import io.grpc.stub.{ StreamObserver, StreamObservers }
+import javax.inject.Inject
 
 import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
 
-class FileRepositoryServiceImpl(backend: FileRepository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FileRepositoryService {
+class FileRepositoryServiceImpl @Inject() (backend: FileRepository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FileRepositoryService {
   override def requestFileStorage(request: RequestFileStorageRequest): Future[RequestFileStorageResponse] = {
     Conversions.encodeErrorsIn {
       backend.requestFileStorage(

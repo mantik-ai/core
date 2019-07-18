@@ -2,8 +2,7 @@ package ai.mantik.planner.repository
 
 import java.net.InetSocketAddress
 
-import ai.mantik.componently.{ AkkaRuntime, Component }
-import ai.mantik.planner.repository.impl.Factory
+import ai.mantik.componently.Component
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 
@@ -53,12 +52,4 @@ object FileRepository {
 
   /** Content Type for Mantik Bundles. */
   val MantikBundleContentType = "application/x-mantik-bundle"
-
-  /**
-   * Create the FileRepository which is referenced in the config.
-   * In Future this should be done using DI Ticket #86.
-   */
-  def createFileRepository()(implicit akkaRuntime: AkkaRuntime): FileRepository = {
-    Factory.createFileRepository()
-  }
 }

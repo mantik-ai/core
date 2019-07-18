@@ -13,16 +13,14 @@ import ai.mantik.planner.repository.{ Errors, FileRepository }
 import ai.mantik.planner.repository.Errors.RepositoryError
 import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.planner.repository.impl.LocalFileRepository.FileMetaData
-import akka.actor.ActorSystem
-import akka.stream.Materializer
 import akka.stream.scaladsl.{ FileIO, Sink, Source }
 import akka.util.ByteString
-import com.typesafe.config.Config
 import io.circe.{ Decoder, Encoder }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import io.circe.syntax._
 import io.circe.parser
+import javax.inject.{ Inject, Singleton }
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
@@ -39,10 +37,12 @@ import scala.collection.JavaConverters._
  *
  * Temporary files are cleaned up periodically. This should scale to some 1000 files but not more.
  */
+@Singleton
 class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) extends FileRepositoryServer {
 
+  @Inject
   def this()(implicit akkaRuntime: AkkaRuntime) {
-    this(new File(akkaRuntime.config.getString("mantik.repository.fileRepository.local.directory")).toPath)
+    this(new File(akkaRuntime.config.getString(LocalFileRepository.DirectoryConfigKey)).toPath)
   }
 
   logger.info(s"Initializing Local File Repository in directory ${directory}")
@@ -231,7 +231,19 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
   }
 }
 
+@Singleton
+class TempFileRepository @Inject() (implicit akkaRuntime: AkkaRuntime) extends LocalFileRepository(
+  Files.createTempDirectory("mantik_simple_storage")
+) {
+  override def shutdown(): Unit = {
+    super.shutdown()
+    FileUtils.deleteDirectory(directory.toFile)
+  }
+}
+
 object LocalFileRepository {
+
+  val DirectoryConfigKey = "mantik.repository.fileRepository.local.directory"
 
   /** File name ending for Meta Data. */
   val MetaEnding = ".meta"
@@ -245,13 +257,4 @@ object LocalFileRepository {
 
   import io.circe.java8.time._
   implicit val metaDataFormat: Encoder[FileMetaData] with Decoder[FileMetaData] = CirceJson.makeSimpleCodec[FileMetaData]
-
-  def createTemporary()(implicit akkaRuntime: AkkaRuntime): LocalFileRepository = {
-    new LocalFileRepository(Files.createTempDirectory("mantik_simple_storage")) {
-      override def shutdown(): Unit = {
-        super.shutdown()
-        FileUtils.deleteDirectory(directory.toFile)
-      }
-    }
-  }
 }

@@ -66,7 +66,6 @@ object TestItems {
   val testBridges = BridgeList(
     Seq(algoPlugin1, selectBridge),
     Seq(learningPlugin),
-    Seq(naturalBridge, format1),
-    DockerConfig()
+    Seq(naturalBridge, format1)
   )
 }

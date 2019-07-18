@@ -1,29 +1,36 @@
 package ai.mantik.planner.repository.impl
 
 import java.io.File
-import java.nio.file.Files
+import java.nio.file.{ Files, Path }
 import java.sql.Timestamp
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
+import ai.mantik.planner.repository.impl.LocalRepository.DirectoryConfigKey
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
 import ai.mantik.planner.repository.impl.LocalRepositoryDb._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import io.circe.parser
+import javax.inject.{ Inject, Singleton }
 import org.apache.commons.io.FileUtils
 import org.sqlite.{ SQLiteErrorCode, SQLiteException }
 
 /** A local repository for artifacts based upon Sqlite. */
-class LocalRepository(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Repository {
+@Singleton
+class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Repository {
+
+  @Inject
+  def this()(implicit akkaRuntime: AkkaRuntime) {
+    this(new File(
+      akkaRuntime.config.getString(LocalRepository.DirectoryConfigKey)
+    ).toPath)
+  }
 
   // Note: in general we are using the plain ExecutionContext here
   // Which should be ok for local usage (but not servers).
   // On servers it's not advisable to use Sqlite anyway.
 
-  val directory = new File(
-    config.getString(LocalRepository.DirectoryConfigKey)
-  ).toPath
   val dbFile = directory.resolve("items.db")
   logger.info(s"Initializing in ${dbFile}")
 
@@ -208,20 +215,20 @@ class LocalRepository(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
   }
 }
 
+@Singleton
+class TempRepository @Inject() (implicit akkaRuntime: AkkaRuntime) extends LocalRepository(
+  Files.createTempDirectory("mantik_db")
+) {
+
+  override def shutdown(): Unit = {
+    super.shutdown()
+    logger.debug(s"Deleting temp directory ${directory}")
+    FileUtils.deleteDirectory(directory.toFile)
+  }
+}
+
 object LocalRepository {
 
   val DirectoryConfigKey = "mantik.repository.artifactRepository.local.directory"
 
-  def createTemporary()(implicit akkaRuntime: AkkaRuntime): LocalRepository = {
-    val tempDir = Files.createTempDirectory("mantik_db")
-    val derivedRuntime: AkkaRuntime = akkaRuntime.withConfigOverrides(
-      DirectoryConfigKey -> tempDir.toString
-    )
-    new LocalRepository()(derivedRuntime) {
-      override def shutdown(): Unit = {
-        super.shutdown()
-        FileUtils.deleteDirectory(directory.toFile)
-      }
-    }
-  }
 }

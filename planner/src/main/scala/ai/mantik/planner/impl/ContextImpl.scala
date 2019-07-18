@@ -12,16 +12,23 @@ import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.PlanExecutorImpl
+import ai.mantik.planner.repository.impl.{ TempFileRepository, TempRepository }
 import ai.mantik.planner.repository.{ Errors, FileRepository, MantikArtifact, Repository }
 import akka.http.scaladsl.model.MediaTypes
 import akka.stream.scaladsl.FileIO
+import javax.inject.Inject
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ Await, Future }
 import scala.reflect.ClassTag
 
-private[impl] class ContextImpl(val repository: Repository, val fileRepository: FileRepository, val planner: Planner, val planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Context {
+private[planner] class ContextImpl @Inject() (
+    val repository: Repository,
+    val fileRepository: FileRepository,
+    val planner: Planner,
+    val planExecutor: PlanExecutor
+)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Context {
   private val dbLookupTimeout = Duration.fromNanos(config.getDuration("mantik.planner.dbLookupTimeout").toNanos)
   private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
 
@@ -97,43 +104,37 @@ private[impl] class ContextImpl(val repository: Repository, val fileRepository: 
   override def shutdown(): Unit = {
     fileRepository.shutdown()
     repository.shutdown()
-    shutdownHandle()
   }
 }
 
 private[mantik] object ContextImpl {
 
-  def constructForLocalTestingWithAkka(shutdownMethod: () => Unit = () => (()))(implicit akkaRuntime: AkkaRuntime): Context = {
-    val repository = Repository.create()
-    val fileRepo: FileRepository = FileRepository.createFileRepository()
+  /** Construct a Client only context (for integration tests.). */
+  def constructTempClient()(implicit akkaRuntime: AkkaRuntime): Context = {
+    val repository = new TempRepository()
+    val fileRepo = new TempFileRepository()
     val executor = constructExecutorClient()
-    constructWithComponents(repository, fileRepo, executor, shutdownMethod)
+    constructWithComponents(repository, fileRepo, executor)
   }
 
   /** Construct a context with a running local stateful services (e.g. the Engine). */
-  def constructWithComponents(
+  private def constructWithComponents(
     repository: Repository,
     fileRepository: FileRepository,
-    executor: Executor,
-    shutdownMethod: () => Unit = () => (())
+    executor: Executor
   )(implicit akkaRuntime: AkkaRuntime): Context = {
     val bridges: Bridges = Bridges.loadFromConfig(akkaRuntime.config)
     val planner = new PlannerImpl(bridges)
     val planExecutor = new PlanExecutorImpl(
       fileRepository,
       repository,
-      executor,
-      "local",
-      bridges.dockerConfig)
-    new ContextImpl(repository, fileRepository, planner, planExecutor, shutdownMethod)
+      executor)
+    new ContextImpl(repository, fileRepository, planner, planExecutor)
   }
 
-  def constructExecutorClient()(implicit akkaRuntime: AkkaRuntime): Executor = {
-    val executorUrl = akkaRuntime.config.getString("mantik.core.executorUrl")
-    val executor: Executor = new ExecutorClient(executorUrl)(
-      akkaRuntime.actorSystem,
-      akkaRuntime.materializer
-    )
+  private def constructExecutorClient()(implicit akkaRuntime: AkkaRuntime): Executor = {
+    val executorUrl = akkaRuntime.config.getString("mantik.executor.client.executorUrl")
+    val executor: Executor = new ExecutorClient(executorUrl)
     executor
   }
 

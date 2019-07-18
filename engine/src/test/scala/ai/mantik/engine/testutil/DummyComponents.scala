@@ -3,9 +3,11 @@ package ai.mantik.engine.testutil
 import java.time.Clock
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.planner.bridge.BridgesProvider
+import ai.mantik.planner.impl.PlannerImpl
 import ai.mantik.planner.repository.{ FileRepository, Repository }
 import ai.mantik.planner.{ CoreComponents, Plan, PlanExecutor, Planner }
-import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalRepository }
+import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalRepository, TempFileRepository, TempRepository }
 import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 import org.apache.commons.io.FileUtils
 
@@ -13,11 +15,12 @@ import scala.concurrent.Future
 
 class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with CoreComponents {
 
-  override lazy val fileRepository = LocalFileRepository.createTemporary()
+  override lazy val fileRepository = new TempFileRepository()
 
-  override lazy val repository: Repository = LocalRepository.createTemporary()
+  override lazy val repository: Repository = new TempRepository()
 
-  override lazy val planner: Planner = Planner.create(config)
+  private val bridges = new BridgesProvider(config).get()
+  override lazy val planner: Planner = new PlannerImpl(bridges)
 
   var nextItemToReturnByExecutor: Future[_] = Future.failed(
     new RuntimeException("Plan executor not implemented")

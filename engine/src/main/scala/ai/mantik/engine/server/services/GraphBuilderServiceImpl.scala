@@ -8,10 +8,11 @@ import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionMan
 import ai.mantik.planner.repository.Errors
 import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
 import akka.stream.Materializer
+import javax.inject.Inject
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class GraphBuilderServiceImpl(sessionManager: SessionManager[Session])(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService {
+class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService {
 
   override def get(request: GetRequest): Future[NodeResponse] = {
     for {

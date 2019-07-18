@@ -13,18 +13,32 @@ import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
 import ai.mantik.planner.repository.{ DeploymentInfo, FileRepository, MantikArtifact, Repository }
 import akka.http.scaladsl.model.Uri
 import io.circe.syntax._
+import javax.inject.{ Inject, Singleton }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 
 /** Responsible for executing plans. */
-private[impl] class PlanExecutorImpl(
+private[planner] class PlanExecutorImpl(
     fileRepository: FileRepository,
     repository: Repository, executor: Executor,
     isolationSpace: String,
     dockerConfig: DockerConfig
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
-  logger.info(s"Initializing PlanExecutor")
+
+  @Singleton
+  @Inject
+  def this(fileRepository: FileRepository, repository: Repository, executor: Executor)(implicit akkaRuntime: AkkaRuntime) {
+    this(
+      fileRepository,
+      repository,
+      executor,
+      isolationSpace = akkaRuntime.config.getString("mantik.planner.isolationSpace"),
+      dockerConfig = DockerConfig.parseFromConfig(
+        akkaRuntime.config.getConfig("mantik.bridge.docker")
+      )
+    )
+  }
 
   private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
   private val jobPollInterval = Duration.fromNanos(config.getDuration("mantik.planner.jobPollInterval").toNanos)

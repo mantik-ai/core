@@ -12,7 +12,8 @@ abstract class ExampleBase {
     try {
       val engineClient = EngineClient.create()
       try {
-        run(engineClient.plannerContext)
+        val context = engineClient.createContext()
+        run(context)
       } finally {
         engineClient.shutdown()
       }

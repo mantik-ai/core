@@ -1,11 +1,12 @@
 package ai.mantik.executor
 
+import ai.mantik.componently.Component
 import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, DeployedServicesQuery, DeployedServicesResponse, Job, JobStatus, PublishServiceRequest, PublishServiceResponse }
 
 import scala.concurrent.Future
 
 /** Defines the interface for the Executor. */
-trait Executor {
+trait Executor extends Component {
 
   /** Schedule a job, returns a future on it's id. */
   def schedule(job: Job): Future[String]
