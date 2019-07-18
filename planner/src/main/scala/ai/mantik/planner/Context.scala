@@ -3,11 +3,6 @@ package ai.mantik.planner
 import java.nio.file.Path
 
 import ai.mantik.elements.MantikId
-import ai.mantik.planner.impl.ContextImpl
-import ai.mantik.planner.utils.AkkaRuntime
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import com.typesafe.config.Config
 
 /** Main Mantik Context used as main access points for Scala Apps. */
 trait Context extends CoreComponents {

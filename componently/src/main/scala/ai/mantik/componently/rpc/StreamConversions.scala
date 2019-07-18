@@ -1,4 +1,4 @@
-package ai.mantik.planner.repository.rpc
+package ai.mantik.componently.rpc
 
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicLong
@@ -7,11 +7,12 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import io.grpc.stub.StreamObserver
-import org.reactivestreams.{ Publisher, Subscriber, Subscription }
+import org.reactivestreams.{ Subscriber, Subscription }
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
 
+/** Helper for converting gRpc Stream Fundamentals into Akka Counterparts. */
 object StreamConversions {
 
   /** Represents an akka source as Stream Observer. */

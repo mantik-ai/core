@@ -1,18 +1,17 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik
+import ai.mantik.componently.utils.FutureHelper
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.DockerConfig
 import ai.mantik.planner
 import ai.mantik.planner._
-import ai.mantik.planner.impl.FutureHelper
 import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
 import ai.mantik.planner.repository.{ DeploymentInfo, FileRepository, MantikArtifact, Repository }
-import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.http.scaladsl.model.Uri
-import org.slf4j.LoggerFactory
 import io.circe.syntax._
 
 import scala.concurrent.duration._
@@ -25,8 +24,6 @@ private[impl] class PlanExecutorImpl(
     isolationSpace: String,
     dockerConfig: DockerConfig
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
-
-  private val logger = LoggerFactory.getLogger(getClass)
   logger.info(s"Initializing PlanExecutor")
 
   private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)

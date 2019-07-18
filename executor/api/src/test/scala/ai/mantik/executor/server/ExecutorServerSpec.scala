@@ -1,5 +1,6 @@
 package ai.mantik.executor.server
 
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.executor.model.docker.Container
@@ -12,6 +13,7 @@ import akka.http.scaladsl.model.HttpRequest
 import scala.concurrent.Future
 
 class ExecutorServerSpec extends TestBase with AkkaSupport {
+  private implicit lazy val akkaRuntime = AkkaRuntime.fromRunning(typesafeConfig)
 
   val config = ServerConfig(
     interface = "localhost",

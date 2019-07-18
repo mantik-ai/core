@@ -1,27 +1,22 @@
 package ai.mantik.executor.server
-import akka.actor.ActorSystem
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshalling.{ Marshal, ToResponseMarshallable }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.ExceptionHandler
-import akka.stream.Materializer
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import ai.mantik.executor.{ Errors, Executor }
 import ai.mantik.executor.model.{ DeployServiceRequest, DeployedServicesQuery, Job, PublishServiceRequest }
 import akka.http.scaladsl.unmarshalling.FromRequestUnmarshaller
-import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 import scala.concurrent.duration._
 
 /** Makes the Executor Interface reachable via HTTP. */
 class ExecutorServer(
     config: ServerConfig,
-    executor: Executor)(implicit actorSystem: ActorSystem, materializer: Materializer) extends FailFastCirceSupport {
-
-  val logger = LoggerFactory.getLogger(getClass)
-  import materializer.executionContext
+    executor: Executor)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FailFastCirceSupport {
 
   implicit def exceptionHandler: ExceptionHandler = ExceptionHandler {
     case e: Errors.ExecutorException =>

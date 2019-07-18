@@ -4,21 +4,18 @@ import java.io.File
 import java.nio.file.Files
 import java.sql.Timestamp
 
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
 import ai.mantik.planner.repository.impl.LocalRepositoryDb._
-import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import io.circe.parser
 import org.apache.commons.io.FileUtils
-import org.slf4j.LoggerFactory
 import org.sqlite.{ SQLiteErrorCode, SQLiteException }
 
 /** A local repository for artifacts based upon Sqlite. */
 class LocalRepository(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Repository {
-
-  private val logger = LoggerFactory.getLogger(getClass)
 
   // Note: in general we are using the plain ExecutionContext here
   // Which should be ok for local usage (but not servers).

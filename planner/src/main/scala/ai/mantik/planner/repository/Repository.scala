@@ -1,13 +1,14 @@
 package ai.mantik.planner.repository
 
+import ai.mantik.componently.{ AkkaRuntime, Component }
 import ai.mantik.elements.{ ItemId, MantikId }
 import ai.mantik.planner.repository.impl.Factory
-import ai.mantik.planner.utils.{ AkkaRuntime, Component }
 
 import scala.concurrent.Future
 
 /** Gives access to Mantik objects. */
 trait Repository extends Component {
+  import ai.mantik.componently.AkkaHelper._
 
   /** Retrieves a Mantik artefact. */
   def get(id: MantikId): Future[MantikArtifact]

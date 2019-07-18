@@ -2,8 +2,8 @@ package ai.mantik.planner.repository.impl
 
 import java.time.Clock
 
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.planner.repository.{ Errors, FileRepository, Repository }
-import ai.mantik.planner.utils.AkkaRuntime
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.typesafe.config.Config
@@ -34,10 +34,8 @@ private[repository] object Factory {
     getRepoType(akkaRuntime.config) match {
       case TempType =>
         logger.info("Creating Temporary File Repository")
-        val clock = Clock.systemUTC()
         LocalFileRepository.createTemporary()
       case LocalType =>
-        val clock = Clock.systemUTC()
         logger.info("Creating LocalFileRepository")
         new LocalFileRepository()
     }

@@ -1,14 +1,13 @@
 package ai.mantik.planner.repository.rpc
 
+import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.{ Errors, Repository }
 import ai.mantik.planner.repository.protos.repository.{ GetItemRequest, GetItemResponse, GetItemWithHullResponse, RemoveRequest, RemoveResponse, SetDeploymentInfoRequest, SetDeploymentInfoResponse, StoreRequest, StoreResponse }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
-import ai.mantik.planner.utils.{ AkkaRuntime, Component }
-import io.grpc.{ Metadata, Status, StatusRuntimeException }
 
 import scala.concurrent.Future
 
-class RepositoryServiceImpl(repository: Repository)(implicit val akkaRuntime: AkkaRuntime) extends RepositoryService with Component {
+class RepositoryServiceImpl(repository: Repository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with RepositoryService {
   override def get(request: GetItemRequest): Future[GetItemResponse] = {
     errorHandling {
       val mantikId = Conversions.decodeMantikId(request.mantikId)

@@ -1,11 +1,11 @@
 package ai.mantik.engine.server.services
 
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.MantikId
 import ai.mantik.engine.protos.graph_executor.{ DeployItemRequest, DeployItemResponse, FetchItemRequest, FetchItemResponse, SaveItemRequest, SaveItemResponse }
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
 import ai.mantik.engine.session.{ ItemNotFoundException, ItemWrongTypeException, Session, SessionManager }
 import ai.mantik.planner.{ ApplicableMantikItem, DataSet }
-import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.stream.Materializer
 
 import scala.concurrent.{ ExecutionContext, Future }

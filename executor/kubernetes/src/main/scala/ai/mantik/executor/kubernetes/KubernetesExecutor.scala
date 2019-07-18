@@ -3,6 +3,7 @@ package ai.mantik.executor.kubernetes
 import java.time.{ Clock, Instant }
 import java.util.UUID
 
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
 import ai.mantik.executor.kubernetes.tracker.KubernetesTracker
@@ -23,11 +24,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 /** Kubennetes implementation of [[Executor]]. */
 class KubernetesExecutor(config: Config, ops: K8sOperations)(
     implicit
-    ec: ExecutionContext,
-    actorSystem: ActorSystem,
-    clock: Clock
-) extends Executor {
-  val logger = Logger(getClass)
+    akkaRuntime: AkkaRuntime
+) extends ComponentBase with Executor {
   val tracker = new KubernetesTracker(config, ops)
 
   val kubernetesHost = ops.clusterServer.authority.host.address()
@@ -315,7 +313,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     }
   }
 
-  def shutdown(): Unit = {
+  override def shutdown(): Unit = {
     checkPodCancellation.cancel()
   }
 
@@ -327,8 +325,9 @@ object KubernetesExecutor {
   /** Create a Kubernetes executor by initializing all components. */
   def create(typesafeConfig: com.typesafe.config.Config)(
     implicit
-    actorSystem: ActorSystem, clock: Clock, materializer: Materializer, ec: ExecutionContext
+    akkaRuntime: AkkaRuntime
   ): KubernetesExecutor = {
+    import ai.mantik.componently.AkkaHelper._
     val config = Config.fromTypesafeConfig(typesafeConfig)
     val kubernetesClient = skuber.k8sInit
     val k8sOperations = new K8sOperations(config, kubernetesClient)

@@ -1,16 +1,16 @@
 package ai.mantik.planner.repository.rpc
 
+import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.elements.{ ItemId, MantikId }
 import ai.mantik.planner.repository.protos.repository.{ GetItemRequest, RemoveRequest, SetDeploymentInfoRequest, StoreRequest }
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
-import ai.mantik.planner.utils.{ AkkaRuntime, Component }
 import io.grpc.Status.Code
 import io.grpc.{ Status, StatusRuntimeException }
 
 import scala.concurrent.Future
 
-class RepositoryClientImpl(service: RepositoryService)(implicit val akkaRuntime: AkkaRuntime) extends Repository with Component {
+class RepositoryClientImpl(service: RepositoryService)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Repository {
   override def get(id: MantikId): Future[MantikArtifact] = {
     decodeErrors {
       service.get(GetItemRequest(Conversions.encodeMantikId(id))).map { response =>

@@ -1,9 +1,10 @@
 package ai.mantik.planner.repository.rpc
 
+import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
+import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.FileRepository
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryService
 import ai.mantik.planner.repository.protos.file_repository.{ AddressResponse, DeleteFileRequest, DeleteFileResponse, LoadFileRequest, LoadFileResponse, RequestFileGetRequest, RequestFileGetResponse, RequestFileStorageRequest, RequestFileStorageResponse, StoreFileRequest, StoreFileResponse }
-import ai.mantik.planner.utils.{ AkkaRuntime, Component }
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
@@ -13,9 +14,7 @@ import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
 
-class FileRepositoryServiceImpl(backend: FileRepository)(implicit val akkaRuntime: AkkaRuntime) extends FileRepositoryService with Component {
-  val logger = Logger(getClass)
-
+class FileRepositoryServiceImpl(backend: FileRepository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FileRepositoryService {
   override def requestFileStorage(request: RequestFileStorageRequest): Future[RequestFileStorageResponse] = {
     Conversions.encodeErrorsIn {
       backend.requestFileStorage(
@@ -35,7 +34,7 @@ class FileRepositoryServiceImpl(backend: FileRepository)(implicit val akkaRuntim
         RequestFileGetResponse(
           fileId = response.fileId,
           path = response.path,
-          contentType = response.contentType.getOrElse("")
+          contentType = RpcConversions.encodeOptionalString(response.contentType)
         )
       }
     }
@@ -51,7 +50,7 @@ class FileRepositoryServiceImpl(backend: FileRepository)(implicit val akkaRuntim
         val source = StreamConversions.streamObserverSource[StoreFileRequest]()
         val withFirstElement = source.prepend(Source.single(req))
         val byteBlobs = withFirstElement.map { req =>
-          Conversions.decodeByteString(req.chunk)
+          RpcConversions.decodeByteString(req.chunk)
         }
         val (streamObserver, result) = byteBlobs.toMat(sink)(Keep.both).run()
         result.onComplete {
@@ -79,7 +78,7 @@ class FileRepositoryServiceImpl(backend: FileRepository)(implicit val akkaRuntim
     backend.loadFile(request.fileId).onComplete {
       case Success(source) =>
         val adaptedSource = source.map { byteString =>
-          LoadFileResponse(Conversions.encodeByteString(byteString))
+          LoadFileResponse(RpcConversions.encodeByteString(byteString))
         }
         StreamConversions.pumpSourceIntoStreamObserver(adaptedSource, responseObserver)
       case Failure(failure) =>

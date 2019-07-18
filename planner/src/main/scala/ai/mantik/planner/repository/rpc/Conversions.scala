@@ -2,14 +2,13 @@ package ai.mantik.planner.repository.rpc
 
 import java.time.Instant
 
+import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact }
 import ai.mantik.planner.repository.protos.types.{ MantikArtifact => ProtoMantikArtifact }
 import ai.mantik.planner.repository.protos.types.{ DeploymentInfo => ProtoDeploymentInfo }
-import ai.mantik.planner.EitherUtils._
-import akka.util.ByteString
-import com.google.protobuf.{ ByteString => ProtoByteString }
+import ai.mantik.componently.utils.EitherExtensions._
 import io.grpc.Status.Code
 import io.grpc.{ Status, StatusRuntimeException }
 
@@ -36,7 +35,7 @@ private[rpc] object Conversions {
   def encodeMantikArtifact(item: MantikArtifact): ProtoMantikArtifact = {
     ProtoMantikArtifact(
       mantikfile = item.mantikfile.toJson,
-      fileId = item.fileId.getOrElse(""),
+      fileId = RpcConversions.encodeOptionalString(item.fileId),
       mantikId = encodeMantikId(item.id),
       itemId = encodeItemId(item.itemId),
       deploymentInfo = item.deploymentInfo.map(encodeDeploymentInfo)
@@ -47,7 +46,7 @@ private[rpc] object Conversions {
     val mantikfileJson = CirceJson.forceParseJson(item.mantikfile)
     MantikArtifact(
       mantikfile = Mantikfile.parseSingleDefinition(mantikfileJson).force,
-      fileId = decodeOptionalString(item.fileId),
+      fileId = RpcConversions.decodeOptionalString(item.fileId),
       id = decodeMantikId(item.mantikId),
       itemId = decodeItemId(item.itemId),
       deploymentInfo = item.deploymentInfo.map(decodeDeploymentInfo)
@@ -58,7 +57,7 @@ private[rpc] object Conversions {
     ProtoDeploymentInfo(
       name = item.name,
       internalUrl = item.internalUrl,
-      externalUrl = item.externalUrl.getOrElse(""),
+      externalUrl = RpcConversions.encodeOptionalString(item.externalUrl),
       timestamp = item.timestamp.toEpochMilli
     )
   }
@@ -67,30 +66,9 @@ private[rpc] object Conversions {
     DeploymentInfo(
       name = deploymentInfo.name,
       internalUrl = deploymentInfo.internalUrl,
-      externalUrl = decodeOptionalString(deploymentInfo.externalUrl),
+      externalUrl = RpcConversions.decodeOptionalString(deploymentInfo.externalUrl),
       timestamp = Instant.ofEpochMilli(deploymentInfo.timestamp)
     )
-  }
-
-  def decodeOptionalString(str: String): Option[String] = {
-    if (str.isEmpty) {
-      None
-    } else {
-      Some(str)
-    }
-  }
-
-  // TODO: Remove this copy and paste with Engine.
-
-  def decodeByteString(bs: ProtoByteString): ByteString = {
-    ByteString.fromArrayUnsafe(bs.toByteArray)
-  }
-
-  def encodeByteString(bs: ByteString): ProtoByteString = {
-    bs.asByteBuffers.foldLeft(ProtoByteString.EMPTY) {
-      case (c, n) =>
-        c.concat(ProtoByteString.copyFrom(n))
-    }
   }
 
   val encodeErrors: PartialFunction[Throwable, Throwable] = {

@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{ Files, Path }
 
 import ai.mantik
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.helper.ZipUtils
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
 import ai.mantik.executor.Executor
@@ -12,19 +13,15 @@ import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.PlanExecutorImpl
 import ai.mantik.planner.repository.{ Errors, FileRepository, MantikArtifact, Repository }
-import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.http.scaladsl.model.MediaTypes
 import akka.stream.scaladsl.FileIO
 import org.apache.commons.io.FileUtils
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.reflect.ClassTag
 
 private[impl] class ContextImpl(val repository: Repository, val fileRepository: FileRepository, val planner: Planner, val planExecutor: PlanExecutor, shutdownHandle: () => Unit)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Context {
-  private val logger = LoggerFactory.getLogger(getClass)
-
   private val dbLookupTimeout = Duration.fromNanos(config.getDuration("mantik.planner.dbLookupTimeout").toNanos)
   private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
 

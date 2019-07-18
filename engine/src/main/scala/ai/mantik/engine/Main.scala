@@ -1,8 +1,8 @@
 package ai.mantik.engine
 
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.engine.buildinfo.BuildInfo
 import ai.mantik.planner.Context
-import ai.mantik.planner.utils.AkkaRuntime
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory

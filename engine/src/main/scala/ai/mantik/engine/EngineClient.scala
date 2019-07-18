@@ -1,5 +1,6 @@
 package ai.mantik.engine
 
+import ai.mantik.componently.{ AkkaRuntime, Component }
 import ai.mantik.engine.protos.engine.AboutServiceGrpc.AboutServiceBlockingStub
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderServiceBlockingStub
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorServiceBlockingStub
@@ -9,7 +10,6 @@ import ai.mantik.planner.impl.ContextImpl
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryServiceStub
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryServiceStub
 import ai.mantik.planner.repository.rpc.{ FileRepositoryClientImpl, RepositoryClientImpl }
-import ai.mantik.planner.utils.{ AkkaRuntime, Component }
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
 import io.grpc.Status.Code

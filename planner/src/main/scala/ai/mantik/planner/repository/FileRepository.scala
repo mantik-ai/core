@@ -2,8 +2,8 @@ package ai.mantik.planner.repository
 
 import java.net.InetSocketAddress
 
+import ai.mantik.componently.{ AkkaRuntime, Component }
 import ai.mantik.planner.repository.impl.Factory
-import ai.mantik.planner.utils.{ AkkaRuntime, Component }
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 

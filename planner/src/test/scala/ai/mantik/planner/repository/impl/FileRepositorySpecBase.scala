@@ -2,7 +2,6 @@ package ai.mantik.planner.repository.impl
 
 import ai.mantik.planner.repository.{ ContentTypes, Errors, FileRepository }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
-import ai.mantik.planner.utils.AkkaRuntime
 import ai.mantik.testutils.{ AkkaSupport, FakeClock, TestBase }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.headers.Accept

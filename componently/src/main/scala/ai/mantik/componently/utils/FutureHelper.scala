@@ -1,16 +1,16 @@
-package ai.mantik.planner.impl
+package ai.mantik.componently.utils
 
 import java.time.Clock
 import java.time.temporal.ChronoUnit
 
 import akka.actor.ActorSystem
-import org.slf4j.Logger
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ ExecutionContext, Future, Promise, TimeoutException }
 import scala.util.{ Failure, Success }
 
-private[impl] object FutureHelper {
+object FutureHelper {
 
   /** Times a future returning function and writes to log. */
   def time[T](logger: Logger, name: String)(f: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
@@ -52,7 +52,6 @@ private[impl] object FutureHelper {
 
   /**
    * Try `f` multiple times within a given timeout.
-   * TODO: This function is copy and paste from executor
    */
   def tryMultipleTimes[T](timeout: FiniteDuration, tryAgainWaitDuration: FiniteDuration)(f: => Future[Option[T]])(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[T] = {
     val result = Promise[T]
