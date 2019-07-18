@@ -70,6 +70,17 @@ val testSettings = Seq (
   parallelExecution in IntegrationTest := false
 ) ++ inConfig(IntegrationTest)(Defaults.testTasks)
 
+def enableProtocolBuffer = Seq(
+  libraryDependencies ++= Seq(
+    "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
+    "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
+    "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
+  ),
+  PB.targets in Compile := Seq(
+    scalapb.gen() -> (sourceManaged in Compile).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
+  )
+)
+
 // Initializes a sub project with common settings
 def makeProject(directory: String, id: String = "") = {
   val idToUse = if (id.isEmpty){
@@ -161,13 +172,10 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
       // Kubernetes Client
       "io.skuber" %% "skuber" % "2.2.0",
 
-      // Logging
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-
       // Guava
       "com.google.guava" % "guava" % "27.1-jre",
+
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
     ),
     publishSettings
   )
@@ -190,6 +198,13 @@ lazy val executorApp = makeProject("executor/app", "executorApp")
     publishSettings
   )
   .enablePlugins(BuildInfoPlugin)
+  .settings(
+    libraryDependencies ++= Seq(
+      // Logging
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+    )
+  )
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](
       name,
@@ -227,12 +242,13 @@ lazy val planner = makeProject("planner")
       "org.xerial" % "sqlite-jdbc" % "3.18.0",
       "io.getquill" %% "quill-jdbc" % "3.2.0"
     ),
-    publishSettings
+    publishSettings,
+    enableProtocolBuffer
   )
 
 
 lazy val examples = makeProject("examples")
-  .dependsOn(planner)
+  .dependsOn(engine)
   .settings(
     name := "examples",
     libraryDependencies ++= Seq(
@@ -243,7 +259,7 @@ lazy val examples = makeProject("examples")
   )
 
 lazy val engine = makeProject("engine")
-  .dependsOn(planner, executorApi)
+  .dependsOn(planner, executorKubernetes)
   .dependsOn(executorApp % "test")
   .settings(
     name := "engine",
@@ -261,18 +277,13 @@ lazy val engine = makeProject("engine")
     buildInfoPackage := "ai.mantik.engine.buildinfo"
   )
   .settings(
-    libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % "1.2.3"
-    )
-  )  
+    enableProtocolBuffer
+  )
   .settings(
     libraryDependencies ++= Seq(
-      "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
-      "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
-      "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
-    ),
-    PB.targets in Compile := Seq(
-      scalapb.gen() -> (sourceManaged in Compile).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
+      // Logging
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
     )
   )
 

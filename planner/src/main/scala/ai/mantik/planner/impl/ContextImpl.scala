@@ -46,6 +46,7 @@ private[impl] class ContextImpl(val repository: Repository, val fileRepository: 
 
   private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
     val (artifact, hull) = await(repository.getWithHull(id), dbLookupTimeout)
+    logger.debug(s"Loaded ${id}, itemId=${artifact.itemId}, fileId=${artifact.fileId}")
     artifact.mantikfile.definitionAs[T#DefinitionType] match {
       case Left(error) => throw new Errors.WrongTypeException("Wrong item type", error)
       case _           => // ok
@@ -92,7 +93,7 @@ private[impl] class ContextImpl(val repository: Repository, val fileRepository: 
     }
     val artifact = MantikArtifact(mantikfile, fileId, idToUse, itemId)
     await(repository.store(artifact), dbLookupTimeout)
-    logger.info(s"Storing ${artifact.id} done")
+    logger.info(s"Storing ${artifact.id} done, itemId=${itemId}, fileId=${fileId}")
     idToUse
   }
 
@@ -103,33 +104,40 @@ private[impl] class ContextImpl(val repository: Repository, val fileRepository: 
   }
 }
 
-object ContextImpl {
-
-  def constructForLocalTesting(): Context = {
-    implicit val akkaRuntime = AkkaRuntime.createNew()
-    constructForLocalTestingWithAkka(
-      shutdownMethod = () => akkaRuntime.actorSystem.terminate()
-    )
-  }
+private[mantik] object ContextImpl {
 
   def constructForLocalTestingWithAkka(shutdownMethod: () => Unit = () => (()))(implicit akkaRuntime: AkkaRuntime): Context = {
-    val executorUrl = akkaRuntime.config.getString("mantik.core.executorUrl")
-
-    implicit val ec: ExecutionContext = akkaRuntime.executionContext
     val repository = Repository.create()
     val fileRepo: FileRepository = FileRepository.createFileRepository()
+    val executor = constructExecutorClient()
+    constructWithComponents(repository, fileRepo, executor, shutdownMethod)
+  }
+
+  /** Construct a context with a running local stateful services (e.g. the Engine). */
+  def constructWithComponents(
+    repository: Repository,
+    fileRepository: FileRepository,
+    executor: Executor,
+    shutdownMethod: () => Unit = () => (())
+  )(implicit akkaRuntime: AkkaRuntime): Context = {
     val bridges: Bridges = Bridges.loadFromConfig(akkaRuntime.config)
     val planner = new PlannerImpl(bridges)
-    val executor: Executor = new ExecutorClient(executorUrl)(
-      akkaRuntime.actorSystem,
-      akkaRuntime.materializer
-    )
     val planExecutor = new PlanExecutorImpl(
-      fileRepo,
+      fileRepository,
       repository,
       executor,
       "local",
       bridges.dockerConfig)
-    new ContextImpl(repository, fileRepo, planner, planExecutor, shutdownMethod)
+    new ContextImpl(repository, fileRepository, planner, planExecutor, shutdownMethod)
   }
+
+  def constructExecutorClient()(implicit akkaRuntime: AkkaRuntime): Executor = {
+    val executorUrl = akkaRuntime.config.getString("mantik.core.executorUrl")
+    val executor: Executor = new ExecutorClient(executorUrl)(
+      akkaRuntime.actorSystem,
+      akkaRuntime.materializer
+    )
+    executor
+  }
+
 }

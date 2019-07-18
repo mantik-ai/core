@@ -30,6 +30,9 @@ trait AkkaRuntime {
       AkkaRuntimeImpl(newConfig, materializer, executionContext, actorSystem, clock)
     }
   }
+
+  /** Shutdown Akka. */
+  def shutdown(): Unit
 }
 
 object AkkaRuntime {
@@ -60,4 +63,6 @@ private[utils] case class AkkaRuntimeImpl(
   executionContext: ExecutionContext,
   actorSystem: ActorSystem,
   clock: Clock
-) extends AkkaRuntime
+) extends AkkaRuntime {
+  override def shutdown(): Unit = actorSystem.terminate()
+}

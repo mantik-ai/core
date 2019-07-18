@@ -9,6 +9,7 @@ import ai.mantik.executor.kubernetes.tracker.KubernetesTracker
 import ai.mantik.executor.model._
 import ai.mantik.executor.{ Errors, Executor }
 import akka.actor.{ ActorSystem, Cancellable }
+import akka.stream.Materializer
 import com.google.common.net.InetAddresses
 import com.typesafe.scalalogging.Logger
 import skuber.json.batch.format._
@@ -31,6 +32,10 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
 
   val kubernetesHost = ops.clusterServer.authority.host.address()
   logger.info(s"Initializing with kubernetes at address ${kubernetesHost}")
+  logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
+  logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
+  logger.info(s"Node collapsing:     ${config.enableExistingServiceNodeCollapse}")
+  logger.info(s"Disable Pull:        ${config.kubernetes.disablePull}")
 
   override def schedule(job: Job): Future[String] = {
     val jobId = UUID.randomUUID().toString
@@ -315,4 +320,19 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   override def nameAndVersion: String = s"KubernetesExecutor ${BuildInfo.version}  (${BuildInfo.gitVersion}-${BuildInfo.buildNum})"
+}
+
+object KubernetesExecutor {
+
+  /** Create a Kubernetes executor by initializing all components. */
+  def create(typesafeConfig: com.typesafe.config.Config)(
+    implicit
+    actorSystem: ActorSystem, clock: Clock, materializer: Materializer, ec: ExecutionContext
+  ): KubernetesExecutor = {
+    val config = Config.fromTypesafeConfig(typesafeConfig)
+    val kubernetesClient = skuber.k8sInit
+    val k8sOperations = new K8sOperations(config, kubernetesClient)
+    val executor = new KubernetesExecutor(config, k8sOperations)
+    executor
+  }
 }

@@ -1,0 +1,64 @@
+syntax = "proto3";
+package ai.mantik.planner.repository.protos;
+import "mantik/repository/types.proto";
+
+/* Holds local available Mantik Objects. */
+service RepositoryService {
+    // Get a single item
+    rpc Get (GetItemRequest) returns (GetItemResponse) {}
+
+    // Get multiple items
+    rpc GetWithHull (GetItemRequest) returns (GetItemWithHullResponse) {}
+
+    // Store an item
+    rpc Store(StoreRequest) returns (StoreResponse) {}
+
+    // Update the deployment state of an element
+    rpc SetDeploymentInfo(SetDeploymentInfoRequest) returns (SetDeploymentInfoResponse) {}
+
+    // Remove an item
+    rpc Remove(RemoveRequest) returns (RemoveResponse) {}
+}
+
+message GetItemRequest {
+    string mantik_id = 1;
+}
+
+message GetItemResponse {
+    MantikArtifact artifact = 1;
+}
+
+message GetItemWithHullResponse {
+    MantikArtifact artifact = 1;
+    repeated MantikArtifact hull = 2;
+}
+
+message StoreRequest {
+    MantikArtifact artifact = 1;
+}
+
+message StoreResponse {
+    // Empty yet
+}
+
+message SetDeploymentInfoRequest {
+    // The item whose deployment info is going to be updated
+    string item_id = 1;
+    // the new deployment info
+    DeploymentInfo info = 2;
+}
+
+message SetDeploymentInfoResponse {
+    // True if item was found and updated
+    bool updated = 1;
+}
+
+message RemoveRequest {
+    // The item which is going to be removed.
+    string mantik_id = 1;
+}
+
+message RemoveResponse {
+    // True, if the item was found
+    bool found = 1;
+}

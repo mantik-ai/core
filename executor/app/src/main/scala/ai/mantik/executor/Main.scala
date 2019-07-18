@@ -20,17 +20,10 @@ object Main extends App {
   implicit val clock = Clock.systemUTC()
   try {
     val typesafeConfig = ConfigFactory.load()
-    val config = Config.fromTypesafeConfig(typesafeConfig)
-    val kubernetesClient = skuber.k8sInit
-    val k8sOperations = new K8sOperations(config, kubernetesClient)
-    val executor = new KubernetesExecutor(config, k8sOperations)
+    val executor = KubernetesExecutor.create(typesafeConfig)
     val serverConfig = ServerConfig.fromTypesafe(typesafeConfig)
     val server = new ExecutorServer(serverConfig, executor)
-    logger.info("Starting Executor")
-    logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
-    logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
-    logger.info(s"Node collapsing:     ${config.enableExistingServiceNodeCollapse}")
-    logger.info(s"Disable Pull:        ${config.kubernetes.disablePull}")
+    logger.info("Starting Executor Server")
     server.start()
   } catch {
     case e: Exception =>

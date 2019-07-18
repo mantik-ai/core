@@ -13,6 +13,10 @@ import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionService
+import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc
+import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryService
+import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc
+import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
 import com.typesafe.config.Config
 import io.grpc.netty.NettyServerBuilder
 import io.grpc.{ Server, ServerBuilder }
@@ -25,7 +29,9 @@ class EngineServer(
     sessionService: SessionService,
     graphBuilderService: GraphBuilderService,
     graphExecutorService: GraphExecutorService,
-    debugService: DebugService
+    debugService: DebugService,
+    repositoryService: RepositoryService,
+    fileRepositoryService: FileRepositoryService
 )(implicit config: Config, executionContext: ExecutionContext) {
 
   private val logger = LoggerFactory.getLogger(getClass)
@@ -84,6 +90,8 @@ class EngineServer(
       .addService(GraphBuilderServiceGrpc.bindService(graphBuilderService, executionContext))
       .addService(GraphExecutorServiceGrpc.bindService(graphExecutorService, executionContext))
       .addService(DebugServiceGrpc.bindService(debugService, executionContext))
+      .addService(RepositoryServiceGrpc.bindService(repositoryService, executionContext))
+      .addService(FileRepositoryServiceGrpc.bindService(fileRepositoryService, executionContext))
       .build()
   }
 

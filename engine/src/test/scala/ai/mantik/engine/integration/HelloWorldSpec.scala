@@ -8,6 +8,7 @@ import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, GetRequest, Literal
 import ai.mantik.engine.protos.graph_executor.FetchItemRequest
 import ai.mantik.engine.protos.sessions.CreateSessionRequest
 import ai.mantik.engine.server.services.Converters
+import ai.mantik.planner.repository.Errors
 import ai.mantik.testutils.tags.IntegrationTest
 import com.google.protobuf.empty.Empty
 
@@ -55,5 +56,14 @@ class HelloWorldSpec extends IntegrationTestBase {
     decoded shouldBe Bundle.buildColumnWise
       .withPrimitives("y", 2.0, 4.0)
       .result
+  }
+
+  it should "give access to the repository" in {
+    intercept[Errors.NotFoundException] {
+      await(engineClient.repository.get("Not-existing"))
+    }
+    intercept[Errors.NotFoundException] {
+      await(engineClient.fileRepository.requestFileGet("foo"))
+    }
   }
 }
