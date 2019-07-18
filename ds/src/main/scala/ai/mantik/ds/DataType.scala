@@ -98,16 +98,21 @@ object FundamentalType {
   case object VoidType extends FundamentalType
 
   /** Parses a fundamental type from Name. */
-  def fromName(name: String): FundamentalType = DataTypeJsonAdapter.fundamentalTypeFromName(name)
+  def fromName(name: String): Option[FundamentalType] = DataTypeJsonAdapter.fundamentalTypeFromName(name)
 }
 
-sealed trait ImageChannel
+sealed trait ImageChannel {
+  def name: String = DataTypeJsonAdapter.imageChannelName(this)
+}
 
 object ImageChannel {
   case object Red extends ImageChannel
   case object Blue extends ImageChannel
   case object Green extends ImageChannel
   case object Black extends ImageChannel
+
+  /** Parses a channel from name. */
+  def fromName(name: String): Option[ImageChannel] = DataTypeJsonAdapter.imageChannelFromName(name)
 }
 
 /** Describe a single image component */
@@ -140,6 +145,23 @@ case class Image(
   }
 
   override def toString: String = s"Image(${width}x${height}, [${channelsToString}])"
+}
+
+object Image {
+
+  /** Convenience constructor for plain Images. */
+  def plain(
+    width: Int,
+    height: Int,
+    components: (ImageChannel, FundamentalType)*
+  ): Image = {
+    Image(width, height,
+      ListMap(components.map {
+        case (channel, dataType) =>
+          channel -> ImageComponent(dataType)
+      }: _*)
+    )
+  }
 }
 
 /**

@@ -20,6 +20,12 @@ class DataTypeSpec extends TestBase {
     toJson(FundamentalType.BoolType) shouldBe Json.fromString("bool")
   }
 
+  it should "know from their name" in {
+    FundamentalType.fromName("int32") shouldBe Some(FundamentalType.Int32)
+    FundamentalType.fromName("INT32") shouldBe Some(FundamentalType.Int32)
+    FundamentalType.fromName("unknown") shouldBe None
+  }
+
   "images" should "serialize well" in {
     toJson(Image(
       100,
@@ -65,6 +71,12 @@ class DataTypeSpec extends TestBase {
       ),
       "format" -> "png".asJson
     )
+  }
+
+  "imageChannel" should "know their name" in {
+    ImageChannel.fromName("red") shouldBe Some(ImageChannel.Red)
+    ImageChannel.fromName("BLACK") shouldBe Some(ImageChannel.Black)
+    ImageChannel.fromName("unknown") shouldBe None
   }
 
   "tabular data" should "serialize well" in {

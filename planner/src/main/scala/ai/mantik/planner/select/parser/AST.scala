@@ -1,6 +1,6 @@
 package ai.mantik.planner.select.parser
 
-import ai.mantik.ds.FundamentalType
+import ai.mantik.ds.{ FundamentalType, ImageChannel }
 
 /** Abstract syntax tree for the parser. */
 object AST {
@@ -64,5 +64,8 @@ object AST {
    */
   sealed trait TypeNode
   case class FundamentalTypeNode(ft: FundamentalType) extends TypeNode
-  case object TensorTypeNode extends TypeNode
+  /** Converts something to a tensor (with optional underlying type change). */
+  case class TensorTypeNode(underlying: Option[FundamentalType]) extends TypeNode
+  /** Converts something to a image (with optional underlying type change). */
+  case class ImageTypeNode(underlying: Option[FundamentalType], channel: Option[ImageChannel]) extends TypeNode
 }

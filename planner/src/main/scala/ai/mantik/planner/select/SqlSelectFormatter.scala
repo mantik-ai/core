@@ -1,6 +1,6 @@
 package ai.mantik.planner.select
 
-import ai.mantik.ds.{ DataType, FundamentalType, Image, TabularData, Tensor }
+import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageChannel, TabularData, Tensor }
 import ai.mantik.ds.element.Primitive
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.operations.BinaryOperation
@@ -51,7 +51,7 @@ private class SqlSelectFormatter(inputData: TabularData) {
         val columnName = columnNames(c.columnId)
         formatColumnName(columnName)
       case c: CastExpression =>
-        s"CAST (${formatExpression(c.expression)} AS ${formatDataType(c.dataType)})"
+        s"CAST (${formatExpression(c.expression)} AS ${formatCastToDataType(c.expression.dataType, c.dataType)})"
       case b: BinaryExpression =>
         formatBinary(b.left, b.right, formatBinaryOperationSign(b.op))
       case e: Condition.Equals =>
@@ -76,12 +76,38 @@ private class SqlSelectFormatter(inputData: TabularData) {
     s"(${formatExpression(left)} ${sign} ${formatExpression(right)})"
   }
 
-  def formatDataType(dataType: DataType): String = {
+  def formatCastToDataType(from: DataType, dataType: DataType): String = {
+
+    def extractSingleUnderlying(dataType: DataType): Option[FundamentalType] = {
+      dataType match {
+        case f: FundamentalType                 => Some(f)
+        case i: Image if i.components.size == 1 => Some(i.components.head._2.componentType)
+        case t: Tensor                          => Some(t.componentType)
+        case _                                  => None
+      }
+    }
+
+    def maybeUnderlyingCast(): String = {
+      val fromUnderlying = extractSingleUnderlying(from)
+      val toUnderlying = extractSingleUnderlying(dataType)
+      (fromUnderlying, toUnderlying) match {
+        case (Some(x), Some(y)) if x == y => "" // no extra cast needed
+        case (Some(_), Some(y))           => s" OF ${y.name}"
+        case _ =>
+          throw new IllegalStateException(s"Cannot serialize cast from $from to $dataType")
+      }
+    }
     dataType match {
       case f: FundamentalType => f.name
-      case i: Image           => "image"
-      case t: Tensor          => "tensor"
-      case _                  => throw new IllegalArgumentException(s"Unsupported data type ${dataType}")
+      case i: Image =>
+        val colorString = i.components.headOption match {
+          case Some((c, _)) if c != ImageChannel.Black => s" IN ${c.name}"
+          case _                                       => ""
+        }
+        "image" + maybeUnderlyingCast() + colorString
+      case t: Tensor =>
+        "tensor" + maybeUnderlyingCast()
+      case _ => throw new IllegalArgumentException(s"Unsupported data type ${dataType}")
     }
   }
 

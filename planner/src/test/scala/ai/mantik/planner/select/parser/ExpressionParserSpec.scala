@@ -1,6 +1,6 @@
 package ai.mantik.planner.select.parser
 
-import ai.mantik.ds.FundamentalType
+import ai.mantik.ds.{ FundamentalType, ImageChannel }
 import ai.mantik.planner.select.parser.AST._
 import org.parboiled2.{ Parser, ParserInput }
 
@@ -37,7 +37,10 @@ class ExpressionParserSpec extends ParserTestBase {
   expressionTest("\"void\"", IdentifierNode("void", ignoreCase = false))
   expressionTest("CAST (1as int32)", CastNode(NumberNode(1), FundamentalTypeNode(FundamentalType.Int32)))
   expressionTest("CAST (1 as int32)", CastNode(NumberNode(1), FundamentalTypeNode(FundamentalType.Int32)))
-  expressionTest("CAST (TRUE as TENSOR)", CastNode(BoolNode(true), TensorTypeNode))
+  expressionTest("CAST (TRUE as TENSOR)", CastNode(BoolNode(true), TensorTypeNode(None)))
+  expressionTest("CAST (TRUE as TENSOR of int32)", CastNode(BoolNode(true), TensorTypeNode(Some(FundamentalType.Int32))))
+  expressionTest("CAST (TRUE as IMAGE)", CastNode(BoolNode(true), ImageTypeNode(None, None)))
+  expressionTest("CAST (TRUE as IMAGE of uint8 in red)", CastNode(BoolNode(true), ImageTypeNode(Some(FundamentalType.Uint8), Some(ImageChannel.Red))))
   expressionTest("A = B", BinaryOperationNode("=", IdentifierNode("A"), IdentifierNode("B")))
   expressionTest("A=B", BinaryOperationNode("=", IdentifierNode("A"), IdentifierNode("B")))
   expressionTest("1<>2", BinaryOperationNode("<>", NumberNode(1), NumberNode(2)))

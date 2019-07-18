@@ -31,5 +31,27 @@ object MnistTraining extends ExampleBase {
     println("Applied:\n" + appliedResult.render())
 
     println("Stats:\n" + context.execute(stats.fetch))
+
+    /*
+    // This doesn't work yet, Bug #99
+    val productionImageInput = TabularData(
+      "image" -> Image(
+        28, 28, ListMap(
+          ImageChannel.Black -> ImageComponent(FundamentalType.Uint8)
+        )
+      )
+    )
+    val inputFilter = AutoAdapt.autoSelectAlgorithm(productionImageInput, trained.functionType.input).force
+
+    val productionPipe = Pipeline.build(
+      inputFilter,
+      trained
+    )
+
+    val deployResult = context.execute(productionPipe.deploy(ingressName = Some("mnist")))
+    println(s"Pipeline deployed: ${deployResult.externalUrl}")
+    // waiting some time to get online, see bug #95
+    Thread.sleep(10000)
+     */
   }
 }
