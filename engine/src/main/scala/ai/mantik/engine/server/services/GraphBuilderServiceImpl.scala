@@ -1,11 +1,11 @@
 package ai.mantik.engine.server.services
 
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, NodeResponse, SelectRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager }
 import ai.mantik.planner.repository.Errors
-import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
 import akka.stream.Materializer
 

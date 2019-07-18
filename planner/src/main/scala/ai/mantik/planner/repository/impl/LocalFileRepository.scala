@@ -7,12 +7,12 @@ import java.time.temporal.{ ChronoUnit, Temporal, TemporalUnit }
 import java.time.{ Clock, Instant }
 import java.util.UUID
 
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.planner.repository.{ Errors, FileRepository }
 import ai.mantik.planner.repository.Errors.RepositoryError
 import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.planner.repository.impl.LocalFileRepository.FileMetaData
-import ai.mantik.planner.utils.AkkaRuntime
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ FileIO, Sink, Source }

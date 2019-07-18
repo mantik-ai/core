@@ -2,6 +2,7 @@ package ai.mantik.engine.server.services
 
 import java.nio.charset.StandardCharsets
 
+import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.formats.json.JsonFormat
@@ -81,7 +82,7 @@ private[engine] object Converters {
     }
     protoBundle.encoding match {
       case BundleEncoding.ENCODING_MSG_PACK =>
-        val bytes = decodeByteString(protoBundle.encoded)
+        val bytes = RpcConversions.decodeByteString(protoBundle.encoded)
         val sink = Bundle.fromStreamWithoutHeader(dataType)
         Source.single(bytes).runWith(sink)
       case BundleEncoding.ENCODING_JSON =>
@@ -129,7 +130,7 @@ private[engine] object Converters {
       ProtoBundle(
         Some(encodeDataType(bundle.model)),
         encoding = BundleEncoding.ENCODING_MSG_PACK,
-        encoded = encodeByteString(byteBlobs)
+        encoded = RpcConversions.encodeByteString(byteBlobs)
       )
     }
   }
@@ -148,27 +149,4 @@ private[engine] object Converters {
       case Right(ok)   => ok
     }
   }
-
-  def decodeByteString(bs: ProtoByteString): ByteString = {
-    ByteString.fromArrayUnsafe(bs.toByteArray)
-  }
-
-  def encodeByteString(bs: ByteString): ProtoByteString = {
-    bs.asByteBuffers.foldLeft(ProtoByteString.EMPTY) {
-      case (c, n) =>
-        c.concat(ProtoByteString.copyFrom(n))
-    }
-  }
-
-  def encodeByteString(bs: IterableOnce[ByteString]): ProtoByteString = {
-    var result = ProtoByteString.EMPTY
-    for {
-      b <- bs
-      p <- b.asByteBuffers
-    } {
-      result = result.concat(ProtoByteString.copyFrom(p))
-    }
-    result
-  }
-
 }

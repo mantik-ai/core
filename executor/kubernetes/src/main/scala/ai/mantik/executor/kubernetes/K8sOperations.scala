@@ -3,6 +3,8 @@ package ai.mantik.executor.kubernetes
 import java.time.Clock
 import java.time.temporal.ChronoUnit
 
+import ai.mantik.componently.utils.FutureHelper
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.executor.Errors.InternalException
 import akka.Done
 import akka.actor.ActorSystem
@@ -26,9 +28,8 @@ import scala.concurrent.{ ExecutionContext, Future, Promise, TimeoutException }
 import scala.util.{ Failure, Success }
 
 /** Wraps Kubernetes Operations */
-class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: ExecutionContext, actorSystem: ActorSystem, clock: Clock) {
+class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
 
-  val logger = Logger(getClass)
   // this seems to be missing in skuber
   private implicit val rsListFormat = skuber.json.format.ListResourceFormat[ReplicaSet]
 
@@ -134,7 +135,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
       }
     }
 
-    tryMultipleTimes(config.kubernetes.defaultTimeout, config.kubernetes.defaultRetryInterval)(tryFunction())
+    FutureHelper.tryMultipleTimes(config.kubernetes.defaultTimeout, config.kubernetes.defaultRetryInterval)(tryFunction())
   }
 
   /** Ensure the existence of a namespace, and returns a kubernetes client for this namespace. */
@@ -155,28 +156,6 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit ex: E
   /** Returns the namespace if available. */
   def getNamespace(namespace: String): Future[Option[Namespace]] = {
     errorHandling(rootClient.getOption[Namespace](namespace))
-  }
-
-  /** Try `f` multiple times within a given timeout. */
-  private def tryMultipleTimes[T](timeout: FiniteDuration, tryAgainWaitDuration: FiniteDuration)(f: => Future[Option[T]]): Future[T] = {
-    val result = Promise[T]
-    val finalTimeout = clock.instant().plus(timeout.toMillis, ChronoUnit.MILLIS)
-    def tryAgain(): Unit = {
-      f.andThen {
-        case Success(None) =>
-          if (clock.instant().isAfter(finalTimeout)) {
-            result.tryFailure(new TimeoutException(s"Timeout after ${timeout}"))
-          } else {
-            actorSystem.scheduler.scheduleOnce(tryAgainWaitDuration)(tryAgain())
-          }
-        case Success(Some(x)) =>
-          result.trySuccess(x)
-        case Failure(e) =>
-          result.tryFailure(e)
-      }
-    }
-    tryAgain()
-    result.future
   }
 
   /** Returns all Pods which are managed by this executor and which are in pending state. */

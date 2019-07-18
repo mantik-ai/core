@@ -3,10 +3,10 @@ package ai.mantik.planner.impl.exec
 import java.net.InetSocketAddress
 import java.util.UUID
 
+import ai.mantik.componently.ComponentBase
 import ai.mantik.planner.repository.FileRepository
 import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
-import ai.mantik.planner.utils.ComponentBase
 import ai.mantik.planner.{ PlanFile, PlanFileReference }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import akka.stream.scaladsl.{ Sink, Source }

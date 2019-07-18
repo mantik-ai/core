@@ -1,6 +1,6 @@
 package ai.mantik.engine.testutil
 
-import ai.mantik.planner.utils.AkkaRuntime
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import com.typesafe.config.{ Config, ConfigFactory }
 

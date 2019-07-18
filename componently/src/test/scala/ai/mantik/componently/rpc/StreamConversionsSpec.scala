@@ -1,4 +1,4 @@
-package ai.mantik.planner.repository.rpc
+package ai.mantik.componently.rpc
 
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import akka.stream.scaladsl.{ Keep, Sink }

@@ -2,10 +2,11 @@ package ai.mantik.planner.repository.rpc
 
 import java.net.{ InetAddress, InetSocketAddress }
 
+import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
+import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.FileRepository
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryService
 import ai.mantik.planner.repository.protos.file_repository.{ DeleteFileRequest, LoadFileRequest, LoadFileResponse, RequestFileGetRequest, RequestFileStorageRequest, StoreFileRequest, StoreFileResponse }
-import ai.mantik.planner.utils.{ AkkaRuntime, Component }
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 import com.google.protobuf.empty.Empty
@@ -14,9 +15,7 @@ import com.typesafe.scalalogging.Logger
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
-class FileRepositoryClientImpl(service: FileRepositoryService)(implicit val akkaRuntime: AkkaRuntime) extends FileRepository with Component {
-  val logger = Logger(getClass)
-
+class FileRepositoryClientImpl(service: FileRepositoryService)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FileRepository {
   override def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult] = {
     Conversions.decodeErrorsIn {
       service.requestFileStorage(RequestFileStorageRequest(temporary)).map { response =>
@@ -34,7 +33,7 @@ class FileRepositoryClientImpl(service: FileRepositoryService)(implicit val akka
         FileRepository.FileGetResult(
           response.fileId,
           response.path,
-          Conversions.decodeOptionalString(response.contentType)
+          RpcConversions.decodeOptionalString(response.contentType)
         )
       }
     }
@@ -52,7 +51,7 @@ class FileRepositoryClientImpl(service: FileRepositoryService)(implicit val akka
 
         val sink = StreamConversions.sinkFromStreamObserver(inputHandler)
           .contramap { data: ByteString =>
-            StoreFileRequest(chunk = Conversions.encodeByteString(data))
+            StoreFileRequest(chunk = RpcConversions.encodeByteString(data))
           }
         sink.mapMaterializedValue { _ =>
           future.map { _ =>
@@ -79,7 +78,7 @@ class FileRepositoryClientImpl(service: FileRepositoryService)(implicit val akka
         val adapted = source.mapMaterializedValue { streamObserver =>
           service.loadFile(LoadFileRequest(fileId = id), streamObserver)
         }.map { response =>
-          Conversions.decodeByteString(response.chunk)
+          RpcConversions.decodeByteString(response.chunk)
         }.mapError(Conversions.decodeErrors)
         adapted
       }

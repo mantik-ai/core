@@ -18,6 +18,7 @@ Code Structure
 --------------
 - :code:`bridge` Contains Adapters (Bridges) to Data Formats and Algorithms
 - :code:`doc` Contains documentation which can be rendered with `sphinx <https://www.sphinx-doc.org/en/master/usage/quickstart.html>`_.
+- :code:`componently` Scala Helper library, simplifying use of Akka, gRpc and Component-Building.
 - :code:`ds` Contains Mantik DataTypes and their main serialization format.
 - :code:`elements` Contains the basic Mantik definitions: Mantikfile, various Definitions.
 - :code:`examples` Contains Examples

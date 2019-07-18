@@ -1,5 +1,6 @@
 package ai.mantik.engine
 
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.engine.server.EngineServer
 import ai.mantik.engine.server.services.{ AboutServiceImpl, DebugServiceImpl, GraphBuilderServiceImpl, GraphExecutorServiceImpl, SessionServiceImpl }
 import ai.mantik.engine.session.{ Session, SessionManager }
@@ -8,7 +9,6 @@ import ai.mantik.executor.server.{ ExecutorServer, ServerConfig }
 import ai.mantik.planner.impl.ContextImpl
 import ai.mantik.planner.repository.rpc.{ FileRepositoryServiceImpl, RepositoryServiceImpl }
 import ai.mantik.planner.repository.{ FileRepository, Repository }
-import ai.mantik.planner.utils.AkkaRuntime
 import ai.mantik.planner.{ Context, CoreComponents, PlanExecutor, Planner }
 
 /**
@@ -20,17 +20,9 @@ private[engine] object EngineFactory {
   def makeEngineContext()(implicit akkaRuntime: AkkaRuntime): Context = {
     val fileRepository = FileRepository.createFileRepository()
     val repository = Repository.create()
-    val executor = KubernetesExecutor.create(akkaRuntime.config)(
-      akkaRuntime.actorSystem,
-      akkaRuntime.clock,
-      akkaRuntime.materializer,
-      akkaRuntime.executionContext
-    )
+    val executor = KubernetesExecutor.create(akkaRuntime.config)
     val executorServerConfig = ServerConfig.fromTypesafe(akkaRuntime.config)
-    val executorServer = new ExecutorServer(executorServerConfig, executor)(
-      akkaRuntime.actorSystem,
-      akkaRuntime.materializer
-    )
+    val executorServer = new ExecutorServer(executorServerConfig, executor)
     executorServer.start()
     ContextImpl.constructWithComponents(
       repository,

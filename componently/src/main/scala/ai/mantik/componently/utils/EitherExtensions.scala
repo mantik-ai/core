@@ -1,8 +1,8 @@
-package ai.mantik.planner
-import scala.language.implicitConversions
+package ai.mantik.componently.utils
 
 /** Extend Either. */
-object EitherUtils {
+object EitherExtensions {
+  import scala.language.implicitConversions
 
   /** Extensions for Either where the left value is something throwable. */
   class ThrowableEitherExt[L <: Throwable, R](in: Either[L, R]) {

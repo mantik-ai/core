@@ -1,6 +1,6 @@
 package ai.mantik.planner.util
 
-import ai.mantik.planner.utils.AkkaRuntime
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.testutils.{ AkkaSupport, FakeClock, TestBase }
 import com.typesafe.config.ConfigFactory
 

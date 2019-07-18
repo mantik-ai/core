@@ -1,11 +1,11 @@
 package ai.mantik.engine.integration
 
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.engine.{ EngineClient, EngineFactory }
 import ai.mantik.engine.server.EngineServer
 import ai.mantik.executor.kubernetes.ExecutorForIntegrationTests
 import ai.mantik.planner.Context
 import ai.mantik.planner.impl.ContextImpl
-import ai.mantik.planner.utils.AkkaRuntime
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -21,8 +21,8 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    embeddedExecutor = new ExecutorForIntegrationTests(typesafeConfig)
     implicit val akkaRuntime = AkkaRuntime.fromRunning(typesafeConfig)
+    embeddedExecutor = new ExecutorForIntegrationTests(typesafeConfig)
     context = ContextImpl.constructForLocalTestingWithAkka()
     engineServer = EngineFactory.makeEngineServer(context)
     engineServer.start()

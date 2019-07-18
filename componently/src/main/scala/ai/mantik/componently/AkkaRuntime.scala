@@ -1,4 +1,4 @@
-package ai.mantik.planner.utils
+package ai.mantik.componently
 
 import java.time.Clock
 
@@ -57,7 +57,7 @@ object AkkaRuntime {
   }
 }
 
-private[utils] case class AkkaRuntimeImpl(
+private[componently] case class AkkaRuntimeImpl(
   config: Config,
   materializer: Materializer,
   executionContext: ExecutionContext,

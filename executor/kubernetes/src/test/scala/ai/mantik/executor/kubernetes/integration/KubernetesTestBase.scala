@@ -2,6 +2,7 @@ package ai.mantik.executor.kubernetes.integration
 
 import java.time.Clock
 
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.kubernetes.{ Config, KubernetesCleaner }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import com.typesafe.config.ConfigFactory
@@ -23,6 +24,8 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
   val config = Config.fromTypesafeConfig(typesafeConfig)
 
   protected var _kubernetesClient: KubernetesClient = _
+
+  protected implicit lazy val akkaRuntime = AkkaRuntime.fromRunning(typesafeConfig)
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()

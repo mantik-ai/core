@@ -2,10 +2,10 @@ package ai.mantik.engine.testutil
 
 import java.time.Clock
 
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.planner.repository.{ FileRepository, Repository }
 import ai.mantik.planner.{ CoreComponents, Plan, PlanExecutor, Planner }
 import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalRepository }
-import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 import org.apache.commons.io.FileUtils
 

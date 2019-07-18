@@ -2,8 +2,8 @@ package ai.mantik.planner.repository.impl
 
 import java.net.{ Inet4Address, InetAddress, InetSocketAddress, NetworkInterface }
 
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.planner.repository.{ Errors, FileRepository }
-import ai.mantik.planner.utils.{ AkkaRuntime, ComponentBase }
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ HttpEntity, MediaType, MediaTypes }
@@ -19,8 +19,6 @@ import scala.util.{ Failure, Success }
 
 /** Implements the HTTP server parts from the [[FileRepository]] trait. */
 abstract class FileRepositoryServer(implicit runtime: AkkaRuntime) extends ComponentBase with FileRepository {
-  protected val logger = LoggerFactory.getLogger(getClass)
-
   val HelloMessage = "This is a Mantik File Repository"
 
   protected val subConfig = runtime.config.getConfig("mantik.repository.fileRepository")

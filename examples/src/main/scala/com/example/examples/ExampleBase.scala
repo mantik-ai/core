@@ -1,8 +1,8 @@
 package com.example.examples
 
+import ai.mantik.componently.AkkaRuntime
 import ai.mantik.engine.EngineClient
 import ai.mantik.planner.Context
-import ai.mantik.planner.utils.AkkaRuntime
 
 /** Implements boiler plate for local mantik sample applications. */
 abstract class ExampleBase {

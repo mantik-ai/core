@@ -52,6 +52,7 @@ lazy val testutils = (project in file("testutils"))
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion,
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "commons-io" % "commons-io" % "2.6",
@@ -136,7 +137,32 @@ lazy val elements = makeProject("elements")
     publishSettings
   )
 
+// Helper library for component building based upon Akka, gRpc
+lazy val componently = makeProject("componently")
+  .settings(
+    name := "componently",
+    libraryDependencies ++= Seq(
+      // SLF4J Api
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+
+      // Akka
+      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+
+      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
+
+      // gRPC
+      "io.grpc" % "grpc-stub" % scalapb.compiler.Version.grpcJavaVersion,
+      "com.google.protobuf" % "protobuf-java" % scalapb.compiler.Version.protobufVersion
+    )
+  )
+
+
 lazy val executorApi = makeProject("executor/api", "executorApi")
+  .dependsOn(componently)
   .settings(
     name := "executor-api",
     libraryDependencies ++= Seq(
@@ -149,8 +175,9 @@ lazy val executorApi = makeProject("executor/api", "executorApi")
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
 
-      // SLF4J Api
+      // Logging
       "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
     ),
     publishSettings
   )
@@ -227,7 +254,7 @@ lazy val executorApp = makeProject("executor/app", "executorApp")
   )
 
 lazy val planner = makeProject("planner")
-  .dependsOn(ds, elements, executorApi)
+  .dependsOn(ds, elements, executorApi, componently)
   .dependsOn(executorApp % "test")
   .settings(
     name := "planner",
@@ -288,7 +315,7 @@ lazy val engine = makeProject("engine")
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, elements, executorApi, executorKubernetes, executorApp, examples, planner, engine)
+  .aggregate(testutils, ds, elements, executorApi, executorKubernetes, executorApp, examples, planner, engine, componently)
   .settings(
     name := "mantik-core",
     publish := {},
