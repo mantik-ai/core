@@ -34,10 +34,8 @@ private[ds] object DataTypeJsonAdapter {
     )
   )
 
-  def fundamentalTypeFromName(name: String): FundamentalType = {
-    FundamentalTypeCodec.stringToElement(name).getOrElse {
-      throw new TypeNotFoundException(s"Type ${name} not found")
-    }
+  def fundamentalTypeFromName(name: String): Option[FundamentalType] = {
+    FundamentalTypeCodec.stringToElement(name.toLowerCase)
   }
 
   def fundamentalTypeToName(fundamentalType: FundamentalType): String = {
@@ -74,6 +72,14 @@ private[ds] object DataTypeJsonAdapter {
       "black" -> ImageChannel.Black
     )
   )
+
+  def imageChannelName(imageChannel: ImageChannel): String = {
+    channelCodec.elementToString(imageChannel)
+  }
+
+  def imageChannelFromName(name: String): Option[ImageChannel] = {
+    channelCodec.stringToElement(name.toLowerCase)
+  }
 
   implicit private object imageComponentCodec extends ObjectEncoder[ImageComponent] with Decoder[ImageComponent] {
     override def encodeObject(a: ImageComponent): JsonObject = {

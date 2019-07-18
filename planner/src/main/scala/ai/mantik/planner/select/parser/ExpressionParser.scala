@@ -1,6 +1,7 @@
 package ai.mantik.planner.select.parser
 
-import ai.mantik.ds.FundamentalType
+import ai.mantik.ds.Errors.TypeNotFoundException
+import ai.mantik.ds.{ FundamentalType, ImageChannel }
 import org.parboiled2._
 
 /** Parser for Expressions. */
@@ -53,22 +54,43 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   }
 
   def Type: Rule1[TypeNode] = rule {
+    TensorType | ImageType | FundamentalTypeN
+  }
+
+  def TensorType: Rule1[TypeNode] = rule {
+    keyword("tensor") ~ optional(keyword("of") ~ FundamentalTypeN) ~> { underlying: Option[FundamentalTypeNode] =>
+      TensorTypeNode(underlying.map(_.ft))
+    }
+  }
+
+  def ImageType: Rule1[TypeNode] = rule {
+    keyword("image") ~ optional(keyword("of") ~ FundamentalTypeN) ~ optional(Whitespace ~ keyword("in") ~ ImageChannelN) ~> { (underlying: Option[FundamentalTypeNode], channel: Option[ImageChannel]) =>
+      ImageTypeNode(underlying.map(_.ft), channel)
+    }
+  }
+
+  def FundamentalTypeN: Rule1[FundamentalTypeNode] = rule {
     capture(oneOrMore(IdentifierChar)) ~> { s: String =>
-      typeNameToType(s)
+      test(isValidFundamentalType(s)) ~ push(
+        FundamentalTypeNode(FundamentalType.fromName(s).get)
+      )
     }
   }
 
-  def typeNameToType(name: String): TypeNode = {
-    if (name.toLowerCase == "tensor") {
-      TensorTypeNode
-    } else {
-      // error handling?!
-      FundamentalTypeNode(FundamentalType.fromName(name.toLowerCase))
+  def ImageChannelN: Rule1[ImageChannel] = rule {
+    capture(oneOrMore(IdentifierChar)) ~> { s: String =>
+      test(isValidChannel(s)) ~ push(
+        ImageChannel.fromName(s).get
+      )
     }
   }
 
-  def Tensor: Rule1[TensorTypeNode.type] = rule {
-    ignoreCase("tensor") ~ push(TensorTypeNode)
+  private def isValidFundamentalType(s: String): Boolean = {
+    FundamentalType.fromName(s).isDefined
+  }
+
+  private def isValidChannel(s: String): Boolean = {
+    ImageChannel.fromName(s).isDefined
   }
 
   /** Consumes a symbol plus whitespace. */

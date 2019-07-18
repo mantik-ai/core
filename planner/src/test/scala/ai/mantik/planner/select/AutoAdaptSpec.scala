@@ -1,6 +1,7 @@
 package ai.mantik.planner.select
 
-import ai.mantik.ds.{DataType, FundamentalType, TabularData}
+import ai.mantik.ds.FundamentalType.{Float32, Float64, Uint8}
+import ai.mantik.ds.{DataType, FundamentalType, Image, ImageChannel, TabularData, Tensor}
 import ai.mantik.elements.{DataSetDefinition, ItemId, Mantikfile}
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{DataSet, DefinitionSource, PayloadSource, Source}
@@ -134,6 +135,42 @@ class AutoAdaptSpec extends TestBase {
     )
     val s = AutoAdapt.autoSelect(type3, type4).left.getOrElse(fail)
     s should include("fail")
+  }
+
+  it should "convert an image to tensor while changing types" in {
+    val type3 = TabularData(
+      "a" -> Image.plain(28, 28, ImageChannel.Black -> Uint8)
+    )
+    val type4 = TabularData(
+      "a" -> Tensor(componentType = Float32, shape = List(28, 28))
+    )
+    // Note: this conversions is not easily writeable with SQL
+    val s = AutoAdapt.autoSelect(type3, type4).forceRight
+    s.resultingType shouldBe type4
+
+    val selectStatement = s.toSelectStatement
+    withClue(s"Parsing select statement ${selectStatement} should yield same type."){
+      val parsedAgain = Select.parse(type3, s.toSelectStatement).forceRight
+      parsedAgain.resultingType shouldBe type4
+    }
+  }
+
+  it should "work for a tensor to image change" in {
+    val type3 = TabularData(
+      "a" -> Tensor(componentType = Float32, shape = List(28, 28))
+    )
+    val type4 = TabularData(
+      "a" -> Image.plain(28, 28, ImageChannel.Red -> Float64)
+    )
+    // Note: this conversions is not easily writeable with SQL
+    val s = AutoAdapt.autoSelect(type3, type4).forceRight
+    s.resultingType shouldBe type4
+
+    val selectStatement = s.toSelectStatement
+    withClue(s"Parsing select statement ${selectStatement} should yield same type."){
+      val parsedAgain = Select.parse(type3, s.toSelectStatement).forceRight
+      parsedAgain.resultingType shouldBe type4
+    }
   }
 
 }

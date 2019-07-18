@@ -63,6 +63,21 @@ case class Select(
       SelectMantikfileBuilder(program, functionType).toMantikfile
     }
   }
+
+  /**
+   * Run a select statement.
+   *
+   * @throws IllegalArgumentException on invalid tabular data.
+   * @return
+   */
+  @throws[IllegalArgumentException]
+  def run(input: Bundle): Bundle = {
+    if (input.model != inputType) {
+      throw new IllegalArgumentException("Input type doesn't match bundle value")
+    }
+    val selectRunner = new SelectRunner(this)
+    selectRunner.run(input)
+  }
 }
 
 object Select {
@@ -85,8 +100,7 @@ object Select {
       case Left(error)   => throw new IllegalArgumentException(error)
       case Right(select) => select
     }
-    val selectRunner = new SelectRunner(select)
-    selectRunner.run(input)
+    select.run(input)
   }
 }
 

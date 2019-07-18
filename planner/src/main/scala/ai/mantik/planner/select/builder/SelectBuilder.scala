@@ -10,7 +10,7 @@ private[select] object SelectBuilder {
 
   /**
    * Builds a select statement for a given input data
-   * Returns either an error or a select statemnt
+   * Returns either an error or a select statement
    */
   def buildSelect(input: TabularData, statement: String): Either[String, Select] = {
     for {
