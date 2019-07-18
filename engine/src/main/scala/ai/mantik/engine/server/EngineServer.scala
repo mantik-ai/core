@@ -3,6 +3,7 @@ package ai.mantik.engine.server
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.engine.protos.debug.DebugServiceGrpc
 import ai.mantik.engine.protos.debug.DebugServiceGrpc.DebugService
 import ai.mantik.engine.protos.engine.AboutServiceGrpc
@@ -13,32 +14,35 @@ import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionService
+import ai.mantik.executor.Executor
+import ai.mantik.executor.server.{ ExecutorServer, ServerConfig }
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryService
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
-import com.typesafe.config.Config
 import io.grpc.netty.NettyServerBuilder
-import io.grpc.{ Server, ServerBuilder }
-import org.slf4j.LoggerFactory
+import io.grpc.Server
+import javax.inject.Inject
 
-import scala.concurrent.ExecutionContext
-
-class EngineServer(
+class EngineServer @Inject() (
     aboutService: AboutService,
     sessionService: SessionService,
     graphBuilderService: GraphBuilderService,
     graphExecutorService: GraphExecutorService,
     debugService: DebugService,
     repositoryService: RepositoryService,
-    fileRepositoryService: FileRepositoryService
-)(implicit config: Config, executionContext: ExecutionContext) {
+    fileRepositoryService: FileRepositoryService,
+    executor: Executor
+)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
 
-  private val logger = LoggerFactory.getLogger(getClass)
   val port = config.getInt("mantik.engine.server.port")
   private val interface = config.getString("mantik.engine.server.interface")
 
   private var server: Option[Server] = None
+
+  private val enableExecutorServer = config.getBoolean("mantik.engine.server.enableExecutorServer")
+
+  private var executorServer: Option[ExecutorServer] = None
 
   /** Start the server */
   def start(): Server = {
@@ -47,19 +51,19 @@ class EngineServer(
     }
 
     val instance = buildServer()
-    logger.info("Starting server")
     this.server = Some(instance)
     logger.info(s"Starting server at ${interface}:${port}")
     instance.start()
-  }
 
-  /** Stop the server. */
-  def stop(): Unit = {
-    if (this.server.isEmpty) {
-      throw new IllegalStateException("Server not running")
+    if (enableExecutorServer) {
+      logger.info("Enabling  Executor Server")
+      val es = new ExecutorServer(ServerConfig.fromTypesafe(config), executor)
+      es.start()
+      executorServer = Some(es)
+    } else {
+      logger.info("Skipping Executor Server, not enabled")
     }
-    shutdown()
-    this.server = None
+    instance
   }
 
   /** Block the thread until the server is finished. */
@@ -70,7 +74,12 @@ class EngineServer(
     instance.awaitTermination()
   }
 
-  private def shutdown(): Unit = {
+  override def shutdown(): Unit = {
+    executorServer.foreach(_.stop())
+    if (this.server.isEmpty) {
+      logger.info("Server not running, cancelling shutdown")
+      return
+    }
     logger.info(s"Requesting server shutdown")
     val instance = server.get
     instance.shutdown()
@@ -80,6 +89,7 @@ class EngineServer(
       instance.awaitTermination()
     }
     logger.info("Server shut down")
+    this.server = None
   }
 
   private def buildServer(): Server = {

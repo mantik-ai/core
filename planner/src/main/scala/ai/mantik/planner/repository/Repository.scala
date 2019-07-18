@@ -1,8 +1,7 @@
 package ai.mantik.planner.repository
 
-import ai.mantik.componently.{ AkkaRuntime, Component }
+import ai.mantik.componently.Component
 import ai.mantik.elements.{ ItemId, MantikId }
-import ai.mantik.planner.repository.impl.Factory
 
 import scala.concurrent.Future
 
@@ -39,13 +38,4 @@ trait Repository extends Component {
 
   /** Remove an artifact. Returns true if it was found. */
   def remove(id: MantikId): Future[Boolean]
-}
-
-object Repository {
-
-  /**
-   * Create a Repository.
-   * In Future this should be done using DI Ticket #86.
-   */
-  def create()(implicit akkaRuntime: AkkaRuntime): Repository = Factory.createRepository()
 }

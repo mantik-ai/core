@@ -1,14 +1,11 @@
 package ai.mantik.engine
 
 import ai.mantik.componently.AkkaRuntime
+import ai.mantik.componently.di.AkkaModule
 import ai.mantik.engine.buildinfo.BuildInfo
-import ai.mantik.planner.Context
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import com.typesafe.config.ConfigFactory
+import ai.mantik.engine.server.{ EngineServer, ServiceModule }
+import com.google.inject.Guice
 import org.slf4j.LoggerFactory
-
-import scala.concurrent.ExecutionContext
 
 object Main {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -17,16 +14,22 @@ object Main {
     logger.info(s"Initializing Mantik Engine ${BuildInfo}")
     implicit val akkaRuntime = AkkaRuntime.createNew()
 
-    val context = EngineFactory.makeEngineContext()
     try {
-      val server = EngineFactory.makeEngineServer(context)
+      val injector = Guice.createInjector(
+        new AkkaModule(),
+        new EngineModule(),
+        ServiceModule
+      )
+
+      val server = injector.getInstance(classOf[EngineServer])
       server.start()
       server.waitUntilFinished()
     } catch {
       case e: Exception =>
         logger.error("Error ", e)
+        System.exit(1)
     } finally {
-      context.shutdown()
+      System.exit(0)
     }
 
   }

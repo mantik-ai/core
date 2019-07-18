@@ -1,9 +1,5 @@
 package ai.mantik.planner
 
-import ai.mantik.planner.bridge.Bridges
-import ai.mantik.planner.impl.PlannerImpl
-import com.typesafe.config.Config
-
 /** A Planner converts an [[Action]] into an executable [[Plan]]. */
 trait Planner {
 
@@ -12,9 +8,6 @@ trait Planner {
 }
 
 object Planner {
-
-  /** Create a planner instance. */
-  def create(config: Config): Planner = new PlannerImpl(Bridges.loadFromConfig(config))
 
   class PlannerException(msg: String) extends RuntimeException(msg)
 

@@ -156,7 +156,10 @@ lazy val componently = makeProject("componently")
 
       // gRPC
       "io.grpc" % "grpc-stub" % scalapb.compiler.Version.grpcJavaVersion,
-      "com.google.protobuf" % "protobuf-java" % scalapb.compiler.Version.protobufVersion
+      "com.google.protobuf" % "protobuf-java" % scalapb.compiler.Version.protobufVersion,
+      
+      // Guice
+      "com.google.inject" % "guice" % "4.2.2"
     )
   )
 

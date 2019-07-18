@@ -1,6 +1,6 @@
 package ai.mantik.executor.server
 
-import ai.mantik.componently.AkkaRuntime
+import ai.mantik.componently.{ AkkaRuntime, Component }
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.executor.model.docker.Container
@@ -53,7 +53,9 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
     var receivedDeployServiceRequest: DeployServiceRequest = _
     var receivedDeployedServicesQuery: DeployedServicesQuery = _
 
-    lazy val executorMock = new Executor {
+    lazy val executorMock = new Executor with Component {
+
+      override implicit protected def akkaRuntime: AkkaRuntime = ExecutorServerSpec.this.akkaRuntime
 
       override def schedule(job: Job): Future[String] = Future.successful("1234")
 
@@ -159,7 +161,10 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
     val internal = new Errors.InternalException("something went wrong")
     val notFound = new Errors.NotFoundException("not found")
 
-    override lazy val executorMock: Executor = new Executor {
+    override lazy val executorMock: Executor = new Executor with Component {
+
+      override implicit protected def akkaRuntime: AkkaRuntime = ExecutorServerSpec.this.akkaRuntime
+
       override def schedule(job: Job): Future[String] = Future.failed(
         internal
       )

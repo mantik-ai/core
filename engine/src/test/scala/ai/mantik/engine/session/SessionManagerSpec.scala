@@ -12,7 +12,7 @@ class SessionManagerSpec extends TestBase with AkkaSupport {
   }
 
   it should "provide create/get/close mechanisms" in {
-    val manager = new SessionManager[DummySession](id => new DummySession(id))
+    val manager = new SessionManagerBase[DummySession](id => new DummySession(id))
     val session = await(manager.create())
     val session2 = await(manager.get(session.id))
     session2 shouldBe session

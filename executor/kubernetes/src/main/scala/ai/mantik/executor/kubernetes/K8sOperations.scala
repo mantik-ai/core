@@ -141,7 +141,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   /** Ensure the existence of a namespace, and returns a kubernetes client for this namespace. */
   def ensureNamespace(namespace: String): Future[Namespace] = {
     errorHandling(rootClient.get[Namespace](namespace)).map { ns =>
-      logger.info(s"Using existing namespace ${namespace}")
+      logger.trace(s"Using existing namespace ${namespace}, no creation necessary")
       ns
     }.recoverWith {
       case e: K8SException if e.status.code.contains(404) =>

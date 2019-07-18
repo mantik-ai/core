@@ -1,24 +1,20 @@
 package ai.mantik.executor.client
 
-import akka.actor.ActorSystem
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshalling.{ Marshal, Marshaller }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
-import akka.stream.Materializer
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, DeployedServicesQuery, DeployedServicesResponse, Job, JobStatus, PublishServiceRequest, PublishServiceResponse }
 import ai.mantik.executor.{ Errors, Executor }
-import org.slf4j.LoggerFactory
+import javax.inject.{ Inject, Provider, Singleton }
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
 /** Akka based client for the Executor. */
-class ExecutorClient(url: Uri)(implicit actorSystem: ActorSystem, mat: Materializer) extends Executor with FailFastCirceSupport {
-  private val logger = LoggerFactory.getLogger(getClass)
-
-  private implicit def ec: ExecutionContext = actorSystem.dispatcher
+class ExecutorClient(url: Uri)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Executor with FailFastCirceSupport {
   private val http = Http()
 
   override def schedule(job: Job): Future[String] = {
@@ -92,5 +88,13 @@ class ExecutorClient(url: Uri)(implicit actorSystem: ActorSystem, mat: Materiali
         }
       }
     }
+  }
+}
+
+class ExecutorClientProvider @Inject() (implicit akkaRuntime: AkkaRuntime) extends Provider[ExecutorClient] {
+  @Singleton
+  override def get(): ExecutorClient = {
+    val executorUrl = akkaRuntime.config.getString("mantik.executor.client.executorUrl")
+    new ExecutorClient(executorUrl)
   }
 }

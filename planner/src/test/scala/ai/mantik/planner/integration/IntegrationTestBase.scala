@@ -1,8 +1,6 @@
 package ai.mantik.planner.integration
 
-import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.kubernetes.{ ExecutorForIntegrationTests, KubernetesCleaner }
-import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import ai.mantik.planner.Context
 import ai.mantik.planner.impl.ContextImpl
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
@@ -28,7 +26,7 @@ abstract class IntegrationTestBase extends TestBaseWithAkkaRuntime {
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     embeddedExecutor = new ExecutorForIntegrationTests(typesafeConfig)
-    context = ContextImpl.constructForLocalTestingWithAkka()
+    context = ContextImpl.constructTempClient()
     scrapKubernetes()
   }
 

@@ -7,6 +7,7 @@ import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.pipelines.ResolvedPipelineStep
 import cats.data.State
 import cats.implicits._
+import javax.inject.Inject
 
 /**
  * Implementation of [[Planner]].
@@ -16,7 +17,7 @@ import cats.implicits._
  *
  * This way it's pure functional and easier to test.
  */
-private[planner] class PlannerImpl(bridges: Bridges) extends Planner {
+private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
 
   val elements = new PlannerElements(bridges)
   val resourcePlanBuilder = new ResourcePlanBuilder(elements)

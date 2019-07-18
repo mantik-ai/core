@@ -16,5 +16,11 @@ trait Component {
 /** Base class for Components. */
 abstract class ComponentBase(implicit protected val akkaRuntime: AkkaRuntime) extends Component with AkkaHelper {
   /** Typesafe logger. */
-  protected final lazy val logger: Logger = Logger(getClass)
+  protected final val logger: Logger = Logger(getClass)
+  logger.trace("Initializing...")
+
+  override def shutdown(): Unit = {
+    super.shutdown()
+    logger.trace("Shutdown")
+  }
 }

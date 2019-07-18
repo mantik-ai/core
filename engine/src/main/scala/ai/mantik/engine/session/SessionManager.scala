@@ -21,7 +21,7 @@ trait SessionBase {
  *
  * TODO: Session Timeout.
  */
-class SessionManager[S <: SessionBase](sessionFactory: String => S)(implicit ec: ExecutionContext) {
+class SessionManagerBase[S <: SessionBase](sessionFactory: String => S)(implicit ec: ExecutionContext) {
 
   private val logger = LoggerFactory.getLogger(getClass)
   private val sessions = new java.util.concurrent.ConcurrentHashMap[String, S]
@@ -65,3 +65,5 @@ class SessionManager[S <: SessionBase](sessionFactory: String => S)(implicit ec:
   }
 
 }
+
+class SessionManager(sessionFactory: String => Session)(implicit ec: ExecutionContext) extends SessionManagerBase[Session](sessionFactory)

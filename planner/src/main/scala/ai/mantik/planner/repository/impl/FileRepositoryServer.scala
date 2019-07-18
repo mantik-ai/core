@@ -105,6 +105,7 @@ abstract class FileRepositoryServer(implicit runtime: AkkaRuntime) extends Compo
 
   override def shutdown(): Unit = {
     bindResult.terminate(60.seconds)
+    super.shutdown()
   }
 
   def boundPort: Int = {

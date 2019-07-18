@@ -2,6 +2,7 @@ package ai.mantik.planner.bridge
 
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import com.typesafe.config.{ Config, ConfigException, ConfigObject }
+import javax.inject.{ Inject, Provider }
 
 import scala.collection.JavaConverters._
 
@@ -16,9 +17,6 @@ trait Bridges {
 
   /** Lookups a format Bridge. */
   def formatBridge(format: String): Option[FormatBridge]
-
-  /** Returns the docker config. */
-  def dockerConfig: DockerConfig
 }
 
 object Bridges {
@@ -31,8 +29,7 @@ object Bridges {
 private[mantik] case class BridgeList(
     algorithms: Seq[AlgorithmBridge],
     trainableAlgorithms: Seq[TrainableAlgorithmBridge],
-    formats: Seq[FormatBridge],
-    dockerConfig: DockerConfig
+    formats: Seq[FormatBridge]
 ) extends Bridges {
 
   override def algorithmBridge(stack: String): Option[AlgorithmBridge] =
@@ -43,6 +40,12 @@ private[mantik] case class BridgeList(
 
   override def formatBridge(format: String): Option[FormatBridge] =
     formats.find(_.format == format)
+}
+
+class BridgesProvider @Inject() (config: Config) extends Provider[Bridges] {
+  override def get(): Bridges = {
+    new BridgeLoader(config).toBridges
+  }
 }
 
 private[bridge] class BridgeLoader(config: Config) {
@@ -58,7 +61,7 @@ private[bridge] class BridgeLoader(config: Config) {
 
   def toBridges: Bridges = {
     BridgeList(
-      algorithms, trainableAlgorithms, formats, dockerConfig
+      algorithms, trainableAlgorithms, formats
     )
   }
 
