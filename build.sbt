@@ -160,7 +160,8 @@ lazy val componently = makeProject("componently")
       
       // Guice
       "com.google.inject" % "guice" % "4.2.2"
-    )
+    ),
+    publishSettings
   )
 
 
