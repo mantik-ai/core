@@ -41,9 +41,9 @@ func ConvertColorModel(expected *ds.Image, src image.Image) (*element.ImageEleme
 	if expected.Width != src.Bounds().Dx() && expected.Height != src.Bounds().Dy() {
 		panic("Expected width / height is not satisfied by source image, resize first")
 	}
-	if expected.Format != nil {
+	if !expected.IsPlain() {
 		// Use go's conversion routines directly
-		return convertImageFormatDirectly(*expected.Format, expected, src)
+		return convertImageFormatDirectly(expected.Format, expected, src)
 	} else {
 		return decodeImageIntoRaw(expected, src)
 	}

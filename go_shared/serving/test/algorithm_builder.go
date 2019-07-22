@@ -15,7 +15,7 @@ func CreateExecutableAlgorithm(from ds.DataType, to ds.DataType, apply func(elem
 	}
 }
 
-func CreateExecutableRowWiseTabularAlgorithm(from * ds.TabularData, to * ds.TabularData, apply func([]element.Element) ([]element.Element, error)) serving.ExecutableAlgorithm {
+func CreateExecutableRowWiseTabularAlgorithm(from *ds.TabularData, to *ds.TabularData, apply func([]element.Element) ([]element.Element, error)) serving.ExecutableAlgorithm {
 	wrapped := func(in element.Element) (element.Element, error) {
 		unpacked := in.(*element.TabularRow)
 		result, err := apply(unpacked.Columns)
@@ -26,7 +26,7 @@ func CreateExecutableRowWiseTabularAlgorithm(from * ds.TabularData, to * ds.Tabu
 		return &packed, nil
 	}
 	return &primitiveAlgorithm{
-		from, to, nil,wrapped,
+		from, to, nil, wrapped,
 	}
 }
 
@@ -41,10 +41,10 @@ func CreateFailingAlgorithm(from ds.DataType, to ds.DataType, err error) serving
 
 type primitiveAlgorithm struct {
 	from ds.DataType
-	to ds.DataType
+	to   ds.DataType
 	// if set, the algorithm will always fail
 	failing error
-	apply func (element.Element) (element.Element, error)
+	apply   func(element.Element) (element.Element, error)
 }
 
 func (p *primitiveAlgorithm) Cleanup() {
@@ -81,5 +81,3 @@ func (p *primitiveAlgorithm) Execute(rows []element.Element) ([]element.Element,
 	}
 	return result, nil
 }
-
-

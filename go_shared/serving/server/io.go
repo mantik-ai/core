@@ -44,9 +44,9 @@ func GenerateInputParser(expectedInput ds.DataType) (InputParser, error) {
 		err = r.ParseMultipartForm(int64(32 << 20))
 		multipartForm := r.MultipartForm
 		if err == nil && multipartForm != nil {
-			log.Print("Got multipart input")
 			if expectingImage != nil {
 				elements, err = DecodeImage(expectingImage, multipartForm)
+				log.Printf("Decoded %d images from multipart encoding", len(elements))
 			} else {
 				err = errors.New("Got unexpected multipart form")
 			}
@@ -58,7 +58,7 @@ func GenerateInputParser(expectedInput ds.DataType) (InputParser, error) {
 				return nil, err
 			}
 		}
-		return elements, nil
+		return elements, err
 	}
 
 	return result, nil
@@ -121,6 +121,7 @@ func GenerateTypedStreamHandler(
 	result := func(w http.ResponseWriter, r *http.Request) {
 		elements, err := inputParser(r)
 		if err != nil {
+			log.Printf("Could not decode input: %s", err.Error())
 			sendError(w, 400, "Bad Request")
 			return
 		}
@@ -130,6 +131,7 @@ func GenerateTypedStreamHandler(
 			sendError(w, 500, "Internal Server Error")
 			return
 		}
+		log.Printf("Handler transformed %d to %d elements", len(elements), len(applied))
 		outputEncoder(element.CreateSliceStreamReader(applied), w, r)
 	}
 	return result, nil
@@ -223,9 +225,9 @@ func DecodeImage(image *ds.Image, form *multipart.Form) ([]element.Element, erro
 	var buf []element.Element = nil
 	for _, subFiles := range files {
 		for _, f := range subFiles {
-			println(f.Filename)
 			decodedImage, err := decodeSingleImage(image, f)
 			if err != nil {
+				println("Decoding image", f.Filename, "failed", err.Error())
 				return nil, err
 			}
 			buf = append(buf, builder.Row(decodedImage))

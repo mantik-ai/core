@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-func TestTabularBuidler(t * testing.T){
-	dt := BuildTabular().Add("x", Float32).AddTensor("y", Int32, []int{1,2}).Result()
+func TestTabularBuidler(t *testing.T) {
+	dt := BuildTabular().Add("x", Float32).AddTensor("y", Int32, []int{1, 2}).Result()
 	expected := FromJsonStringOrPanic(`
 {
 	"columns": {

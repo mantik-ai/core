@@ -140,7 +140,7 @@ func LookupReader(dataType ds.DataType, bigEndian bool) (int, BinaryReader, erro
 }
 
 func LookupImageReader(image *ds.Image, bigEndian bool) (int, BinaryReader, error) {
-	if image.Format != nil && *image.Format != "plain" {
+	if !image.IsPlain() {
 		return 0, nil, errors.New("only plain image format supported")
 	}
 	if image.Width <= 0 || image.Height <= 0 {

@@ -140,7 +140,7 @@ func TestServingJson(t *testing.T) {
 	})
 }
 
-func TestErrorReturning(t * testing.T){
+func TestErrorReturning(t *testing.T) {
 	algorithm := test.CreateFailingAlgorithm(ds.Int32, ds.Int32, errors.New("Boom"))
 	server, err := CreateServerForExecutable(algorithm, ":0")
 	assert.NoError(t, err)

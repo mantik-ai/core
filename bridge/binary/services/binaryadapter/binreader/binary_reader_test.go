@@ -73,7 +73,7 @@ func TestImages(t *testing.T) {
 			ds.ImageComponentElement{ds.Red, ds.ImageComponent{ds.Ref(ds.Uint8)}},
 			ds.ImageComponentElement{ds.Blue, ds.ImageComponent{ds.Ref(ds.Int32)}},
 		},
-		nil,
+		"plain",
 	}
 	byteLen, converter, err := LookupReader(&image, true)
 	assert.NoError(t, err)
@@ -91,13 +91,11 @@ func TestImages(t *testing.T) {
 	block[0] = 1
 	assert.Equal(t, byte(0), unpacked[0])
 
-	jpeg := "jpeg"
-	image.Format = &jpeg
+	image.Format = "jpeg"
 	_, _, err = LookupReader(&image, true)
 	assert.Error(t, err)
 
-	plain := "plain"
-	image.Format = &plain
+	image.Format = "plain"
 	_, _, err = LookupReader(&image, true)
 	assert.NoError(t, err)
 }

@@ -108,6 +108,15 @@ func DecodeBundleFromReader(backendType serializer.BackendType, reader io.Reader
 	return DecodeBundleFromDeserializingBackend(backend)
 }
 
+// Decode a single value (without header)
+func DecodeBundleValue(dataType ds.DataType, backendType serializer.BackendType, reader io.Reader) (*element.Bundle, error) {
+	backend, err := serializer.CreateDeserializingBackend(backendType, reader)
+	if err != nil {
+		return nil, err
+	}
+	return DecodeBundleValueFromDeserializingBackend(backend, dataType)
+}
+
 func DecodeBundleFromDeserializingBackend(backend serializer.DeserializingBackend) (*element.Bundle, error) {
 	var usedType ds.DataType = nil
 	typeTaker := func(dataType ds.DataType) error {
@@ -126,6 +135,25 @@ func DecodeBundleFromDeserializingBackend(backend serializer.DeserializingBacken
 				return nil, errors.New("Stream end without type")
 			}
 			result := element.Bundle{usedType, incomingRows}
+			return &result, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		incomingRows = append(incomingRows, row)
+	}
+}
+
+func DecodeBundleValueFromDeserializingBackend(backend serializer.DeserializingBackend, dataType ds.DataType) (*element.Bundle, error) {
+	decoder, err := CreateHeaderFreeDecoder(dataType, backend)
+	if err != nil {
+		return nil, err
+	}
+	var incomingRows = []element.Element{} // we want empty slices for deep comparison
+	for {
+		row, err := decoder.Read()
+		if err == io.EOF {
+			result := element.Bundle{dataType, incomingRows}
 			return &result, nil
 		}
 		if err != nil {

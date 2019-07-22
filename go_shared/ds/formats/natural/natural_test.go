@@ -1,6 +1,7 @@
 package natural
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"gl.ambrosys.de/mantik/go_shared/ds"
@@ -286,6 +287,27 @@ func TestEncodeSingleValue(t *testing.T) {
 	r, err := EncodeBundleValue(&b, serializer.BACKEND_JSON)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("5"), r)
+}
+
+func TestDecodeSingleValue(t *testing.T) {
+	sample := bytes.NewBufferString("5")
+	r, err := DecodeBundleValue(ds.Int32, serializer.BACKEND_JSON, sample)
+	assert.NoError(t, err)
+	assert.Equal(t, ds.Int32, r.Type)
+	assert.Equal(t, int32(5), r.GetSinglePrimitive())
+}
+
+func TestDecodeSingleTabularValue(t *testing.T) {
+	sample := bytes.NewBufferString(`[[1,"Hello"],[2, "World"]]`)
+	tt := ds.BuildTabular().Add("x", ds.Int32).Add("y", ds.String).Result()
+	r, err := DecodeBundleValue(tt, serializer.BACKEND_JSON, sample)
+	assert.NoError(t, err)
+	assert.Equal(t, tt, r.Type)
+	assert.Equal(t, 2, len(r.Rows))
+	assert.Equal(t, int32(1), r.GetTabularPrimitive(0, 0))
+	assert.Equal(t, int32(2), r.GetTabularPrimitive(1, 0))
+	assert.Equal(t, "Hello", r.GetTabularPrimitive(0, 1))
+	assert.Equal(t, "World", r.GetTabularPrimitive(1, 1))
 }
 
 func TestEncodeTabularValue(t *testing.T) {

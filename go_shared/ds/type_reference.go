@@ -43,6 +43,12 @@ func (t TypeReference) MarshalJSON() ([]byte, error) {
 	}
 }
 
+/** Encodes the type to json, if it fails it will return an empty string.
+(which should not happen)*/
+func (t TypeReference) ToJsonString() string {
+	return ToJsonString(t.Underlying)
+}
+
 func (t *TypeReference) UnmarshalJSON(bytes []byte) error {
 	if len(bytes) <= 0 {
 		return errors.New("Empty JSON")

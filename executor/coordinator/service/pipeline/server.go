@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/serving"
 	"gl.ambrosys.de/mantik/go_shared/serving/server"
+	"gl.ambrosys.de/mantik/go_shared/util/httpext"
 	"net/http"
 )
 
 type Server struct {
+	httpext.ServerExt
 	pipeline *Pipeline
-	server   http.Server
 	runner   *RequestRunner
 }
 
@@ -20,7 +22,9 @@ func CreateServer(pipeline *Pipeline, port int) (*Server, error) {
 	addr := fmt.Sprintf(":%d", port)
 	var result = Server{
 		pipeline: pipeline,
-		server:   http.Server{Addr: addr},
+		ServerExt: httpext.ServerExt{
+			Server: http.Server{Addr: addr},
+		},
 	}
 
 	serveMux := http.NewServeMux()
@@ -36,10 +40,13 @@ func CreateServer(pipeline *Pipeline, port int) (*Server, error) {
 		requestRunner.Type().Output.Underlying,
 		requestRunner.Execute,
 	)
+	logrus.Debug("Initialized Request pipeline")
+	logrus.Debug("Input:  ", requestRunner.Type().Input.ToJsonString())
+	logrus.Debug("Output: ", requestRunner.Type().Output.ToJsonString())
 
 	serveMux.HandleFunc("/type", result.typeHandler)
 	serveMux.HandleFunc("/apply", applyHandler)
-	result.server.Handler = serveMux
+	result.ServerExt.Handler = serveMux
 
 	return &result, nil
 }
@@ -71,12 +78,4 @@ func (s *Server) typeHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) apply([]element.Element) ([]element.Element, error) {
 	return nil, errors.New("Not implemented")
-}
-
-func (p *Server) ListenAndServe() error {
-	err := p.server.ListenAndServe()
-	if err == http.ErrServerClosed {
-		return nil
-	}
-	return err
 }
