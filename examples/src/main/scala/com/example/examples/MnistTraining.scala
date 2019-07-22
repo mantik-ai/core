@@ -1,7 +1,12 @@
 package com.example.examples
 import java.io.File
 
-import ai.mantik.planner.Context
+import ai.mantik.ds.{ FundamentalType, Image, ImageChannel, ImageComponent, TabularData }
+import ai.mantik.planner.{ Context, Pipeline }
+import ai.mantik.planner.select.AutoAdapt
+
+import ai.mantik.componently.utils.EitherExtensions._
+import scala.collection.immutable.ListMap
 
 object MnistTraining extends ExampleBase {
 
@@ -32,13 +37,9 @@ object MnistTraining extends ExampleBase {
 
     println("Stats:\n" + context.execute(stats.fetch))
 
-    /*
-    // This doesn't work yet, Bug #99
     val productionImageInput = TabularData(
-      "image" -> Image(
-        28, 28, ListMap(
-          ImageChannel.Black -> ImageComponent(FundamentalType.Uint8)
-        )
+      "image" -> Image.plain(
+        28, 28, ImageChannel.Black -> FundamentalType.Uint8
       )
     )
     val inputFilter = AutoAdapt.autoSelectAlgorithm(productionImageInput, trained.functionType.input).force
@@ -50,8 +51,5 @@ object MnistTraining extends ExampleBase {
 
     val deployResult = context.execute(productionPipe.deploy(ingressName = Some("mnist")))
     println(s"Pipeline deployed: ${deployResult.externalUrl}")
-    // waiting some time to get online, see bug #95
-    Thread.sleep(10000)
-     */
   }
 }

@@ -29,7 +29,7 @@ func CreateImageWriter(image *ds.Image) (ComponentWriter, error) {
 	if !ok {
 		return nil, errors.Errorf("Only fundamental image components supported")
 	}
-	if image.Format != nil && *image.Format != "plain" {
+	if !image.IsPlain() {
 		return nil, errors.Errorf("Can only encode plain images")
 	}
 	return imageComponentWriter{

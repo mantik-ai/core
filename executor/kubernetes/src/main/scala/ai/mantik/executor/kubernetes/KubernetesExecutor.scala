@@ -183,7 +183,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       usedService <- ops.create(Some(namespace), service)
       maybeIngress = converter.ingress(usedService.name)
       _ <- maybeIngress.map { ingress =>
-        ops.create(Some(namespace), ingress)
+        ops.createOrReplace(Some(namespace), ingress)
       }.getOrElse(Future.successful(()))
     } yield {
       val serviceUrl = s"http://${usedService.name}"

@@ -56,3 +56,20 @@ func CreateDecoderForType(expectedDataType ds.DataType, backend serializer.Deser
 	}
 	return CreateDecoder(checker, backend)
 }
+
+func CreateHeaderFreeDecoder(expectedDataType ds.DataType, backend serializer.DeserializingBackend) (element.StreamReader, error) {
+	deserializer, err := LookupRootElementDeserializer(expectedDataType)
+	if err != nil {
+		return nil, err
+	}
+	_, isTabular := expectedDataType.(*ds.TabularData)
+	if isTabular {
+		err = backend.StartReadingTabularValues()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return decoder{
+		backend, deserializer,
+	}, nil
+}

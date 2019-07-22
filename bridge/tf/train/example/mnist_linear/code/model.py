@@ -48,5 +48,5 @@ class Model:
             logits = tf.matmul(xp_reshaped, tf.constant(w_value)) + tf.constant(b_value)
             y = tf.dtypes.cast(tf.math.argmax(logits, axis=1), tf.uint8)
             tf.saved_model.simple_save(
-                sess, directory, inputs={"x": xp}, outputs={"y": y}
+                sess, directory, inputs={"x": xp}, outputs={"y": y, "logits": logits}
             )

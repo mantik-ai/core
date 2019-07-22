@@ -25,6 +25,7 @@ object Errors {
         code match {
           case 400 => new BadRequestException(msg)
           case 404 => new NotFoundException(msg)
+          case 409 => new ConflictException(msg)
           case 500 => new InternalException(msg)
           case _   => new ExecutorException(msg, code)
         }
@@ -34,6 +35,9 @@ object Errors {
 
   /** A resource was not found. */
   class NotFoundException(msg: String) extends ExecutorException(msg, 404)
+
+  /** A Conflict (e.g. Exists Already). */
+  class ConflictException(msg: String) extends ExecutorException(msg, 409)
 
   /** The request was not ok */
   class BadRequestException(msg: String) extends ExecutorException(msg, 400)

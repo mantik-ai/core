@@ -45,3 +45,7 @@ type:
     output:
         columns:
             label: uint8
+            logits:
+              type: tensor
+              shape: [10]
+              componentType: float32

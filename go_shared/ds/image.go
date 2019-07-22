@@ -11,7 +11,8 @@ type Image struct {
 	Width      int                 `json:"width"`
 	Height     int                 `json:"height"`
 	Components OrderedComponentMap `json:"components"`
-	Format     *string             `json:"format,omitempty"`
+	// Image format: supported "", "plain", "png", "jpeg" (empty is the same as "plain")
+	Format string `json:"format,omitempty"`
 }
 
 type OrderedComponentMap []ImageComponentElement
@@ -37,12 +38,29 @@ var channels = []ImageChannel{
 	Black,
 }
 
+/* Create an image definition with a single channel and raw encoding. Convenience Constructor. */
+func CreateSingleChannelRawImage(width int, height int, channel ImageChannel, dataType *FundamentalType) *Image {
+	return &Image{
+		width,
+		height,
+		[]ImageComponentElement{
+			{channel, ImageComponent{Ref(dataType)}},
+		},
+		"plain",
+	}
+}
+
 func (t *Image) IsFundamental() bool {
 	return false
 }
 
 func (t *Image) TypeName() string {
 	return "image"
+}
+
+// Return true, if this is a plain image.
+func (t *Image) IsPlain() bool {
+	return t.Format == "" || t.Format == "plain"
 }
 
 func findChannel(s string) (*ImageChannel, error) {
