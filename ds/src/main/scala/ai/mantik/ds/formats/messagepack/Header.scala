@@ -1,4 +1,4 @@
-package ai.mantik.ds.formats.natural
+package ai.mantik.ds.formats.messagepack
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.helper.circe.CirceJson

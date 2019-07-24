@@ -1,8 +1,8 @@
-package ai.mantik.ds.formats.natural
+package ai.mantik.ds.formats.messagepack
 
 import ai.mantik.ds.FundamentalType._
 import ai.mantik.ds._
-import ai.mantik.ds.formats.natural.MessagePackAdapters.AnonymousMessagePackAdapter
+import ai.mantik.ds.formats.messagepack.MessagePackAdapters.AnonymousMessagePackAdapter
 import ai.mantik.ds.element._
 import ai.mantik.ds.testutil.TestBase
 import akka.util.ByteString

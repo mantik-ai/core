@@ -1,4 +1,4 @@
-package ai.mantik.ds.formats.natural
+package ai.mantik.ds.formats.messagepack
 
 import ai.mantik.ds.Errors.{ EncodingException, FormatNotSupportedException }
 import ai.mantik.ds.FundamentalType._
@@ -10,7 +10,7 @@ import org.msgpack.core.{ MessageFormat, MessagePackException, MessagePacker, Me
 import scala.reflect.ClassTag
 
 /** Contains Adapters from natural format to MessagePack and back. */
-private[natural] object MessagePackAdapters {
+private[messagepack] object MessagePackAdapters {
 
   /** A MessagePack adapter with anonymous interface. */
   trait AnonymousMessagePackAdapter {
@@ -56,7 +56,7 @@ private[natural] object MessagePackAdapters {
     }
 
     /** Helper for allocating arrays, as the class Tag is required here. */
-    private[natural] def allocateArray(length: Int): Array[ST] = new Array[ST](length)
+    private[messagepack] def allocateArray(length: Int): Array[ST] = new Array[ST](length)
   }
 
   type Aux[A0 <: DataType, B0] = MessagePackAdapter[A0] {

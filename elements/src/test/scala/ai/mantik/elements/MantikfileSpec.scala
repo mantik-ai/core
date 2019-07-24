@@ -23,7 +23,7 @@ class MantikfileSpec extends TestBase {
     """.stripMargin
 
   val minimalFile =
-    """name: My Mini Algorithm
+    """name: yup
       |stack: foobar
       |directory: mydir
       |type:
@@ -46,6 +46,20 @@ class MantikfileSpec extends TestBase {
       name = Some("super_duper_algorithm"),
       version = Some("0.1"),
     )
+    mf.violations shouldBe empty
+  }
+
+  it should "see invalid name/version" in {
+    val sample =
+      """name: InvalidName
+        |version: Invalid-234
+        |stack: foo
+        |type:
+        |   input: bool
+        |   output: bool
+      """.stripMargin
+    val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](sample).forceRight
+    mf.violations shouldBe Seq("Invalid Name", "Invalid Version")
   }
 
   it should "parse a minimal file" in {
@@ -56,8 +70,9 @@ class MantikfileSpec extends TestBase {
       `type` = FunctionType(FundamentalType.BoolType, FundamentalType.BoolType)
     )
     mf.header shouldBe MantikHeader(
-      name = Some("My Mini Algorithm")
+      name = Some("yup")
     )
+    mf.violations shouldBe empty
   }
 
   it should "convert to yaml and back" in {

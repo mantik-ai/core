@@ -60,6 +60,12 @@ case class Mantikfile[T <: MantikDefinition](
       case Right(value) => value
     }
   }
+
+  /** Return violations (note: cannot spot bridge-related violations) */
+  def violations: Seq[String] = {
+    val mantikId = header.id
+    mantikId.map(_.violations).getOrElse(Nil)
+  }
 }
 
 object Mantikfile {

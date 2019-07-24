@@ -1,6 +1,4 @@
-package ai.mantik.ds.formats.natural
-
-import java.nio.file.Path
+package ai.mantik.ds.formats.messagepack
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.Errors.{ EncodingException, FormatDefinitionException }
@@ -16,29 +14,16 @@ import io.circe.syntax._
 
 import scala.concurrent.{ Future, Promise }
 
-/** Reader/Writer for natural format. */
-class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Boolean = true) {
+/**
+ * Reader/Writer for Message Pack Bundles.
+ * (Also called "natural" Bundles when being referred).
+ */
+class MessagePackReaderWriter(dataType: DataType, withHeader: Boolean = true) {
 
-  /** Read a Natural Format unpacked Zip Bundle. */
-  def readDirectory(directory: Path): Source[RootElement, _] = {
-    val file = desc.file.getOrElse {
-      throw new IllegalStateException(s"No file given, cannot read directory")
-    }
-    val inFile = directory.resolve(file)
-    require(inFile.startsWith(directory), s"Input file is leaving directory, something is wrong with ${desc.file}")
-    val fileSource = FileIO.fromPath(inFile)
-    readInputSource(fileSource)
-  }
-
-  /** Read a plain input stream. */
-  def readInputSource(source: Source[ByteString, _]): Source[RootElement, _] = {
-    source.via(decoder())
-  }
-
-  /** Create a pure decoder for RootElemens. */
+  /** Create a pure decoder for RootElements. */
   def decoder(): Flow[ByteString, RootElement, _] = {
     val messagePackFramer = MessagePackFramer.make()
-    val context = MessagePackAdapters.createRootElementContext(desc.`type`)
+    val context = MessagePackAdapters.createRootElementContext(dataType)
 
     if (!withHeader) {
       val unpacked = messagePackFramer.map { byteString =>
@@ -53,9 +38,8 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
         val parsedHeader = MessagePackJsonSupport.fromMessagePackBytes(header.head).as[Header].right.getOrElse {
           throw new EncodingException(s"Could not parse header")
         }
-        if (parsedHeader.format != desc.`type`) {
-          // TODO: In future  we could do automatic sub selection here
-          throw new FormatDefinitionException(s"Format mismatch, expected: ${desc.`type`}, got ${parsedHeader.format}")
+        if (parsedHeader.format != dataType) {
+          throw new EncodingException(s"Format mismatch, expected: ${dataType}, got ${parsedHeader.format}")
         }
         followUp
     }
@@ -68,23 +52,11 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
     unpacked
   }
 
-  /** Write into a Directory which can then be zipped. */
-  def writeDirectory(directory: Path): Sink[RootElement, Future[IOResult]] = {
-    val file = desc.file.getOrElse {
-      throw new IllegalStateException(s"No file given, cannot read directory")
-    }
-    val outFile = directory.resolve(file)
-    require(outFile.startsWith(directory), s"Output file is leaving directory, something is wrong with ${desc.file}")
-    val fileSink = FileIO.toPath(outFile)
-
-    encoder.toMat(fileSink)(Keep.right)
-  }
-
   /** Generate a pure encoder for RootElemensts. */
   def encoder(): Flow[RootElement, ByteString, _] = {
     // Row Writer
     val naturalTabularRowWriter = Flow.fromGraph(new NaturalTabularRowWriter(
-      MessagePackAdapters.createRootElementContext(desc.`type`)
+      MessagePackAdapters.createRootElementContext(dataType)
     ))
 
     if (!withHeader) {
@@ -93,7 +65,7 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
 
     // Header
     val prefix = MessagePackJsonSupport.toMessagePackBytes(
-      Header(desc.`type`).asJson
+      Header(dataType).asJson
     )
 
     // Prepending header
@@ -102,10 +74,10 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
   }
 }
 
-object NaturalFormatReaderWriter {
+object MessagePackReaderWriter {
 
   /**
-   * Create a pure decoder for RootElemens.
+   * Create a pure decoder for RootElements.
    * The format will be directly read from the header.
    * The format will be returned as materialized value
    * Note: do not reuse flow, as it carries an internal state (the data type)
@@ -142,7 +114,7 @@ object NaturalFormatReaderWriter {
   }
 }
 
-private[natural] class NaturalTabularRowWriter(context: MessagePackAdapters.RootElementContext) extends GraphStage[FlowShape[RootElement, ByteString]] {
+private[messagepack] class NaturalTabularRowWriter(context: MessagePackAdapters.RootElementContext) extends GraphStage[FlowShape[RootElement, ByteString]] {
   val in: Inlet[RootElement] = Inlet("NaturalTabularRowWriter.in")
   val out: Outlet[ByteString] = Outlet("NaturalTabularRowWriter.out")
 
