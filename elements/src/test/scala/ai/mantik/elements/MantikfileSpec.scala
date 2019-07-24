@@ -343,4 +343,13 @@ class MantikfileSpec extends TestBase {
     casted.toJsonValue shouldBe parsedExpected.toJsonValue
     casted shouldBe parsedExpected
   }
+
+  it should "encode transparently to JSON" in {
+    val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](sample).forceRight
+    import io.circe.syntax._
+    val json = mf.asJson
+    json shouldBe mf.toJsonValue
+    val back = json.as[Mantikfile[AlgorithmDefinition]]
+    back shouldBe Right(mf)
+  }
 }

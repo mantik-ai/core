@@ -33,10 +33,11 @@ sealed trait Bundle {
    * Note: this is intended for testing.
    * @return future which completes when the file is written and with the generated description.
    */
+  @deprecated("Bundles should not be encoded as ZIP-File", "master")
   def toZipBundle(zipOutputFile: Path)(implicit materializer: Materializer): Future[(NaturalFormatDescription, IOResult)] = {
     implicit val ec = materializer.executionContext
     val description = NaturalFormatDescription(
-      model = model,
+      `type` = model,
       file = Some(Bundle.DefaultFileName)
     )
     val sink = FileIO.toPath(zipOutputFile)
@@ -51,6 +52,7 @@ sealed trait Bundle {
   }
 
   /** Serializes the bundle into a Gzip Stream. */
+  @deprecated("DS Should not care about GZIP", "master")
   def asGzip(): Source[ByteString, _] = {
     val source = Source(rows)
     val description = NaturalFormatDescription(model)
@@ -68,6 +70,7 @@ sealed trait Bundle {
   }
 
   /** Serializes the bundle into a Gzip Block. */
+  @deprecated("DS Should not care about GZIP", "master")
   def asGzipSync()(implicit materializer: Materializer): ByteString = {
     Await.result(asGzip().runWith(Sink.seq[ByteString]), Duration.Inf).fold(ByteString.empty)(_ ++ _)
   }
@@ -170,6 +173,7 @@ object Bundle {
    * Import the natural bundle from a single file ZIP File.
    * This is mainly intended for testing.
    */
+  @deprecated("Bundles should not be encoded as ZIP files", "master")
   def fromZipBundle(input: Path)(implicit materializer: Materializer): Future[Bundle] = {
     implicit val ec = materializer.executionContext
     val source = FileIO.fromPath(input)
@@ -190,6 +194,7 @@ object Bundle {
   }
 
   /** Deserializes the bundle from a GZIP Stream */
+  @deprecated("DS Should not care about Gzip", "master")
   def fromGzip()(implicit ec: ExecutionContext): Sink[ByteString, Future[Bundle]] = {
     val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
     val sink: Sink[ByteString, (Future[DataType], Future[Seq[RootElement]])] =
@@ -232,6 +237,7 @@ object Bundle {
   }
 
   /** Deserializes the bundle from an in-memory bytestring. (gzipped) */
+  @deprecated("DS Should not care about gzip", "master")
   def fromGzipSync(byteString: ByteString)(implicit materializer: Materializer): Bundle = {
     implicit val ec = materializer.executionContext
     Await.result(Source.single(byteString).toMat(fromGzip())(Keep.right).run(), Duration.Inf)
