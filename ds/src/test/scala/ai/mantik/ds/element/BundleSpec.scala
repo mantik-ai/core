@@ -27,23 +27,6 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     )
   )
 
-  it should "be directly writeable and decodeable from zip files" in {
-    val sampleFile1 = tempDirectory.resolve("sample1.zip")
-    val result = await(sampleBundle.toZipBundle(sampleFile1))
-    result._1.`type` shouldBe sampleBundle.model
-    result._2.count shouldBe >(0L)
-
-    sampleFile1.toFile.exists() shouldBe true
-
-    val decodeResult = await(Bundle.fromZipBundle(sampleFile1))
-    decodeResult shouldBe sampleBundle
-  }
-
-  it should "be encodable into gzip and from gzip" in {
-    val backAgain = await(sampleBundle.asGzip().runWith(Bundle.fromGzip()))
-    backAgain shouldBe sampleBundle
-  }
-
   it should "be encodable into a stream without header and back" in {
     val data = collectSource(sampleBundle.encode(withHeader = false))
     val dataAsSource: Source[ByteString, _] = Source(data.toVector)

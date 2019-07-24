@@ -32,35 +32,6 @@ object MantikDefinition extends DiscriminatorDependentCodec[MantikDefinition] {
   val DataSetKind = "dataset"
   val TrainableAlgorithmKind = "trainable"
   val PipelineKind = "pipeline"
-
-  /** Validates the name, returns violations. */
-  def nameViolations(name: String): Seq[String] = {
-    val violations = Seq.newBuilder[String]
-    if (!NameRegex.pattern.matcher(name).matches()) {
-      violations += "Invalid Name"
-    }
-    violations.result()
-  }
-
-  /** Validates the version, returns violations. */
-  def versionViolations(version: String): Seq[String] = {
-    val violations = Seq.newBuilder[String]
-    if (!VersionRegex.pattern.matcher(version).matches()) {
-      violations += "Invalid Version"
-    }
-    violations.result()
-  }
-
-  /**
-   * Regex for a Name.
-   * Note: in contrast to account names, also "_" and "." in the middle is allowed
-   */
-  val NameRegex: Regex = "^[a-z\\d](?:[a-z\\d_\\.]|-(?=[a-z\\d])){0,38}$".r
-  /**
-   * Regex for a Version.
-   * Note: in contrast to account names, also "_" and "." in the middle is allowed
-   */
-  val VersionRegex: Regex = "^[a-z\\d]([a-z\\d_\\.\\-]*[a-z\\d])?$".r
 }
 
 /** An Algorithm Definition inside a Mantikfile. */
@@ -137,6 +108,3 @@ case class OptionalFunctionType(
 object OptionalFunctionType {
   implicit val codec: Encoder[OptionalFunctionType] with Decoder[OptionalFunctionType] = CirceJson.makeSimpleCodec[OptionalFunctionType]
 }
-
-/** Exception which can be thrown upon illegal Mantik Definitions. */
-class InvalidMantikDefinitionException(msg: String) extends RuntimeException(msg)

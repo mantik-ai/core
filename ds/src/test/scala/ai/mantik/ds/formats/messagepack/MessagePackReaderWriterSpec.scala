@@ -1,4 +1,4 @@
-package ai.mantik.ds.formats.natural
+package ai.mantik.ds.formats.messagepack
 
 import java.io.File
 
@@ -13,7 +13,7 @@ import akka.util.ByteString
 
 import scala.concurrent.Future
 
-class NaturalFormatReaderWriterSpec extends TestBase with GlobalAkkaSupport with TempDirSupport {
+class MessagePackReaderWriterSpec extends TestBase with GlobalAkkaSupport with TempDirSupport {
 
   val sampleBundle = Bundle(
     TabularData(
@@ -29,38 +29,8 @@ class NaturalFormatReaderWriterSpec extends TestBase with GlobalAkkaSupport with
       )
     )
   )
-  val sampleDesc = NaturalFormatDescription(
-    sampleBundle.model
-  )
-
-  it should "create readable file bundles" in {
-    val descWithFile = sampleDesc.copy(
-      file = Some("file1")
-    )
-    val readerWriter = new NaturalFormatReaderWriter(descWithFile)
-    val sink = readerWriter.writeDirectory(tempDirectory)
-    await(Source(sampleBundle.rows).runWith(sink))
-
-    new File(tempDirectory.toFile, "file1").exists() shouldBe true
-
-    val source = readerWriter.readDirectory(tempDirectory)
-    val collected = collectSource(source)
-    collected shouldBe sampleBundle.rows
-  }
-
-  it should "fail when there is no file given in description" in {
-    val readerWriter = new NaturalFormatReaderWriter(sampleDesc)
-    intercept[IllegalStateException] {
-      readerWriter.writeDirectory(tempDirectory)
-    }
-    intercept[IllegalStateException] {
-      readerWriter.readDirectory(tempDirectory)
-    }
-
-  }
-
   it should "create readable data streams" in {
-    val readerWriter = new NaturalFormatReaderWriter(sampleDesc)
+    val readerWriter = new MessagePackReaderWriter(sampleBundle.model)
 
     val source = Source(sampleBundle.rows)
     val collected = collectSource(source.via(readerWriter.encoder()).via(readerWriter.decoder()))
@@ -68,12 +38,12 @@ class NaturalFormatReaderWriterSpec extends TestBase with GlobalAkkaSupport with
   }
 
   it should "be possible to auto decode the format" in {
-    val readerWriter = new NaturalFormatReaderWriter(sampleDesc)
+    val readerWriter = new MessagePackReaderWriter(sampleBundle.model)
     val source = Source(sampleBundle.rows)
 
     val (futureDataType: Future[DataType], futureData: Future[Seq[RootElement]]) = source
       .via(readerWriter.encoder())
-      .viaMat(NaturalFormatReaderWriter.autoFormatDecoder())(Keep.right)
+      .viaMat(MessagePackReaderWriter.autoFormatDecoder())(Keep.right)
       .toMat(Sink.seq)(Keep.both)
       .run()
 
@@ -82,25 +52,26 @@ class NaturalFormatReaderWriterSpec extends TestBase with GlobalAkkaSupport with
   }
 
   it should "report errors on empty streams" in {
-    val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
+    val decoder = MessagePackReaderWriter.autoFormatDecoder()
     intercept[EncodingException] {
       await(Source.empty.via(decoder).runWith(Sink.seq))
     }
   }
 
   it should "report errors on good header and broken data" in {
+    val encoded = collectByteSource(sampleBundle.encode(true))
     val source = Source(
-      List(sampleBundle.asGzipSync(), ByteString(0x4d.toByte))
+      List(encoded, ByteString(0x4d.toByte))
     )
-    val decoder = NaturalFormatReaderWriter.autoFormatDecoder()
+    val decoder = MessagePackReaderWriter.autoFormatDecoder()
     intercept[EncodingException] {
       await(source.via(decoder).runWith(Sink.seq))
     }
   }
 
   it should "be possible to skip the encoding of the header" in {
-    val withoutHeader = new NaturalFormatReaderWriter(sampleDesc, withHeader = false)
-    val withHeader = new NaturalFormatReaderWriter(sampleDesc, withHeader = true)
+    val withoutHeader = new MessagePackReaderWriter(sampleBundle.model, withHeader = false)
+    val withHeader = new MessagePackReaderWriter(sampleBundle.model, withHeader = true)
 
     val source = Source(sampleBundle.rows)
     val withoutHeaderBytes = await(source.via(withoutHeader.encoder()).toMat(Sink.seq)(Keep.right).run()).reduce(_ ++ _)
