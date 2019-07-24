@@ -38,7 +38,7 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
   /** Create a pure decoder for RootElemens. */
   def decoder(): Flow[ByteString, RootElement, _] = {
     val messagePackFramer = MessagePackFramer.make()
-    val context = MessagePackAdapters.createRootElementContext(desc.model)
+    val context = MessagePackAdapters.createRootElementContext(desc.`type`)
 
     if (!withHeader) {
       val unpacked = messagePackFramer.map { byteString =>
@@ -53,9 +53,9 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
         val parsedHeader = MessagePackJsonSupport.fromMessagePackBytes(header.head).as[Header].right.getOrElse {
           throw new EncodingException(s"Could not parse header")
         }
-        if (parsedHeader.format != desc.model) {
+        if (parsedHeader.format != desc.`type`) {
           // TODO: In future  we could do automatic sub selection here
-          throw new FormatDefinitionException(s"Format mismatch, expected: ${desc.model}, got ${parsedHeader.format}")
+          throw new FormatDefinitionException(s"Format mismatch, expected: ${desc.`type`}, got ${parsedHeader.format}")
         }
         followUp
     }
@@ -84,7 +84,7 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
   def encoder(): Flow[RootElement, ByteString, _] = {
     // Row Writer
     val naturalTabularRowWriter = Flow.fromGraph(new NaturalTabularRowWriter(
-      MessagePackAdapters.createRootElementContext(desc.model)
+      MessagePackAdapters.createRootElementContext(desc.`type`)
     ))
 
     if (!withHeader) {
@@ -93,7 +93,7 @@ class NaturalFormatReaderWriter(desc: NaturalFormatDescription, withHeader: Bool
 
     // Header
     val prefix = MessagePackJsonSupport.toMessagePackBytes(
-      Header(desc.model).asJson
+      Header(desc.`type`).asJson
     )
 
     // Prepending header

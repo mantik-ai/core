@@ -2,10 +2,11 @@ package ai.mantik.elements
 
 import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.elements.meta.{ MetaJson, MetaVariableException }
-import io.circe.{ DecodingFailure, Json, Error }
+import io.circe.Decoder.Result
+import io.circe.{ Decoder, DecodingFailure, Error, HCursor, Json, JsonObject, ObjectEncoder }
 import io.circe.syntax._
 import io.circe.yaml.syntax._
-import io.circe.yaml.{ parser => YamlParser }
+import io.circe.yaml.{ Printer, parser => YamlParser }
 
 import scala.reflect.ClassTag
 
@@ -29,7 +30,9 @@ case class Mantikfile[T <: MantikDefinition](
   }
 
   /** Returns Yaml code  */
-  def toYaml: String = toJsonValue.asYaml.spaces2
+  def toYaml: String = {
+    Printer(preserveOrder = true).pretty(toJsonValue)
+  }
 
   /** Returns Json code. */
   def toJson: String = toJsonValue.spaces2
@@ -118,4 +121,24 @@ object Mantikfile {
     Mantikfile.parseMetaJson(updatedJsonObject).flatMap(_.cast[AlgorithmDefinition])
   }
 
+  /** Encodes a Mantikfile to it's json value. */
+  implicit def encoder[T <: MantikDefinition]: ObjectEncoder[Mantikfile[T]] = new ObjectEncoder[Mantikfile[T]] {
+    override def encodeObject(a: Mantikfile[T]): JsonObject = a.metaJson.sourceJson
+  }
+
+  /** Decodes a Mantikfile from JSON. */
+  implicit def decoder[T <: MantikDefinition: ClassTag]: Decoder[Mantikfile[T]] = new Decoder[Mantikfile[T]] {
+    override def apply(c: HCursor): Result[Mantikfile[T]] = {
+      val result = for {
+        metaJson <- c.as[MetaJson]
+        parsed <- Mantikfile.parseMetaJson(metaJson)
+        casted <- parsed.cast[T]
+      } yield casted
+      result match {
+        case Left(e: DecodingFailure) => Left(e)
+        case Left(other)              => new Left(DecodingFailure(other.getMessage, Nil))
+        case Right(ok)                => Right(ok)
+      }
+    }
+  }
 }

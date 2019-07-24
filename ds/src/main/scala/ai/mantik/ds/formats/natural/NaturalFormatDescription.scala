@@ -7,8 +7,9 @@ import io.circe.generic.semiauto._
  * Describes a natural bundle.
  * The file is encoded using MsgPack
  */
+@deprecated("DS Library should not care about Mantikfile Layouts, just provide encoders.", "master")
 case class NaturalFormatDescription(
-    model: DataType,
+    `type`: DataType,
     file: Option[String] = None
 )
 

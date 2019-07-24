@@ -57,9 +57,9 @@ lazy val testutils = (project in file("testutils"))
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "commons-io" % "commons-io" % "2.6",
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "io.circe" %% "circe-yaml" % "0.8.0"
     ),
-    publish := {},
-    publishLocal := {}
+    publishSettings
   )
 
 lazy val IntegrationTest = config("it") extend(Test)
