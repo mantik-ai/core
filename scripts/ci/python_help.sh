@@ -31,5 +31,9 @@ python_build_standard(){
     mkdir -p parent
     python_prepare_pip_build
     # Bug: Not OSX Compatible (-p is not the same as --parents!)
-    cp --parents `find . -name "*.py" -not -path "./target/*" -not -path "./example/*"` target/
+    if [[ "$OSTYPE" == "darwin"* ]];then
+      rsync -R `find . -name "*.py" -not -path "./target/*" -not -path "./example/*"` target/
+    else
+      cp --parents `find . -name "*.py" -not -path "./target/*" -not -path "./example/*"` target/
+    fi
 }
