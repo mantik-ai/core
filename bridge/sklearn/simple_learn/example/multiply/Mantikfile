@@ -1,0 +1,19 @@
+name: multiply
+stack: sklearn.simple_learn
+directory: code
+kind: algorithm
+# TODO: Without support for meta variables not yet really useful
+# Example would be here: https://gl.ambrosys.de/mantik/core/issues/6#note_27995
+
+# The type of training data
+
+# The type for statistic after training
+
+# The type when trained
+type:
+  input:
+    columns:
+      x: float64
+  output:
+    columns:
+      y: float64
