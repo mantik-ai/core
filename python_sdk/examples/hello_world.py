@@ -15,7 +15,6 @@ print("Connected to version {}".format(response.version))
 
 add_response = debug_service.AddLocalMantikDirectory(
     AddLocalMantikDirectoryRequest(
-        #directory="bridge/tf/saved_model/test/resources/samples/double_multiply"
         directory="bridge/sklearn/simple_learn/example/multiply"
     )
 )
