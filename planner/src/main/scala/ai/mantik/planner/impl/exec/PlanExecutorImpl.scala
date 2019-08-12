@@ -4,13 +4,15 @@ import ai.mantik
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.element.Bundle
+import ai.mantik.elements.MantikId
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.DockerConfig
 import ai.mantik.planner
+import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner._
 import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
-import ai.mantik.planner.repository.{ DeploymentInfo, FileRepository, MantikArtifact, Repository }
+import ai.mantik.planner.repository.{ DeploymentInfo, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
 import akka.http.scaladsl.model.Uri
 import io.circe.syntax._
 import javax.inject.{ Inject, Singleton }
@@ -23,12 +25,13 @@ private[planner] class PlanExecutorImpl(
     fileRepository: FileRepository,
     repository: Repository, executor: Executor,
     isolationSpace: String,
-    dockerConfig: DockerConfig
+    dockerConfig: DockerConfig,
+    artifactRetriever: MantikArtifactRetriever
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
 
   @Singleton
   @Inject
-  def this(fileRepository: FileRepository, repository: Repository, executor: Executor)(implicit akkaRuntime: AkkaRuntime) {
+  def this(fileRepository: FileRepository, repository: Repository, executor: Executor, retriever: MantikArtifactRetriever)(implicit akkaRuntime: AkkaRuntime) {
     this(
       fileRepository,
       repository,
@@ -36,7 +39,8 @@ private[planner] class PlanExecutorImpl(
       isolationSpace = akkaRuntime.config.getString("mantik.planner.isolationSpace"),
       dockerConfig = DockerConfig.parseFromConfig(
         akkaRuntime.config.getConfig("mantik.bridge.docker")
-      )
+      ),
+      retriever
     )
   }
 
@@ -88,7 +92,7 @@ private[planner] class PlanExecutorImpl(
       case PlanOp.Empty =>
         logger.debug(s"Executing empty")
         Future.successful(())
-      case PlanOp.PushBundle(bundle, fileRef) =>
+      case PlanOp.StoreBundleToFile(bundle, fileRef) =>
         val fileId = files.resolveFileId(fileRef)
         FutureHelper.time(logger, s"Bundle Push $fileId") {
           fileRepository.storeFile(fileId, FileRepository.MantikBundleContentType).flatMap { sink =>
@@ -96,7 +100,7 @@ private[planner] class PlanExecutorImpl(
             source.runWith(sink)
           }
         }
-      case PlanOp.PullBundle(_, fileRef) =>
+      case PlanOp.LoadBundleFromFile(_, fileRef) =>
         val fileId = files.resolveFileId(fileRef)
         FutureHelper.time(logger, s"Bundle Pull $fileId") {
           fileRepository.loadFile(fileId).flatMap { source =>
@@ -104,20 +108,37 @@ private[planner] class PlanExecutorImpl(
             source.runWith(sink)
           }
         }
-      case PlanOp.AddMantikItem(id, item, fileReference) =>
-        // TODO: Support for adding without Id.
+      case PlanOp.AddMantikItem(item, fileReference) =>
         val fileId = fileReference.map(files.resolveFileId)
         val mantikfile = item.mantikfile
+        val id = MantikId.anonymous(item.itemId)
         val artifact = MantikArtifact(mantikfile, fileId, id, item.itemId)
         FutureHelper.time(logger, s"Adding Mantik Item $id") {
           repository.store(artifact).map { _ =>
             item.state.update { state =>
               state.copy(
-                isStored = true,
+                isStored = true
+              )
+            }
+          }
+        }
+      case PlanOp.TagMantikItem(item, id) =>
+        FutureHelper.time(logger, s"Tagging Mantik Item") {
+          repository.ensureMantikId(item.itemId, id).map { _ =>
+            item.state.update { state =>
+              state.copy(
                 mantikId = Some(id)
               )
             }
           }
+        }
+      case PlanOp.PushMantikItem(item) =>
+        if (!item.state.get.isStored) {
+          throw new InconsistencyException("Item is not stored")
+        }
+        val mantikId = item.mantikId
+        FutureHelper.time(logger, s"Pushing Artifact ${mantikId}") {
+          artifactRetriever.push(mantikId)
         }
       case PlanOp.RunGraph(graph) =>
         val jobGraphConverter = new JobGraphConverter(fileServiceUri, isolationSpace, files, dockerConfig.logins)

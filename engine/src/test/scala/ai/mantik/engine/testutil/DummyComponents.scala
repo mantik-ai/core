@@ -1,14 +1,11 @@
 package ai.mantik.engine.testutil
 
-import java.time.Clock
-
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.planner.bridge.BridgesProvider
 import ai.mantik.planner.impl.PlannerImpl
-import ai.mantik.planner.repository.{ FileRepository, Repository }
+import ai.mantik.planner.repository.impl.{ MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
+import ai.mantik.planner.repository.{ FileRepository, MantikArtifactRetriever, MantikRegistry, Repository }
 import ai.mantik.planner.{ CoreComponents, Plan, PlanExecutor, Planner }
-import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalRepository, TempFileRepository, TempRepository }
-import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.Future
@@ -18,6 +15,12 @@ class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
   override lazy val fileRepository = new TempFileRepository()
 
   override lazy val repository: Repository = new TempRepository()
+
+  private lazy val registry: MantikRegistry = MantikRegistry.empty
+
+  override def retriever: MantikArtifactRetriever = new MantikArtifactRetrieverImpl(
+    repository, fileRepository, registry
+  )
 
   private val bridges = new BridgesProvider(config).get()
   override lazy val planner: Planner = new PlannerImpl(bridges)
@@ -48,6 +51,8 @@ class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
       override def fileRepository: FileRepository = me.fileRepository
 
       override def repository: Repository = me.repository
+
+      override def retriever: MantikArtifactRetriever = me.retriever
 
       override def planner: Planner = me.planner
 

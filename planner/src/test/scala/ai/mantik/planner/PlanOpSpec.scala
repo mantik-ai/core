@@ -7,9 +7,9 @@ import ai.mantik.testutils.TestBase
 class PlanOpSpec extends TestBase {
 
   // Fake plans for testing
-  val plan1 = PlanOp.PushBundle(Bundle(Int32, Vector(SingleElement(Primitive(1)))), PlanFileReference(1))
-  val plan2 = PlanOp.PushBundle(Bundle(Int32, Vector(SingleElement(Primitive(1)))), PlanFileReference(2))
-  val plan3 = PlanOp.PushBundle(Bundle(Int32, Vector(SingleElement(Primitive(1)))), PlanFileReference(3))
+  val plan1 = PlanOp.StoreBundleToFile(Bundle(Int32, Vector(SingleElement(Primitive(1)))), PlanFileReference(1))
+  val plan2 = PlanOp.StoreBundleToFile(Bundle(Int32, Vector(SingleElement(Primitive(1)))), PlanFileReference(2))
+  val plan3 = PlanOp.StoreBundleToFile(Bundle(Int32, Vector(SingleElement(Primitive(1)))), PlanFileReference(3))
 
   "combine" should "be efficient" in {
     PlanOp.combine(PlanOp.Empty, PlanOp.Empty) shouldBe PlanOp.Empty

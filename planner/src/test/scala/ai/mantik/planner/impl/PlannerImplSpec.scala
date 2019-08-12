@@ -55,9 +55,9 @@ class PlannerImplSpec extends TestBase {
 
   "storeSingleItem" should "store an item" in new Env {
     val ds = DataSet.literal(lit)
-    val (state, result) = runWithEmptyState(planner.storeSingleItem(ds, MantikId("foobar")))
+    val (state, result) = runWithEmptyState(planner.storeSingleItem(ds))
     splitOps(result.preOp).find(_.isInstanceOf[PlanOp.AddMantikItem]).get shouldBe PlanOp.AddMantikItem(
-      MantikId("foobar"), ds, Some(PlanFileReference(1))
+      ds, Some(PlanFileReference(1))
     )
     result.files.head.ref shouldBe PlanFileReference(1)
     state.files.head.ref shouldBe PlanFileReference(1)
@@ -144,10 +144,12 @@ class PlannerImplSpec extends TestBase {
     )
 
     plan.op shouldBe PlanOp.seq(
-      PlanOp.PushBundle(lit, PlanFileReference(1)),
+      PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
       PlanOp.AddMantikItem(
-        MantikId("item1"),
         item, Some(PlanFileReference(1)),
+      ),
+      PlanOp.TagMantikItem(
+        item, "item1"
       )
     )
   }
@@ -170,14 +172,16 @@ class PlannerImplSpec extends TestBase {
     val algorithmName = pipeline.resolved.steps.head.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm
     plan.op shouldBe PlanOp.seq(
       PlanOp.AddMantikItem(
-        algorithmName,
         algorithm2,
         Some(PlanFileReference(1)),
       ),
       PlanOp.AddMantikItem(
-        MantikId("pipe1"),
         pipeline,
         None,
+      ),
+      PlanOp.TagMantikItem(
+        pipeline,
+        "pipe1"
       )
     )
   }
@@ -193,13 +197,16 @@ class PlannerImplSpec extends TestBase {
         pipeline, "pipe1"
       )
     )
-
-    plan.op shouldBe
+    splitOps(plan.op) shouldBe Seq(
       PlanOp.AddMantikItem(
-        MantikId("pipe1"),
         pipeline,
         None
+      ),
+      PlanOp.TagMantikItem(
+        pipeline,
+        "pipe1"
       )
+    )
   }
 
   it should "convert a simple fetch operation" in new Env {
@@ -212,8 +219,8 @@ class PlannerImplSpec extends TestBase {
       PlanFile(PlanFileReference(1), read = true, write = true, temporary = true)
     )
     plan.op shouldBe PlanOp.seq(
-      PlanOp.PushBundle(lit, PlanFileReference(1)),
-      PlanOp.PullBundle(lit.model, PlanFileReference(1))
+      PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
+      PlanOp.LoadBundleFromFile(lit.model, PlanFileReference(1))
     )
   }
 
@@ -231,7 +238,7 @@ class PlannerImplSpec extends TestBase {
     val (_, opFiles) = runWithEmptyState(planner.resourcePlanBuilder.manifestDataSetAsFile(inner, true))
     plan.op shouldBe PlanOp.seq(
       opFiles.preOp,
-      PlanOp.PullBundle(inner.dataType, PlanFileReference(2))
+      PlanOp.LoadBundleFromFile(inner.dataType, PlanFileReference(2))
     )
   }
 
@@ -262,6 +269,18 @@ class PlannerImplSpec extends TestBase {
     ops.find(_.isInstanceOf[PlanOp.DeployAlgorithm]) shouldBe defined
   }
 
+  it should "convert a push operation" in new Env {
+    val a = DataSet.literal(lit)
+    val pushAction = a.push("foo1")
+    val plan = planner.convert(pushAction)
+    val ops = splitOps(plan.op)
+    ops.size shouldBe 4
+    ops(0) shouldBe an[PlanOp.StoreBundleToFile]
+    ops(1) shouldBe an[PlanOp.AddMantikItem]
+    ops(2) shouldBe an[PlanOp.TagMantikItem]
+    ops(3) shouldBe an[PlanOp.PushMantikItem]
+  }
+
   "caching" should "cache simple values in files" in new Env {
     val a = DataSet.literal(lit)
     val b = a.select("select x as y").cached
@@ -280,7 +299,7 @@ class PlannerImplSpec extends TestBase {
     cachePlan.files shouldBe List(cacheKey -> PlanFileReference(2))
     cachePlan.alternative shouldBe an[PlanOp.Sequential]
     val parts = cachePlan.alternative.asInstanceOf[PlanOp.Sequential].plans
-    parts.head shouldBe an[PlanOp.PushBundle]
+    parts.head shouldBe an[PlanOp.StoreBundleToFile]
     parts(1) shouldBe an[PlanOp.RunGraph]
 
 
@@ -292,7 +311,7 @@ class PlannerImplSpec extends TestBase {
       parts.head shouldBe an[PlanOp.CacheOp]
       parts.head.asInstanceOf[PlanOp.CacheOp].cacheGroup shouldBe List(cacheKey)
       parts(1) shouldBe an [PlanOp.RunGraph]
-      parts(2) shouldBe an [PlanOp.PullBundle]
+      parts(2) shouldBe an [PlanOp.LoadBundleFromFile]
     }
   }
 
@@ -306,10 +325,11 @@ class PlannerImplSpec extends TestBase {
       PlanFile(PlanFileReference(1), read = true, write = true, temporary = true),
       PlanFile(PlanFileReference(2), read = true, write = true, temporary = false, cacheKey = Some(cacheKey))
     )
-    val parts = plan.op.asInstanceOf[PlanOp.Sequential].plans
-    parts.size shouldBe  2 // CacheOp, AddMantikItem
+    val parts = splitOps(plan.op)
+    parts.size shouldBe  3 // CacheOp, AddMantikItem, TagMantikItem
     parts.head shouldBe an[PlanOp.CacheOp]
     parts(1) shouldBe an[PlanOp.AddMantikItem]
+    parts(2) shouldBe an[PlanOp.TagMantikItem]
   }
 
   it should "automatically cache training outputs" in new Env {

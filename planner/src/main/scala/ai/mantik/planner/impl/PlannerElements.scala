@@ -27,7 +27,7 @@ class PlannerElements(bridges: Bridges) {
   def literalToPushBundle(literal: PayloadSource.Literal, fileReference: PlanFile): PlanOp = {
     literal match {
       case PayloadSource.BundleLiteral(content) =>
-        PlanOp.PushBundle(content, fileReference.ref)
+        PlanOp.StoreBundleToFile(content, fileReference.ref)
     }
   }
 

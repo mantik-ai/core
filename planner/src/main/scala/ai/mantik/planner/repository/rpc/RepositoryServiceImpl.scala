@@ -2,7 +2,7 @@ package ai.mantik.planner.repository.rpc
 
 import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.{ Errors, Repository }
-import ai.mantik.planner.repository.protos.repository.{ GetItemRequest, GetItemResponse, GetItemWithHullResponse, RemoveRequest, RemoveResponse, SetDeploymentInfoRequest, SetDeploymentInfoResponse, StoreRequest, StoreResponse }
+import ai.mantik.planner.repository.protos.repository.{ EnsureMantikIdRequest, EnsureMantikIdResponse, GetItemRequest, GetItemResponse, RemoveRequest, RemoveResponse, SetDeploymentInfoRequest, SetDeploymentInfoResponse, StoreRequest, StoreResponse }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
 import javax.inject.Inject
 
@@ -20,18 +20,6 @@ class RepositoryServiceImpl @Inject() (repository: Repository)(implicit akkaRunt
     }
   }
 
-  override def getWithHull(request: GetItemRequest): Future[GetItemWithHullResponse] = {
-    errorHandling {
-      val mantikId = Conversions.decodeMantikId(request.mantikId)
-      repository.getWithHull(mantikId).map { response =>
-        GetItemWithHullResponse(
-          Some(Conversions.encodeMantikArtifact(response._1)),
-          response._2.map(Conversions.encodeMantikArtifact)
-        )
-      }
-    }
-  }
-
   override def store(request: StoreRequest): Future[StoreResponse] = {
     errorHandling {
       val decoded = Conversions.decodeMantikArtifact(request.artifact.getOrElse(
@@ -39,6 +27,16 @@ class RepositoryServiceImpl @Inject() (repository: Repository)(implicit akkaRunt
       ))
       repository.store(decoded).map { _ =>
         StoreResponse()
+      }
+    }
+  }
+
+  override def ensureMantikId(request: EnsureMantikIdRequest): Future[EnsureMantikIdResponse] = {
+    errorHandling {
+      val itemId = Conversions.decodeItemId(request.itemId)
+      val mantikId = Conversions.decodeMantikId(request.mantikId)
+      repository.ensureMantikId(itemId, mantikId).map { changed =>
+        EnsureMantikIdResponse(changed = changed)
       }
     }
   }

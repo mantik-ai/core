@@ -19,6 +19,9 @@ trait Context extends CoreComponents {
   /** Load a Pipeline. */
   def loadPipeline(id: MantikId): Pipeline
 
+  /** Pulls an item from registry. */
+  def pull(id: MantikId): MantikItem
+
   /** Execute an Action. */
   def execute[T](action: Action[T]): T
 

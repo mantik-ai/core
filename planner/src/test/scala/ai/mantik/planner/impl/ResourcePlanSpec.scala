@@ -11,8 +11,8 @@ class ResourcePlanSpec extends TestBase {
 
   // Some fake plans to simplify testing
   val lit = Bundle(Int32, Vector(SingleElement(Primitive(1))))
-  val pusher  = PlanOp.PushBundle(lit, PlanFileReference(1))
-  val pusher2 = PlanOp.PushBundle(lit, PlanFileReference(2))
+  val pusher  = PlanOp.StoreBundleToFile(lit, PlanFileReference(1))
+  val pusher2 = PlanOp.StoreBundleToFile(lit, PlanFileReference(2))
 
   val algorithm = ResourcePlan (
     pre = PlanOp.seq(pusher),

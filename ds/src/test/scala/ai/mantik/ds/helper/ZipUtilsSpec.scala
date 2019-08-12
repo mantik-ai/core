@@ -1,17 +1,16 @@
 package ai.mantik.ds.helper
 
-import java.io.File
-
 import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
 import org.apache.commons.io.FileUtils
 import _root_.akka.stream.scaladsl._
 import _root_.akka.util.ByteString
+import ai.mantik.testutils.ResourceSupport
 
 import scala.concurrent.duration._
 
-class ZipUtilsSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
-  val sampleDirectory = new File(getClass.getResource("/sample_directory").toURI).toPath
-  val sampleFile = new File(getClass.getResource("/sample_directory/numbers.png").toURI).toPath
+class ZipUtilsSpec extends TestBase with TempDirSupport with GlobalAkkaSupport with ResourceSupport {
+  val sampleDirectory = resourcePath("/sample_directory")
+  val sampleFile = resourcePath("/sample_directory/numbers.png")
 
   "zipping and unzipping" should "work" in {
     val zipFile = tempDirectory.resolve("test.zip")

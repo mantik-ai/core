@@ -3,6 +3,9 @@ package ai.mantik.elements
 import java.security.SecureRandom
 import java.util.Base64
 
+import io.circe.Decoder.Result
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
+
 /**
  * Provides a stable identifier for Mantik Items.
  *
@@ -38,5 +41,16 @@ object ItemId {
   private def encodeBinary(array: Array[Byte]): String = {
     // Use URL Encoding, we do not want "/"
     Base64.getUrlEncoder.withoutPadding().encodeToString(array)
+  }
+
+  implicit val encoder: Encoder[ItemId] = new Encoder[ItemId] {
+    override def apply(a: ItemId): Json = Json.fromString(a.toString)
+  }
+
+  implicit val decoder: Decoder[ItemId] = new Decoder[ItemId] {
+    override def apply(c: HCursor): Result[ItemId] = c.value.asString match {
+      case None    => Left(DecodingFailure("Expected string", c.history))
+      case Some(s) => Right(fromString(s))
+    }
   }
 }

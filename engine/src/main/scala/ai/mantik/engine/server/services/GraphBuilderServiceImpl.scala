@@ -17,7 +17,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
   override def get(request: GetRequest): Future[NodeResponse] = {
     for {
       session <- sessionManager.get(request.sessionId)
-      (artifact, hull) <- session.components.repository.getWithHull(request.name).recover {
+      (artifact, hull) <- session.components.retriever.get(request.name).recover {
         case _: Errors.NotFoundException => throw new ArtefactNotFoundException(request.name)
       }
     } yield {

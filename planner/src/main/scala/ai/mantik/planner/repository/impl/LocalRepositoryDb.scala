@@ -27,6 +27,7 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
     querySchema[DbMantikName](
       "mantik_name",
       _.id -> "id",
+      _.account -> "account",
       _.name -> "name",
       _.version -> "version",
       _.currentItemId -> "current_item_id"
@@ -64,6 +65,7 @@ private[impl] object LocalRepositoryDb {
 
   case class DbMantikName(
       id: UUID = UUID.randomUUID(),
+      account: String,
       name: String,
       version: String,
       currentItemId: String

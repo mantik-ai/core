@@ -86,7 +86,7 @@ class ResourcePlanBuilderSpec extends TestBase {
       PlanFile(PlanFileReference(1), write = true, read = true, temporary = true)
     )
     source shouldBe ResourcePlan(
-      pre = PlanOp.PushBundle(lit, PlanFileReference(1)),
+      pre = PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
       graph = Graph(
         nodes = Map (
           "1" -> Node (
@@ -219,7 +219,7 @@ class ResourcePlanBuilderSpec extends TestBase {
       DataSet.literal(lit)
     ))._2
 
-    sourcePlan.pre shouldBe PlanOp.PushBundle(lit, PlanFileReference(1))
+    sourcePlan.pre shouldBe PlanOp.StoreBundleToFile(lit, PlanFileReference(1))
     sourcePlan.graph shouldBe Graph(
       Map(
         "1" -> Node(

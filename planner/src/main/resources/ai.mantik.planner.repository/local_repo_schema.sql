@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS mantik_deployment_info (
 CREATE TABLE IF NOT EXISTS mantik_name (
     -- Internal ID
     id UUID PRIMARY KEY,
+    -- Account of the artifact (default library)
+    account VARCHAR NOT NULL,
     -- Name of the artifact
     name VARCHAR NOT NULL,
     -- Version (default is latest)
@@ -41,4 +43,4 @@ CREATE TABLE IF NOT EXISTS mantik_name (
 );
 
 
-CREATE UNIQUE INDEX IF NOT EXISTS mantik_artifact_name_version ON mantik_name (name, version);
+CREATE UNIQUE INDEX IF NOT EXISTS mantik_artifact_name_version ON mantik_name (account, name, version);

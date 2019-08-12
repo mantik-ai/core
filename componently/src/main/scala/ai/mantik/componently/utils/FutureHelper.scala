@@ -3,6 +3,7 @@ package ai.mantik.componently.utils
 import java.time.Clock
 import java.time.temporal.ChronoUnit
 
+import ai.mantik.componently.AkkaRuntime
 import akka.actor.ActorSystem
 import com.typesafe.scalalogging.Logger
 
@@ -27,6 +28,25 @@ object FutureHelper {
   }
 
   /**
+   * Let a future with [[TimeoutException]] if it takes too long.
+   * Note: the inner code of the future will still run, as they are not cancellable.
+   * @param operationName an operation name, which will be displayed in the exception.
+   * @return the future which will fail with timeout.
+   */
+  def addTimeout[T](future: Future[T], operationName: String = "Future", timeout: FiniteDuration)(implicit akkaRuntime: AkkaRuntime): Future[T] = {
+    implicit def ec = akkaRuntime.executionContext
+    val promise = Promise[T]
+    val cancellable = akkaRuntime.actorSystem.scheduler.scheduleOnce(timeout) {
+      promise.tryFailure(new TimeoutException(s"$operationName timed out"))
+    }
+    future.onComplete { result =>
+      cancellable.cancel()
+      promise.tryComplete(result)
+    }
+    promise.future
+  }
+
+  /**
    * Runs a function `f` on a given list, each after each other. Each method receives the state returned by the function before.
    * @param in input data for the function
    * @param s0 initial state
@@ -48,6 +68,16 @@ object FutureHelper {
 
     continueRunning(in.toList, s0)
     result.future
+  }
+
+  /** Runs f after each other, eventually leading to a map operation. */
+  def afterEachOther[T, X](in: Iterable[T])(f: T => Future[X])(implicit ec: ExecutionContext): Future[Vector[X]] = {
+    afterEachOtherStateful(in, Vector.empty[X]) {
+      case (s, i) =>
+        f(i).map { x =>
+          s :+ x
+        }
+    }
   }
 
   /**

@@ -109,6 +109,30 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
     }
   }
 
+  it should "allow tagging artifacts" in {
+    withRepo { repo =>
+      await(repo.store(artifact1))
+      await(repo.store(artifact2))
+
+      await(repo.ensureMantikId(artifact1.itemId, artifact1.id)) shouldBe false // already existing
+
+      val newName = MantikId("newname")
+      await(repo.ensureMantikId(artifact1.itemId, newName)) shouldBe true
+
+      val back1 = await(repo.get(artifact1.id))
+      back1 shouldBe artifact1
+
+      val back2 = await(repo.get(newName))
+      back2.itemId shouldBe back1.itemId
+      back2 shouldBe artifact1.copy(id = newName)
+
+      // Tricky: Giving a new itemId
+      await(repo.ensureMantikId(artifact2.itemId, newName)) shouldBe true
+      val back3 = await(repo.get(newName))
+      back3.itemId shouldBe artifact2.itemId
+    }
+  }
+
   it should "overwrite existing versions" in {
     withRepo { repo =>
       await(repo.store(artifact1))
@@ -146,7 +170,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.store(artifact1))
       await(repo.store(artifact1DifferentName))
       await(repo.store(artifact1DifferentVersion))
-      await(repo.remove(MantikId("someId"))) shouldBe false
+      await(repo.remove("someId")) shouldBe false
 
       await(repo.remove(artifact1.id)) shouldBe true
       intercept[Errors.NotFoundException] {

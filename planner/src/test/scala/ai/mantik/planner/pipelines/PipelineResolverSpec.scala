@@ -58,8 +58,8 @@ class PipelineResolverSpec extends TestBase {
           )
         )
       )), Map(
-        MantikId("a") -> a,
-        MantikId("b") -> b
+        MantikId(name = "a") -> a,
+        MantikId(name = "b") -> b
       )
     )
   }
@@ -83,7 +83,7 @@ class PipelineResolverSpec extends TestBase {
           )
         )
       )), Map(
-        MantikId("b") -> b
+        MantikId(name = "b") -> b
       )
     )
   }
@@ -180,8 +180,8 @@ class PipelineResolverSpec extends TestBase {
           ))
         )
       )), Map(
-        MantikId("a") -> algorithm1,
-        MantikId("b") -> algorithm3
+        MantikId(name = "a") -> algorithm1,
+        MantikId(name = "b") -> algorithm3
       )
     ).forceRight
     resolvedWithApplication.functionType.output shouldBe TabularData("z" -> Tensor(FundamentalType.Float32, List(10)))
