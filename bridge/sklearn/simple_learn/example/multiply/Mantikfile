@@ -1,0 +1,11 @@
+name: multiply
+stack: sklearn.simple_learn
+directory: code
+kind: algorithm
+type:
+  input:
+    columns:
+      x: float64
+  output:
+    columns:
+      y: float64

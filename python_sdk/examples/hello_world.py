@@ -15,7 +15,7 @@ print("Connected to version {}".format(response.version))
 
 add_response = debug_service.AddLocalMantikDirectory(
     AddLocalMantikDirectoryRequest(
-        directory="bridge/tf/saved_model/test/resources/samples/double_multiply"
+        directory="bridge/sklearn/simple_learn/example/multiply"
     )
 )
 print("Added item {}".format(add_response.name))
@@ -25,7 +25,7 @@ session = session_service.CreateSession(CreateSessionRequest())
 print("Created session {}".format(session.session_id))
 
 algorithm = graph_builder_service.Get(
-    GetRequest(session_id=session.session_id, name="double_multiply")
+    GetRequest(session_id=session.session_id, name="multiply")
 )
 print("Created Algorithm Node {}".format(algorithm.item_id))
 
