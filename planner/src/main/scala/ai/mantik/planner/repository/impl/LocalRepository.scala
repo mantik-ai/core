@@ -79,7 +79,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
         }
 
         val exists = run {
-          db.names.filter { e => e.name == lift(mantikId.name) && e.version == lift(mantikId.version) }.map(_.id)
+          db.names.filter { e => e.account == lift(mantikId.account) && e.name == lift(mantikId.name) && e.version == lift(mantikId.version) }.map(_.id)
         }.headOption
 
         exists match {
@@ -91,6 +91,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
           case None =>
             // doesn't exit, insert
             val convertedName = DbMantikName(
+              account = mantikId.account,
               name = mantikId.name,
               version = mantikId.version,
               currentItemId = converted.itemId
@@ -100,6 +101,44 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
             }
         }
         updateDeploymentStateOp(mantikArtefact.itemId, mantikArtefact.deploymentInfo)
+      }
+    }
+  }
+
+  override def ensureMantikId(id: ItemId, mantikId: MantikId): Future[Boolean] = {
+    Future {
+      val nameElement = DbMantikName(
+        account = mantikId.account,
+        name = mantikId.name,
+        version = mantikId.version,
+        currentItemId = id.toString
+      )
+
+      transaction {
+        val exists = run {
+          db.names.filter { e =>
+            e.account == lift(mantikId.account) &&
+              e.name == lift(mantikId.name) &&
+              e.version == lift(mantikId.version)
+          }.map(x => (x.id, x.currentItemId))
+        }.headOption
+
+        exists match {
+          case Some((_, itemId)) if itemId == id.toString =>
+            // No change
+            false
+          case Some((id, _)) =>
+            // Current Item points to another item
+            // drop it and rewrite it
+            run(db.names.filter(_.id == lift(id)).delete)
+            run(db.names.insert(lift(nameElement)))
+            true
+          case None =>
+            run {
+              db.names.insert(lift(nameElement))
+            }
+            true
+        }
       }
     }
   }
@@ -186,6 +225,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
     MantikArtifact(
       mantikfile = mantikfile,
       id = MantikId(
+        account = name.account,
         name = name.name,
         version = name.version
       ),

@@ -27,7 +27,7 @@ class MantikItemSpec extends TestBase {
     sample.mantikfile.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(123)
     sample.mantikId shouldBe 'anonymous
     sample.state.update(_.copy(mantikId = Some("foo")))
-    sample.mantikId shouldBe MantikId("foo")
+    sample.mantikId shouldBe MantikId(name = "foo")
 
     val after = sample.withMetaValue("x", 100)
     after.mantikfile.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(100)

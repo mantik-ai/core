@@ -1,23 +1,18 @@
 package ai.mantik.planner.impl
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.{ Files, Path }
+import java.nio.file.Path
 
-import ai.mantik
+import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.ds.helper.ZipUtils
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
+import ai.mantik.elements.MantikId
 import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.PlanExecutorImpl
-import ai.mantik.planner.repository.impl.{ TempFileRepository, TempRepository }
-import ai.mantik.planner.repository.{ Errors, FileRepository, MantikArtifact, Repository }
-import akka.http.scaladsl.model.MediaTypes
-import akka.stream.scaladsl.FileIO
+import ai.mantik.planner.repository.impl.{ MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
+import ai.mantik.planner.repository.{ Errors, FileRepository, MantikArtifactRetriever, MantikRegistry, Repository }
 import javax.inject.Inject
-import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
@@ -27,10 +22,11 @@ private[planner] class ContextImpl @Inject() (
     val repository: Repository,
     val fileRepository: FileRepository,
     val planner: Planner,
-    val planExecutor: PlanExecutor
+    val planExecutor: PlanExecutor,
+    val registry: MantikRegistry,
+    val retriever: MantikArtifactRetriever
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Context {
-  private val dbLookupTimeout = Duration.fromNanos(config.getDuration("mantik.planner.dbLookupTimeout").toNanos)
-  private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
+  private val jobTimeout = config.getFiniteDuration("mantik.planner.jobTimeout")
 
   override def loadDataSet(id: MantikId): DataSet = {
     load[DataSet](id)
@@ -48,9 +44,13 @@ private[planner] class ContextImpl @Inject() (
     load[Pipeline](id)
   }
 
+  override def pull(id: MantikId): MantikItem = {
+    val (artifact, hull) = await(retriever.pull(id))
+    MantikItem.fromMantikArtifact(artifact, hull)
+  }
+
   private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
-    val (artifact, hull) = await(repository.getWithHull(id), dbLookupTimeout)
-    logger.debug(s"Loaded ${id}, itemId=${artifact.itemId}, fileId=${artifact.fileId}")
+    val (artifact, hull) = await(retriever.get(id))
     artifact.mantikfile.definitionAs[T#DefinitionType] match {
       case Left(error) => throw new Errors.WrongTypeException("Wrong item type", error)
       case _           => // ok
@@ -65,40 +65,12 @@ private[planner] class ContextImpl @Inject() (
     result
   }
 
-  private def await[T](future: Future[T], timeout: FiniteDuration) = {
+  private def await[T](future: Future[T], timeout: Duration = Duration.Inf) = {
     Await.result(future, timeout)
   }
 
   override def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): MantikId = {
-    logger.info(s"Pushing local Mantik file...")
-    val file = dir.resolve("Mantikfile")
-    val fileContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
-    // Parsing
-    val mantikfile = Mantikfile.fromYaml(fileContent) match {
-      case Left(error) => throw new RuntimeException("Could not parse mantik file", error)
-      case Right(ok)   => ok
-    }
-    val idToUse = id.getOrElse {
-      mantikfile.header.id.getOrElse(throw new RuntimeException("Mantikfile has no id and no id is given"))
-    }
-    val itemId = ItemId.generate()
-    val fileId = mantikfile.definition.directory.map { dataDir =>
-      // Uploading File Content
-      val resolved = dir.resolve(dataDir)
-      require(resolved.startsWith(dir), "Data directory may not escape root directory")
-      val tempFile = Files.createTempFile("mantik_context", ".zip")
-      ZipUtils.zipDirectory(resolved, tempFile)
-      val fileStorage = await(fileRepository.requestFileStorage(false), dbLookupTimeout)
-      val sink = await(fileRepository.storeFile(fileStorage.fileId, MediaTypes.`application/octet-stream`.value), dbLookupTimeout)
-      val source = FileIO.fromPath(tempFile)
-      await(source.runWith(sink), dbLookupTimeout)
-      tempFile.toFile.delete()
-      fileStorage.fileId
-    }
-    val artifact = MantikArtifact(mantikfile, fileId, idToUse, itemId)
-    await(repository.store(artifact), dbLookupTimeout)
-    logger.info(s"Storing ${artifact.id} done, itemId=${itemId}, fileId=${fileId}")
-    idToUse
+    await(retriever.addLocalDirectoryToRepository(dir, id)).id
   }
 
   override def shutdown(): Unit = {
@@ -114,22 +86,27 @@ private[mantik] object ContextImpl {
     val repository = new TempRepository()
     val fileRepo = new TempFileRepository()
     val executor = constructExecutorClient()
-    constructWithComponents(repository, fileRepo, executor)
+    val registry = MantikRegistry.empty
+    constructWithComponents(repository, fileRepo, executor, registry)
   }
 
   /** Construct a context with a running local stateful services (e.g. the Engine). */
   private def constructWithComponents(
     repository: Repository,
     fileRepository: FileRepository,
-    executor: Executor
+    executor: Executor,
+    registry: MantikRegistry
   )(implicit akkaRuntime: AkkaRuntime): Context = {
     val bridges: Bridges = Bridges.loadFromConfig(akkaRuntime.config)
     val planner = new PlannerImpl(bridges)
+    val retriever = new MantikArtifactRetrieverImpl(repository, fileRepository, registry)
     val planExecutor = new PlanExecutorImpl(
       fileRepository,
       repository,
-      executor)
-    new ContextImpl(repository, fileRepository, planner, planExecutor)
+      executor,
+      retriever
+    )
+    new ContextImpl(repository, fileRepository, planner, planExecutor, registry, retriever)
   }
 
   private def constructExecutorClient()(implicit akkaRuntime: AkkaRuntime): Executor = {

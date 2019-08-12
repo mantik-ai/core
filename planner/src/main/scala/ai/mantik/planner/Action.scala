@@ -17,8 +17,11 @@ object Action {
   /** Fetch a dataset. */
   case class FetchAction(dataSet: DataSet) extends Action[Bundle]
 
-  /** Something is going to be saved. */
+  /** An item should be saved */
   case class SaveAction(item: MantikItem, id: MantikId) extends Action[Unit]
+
+  /** An item should be pushed (indicates also saving). */
+  case class PushAction(item: MantikItem, id: MantikId) extends Action[Unit]
 
   /**
    * Deploy some item.

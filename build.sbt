@@ -127,8 +127,31 @@ lazy val ds = makeProject("ds")
     publishSettings
   )
 
+// Utility stuff, may only depend on Akka, Http and JSON.
+lazy val util = makeProject("util")
+  .settings(
+    name := "util",
+    libraryDependencies ++= Seq(
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      // Akka
+      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
+      "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
+
+      // Circe
+      "io.circe" %% "circe-generic" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion,
+      "io.circe" %% "circe-java8" % circeVersion,
+
+      "de.heikoseeberger" %% "akka-http-circe" % "1.25.2"
+    ),
+    publishSettings
+  )
+
 lazy val elements = makeProject("elements")
-  .dependsOn(ds)
+  .dependsOn(ds, util)
   .settings(
     name := "elements",
     libraryDependencies ++= Seq(
@@ -137,27 +160,18 @@ lazy val elements = makeProject("elements")
     publishSettings
   )
 
-// Helper library for component building based upon Akka, gRpc
+// Helper library for component building based upon gRpc and Guice
 lazy val componently = makeProject("componently")
+  .dependsOn(util)
   .settings(
     name := "componently",
     libraryDependencies ++= Seq(
-      // SLF4J Api
-      "org.slf4j" % "slf4j-api" % slf4jVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-
-      // Akka
-      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-
-      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
 
       // gRPC
       "io.grpc" % "grpc-stub" % scalapb.compiler.Version.grpcJavaVersion,
       "com.google.protobuf" % "protobuf-java" % scalapb.compiler.Version.protobufVersion,
-      
+
       // Guice
       "com.google.inject" % "guice" % "4.2.2"
     ),
@@ -319,7 +333,7 @@ lazy val engine = makeProject("engine")
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, elements, executorApi, executorKubernetes, executorApp, examples, planner, engine, componently)
+  .aggregate(testutils, ds, elements, executorApi, executorKubernetes, executorApp, examples, planner, engine, componently, util)
   .settings(
     name := "mantik-core",
     publish := {},

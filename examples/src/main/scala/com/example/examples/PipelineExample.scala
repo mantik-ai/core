@@ -1,6 +1,7 @@
 package com.example.examples
 import java.io.File
 
+import ai.mantik.elements.MantikId
 import ai.mantik.planner.{ Context, Pipeline }
 
 object PipelineExample extends ExampleBase {
@@ -19,7 +20,12 @@ object PipelineExample extends ExampleBase {
     val result = context.execute(pipeline.deploy(ingressName = Some("mnist")))
     println(s"Pipeline deployed at ${result.externalUrl.get}")
 
-    // We must wait a little bit so that it comes online. See bug #95
-    Thread.sleep(10000)
+    val pushMantikId = MantikId("nob/mnist1")
+    context.execute(pipeline.push(pushMantikId))
+    println(s"Pipeline pushed to ${pushMantikId}")
+
+    // This still fails, see #114
+    // val pulled = context.pull("nob/mnist1")
+    // println(s"Pulled pipeline ${pulled.mantikId}")
   }
 }

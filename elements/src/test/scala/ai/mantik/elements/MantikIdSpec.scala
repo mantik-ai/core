@@ -1,6 +1,8 @@
 package ai.mantik.elements
 
 import ai.mantik.testutils.TestBase
+import io.circe.Json
+import io.circe.syntax._
 
 class MantikIdSpec extends TestBase {
 
@@ -35,7 +37,7 @@ class MantikIdSpec extends TestBase {
     }
     val item = ItemId.generate()
     val mantikItem = MantikId.anonymous(item)
-    withClue(s"Also anonymous items like ${item} -> ${mantikItem} should be acceptable"){
+    withClue(s"Also anonymous items like ${item} -> ${mantikItem} should be acceptable") {
       mantikItem.violations shouldBe empty
     }
   }
@@ -65,10 +67,44 @@ class MantikIdSpec extends TestBase {
     val bad = MantikId(
       name = "Foo Bar",
       version = "BIG",
+      account = "bad Account"
     )
     bad.violations should contain theSameElementsAs Seq(
       "Invalid Version",
-      "Invalid Name"
+      "Invalid Name",
+      "Invalid Account"
     )
+  }
+
+  val examples = Seq(
+    MantikId(name = "foo") -> "foo",
+    MantikId(account = "nob", name = "foo") -> "nob/foo",
+    MantikId(account = "nob", name = "foo", version = "v1") -> "nob/foo:v1",
+    MantikId(name = "foo", version = "v1") -> "foo:v1"
+  )
+
+  "toString/fromString" should "decode various elements" in {
+    examples.foreach {
+      case (example, serialized) =>
+        example.violations shouldBe empty
+        example.toString shouldBe serialized
+        MantikId.fromString(serialized) shouldBe example
+    }
+  }
+
+  "JSON Encoding" should "work" in {
+    examples.foreach {
+      case (example, serialized) =>
+        example.asJson shouldBe Json.fromString(serialized)
+        Json.fromString(serialized).as[MantikId] shouldBe Right(example)
+    }
+  }
+
+  "auto conversion" should "work" in {
+    val a: MantikId = "user/foo:bar" // auto converted by implicit
+    val b: MantikId = MantikId("user/foo:bar")
+    val c: MantikId = MantikId(name = "foo", account = "user", version = "bar")
+    a shouldBe c
+    b shouldBe c
   }
 }

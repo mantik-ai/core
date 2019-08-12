@@ -48,6 +48,29 @@ class FutureHelperSpec extends TestBase with AkkaSupport {
     call shouldBe 2
   }
 
+  "afterEachOther" should "call multiple methods" in {
+    def testFun(x: Int): Future[Int] = {
+      Future.successful(x + 1)
+    }
+    await(FutureHelper.afterEachOther(Seq(1, 2))(testFun)) shouldBe Seq(2, 3)
+    await(FutureHelper.afterEachOther(Nil)(testFun)) shouldBe Nil
+
+    var called = 0
+    def failOn2(x: Int): Future[Int] = {
+      called += 1
+      if (x == 2) {
+        Future.failed(dummyException)
+      } else {
+        Future.successful(x + 1)
+      }
+    }
+    val result = FutureHelper.afterEachOther(Seq(0, 1, 2, 3, 4))(failOn2)
+    intercept[RuntimeException] {
+      await(result)
+    } shouldBe dummyException
+    called shouldBe 3
+  }
+
   "tryMultipleTimes" should "work" in {
     var calls = 0
 

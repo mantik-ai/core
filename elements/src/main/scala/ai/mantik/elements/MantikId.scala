@@ -8,26 +8,38 @@ import scala.util.matching.Regex
 /**
  * Identifies a Mantik Artifact.
  *
+ * @param account
  * @param name of the Mantik artifact. If it starts with @ it refers to a [[ItemId]].
  */
 case class MantikId(
+    // Note: ordering is this way, to force the user to use
+    // named arguments to set name explicitly.
+    // There is also an implicit conversion from string
+    // which parses all elements and an apply function for conversion from string.
+    account: String = MantikId.DefaultAccount,
     name: String,
     version: String = MantikId.DefaultVersion
 ) {
 
   override def toString: String = {
-    if (version == MantikId.DefaultVersion) {
-      name
-    } else {
-      name + ":" + version
+    val builder = StringBuilder.newBuilder
+    if (account != MantikId.DefaultAccount) {
+      builder ++= account
+      builder += '/'
     }
+    builder ++= name
+    if (version != MantikId.DefaultVersion) {
+      builder += ':'
+      builder ++= version
+    }
+    return builder.result()
   }
 
   /** Returns true if the Mantik Id is generated. */
   def isAnonymous: Boolean = name.startsWith(MantikId.AnonymousPrefix)
 
   /** Returns Naming violatins. */
-  def violations: Seq[String] = MantikId.nameViolations(name) ++ MantikId.versionViolations(version)
+  def violations: Seq[String] = MantikId.accountViolations(account) ++ MantikId.nameViolations(name) ++ MantikId.versionViolations(version)
 }
 
 object MantikId {
@@ -35,6 +47,9 @@ object MantikId {
 
   /** If no version is given, this version is accessed. */
   val DefaultVersion = "latest"
+
+  /** The library account is the default and omitted on serializing. */
+  val DefaultAccount = "library"
 
   /** Prefix for Anonymous Mantik Ids. */
   val AnonymousPrefix = "@"
@@ -47,16 +62,59 @@ object MantikId {
     }
   }
 
+  def apply(s: String): MantikId = fromString(s)
+
+  /** JSON Encoding to String. */
+  implicit val encoder: Encoder[MantikId] = new Encoder[MantikId] {
+    override def apply(a: MantikId): Json = Json.fromString(a.toString)
+  }
+
+  /** JSON Encoding from String. */
+  implicit val decoder: Decoder[MantikId] = new Decoder[MantikId] {
+    override def apply(c: HCursor): Result[MantikId] = {
+      c.value.asString match {
+        case None => Left(DecodingFailure("Expected string", c.history))
+        case Some(s) =>
+          decodeString(s)
+      }
+    }
+  }
+
   private def decodeString(s: String): Result[MantikId] = {
     s.split(":").toList match {
-      case List(name, version) => Right(MantikId(name, version))
-      case List(name)          => Right(MantikId(name))
+      case List(accountName, version) =>
+        decodeAccountName(accountName).map {
+          case (account, name) =>
+            MantikId(account = account, name = name, version = version)
+        }
+      case List(accountName) =>
+        decodeAccountName(accountName).map {
+          case (account, name) =>
+            MantikId(
+              name = name,
+              account = account,
+              version = MantikId.DefaultVersion
+            )
+        }
       case _ =>
         Left(DecodingFailure(s"${s} is not a valid Mantik id", Nil))
     }
   }
 
-  def anonymous(itemId: ItemId): MantikId = MantikId(AnonymousPrefix + itemId.toString)
+  private def decodeAccountName(s: String): Result[(String, String)] = {
+    s.split("/").toList match {
+      case List(account, name) => Right((account, name))
+      case List(name)          => Right((DefaultAccount, name))
+      case _ =>
+        Left(DecodingFailure(s"${s} is not a valid account / name combination", Nil))
+    }
+  }
+
+  def anonymous(itemId: ItemId): MantikId = MantikId(
+    name = AnonymousPrefix + itemId.toString,
+    account = MantikId.DefaultAccount,
+    version = MantikId.DefaultVersion
+  )
 
   /** Encodes a mantik id within a string. */
   implicit val mantikIdCodec: Encoder[MantikId] with Decoder[MantikId] = new Encoder[MantikId] with Decoder[MantikId] {
@@ -70,6 +128,15 @@ object MantikId {
         r <- decodeString(s)
       } yield r
     }
+  }
+
+  /** Validates the account, returns violations. */
+  def accountViolations(account: String): Seq[String] = {
+    val violations = Seq.newBuilder[String]
+    if (!AccountRegex.pattern.matcher(account).matches()) {
+      violations += "Invalid Account"
+    }
+    violations.result()
   }
 
   /** Validates the name, returns violations. */
@@ -101,6 +168,9 @@ object MantikId {
    * Note: in contrast to account names, also "_" and "." in the middle is allowed
    */
   val NameRegex: Regex = "^[a-z\\d](?:[a-z\\d_\\.]|-(?=[a-z\\d])){0,50}$".r
+
+  /** Regex for account. */
+  val AccountRegex: Regex = NameRegex
 
   /** Regex for anonymous names. */
   val AnonymousNameRegex: Regex = "^@[a-zA-Z-_\\d]{1,50}$".r

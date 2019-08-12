@@ -38,8 +38,11 @@ trait MantikItem {
     MantikItemState(mantikId, loaded, file)
   })
 
-  /** Save an item back to Mantik. */
-  def save(location: MantikId): Action.SaveAction = Action.SaveAction(this, location)
+  /** Save an item back in the local database */
+  def save(id: MantikId): Action.SaveAction = Action.SaveAction(this, id)
+
+  /** Pushes an item to the registry. */
+  def push(id: MantikId): Action.PushAction = Action.PushAction(this, id)
 
   /** Returns the type's stack. */
   def stack: String = mantikfile.definition.stack
@@ -82,6 +85,17 @@ trait MantikItem {
 
   /** Override the mantik file (not this can be dangerous). */
   protected def withMantikfile(mantikfile: Mantikfile[DefinitionType]): OwnType
+
+  override def toString: String = {
+    val simpleName = getClass.getSimpleName
+    val id = mantikId
+    val stored = if (state.get.isStored) {
+      "stored"
+    } else {
+      ""
+    }
+    s"${simpleName}(${id} ${stored})"
+  }
 }
 
 /** A Mantik Item which can be applied to DataSets (e.g. Algorithms). */

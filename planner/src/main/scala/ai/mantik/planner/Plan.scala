@@ -65,14 +65,23 @@ object PlanOp {
   /** Run a job. */
   case class RunGraph(graph: Graph[PlanNodeService]) extends PlanOp
 
-  /** Push a bundles content to the file repository. */
-  case class PushBundle(bundle: Bundle, fileReference: PlanFileReference) extends PlanOp
+  /** Stores a Bundle Content as File. */
+  case class StoreBundleToFile(bundle: Bundle, fileReference: PlanFileReference) extends PlanOp
 
-  /** Pulls a bundle from the file repository. */
-  case class PullBundle(dataType: DataType, fileReference: PlanFileReference) extends PlanOp
+  /** Loads a Bundle from a File. */
+  case class LoadBundleFromFile(dataType: DataType, fileReference: PlanFileReference) extends PlanOp
 
-  /** Add some mantik item. */
-  case class AddMantikItem(id: MantikId, item: MantikItem, file: Option[PlanFileReference]) extends PlanOp
+  /** Add some mantik item (only the itemId) */
+  case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference]) extends PlanOp
+
+  /** Tag some Item.  */
+  case class TagMantikItem(item: MantikItem, id: MantikId) extends PlanOp
+
+  /**
+   * Push a Mantik Item to a remote registry.
+   * (Must be added first)
+   */
+  case class PushMantikItem(item: MantikItem) extends PlanOp
 
   /** Deploy an algorithm. */
   case class DeployAlgorithm(

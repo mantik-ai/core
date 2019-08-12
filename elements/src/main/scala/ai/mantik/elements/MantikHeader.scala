@@ -13,17 +13,23 @@ import io.circe.{ Decoder, ObjectEncoder }
  * @param authorEmail email of Author
  * @param name default name of the Artifact behind the Mantikfile.
  * @param version default version of the Artifact behind the mantik file.
+ * @param account default accoutn name of the Artifact behind the mantik file.
  */
 case class MantikHeader(
     author: Option[String] = None,
     authorEmail: Option[String] = None,
     name: Option[String] = None,
-    version: Option[String] = None
+    version: Option[String] = None,
+    account: Option[String] = None
 ) {
 
   /** Returns a MantikId for this Item, when a name is given. */
   def id: Option[MantikId] = name.map { name =>
-    MantikId(name, version.getOrElse(MantikId.DefaultVersion))
+    MantikId(
+      name = name,
+      version = version.getOrElse(MantikId.DefaultVersion),
+      account = account.getOrElse(MantikId.DefaultAccount)
+    )
   }
 }
 

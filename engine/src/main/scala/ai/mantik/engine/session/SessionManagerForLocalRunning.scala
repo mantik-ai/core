@@ -2,7 +2,7 @@ package ai.mantik.engine.session
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.planner.{ Context, CoreComponents, PlanExecutor, Planner }
-import ai.mantik.planner.repository.{ FileRepository, Repository }
+import ai.mantik.planner.repository.{ FileRepository, MantikArtifactRetriever, Repository }
 import javax.inject.{ Inject, Singleton }
 
 @Singleton
@@ -19,6 +19,8 @@ object SessionManagerForLocalRunning {
       override def fileRepository: FileRepository = context.fileRepository
 
       override def repository: Repository = context.repository
+
+      override def retriever: MantikArtifactRetriever = context.retriever
 
       override def planner: Planner = context.planner
 

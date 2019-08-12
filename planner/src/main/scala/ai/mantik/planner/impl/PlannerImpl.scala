@@ -31,18 +31,18 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
   def convertSingleAction[T](action: Action[T]): State[PlanningState, PlanOp] = {
     action match {
       case s: Action.SaveAction =>
-        storeDependentItems(s.item).flatMap { dependentStoreAction =>
-          storeSingleItem(s.item, s.id).map { filesPlan =>
-            PlanOp.seq(dependentStoreAction, filesPlan.preOp)
-          }
-        }
+        ensureItemWithDependenciesStoredWithName(s.item, s.id)
       case p: Action.FetchAction =>
         resourcePlanBuilder.manifestDataSetAsFile(p.dataSet, canBeTemporary = true).map { filesPlan =>
           val fileRef = filesPlan.fileRefs.head
           PlanOp.seq(
             filesPlan.preOp,
-            PlanOp.PullBundle(p.dataSet.dataType, fileRef)
+            PlanOp.LoadBundleFromFile(p.dataSet.dataType, fileRef)
           )
+        }
+      case p: Action.PushAction =>
+        ensureItemWithDependenciesStoredWithName(p.item, p.id).map { op =>
+          PlanOp.seq(op, PlanOp.PushMantikItem(p.item))
         }
       case d: Action.Deploy =>
         d.item match {
@@ -56,8 +56,58 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
     }
   }
 
+  /** Store an item and all its dependencies. */
+  private def storeItemWithDependencies(item: MantikItem): State[PlanningState, PlanOp] = {
+    storeDependentItems(item).flatMap { dependentStoreAction =>
+      storeSingleItem(item).map { filesPlan =>
+        PlanOp.seq(dependentStoreAction, filesPlan.preOp)
+      }
+    }
+  }
+
+  /** Ensure that the item is stored inside the database. */
+  def ensureItemStored(item: MantikItem): State[PlanningState, FilesPlan] = {
+    PlanningState(_.itemStorage(item)).flatMap {
+      case None =>
+        // not yet stored
+        storeSingleItem(item)
+      case Some(stored) =>
+        // already stored
+        PlanningState.pure {
+          FilesPlan(
+            PlanOp.Empty,
+            stored.payload.toIndexedSeq
+          )
+        }
+    }
+  }
+
+  /** Ensure that an item with it's dependencies is stored. */
+  def ensureItemWithDependenciesStored(item: MantikItem): State[PlanningState, PlanOp] = {
+    val dependent = dependentItems(item)
+
+    for {
+      dependentOps <- (dependent.map {
+        case (_, dependent) =>
+          ensureItemWithDependenciesStored(dependent)
+      }).sequence
+      mainOp <- ensureItemStored(item)
+    } yield {
+      PlanOp.seq(
+        PlanOp.seq(dependentOps: _*),
+        mainOp.preOp
+      )
+    }
+  }
+
+  def ensureItemWithDependenciesStoredWithName(item: MantikItem, id: MantikId): State[PlanningState, PlanOp] = {
+    ensureItemWithDependenciesStored(item).map { preOp =>
+      PlanOp.seq(preOp, PlanOp.TagMantikItem(item, id))
+    }
+  }
+
   /** Store an item and also returns the file referencing to it. */
-  def storeSingleItem(item: MantikItem, id: MantikId): State[PlanningState, FilesPlan] = {
+  def storeSingleItem(item: MantikItem): State[PlanningState, FilesPlan] = {
     resourcePlanBuilder.translateItemPayloadSourceAsFiles(item.payloadSource, canBeTemporary = false).flatMap { filesPlan =>
       val file = filesPlan.files.headOption
       val fileRef = file.map(_.ref)
@@ -66,7 +116,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
         val updatedState = state.withItemStored(item.itemId, itemStored)
         val combinedOps = PlanOp.seq(
           filesPlan.preOp,
-          PlanOp.AddMantikItem(id, item, fileRef)
+          PlanOp.AddMantikItem(item, fileRef)
         )
         updatedState -> FilesPlan(
           combinedOps,
@@ -84,7 +134,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
           // already loaded under this name
           PlanningState.pure(PlanOp.Empty: PlanOp)
         } else {
-          convertSingleAction(Action.SaveAction(item, mantikId))
+          storeItemWithDependencies(item)
         }
     }.sequence.map { changes =>
       PlanOp.seq(changes: _*)
@@ -132,23 +182,6 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
         val updatedState = state.withItemDeployed(algorithm.itemId, PlanningState.ItemDeployed())
         updatedState -> combined
       }
-    }
-  }
-
-  /** Ensure that the item is stored inside the database. */
-  def ensureItemStored(item: MantikItem): State[PlanningState, FilesPlan] = {
-    PlanningState(_.itemStorage(item)).flatMap {
-      case None =>
-        // not yet stored
-        storeSingleItem(item, item.mantikId)
-      case Some(stored) =>
-        // already stored
-        PlanningState.pure {
-          FilesPlan(
-            PlanOp.Empty,
-            stored.payload.toIndexedSeq
-          )
-        }
     }
   }
 

@@ -7,23 +7,15 @@ import scala.concurrent.Future
 
 /** Gives access to Mantik objects. */
 trait Repository extends Component {
-  import ai.mantik.componently.AkkaHelper._
-
   /** Retrieves a Mantik artefact. */
   def get(id: MantikId): Future[MantikArtifact]
 
-  /** Returns a Mantik artefact and all its referenced items. */
-  def getWithHull(id: MantikId): Future[(MantikArtifact, Seq[MantikArtifact])] = {
-    get(id).flatMap { artifact =>
-      val referenced = artifact.mantikfile.definition.referencedItems
-      val othersFuture = Future.sequence(referenced.map { subId =>
-        get(subId)
-      })
-      othersFuture.map { others =>
-        artifact -> others
-      }
-    }
-  }
+  /**
+   * Tag an existing item with a new name.
+   * @return if the new tag was created or false if it was already existant.
+   * Throws if the item was not found.
+   */
+  def ensureMantikId(id: ItemId, newName: MantikId): Future[Boolean]
 
   /** Stores a Mantik artefact. */
   def store(mantikArtefact: MantikArtifact): Future[Unit]
