@@ -4,14 +4,14 @@ import java.util.UUID
 
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{AlgorithmDefinition, Mantikfile}
+import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile }
 import ai.mantik.planner.select.Select
 
 /** Some A => B Transformation Algorithm */
 case class Algorithm(
     source: Source,
     private[planner] val mantikfile: Mantikfile[AlgorithmDefinition],
-    private[planner] val select: Option[Select] = None,
+    private[planner] val select: Option[Select] = None
 ) extends ApplicableMantikItem {
 
   override type DefinitionType = AlgorithmDefinition

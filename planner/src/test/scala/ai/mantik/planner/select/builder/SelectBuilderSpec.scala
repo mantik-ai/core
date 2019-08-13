@@ -1,7 +1,7 @@
 package ai.mantik.planner.select.builder
 
-import ai.mantik.ds.element.{Bundle, Primitive}
-import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.element.{ Bundle, Primitive }
+import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.planner.select._
 import ai.mantik.testutils.TestBase
 
@@ -17,7 +17,7 @@ class SelectBuilderSpec extends TestBase {
   // Test encoding to SQL and back yields the same result.
   private def testReparsable(select: Select): Unit = {
     val selectStatement = select.toSelectStatement
-    withClue(s"Re-Serialized ${selectStatement} should be parseable"){
+    withClue(s"Re-Serialized ${selectStatement} should be parseable") {
       val parsed = Select.parse(select.inputType, selectStatement)
       parsed shouldBe Right(select)
     }
@@ -35,7 +35,8 @@ class SelectBuilderSpec extends TestBase {
   it should "support selecting a single" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT y")
     got shouldBe Right(
-      Select(simpleInput,
+      Select(
+        simpleInput,
         Some(
           List(
             SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
@@ -52,7 +53,8 @@ class SelectBuilderSpec extends TestBase {
   it should "support selecting multiple" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT y,x")
     got shouldBe Right(
-      Select(simpleInput,
+      Select(
+        simpleInput,
         Some(
           List(
             SelectProjection("y", ColumnExpression(1, FundamentalType.StringType)),
@@ -71,7 +73,8 @@ class SelectBuilderSpec extends TestBase {
   it should "support simple casts" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT CAST(x as int64)")
     got shouldBe Right(
-      Select(simpleInput,
+      Select(
+        simpleInput,
         Some(
           List(
             SelectProjection(
@@ -117,7 +120,8 @@ class SelectBuilderSpec extends TestBase {
 
   it should "support simple filters" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE x = 5")
-    val expected = Select(simpleInput,
+    val expected = Select(
+      simpleInput,
       Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
@@ -127,7 +131,7 @@ class SelectBuilderSpec extends TestBase {
           // TODO: It should optimize away this cast
           CastExpression(
             ConstantExpression(Bundle.fundamental(5.toByte)),
-            FundamentalType.Int32,
+            FundamentalType.Int32
           )
         )
       )
@@ -138,7 +142,8 @@ class SelectBuilderSpec extends TestBase {
 
   it should "support simple filters II" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World'")
-    val expected = Select(simpleInput,
+    val expected = Select(
+      simpleInput,
       Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
@@ -155,7 +160,8 @@ class SelectBuilderSpec extends TestBase {
 
   it should "support simple combined filters" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World' and x = 1")
-    val expected = Select(simpleInput,
+    val expected = Select(
+      simpleInput,
       Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
@@ -169,7 +175,7 @@ class SelectBuilderSpec extends TestBase {
           // TODO: It should optimize away this cast
           CastExpression(
             ConstantExpression(Bundle.fundamental(1.toByte)),
-            FundamentalType.Int32,
+            FundamentalType.Int32
           )
         )
       )

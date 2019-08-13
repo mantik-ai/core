@@ -142,7 +142,7 @@ class GraphAnalysisSpec extends TestBase {
     analysis.flows shouldBe Set(
       GraphAnalysis.Flow.fromRefs(
         NodeResourceRef("trainable_algorithm", "trained_out"),
-        NodeResourceRef("trained_saver", ExecutorModelDefaults.SinkResource),
+        NodeResourceRef("trained_saver", ExecutorModelDefaults.SinkResource)
       ),
       GraphAnalysis.Flow.fromRefs(
         NodeResourceRef("trainable_algorithm", "stats"),

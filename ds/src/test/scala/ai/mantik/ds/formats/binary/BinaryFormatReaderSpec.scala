@@ -2,13 +2,13 @@ package ai.mantik.ds.formats.binary
 
 import java.io.File
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, NoSuchFileException}
+import java.nio.file.{ Files, NoSuchFileException }
 
-import ai.mantik.ds.{FundamentalType, TabularData}
-import ai.mantik.ds.element.{Primitive, RootElement, TabularRow}
-import ai.mantik.ds.testutil.{GlobalAkkaSupport, TempDirSupport, TestBase}
-import org.apache.commons.io.{FileUtils, IOUtils}
-import io.circe.yaml.{parser => YamlParser}
+import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.element.{ Primitive, RootElement, TabularRow }
+import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
+import org.apache.commons.io.{ FileUtils, IOUtils }
+import io.circe.yaml.{ parser => YamlParser }
 
 class BinaryFormatReaderSpec extends TestBase with GlobalAkkaSupport with TempDirSupport {
 
@@ -120,7 +120,7 @@ class BinaryFormatReaderSpec extends TestBase with GlobalAkkaSupport with TempDi
           file.getName,
           content = Seq(
             BinaryFileContent.Stride(8),
-            BinaryFileContent.Element("x"),
+            BinaryFileContent.Element("x")
           )
         )
       )
@@ -156,7 +156,7 @@ class BinaryFormatReaderSpec extends TestBase with GlobalAkkaSupport with TempDi
 
     val expectedRows = Seq(
       TabularRow(Primitive[Int](67438087), Primitive[Byte](3)), // 67438087 = 0x04050607 which is big endian.
-      TabularRow(Primitive[Int](202182159), Primitive[Byte](11)),
+      TabularRow(Primitive[Int](202182159), Primitive[Byte](11))
     )
 
     result shouldBe expectedRows
@@ -189,7 +189,7 @@ class BinaryFormatReaderSpec extends TestBase with GlobalAkkaSupport with TempDi
     val result = executeReading(layout)
 
     val expectedRows = for (i <- 0 until 14) yield {
-      TabularRow(Primitive[Byte]((13 -i ).toByte), Primitive[Byte]((i + 2).toByte))
+      TabularRow(Primitive[Byte]((13 - i).toByte), Primitive[Byte]((i + 2).toByte))
     }
 
     result shouldBe expectedRows
@@ -238,7 +238,7 @@ class BinaryFormatReaderSpec extends TestBase with GlobalAkkaSupport with TempDi
     val reader = new BinaryFormatReader(layout, tempDirectory)
     val source = reader.read()
 
-    intercept[NoSuchFileException]{
+    intercept[NoSuchFileException] {
       collectSource(source)
     }
   }

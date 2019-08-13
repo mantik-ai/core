@@ -1,7 +1,7 @@
 package ai.mantik.ds.converter.casthelper
 
-import ai.mantik.ds.element.{Primitive, PrimitiveEncoder, TensorElement}
-import ai.mantik.ds.{FundamentalType, Tensor}
+import ai.mantik.ds.element.{ Primitive, PrimitiveEncoder, TensorElement }
+import ai.mantik.ds.{ FundamentalType, Tensor }
 
 /** Packs and unpacks Tensors. */
 private[ds] object TensorHelper {
@@ -37,6 +37,6 @@ private[ds] object TensorHelper {
     makeTensorPrimitiveConverter(FundamentalType.Float64),
     makeTensorPrimitiveConverter(FundamentalType.BoolType),
     makeTensorPrimitiveConverter(FundamentalType.VoidType),
-    makeTensorPrimitiveConverter(FundamentalType.StringType),
+    makeTensorPrimitiveConverter(FundamentalType.StringType)
   ).map(x => x.ft -> x).toMap
 }

@@ -1,15 +1,15 @@
 package ai.mantik.planner.select
 
-import ai.mantik.ds.FundamentalType.{Float32, Float64, Uint8}
-import ai.mantik.ds.{DataType, FundamentalType, Image, ImageChannel, TabularData, Tensor}
-import ai.mantik.elements.{DataSetDefinition, ItemId, Mantikfile}
+import ai.mantik.ds.FundamentalType.{ Float32, Float64, Uint8 }
+import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageChannel, TabularData, Tensor }
+import ai.mantik.elements.{ DataSetDefinition, ItemId, Mantikfile }
 import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.{DataSet, DefinitionSource, PayloadSource, Source}
+import ai.mantik.planner.{ DataSet, DefinitionSource, PayloadSource, Source }
 import ai.mantik.testutils.TestBase
 
 class AutoAdaptSpec extends TestBase {
 
-  val type1 = TabularData (
+  val type1 = TabularData(
     "x" -> FundamentalType.Int32
   )
 
@@ -17,12 +17,10 @@ class AutoAdaptSpec extends TestBase {
     "y" -> FundamentalType.Int32
   )
 
-
-
   private def makeDs(dt: DataType): DataSet = {
     // DataSet source is not important here.
     DataSet(
-      Source (DefinitionSource.Loaded("item1234", ItemId.generate()), PayloadSource.Loaded("someId", ContentTypes.ZipFileContentType)),
+      Source(DefinitionSource.Loaded("item1234", ItemId.generate()), PayloadSource.Loaded("someId", ContentTypes.ZipFileContentType)),
       Mantikfile.pure(DataSetDefinition(format = "someformat", `type` = dt))
     )
   }
@@ -53,7 +51,7 @@ class AutoAdaptSpec extends TestBase {
     val type3 = TabularData(
       "a" -> FundamentalType.StringType,
       "u" -> FundamentalType.BoolType, // unreferenced
-      "b" -> FundamentalType.Int32,
+      "b" -> FundamentalType.Int32
     )
 
     val type4 = TabularData(
@@ -149,7 +147,7 @@ class AutoAdaptSpec extends TestBase {
     s.resultingType shouldBe type4
 
     val selectStatement = s.toSelectStatement
-    withClue(s"Parsing select statement ${selectStatement} should yield same type."){
+    withClue(s"Parsing select statement ${selectStatement} should yield same type.") {
       val parsedAgain = Select.parse(type3, s.toSelectStatement).forceRight
       parsedAgain.resultingType shouldBe type4
     }
@@ -167,7 +165,7 @@ class AutoAdaptSpec extends TestBase {
     s.resultingType shouldBe type4
 
     val selectStatement = s.toSelectStatement
-    withClue(s"Parsing select statement ${selectStatement} should yield same type."){
+    withClue(s"Parsing select statement ${selectStatement} should yield same type.") {
       val parsedAgain = Select.parse(type3, s.toSelectStatement).forceRight
       parsedAgain.resultingType shouldBe type4
     }

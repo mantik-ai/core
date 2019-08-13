@@ -3,13 +3,15 @@ package ai.mantik.componently
 import java.time.Clock
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
-import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
+import akka.stream.{ ActorMaterializer, Materializer }
+import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 
 import scala.concurrent.ExecutionContext
 
-/** Encapsulates access to various used Akka Components.
-  * and underlying stuff. */
+/**
+ * Encapsulates access to various used Akka Components.
+ * and underlying stuff.
+ */
 trait AkkaRuntime {
   def config: Config
   def clock: Clock
@@ -21,10 +23,11 @@ trait AkkaRuntime {
   def withConfigOverrides(
     keyValues: (String, AnyRef)*
   ): AkkaRuntime = {
-    if (keyValues.isEmpty){
+    if (keyValues.isEmpty) {
       this
     } else {
-      val newConfig = keyValues.foldLeft(config) { case (c, (key, value)) =>
+      val newConfig = keyValues.foldLeft(config) {
+        case (c, (key, value)) =>
           c.withValue(key, ConfigValueFactory.fromAnyRef(value))
       }
       AkkaRuntimeImpl(newConfig, materializer, executionContext, actorSystem, clock)
@@ -40,7 +43,7 @@ object AkkaRuntime {
   /** Create an AkkaRuntime instance from running Akka components. */
   def fromRunning(
     config: Config = ConfigFactory.load(),
-    clock: Clock = Clock.systemUTC(),
+    clock: Clock = Clock.systemUTC()
   )(implicit actorSystem: ActorSystem, ec: ExecutionContext, m: Materializer): AkkaRuntime = {
     AkkaRuntimeImpl(config, m, ec, actorSystem, clock)
   }
@@ -58,11 +61,11 @@ object AkkaRuntime {
 }
 
 private[componently] case class AkkaRuntimeImpl(
-  config: Config,
-  materializer: Materializer,
-  executionContext: ExecutionContext,
-  actorSystem: ActorSystem,
-  clock: Clock
+    config: Config,
+    materializer: Materializer,
+    executionContext: ExecutionContext,
+    actorSystem: ActorSystem,
+    clock: Clock
 ) extends AkkaRuntime {
   override def shutdown(): Unit = actorSystem.terminate()
 }

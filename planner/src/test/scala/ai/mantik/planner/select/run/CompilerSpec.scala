@@ -1,8 +1,8 @@
 package ai.mantik.planner.select.run
 
-import ai.mantik.ds.element.{Bundle, Primitive, ValueEncoder}
+import ai.mantik.ds.element.{ Bundle, Primitive, ValueEncoder }
 import ai.mantik.ds.operations.BinaryOperation
-import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.planner.select.Select
 import ai.mantik.testutils.TestBase
 
@@ -24,7 +24,7 @@ class CompilerSpec extends TestBase {
     compile(simpleInput, "select *") shouldBe Right(
       SelectProgram(
         None,
-        None,
+        None
       )
     )
   }
@@ -65,7 +65,7 @@ class CompilerSpec extends TestBase {
   it should "compile a not filter" in {
     compile(simpleInput, "select * where not(x = 1 and y = 'boom')") shouldBe Right(
       SelectProgram(
-        selector = Some(Program (
+        selector = Some(Program(
           OpCode.Get(0),
           OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
@@ -101,7 +101,7 @@ class CompilerSpec extends TestBase {
           OpCode.Constant(Bundle.fundamental(1.toByte)),
           OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
           OpCode.BinaryOp(FundamentalType.Int32, BinaryOperation.Add),
-          OpCode.Cast(FundamentalType.Int32, FundamentalType.Float64),
+          OpCode.Cast(FundamentalType.Int32, FundamentalType.Float64)
         ))
       )
     )

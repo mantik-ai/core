@@ -8,16 +8,16 @@ import ai.mantik.testutils.tags.IntegrationTest
 class MissingImagesSpec extends IntegrationTestBase {
 
   it should "fail correctly for missing images." in new Env {
-    val job = Job (
+    val job = Job(
       "missing1",
       graph = Graph(
-        nodes = Map (
+        nodes = Map(
           "A" -> Node.source(
             ContainerService(
               main = Container(
                 image = "missing_image1"
               )
-            ),
+            )
           ),
           "B" -> Node.sink(
             ContainerService(
@@ -37,7 +37,7 @@ class MissingImagesSpec extends IntegrationTestBase {
       await(executor.status(job.isolationSpace, jobId)).state shouldBe JobState.Failed
     }
     eventually {
-      await(executor.logs(job.isolationSpace, jobId)) should include ("could not find image")
+      await(executor.logs(job.isolationSpace, jobId)) should include("could not find image")
     }
   }
 

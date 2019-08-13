@@ -1,26 +1,26 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.FundamentalType.Int32
-import ai.mantik.ds.element.{Bundle, Primitive, SingleElement}
+import ai.mantik.ds.element.{ Bundle, Primitive, SingleElement }
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.planner.{PlanFileReference, PlanNodeService, PlanOp}
+import ai.mantik.planner.{ PlanFileReference, PlanNodeService, PlanOp }
 import ai.mantik.testutils.TestBase
 
 class ResourcePlanSpec extends TestBase {
 
   // Some fake plans to simplify testing
   val lit = Bundle(Int32, Vector(SingleElement(Primitive(1))))
-  val pusher  = PlanOp.StoreBundleToFile(lit, PlanFileReference(1))
+  val pusher = PlanOp.StoreBundleToFile(lit, PlanFileReference(1))
   val pusher2 = PlanOp.StoreBundleToFile(lit, PlanFileReference(2))
 
-  val algorithm = ResourcePlan (
+  val algorithm = ResourcePlan(
     pre = PlanOp.seq(pusher),
-    graph = Graph (
+    graph = Graph(
       Map(
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
-          resources = Map (
+          resources = Map(
             "inout" -> NodeResource(ResourceType.Transformer)
           )
         )
@@ -34,13 +34,13 @@ class ResourcePlanSpec extends TestBase {
     )
   )
 
-  val algorithm2 = ResourcePlan (
+  val algorithm2 = ResourcePlan(
     pre = PlanOp.seq(pusher2),
-    graph = Graph (
+    graph = Graph(
       Map(
         "2" -> Node(
           PlanNodeService.DockerContainer(Container("bar"), None, TestItems.algorithm1),
-          resources = Map (
+          resources = Map(
             "inout" -> NodeResource(ResourceType.Transformer)
           )
         )
@@ -56,11 +56,11 @@ class ResourcePlanSpec extends TestBase {
 
   val multiOutput = ResourcePlan(
     pre = PlanOp.seq(pusher),
-    graph = Graph (
+    graph = Graph(
       Map(
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-          resources = Map (
+          resources = Map(
             "in1" -> NodeResource(ResourceType.Sink),
             "out1" -> NodeResource(ResourceType.Source),
             "out2" -> NodeResource(ResourceType.Source)
@@ -77,13 +77,13 @@ class ResourcePlanSpec extends TestBase {
     )
   )
 
-  val multiInput = ResourcePlan (
+  val multiInput = ResourcePlan(
     pre = PlanOp.seq(pusher),
-    graph = Graph (
+    graph = Graph(
       Map(
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-          resources = Map (
+          resources = Map(
             "in1" -> NodeResource(ResourceType.Sink),
             "in2" -> NodeResource(ResourceType.Sink),
             "out" -> NodeResource(ResourceType.Source)
@@ -93,20 +93,20 @@ class ResourcePlanSpec extends TestBase {
     ),
     inputs = Seq(
       NodeResourceRef("1", "in1"),
-      NodeResourceRef("1", "in2"),
+      NodeResourceRef("1", "in2")
     ),
     outputs = Seq(
-      NodeResourceRef("1", "out"),
+      NodeResourceRef("1", "out")
     )
   )
 
-  val dataset = ResourcePlan (
+  val dataset = ResourcePlan(
     pre = PlanOp.seq(pusher2),
-    graph = Graph (
-      Map (
+    graph = Graph(
+      Map(
         "2" -> Node(
           PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-          resources = Map (
+          resources = Map(
             "out" -> NodeResource(ResourceType.Source)
           )
         )
@@ -136,7 +136,7 @@ class ResourcePlanSpec extends TestBase {
     multiOutput.projectOutput(1) shouldBe multiOutput.copy(
       outputs = Seq(multiOutput.outputs(1))
     )
-    intercept[IllegalArgumentException]{
+    intercept[IllegalArgumentException] {
       multiOutput.projectOutput(2)
     }
   }
@@ -145,16 +145,16 @@ class ResourcePlanSpec extends TestBase {
     algorithm.application(dataset) shouldBe ResourcePlan(
       pre = PlanOp.seq(pusher, pusher2),
       graph = Graph(
-        Map (
+        Map(
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
-            resources = Map (
+            resources = Map(
               "inout" -> NodeResource(ResourceType.Transformer)
             )
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-            resources = Map (
+            resources = Map(
               "out" -> NodeResource(ResourceType.Source)
             )
           )
@@ -169,13 +169,13 @@ class ResourcePlanSpec extends TestBase {
   }
 
   it should "work when not all inputs are used" in {
-    multiInput.application(dataset) shouldBe ResourcePlan (
+    multiInput.application(dataset) shouldBe ResourcePlan(
       pre = PlanOp.seq(pusher, pusher2),
       graph = Graph(
-        Map (
+        Map(
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-            resources = Map (
+            resources = Map(
               "in1" -> NodeResource(ResourceType.Sink),
               "in2" -> NodeResource(ResourceType.Sink),
               "out" -> NodeResource(ResourceType.Source)
@@ -183,7 +183,7 @@ class ResourcePlanSpec extends TestBase {
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-            resources = Map (
+            resources = Map(
               "out" -> NodeResource(ResourceType.Source)
             )
           )
@@ -198,13 +198,13 @@ class ResourcePlanSpec extends TestBase {
   }
 
   it should "work when not all outputs are used" in {
-    multiOutput.application(dataset) shouldBe ResourcePlan (
+    multiOutput.application(dataset) shouldBe ResourcePlan(
       pre = PlanOp.seq(pusher, pusher2),
       graph = Graph(
-        Map (
+        Map(
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-            resources = Map (
+            resources = Map(
               "in1" -> NodeResource(ResourceType.Sink),
               "out1" -> NodeResource(ResourceType.Source),
               "out2" -> NodeResource(ResourceType.Source)
@@ -212,7 +212,7 @@ class ResourcePlanSpec extends TestBase {
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-            resources = Map (
+            resources = Map(
               "out" -> NodeResource(ResourceType.Source)
             )
           )
@@ -231,19 +231,19 @@ class ResourcePlanSpec extends TestBase {
 
   it should "be possible to chain algorithms using applications" in {
     val result = algorithm2.application(algorithm)
-    result shouldBe ResourcePlan (
+    result shouldBe ResourcePlan(
       pre = PlanOp.seq(pusher2, pusher),
-      graph = Graph (
+      graph = Graph(
         Map(
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
-            resources = Map (
+            resources = Map(
               "inout" -> NodeResource(ResourceType.Transformer)
             )
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.algorithm1),
-            resources = Map (
+            resources = Map(
               "inout" -> NodeResource(ResourceType.Transformer)
             )
           )

@@ -40,7 +40,7 @@ class DataTypeSpec extends TestBase {
       "height" -> 200.asJson,
       "components" -> Json.obj(
         "red" -> Json.obj(
-          "componentType" -> "uint8".asJson,
+          "componentType" -> "uint8".asJson
         ),
         "green" -> Json.obj(
           "componentType" -> "uint32".asJson
@@ -63,7 +63,7 @@ class DataTypeSpec extends TestBase {
       "height" -> 200.asJson,
       "components" -> Json.obj(
         "red" -> Json.obj(
-          "componentType" -> "uint8".asJson,
+          "componentType" -> "uint8".asJson
         ),
         "green" -> Json.obj(
           "componentType" -> "uint32".asJson
@@ -95,13 +95,13 @@ class DataTypeSpec extends TestBase {
     )
     toJson(TabularData(
       ListMap(
-      "image" -> Image(
-        100,
-        200,
-        ListMap(
-          ImageChannel.Red -> ImageComponent(FundamentalType.Uint32)
+        "image" -> Image(
+          100,
+          200,
+          ListMap(
+            ImageChannel.Red -> ImageComponent(FundamentalType.Uint32)
+          )
         )
-      )
       ),
       rowCount = Some(10000)
     )) shouldBe Json.obj(
@@ -125,7 +125,7 @@ class DataTypeSpec extends TestBase {
 
   "tensors" should "serialize well" in {
     toJson(Tensor(
-      FundamentalType.Int32, Seq(1,2)
+      FundamentalType.Int32, Seq(1, 2)
     )) shouldBe Json.obj(
       "type" -> "tensor".asJson,
       "componentType" -> "int32".asJson,
@@ -174,13 +174,13 @@ class DataTypeSpec extends TestBase {
       )
     ),
     Image(
-      100, 100, components = ListMap (
+      100, 100, components = ListMap(
         ImageChannel.Black -> ImageComponent(FundamentalType.Uint8)
       ),
       format = ImageFormat.Png
     ),
     TabularData(
-      columns = ListMap (
+      columns = ListMap(
         "id" -> FundamentalType.Int64,
         "name" -> FundamentalType.StringType,
         "image" -> Image(
@@ -191,7 +191,7 @@ class DataTypeSpec extends TestBase {
       )
     ),
     TabularData(
-      columns = ListMap (
+      columns = ListMap(
         "name" -> FundamentalType.StringType,
         "id" -> FundamentalType.Int64,
         "image" -> Image(
@@ -204,7 +204,7 @@ class DataTypeSpec extends TestBase {
     ),
     Tensor(
       componentType = FundamentalType.BoolType,
-      shape = Seq(1,2,3)
+      shape = Seq(1, 2, 3)
     ),
     Tensor(
       componentType = FundamentalType.Int32,

@@ -2,9 +2,9 @@ package ai.mantik.planner.impl
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements
-import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikId, Mantikfile, PipelineStep}
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikId, Mantikfile, PipelineStep }
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner._
@@ -22,7 +22,7 @@ class PlannerImplSpec extends TestBase {
     }
 
     val algorithm1 = Algorithm(
-      Source(DefinitionSource.Loaded("algo1:version1", ItemId.generate()),PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+      Source(DefinitionSource.Loaded("algo1:version1", ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
     )
     val dataset1 = DataSet(
       Source(DefinitionSource.Loaded("dataset1:version1", ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1
@@ -39,8 +39,8 @@ class PlannerImplSpec extends TestBase {
     def splitOps(op: PlanOp): Seq[PlanOp] = {
       op match {
         case PlanOp.Sequential(parts) => parts
-        case PlanOp.Empty => Nil
-        case other => Seq(other)
+        case PlanOp.Empty             => Nil
+        case other                    => Seq(other)
       }
     }
   }
@@ -78,7 +78,7 @@ class PlannerImplSpec extends TestBase {
     splitOps(result.preOp).find(_.isInstanceOf[PlanOp.AddMantikItem]) shouldBe defined
     result.fileRefs.head shouldBe PlanFileReference(1)
 
-    withClue("It should not lead to a change if the item is stored twice"){
+    withClue("It should not lead to a change if the item is stored twice") {
       val (state2, result2) = planner.ensureItemStored(ds).run(state).value
       result2.preOp shouldBe PlanOp.Empty
       result2.fileRefs.head shouldBe PlanFileReference(1)
@@ -113,10 +113,10 @@ class PlannerImplSpec extends TestBase {
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
     pipe.state.get.deployment shouldBe empty // no state changes
     state.itemDeployed(pipe) shouldBe defined
-    withClue("dependent items are also deployed"){
+    withClue("dependent items are also deployed") {
       state.itemDeployed(algorithm1) shouldBe defined
     }
-    withClue("It must also be stored"){
+    withClue("It must also be stored") {
       state.itemStorage(pipe)._2 shouldBe defined
     }
   }
@@ -146,7 +146,7 @@ class PlannerImplSpec extends TestBase {
     plan.op shouldBe PlanOp.seq(
       PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
       PlanOp.AddMantikItem(
-        item, Some(PlanFileReference(1)),
+        item, Some(PlanFileReference(1))
       ),
       PlanOp.TagMantikItem(
         item, "item1"
@@ -173,11 +173,11 @@ class PlannerImplSpec extends TestBase {
     plan.op shouldBe PlanOp.seq(
       PlanOp.AddMantikItem(
         algorithm2,
-        Some(PlanFileReference(1)),
+        Some(PlanFileReference(1))
       ),
       PlanOp.AddMantikItem(
         pipeline,
-        None,
+        None
       ),
       PlanOp.TagMantikItem(
         pipeline,
@@ -227,7 +227,7 @@ class PlannerImplSpec extends TestBase {
   it should "also work if it has to convert a executed dataset" in new Env {
     val inner = DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2)
     val plan = planner.convert(
-      Action.FetchAction (
+      Action.FetchAction(
         inner
       )
     )
@@ -260,7 +260,7 @@ class PlannerImplSpec extends TestBase {
 
   it should "save a non-loaded algorithm first" in new Env {
     val algorithm2 = Algorithm(
-      Source(DefinitionSource.Constructed(),PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+      Source(DefinitionSource.Constructed(), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
     )
     val deployAction = algorithm2.deploy()
     val plan = planner.convert(deployAction)
@@ -302,7 +302,6 @@ class PlannerImplSpec extends TestBase {
     parts.head shouldBe an[PlanOp.StoreBundleToFile]
     parts(1) shouldBe an[PlanOp.RunGraph]
 
-
     withClue("It should use the same key for a 2nd invocation referring to the same data") {
       val c2 = b.select("select y as m")
       val plan = planner.convert(c2.fetch)
@@ -310,8 +309,8 @@ class PlannerImplSpec extends TestBase {
       parts.size shouldBe 3 // calculation of cached, calculation 2 and pulling
       parts.head shouldBe an[PlanOp.CacheOp]
       parts.head.asInstanceOf[PlanOp.CacheOp].cacheGroup shouldBe List(cacheKey)
-      parts(1) shouldBe an [PlanOp.RunGraph]
-      parts(2) shouldBe an [PlanOp.LoadBundleFromFile]
+      parts(1) shouldBe an[PlanOp.RunGraph]
+      parts(2) shouldBe an[PlanOp.LoadBundleFromFile]
     }
   }
 
@@ -326,7 +325,7 @@ class PlannerImplSpec extends TestBase {
       PlanFile(PlanFileReference(2), read = true, write = true, temporary = false, cacheKey = Some(cacheKey))
     )
     val parts = splitOps(plan.op)
-    parts.size shouldBe  3 // CacheOp, AddMantikItem, TagMantikItem
+    parts.size shouldBe 3 // CacheOp, AddMantikItem, TagMantikItem
     parts.head shouldBe an[PlanOp.CacheOp]
     parts(1) shouldBe an[PlanOp.AddMantikItem]
     parts(2) shouldBe an[PlanOp.TagMantikItem]

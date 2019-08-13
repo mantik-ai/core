@@ -1,10 +1,10 @@
 package ai.mantik.executor.kubernetes
 
 import ai.mantik.executor.model._
-import ai.mantik.executor.model.docker.{Container, DockerConfig, DockerLogin}
+import ai.mantik.executor.model.docker.{ Container, DockerConfig, DockerLogin }
 import ai.mantik.testutils.TestBase
 import io.circe.syntax._
-import skuber.{RestartPolicy, Volume}
+import skuber.{ RestartPolicy, Volume }
 
 class KubernetesJobConverterSpec extends TestBase {
 
@@ -15,7 +15,7 @@ class KubernetesJobConverterSpec extends TestBase {
       coordinator = Container("my_coordinator", Seq("coordinator_arg")),
       payloadPreparer = Container("payload_preparer"),
       kubernetes = oldConfig.kubernetes.copy(
-        namespacePrefix = "systemtest-",
+        namespacePrefix = "systemtest-"
       ),
       podTrackerId = "mantik-executor",
       dockerConfig = DockerConfig(

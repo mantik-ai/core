@@ -4,8 +4,8 @@ import com.typesafe.config.Config
 
 /** Configuration for [[ExecutorServer]]. */
 case class ServerConfig(
-  interface: String,
-  port: Int
+    interface: String,
+    port: Int
 )
 
 object ServerConfig {
@@ -17,7 +17,7 @@ object ServerConfig {
     val subConfig = config.getConfig(Path)
     ServerConfig(
       interface = subConfig.getString("interface"),
-      port = subConfig.getInt("port"),
+      port = subConfig.getInt("port")
     )
   }
 }
