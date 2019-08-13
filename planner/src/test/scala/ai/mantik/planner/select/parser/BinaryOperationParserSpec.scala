@@ -1,11 +1,11 @@
 package ai.mantik.planner.select.parser
 
-import ai.mantik.planner.select.parser.AST.{BinaryOperationNode, IdentifierNode}
+import ai.mantik.planner.select.parser.AST.{ BinaryOperationNode, IdentifierNode }
 import org.parboiled2._
 
 class BinaryOperationParserSpec extends ParserTestBase {
 
-  class ParserImpl (val input: ParserInput) extends Parser with ExpressionParser
+  class ParserImpl(val input: ParserInput) extends Parser with ExpressionParser
 
   override protected def makeParser(s: String) = new ParserImpl(s)
 
@@ -16,21 +16,24 @@ class BinaryOperationParserSpec extends ParserTestBase {
       )
     )
     testEquality(_.Prio3BinaryOperation, "A * B + C",
-      BinaryOperationNode("+",
+      BinaryOperationNode(
+        "+",
         BinaryOperationNode("*", IdentifierNode("A"), IdentifierNode("B")),
         IdentifierNode("C")
       )
     )
     testEquality(_.Expression, "A * B + C",
-      BinaryOperationNode("+",
+      BinaryOperationNode(
+        "+",
         BinaryOperationNode("*", IdentifierNode("A"), IdentifierNode("B")),
         IdentifierNode("C")
       )
     )
     testEquality(_.Expression, "A * B and C + D",
-      BinaryOperationNode("and",
+      BinaryOperationNode(
+        "and",
         BinaryOperationNode("*", IdentifierNode("A"), IdentifierNode("B")),
-        BinaryOperationNode("+", IdentifierNode("C"), IdentifierNode("D")),
+        BinaryOperationNode("+", IdentifierNode("C"), IdentifierNode("D"))
       )
     )
   }
@@ -47,9 +50,10 @@ class BinaryOperationParserSpec extends ParserTestBase {
   }
 
   "multiple arguments" should "work and be left-assiocative" in {
-    for (sign <- Seq("+", "-", "*", "/", "and", "or")){
+    for (sign <- Seq("+", "-", "*", "/", "and", "or")) {
       testEquality(_.ExpressionEOI, s"A $sign B $sign C",
-        BinaryOperationNode(sign,
+        BinaryOperationNode(
+          sign,
           BinaryOperationNode(sign, IdentifierNode("A"), IdentifierNode("B")),
           IdentifierNode("C")
         )

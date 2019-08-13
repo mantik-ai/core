@@ -1,7 +1,7 @@
 package ai.mantik.elements
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.meta.MetaVariable
@@ -44,7 +44,7 @@ class MantikfileSpec extends TestBase {
       author = Some("John Doe"),
       authorEmail = Some("john.doe@example.com"),
       name = Some("super_duper_algorithm"),
-      version = Some("0.1"),
+      version = Some("0.1")
     )
     mf.violations shouldBe empty
   }
@@ -130,12 +130,12 @@ class MantikfileSpec extends TestBase {
       """.stripMargin
     val mantikfile = Mantikfile.fromYamlWithType[DataSetDefinition](definition).forceRight
     mantikfile.definition shouldBe elements.DataSetDefinition(
-        directory = Some("my_dir"),
-        format = "binary",
-        `type` = TabularData(
-          "x" -> FundamentalType.Int32,
-          "y" -> FundamentalType.StringType
-        )
+      directory = Some("my_dir"),
+      format = "binary",
+      `type` = TabularData(
+        "x" -> FundamentalType.Int32,
+        "y" -> FundamentalType.StringType
+      )
     )
     mantikfile.header shouldBe MantikHeader(
       name = Some("dataset1"),
@@ -162,14 +162,14 @@ class MantikfileSpec extends TestBase {
       """.stripMargin
     val mantikfile = Mantikfile.fromYamlWithType[TrainableAlgorithmDefinition](definition).forceRight
     mantikfile.definition shouldBe elements.TrainableAlgorithmDefinition(
-        stack = "foo1",
-        `type` = FunctionType(
-          FundamentalType.Int32,
-          FundamentalType.Int64
-        ),
-        trainingType = FundamentalType.Int32,
-        statType = FundamentalType.StringType,
-        directory = Some("foo")
+      stack = "foo1",
+      `type` = FunctionType(
+        FundamentalType.Int32,
+        FundamentalType.Int64
+      ),
+      trainingType = FundamentalType.Int32,
+      statType = FundamentalType.StringType,
+      directory = Some("foo")
     )
     mantikfile.header shouldBe MantikHeader(
       name = Some("train1")
@@ -218,7 +218,7 @@ class MantikfileSpec extends TestBase {
             "select i"
           )
         )
-    )
+      )
     mantikfile.header shouldBe MantikHeader(
       name = Some("pipeline1")
     )
