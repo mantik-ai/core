@@ -5,3 +5,4 @@ __pycache__
 doc/index.rst
 doc/Pipfile*
 /public
+/bridge/tf/saved_model/docker_build/
