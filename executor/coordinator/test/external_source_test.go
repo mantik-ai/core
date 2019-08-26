@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestSimpleExternalABCopy(t *testing.T) {
@@ -104,8 +105,8 @@ func TestExternalAbcFlow(t *testing.T) {
 
 	testData := []byte("Hello World")
 	abc := CreateAbcFlowNodes(testData)
-	abc.plan.Nodes["A"] = coordinator.MakeExternalNode(abc.sourceServer.ResourceUrl())
-	abc.plan.Nodes["C"] = coordinator.MakeExternalNode(abc.sinkServer.ResourceUrl())
+	abc.plan.Nodes["A"] = coordinator.MakeExternalNode(abc.sourceServer.URL)
+	abc.plan.Nodes["C"] = coordinator.MakeExternalNode(abc.sinkServer.URL)
 
 	c, err := coordinator.CreateCoordinator("localhost", randomPortSettings, &abc.plan)
 	assert.NoError(t, err)
@@ -129,7 +130,7 @@ func TestExternalAbcFlow2(t *testing.T) {
 
 	testData := []byte("Hello World")
 	abc := CreateAbcFlowNodes(testData)
-	abc.plan.Nodes["B"] = coordinator.MakeExternalNode(abc.transformServer.ResourceUrl())
+	abc.plan.Nodes["B"] = coordinator.MakeExternalNode(abc.transformServer.URL)
 
 	c, err := coordinator.CreateCoordinator("localhost", randomPortSettings, &abc.plan)
 	assert.NoError(t, err)
@@ -184,14 +185,96 @@ func TestExternalOnlyAbFlow(t *testing.T) {
 	assert.Equal(t, testData, ts2.RequestData[0])
 }
 
+func TestAutoQuit(t *testing.T) {
+	// External -> External
+	// The coordinator will have to do the work by itself as it can't offload it to a node.
+
+	testData := []byte("Hello World")
+
+	ts1 := testutil.CreateSampleSource("Source", testData)
+	defer ts1.Close()
+
+	ts2 := testutil.CreateSampleSink("Sink")
+	defer ts2.Close()
+
+	plan := coordinator.Plan{
+		Nodes: map[string]coordinator.Node{
+			"A": coordinator.Node{Url: &ts1.URL, QuitAfterwards: true},
+			"B": coordinator.Node{Url: &ts2.URL},
+		},
+		Flows: []coordinator.Flow{
+			coordinator.Flow{
+				coordinator.NodeResourceRef{"A", "Source", nil},
+				coordinator.NodeResourceRef{"B", "Sink", nil},
+			},
+		},
+	}
+
+	c, err := coordinator.CreateCoordinator("localhost", randomPortSettings, &plan)
+	assert.NoError(t, err)
+
+	var group sync.WaitGroup
+	err = c.Run()
+	group.Wait()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, ts1.Requests)
+	assert.Equal(t, 1, ts2.Requests)
+	assert.True(t, ts1.QuitRequested) // Important
+	assert.False(t, ts2.QuitRequested)
+	assert.Equal(t, testData, ts2.RequestData[0])
+}
+
+func TestUnreachableExternalWebservice(t *testing.T) {
+	testData := []byte("Hello World")
+
+	ts1 := testutil.CreateSampleSource("Source", testData)
+	defer ts1.Close()
+
+	ts1.StatusToReturn = 500 // will be changed in a short time
+
+	ts2 := testutil.CreateSampleSink("Sink")
+	defer ts2.Close()
+
+	plan := coordinator.Plan{
+		Nodes: map[string]coordinator.Node{
+			"A": coordinator.MakeExternalNode(ts1.URL),
+			"B": coordinator.MakeExternalNode(ts2.URL),
+		},
+		Flows: []coordinator.Flow{
+			coordinator.Flow{
+				coordinator.NodeResourceRef{"A", "Source", nil},
+				coordinator.NodeResourceRef{"B", "Sink", nil},
+			},
+		},
+	}
+
+	randomPortSettings.WaitForWebServiceReachable = time.Millisecond * 100
+	randomPortSettings.RetryTime = time.Millisecond * 10
+
+	c, err := coordinator.CreateCoordinator("localhost", randomPortSettings, &plan)
+	assert.NoError(t, err)
+
+	var group sync.WaitGroup
+	time.AfterFunc(50*time.Millisecond, func() {
+		ts1.StatusToReturn = 200
+	})
+	err = c.Run()
+
+	group.Wait()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, ts1.Requests)
+	assert.Equal(t, 1, ts2.Requests)
+	assert.Equal(t, testData, ts2.RequestData[0])
+}
+
 func TestFullExternalAbcFlow(t *testing.T) {
 	// External --> External ---> External
 
 	testData := []byte("Hello World")
 	abc := CreateAbcFlowNodes(testData)
-	abc.plan.Nodes["A"] = coordinator.MakeExternalNode(abc.sourceServer.ResourceUrl())
-	abc.plan.Nodes["B"] = coordinator.MakeExternalNode(abc.transformServer.ResourceUrl())
-	abc.plan.Nodes["C"] = coordinator.MakeExternalNode(abc.sinkServer.ResourceUrl())
+	abc.plan.Nodes["A"] = coordinator.MakeExternalNode(abc.sourceServer.URL)
+	abc.plan.Nodes["B"] = coordinator.MakeExternalNode(abc.transformServer.URL)
+	abc.plan.Nodes["C"] = coordinator.MakeExternalNode(abc.sinkServer.URL)
 
 	c, err := coordinator.CreateCoordinator("localhost", randomPortSettings, &abc.plan)
 	assert.NoError(t, err)

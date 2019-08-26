@@ -1,5 +1,6 @@
 package ai.mantik.executor.kubernetes.integration
 
+import ai.mantik.executor.common.test.integration.DeployServiceSpecBase
 import ai.mantik.executor.kubernetes.KubernetesConstants
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model._
@@ -9,110 +10,12 @@ import skuber.json.format._
 import skuber.{ ListResource, Secret }
 
 @IntegrationTest
-class DeployServiceSpec extends IntegrationTestBase {
+class DeployServiceSpec extends IntegrationTestBase with DeployServiceSpecBase {
 
   // this seems to be missing in skuber
   implicit val rsListFormat = skuber.json.format.ListResourceFormat[ReplicaSet]
 
-  it should "allow deploying a service" in new Env {
-    val isolationSpace = "deploy-spec"
-    val deployRequest = DeployServiceRequest(
-      "service1",
-      isolationSpace = isolationSpace,
-      service = ContainerService(
-        main = Container(
-          image = "executor_sample_transformer"
-        )
-      )
-    )
-    val response = await(executor.deployService(deployRequest))
-    response.serviceName shouldNot be(empty)
-    response.url shouldNot be(empty)
-
-    // we can now use the URL in a job.
-    val job = Job(
-      isolationSpace = isolationSpace,
-      graph = Graph(
-        nodes = Map(
-          "A" -> Node.source(
-            ContainerService(
-              main = Container(
-                image = "executor_sample_source"
-              )
-            )
-          ),
-          "B" -> Node.transformer(
-            ExistingService(
-              url = response.url
-            )
-          ),
-          "C" -> Node.sink(
-            ContainerService(
-              main = Container(
-                image = "executor_sample_sink"
-              )
-            )
-          )
-        ),
-        links = Link.links(
-          NodeResourceRef("A", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("B", ExecutorModelDefaults.TransformationResource),
-          NodeResourceRef("B", ExecutorModelDefaults.TransformationResource) -> NodeResourceRef("C", ExecutorModelDefaults.SinkResource)
-        )
-      )
-    )
-    val jobId = await(executor.schedule(job))
-
-    val status = eventually {
-      val status = await(executor.status(job.isolationSpace, jobId))
-      status.state shouldBe JobState.Finished
-      status
-    }
-  }
-
-  it should "allow querying a service" in new Env {
-    val isolationSpace = "deploy-spec2"
-    val deployRequest = DeployServiceRequest(
-      "service1",
-      Some("name1"),
-      isolationSpace = isolationSpace,
-      service = ContainerService(
-        main = Container(
-          image = "executor_sample_transformer"
-        )
-      )
-    )
-    val response = await(executor.deployService(deployRequest))
-    response.serviceName shouldNot be(empty)
-    response.url shouldNot be(empty)
-
-    val queryResponse1 = await(executor.queryDeployedServices(
-      DeployedServicesQuery(isolationSpace)
-    ))
-
-    queryResponse1.services shouldBe List(
-      DeployedServicesEntry("service1", response.url)
-    )
-
-    // different namesapce
-    val queryResponse2 = await(executor.queryDeployedServices(
-      DeployedServicesQuery("other-space")
-    ))
-    queryResponse2.services shouldBe empty
-
-    // different id
-    val queryResponse4 = await(executor.queryDeployedServices(
-      DeployedServicesQuery(isolationSpace, serviceId = Some("otehr"))
-    ))
-    queryResponse4.services shouldBe empty
-
-    // over specified (but matching)
-    val queryResponse5 = await(executor.queryDeployedServices(
-      DeployedServicesQuery(isolationSpace, serviceId = Some("service1"))
-    ))
-    queryResponse5 shouldBe queryResponse1
-  }
-
-  it should "allow service deletion" in new Env {
+  it should "should delete all kubernetes artifacts upon deletion" in new Env {
     val isolationSpace = "deploy-spec3"
     val ns = config.kubernetes.namespacePrefix + isolationSpace
     val nsClient = kubernetesClient.usingNamespace(ns)
@@ -156,34 +59,6 @@ class DeployServiceSpec extends IntegrationTestBase {
 
     replicaSetCount() shouldBe 2
     secretCount() shouldBe 2
-
-    val queryResponse1 = await(executor.queryDeployedServices(
-      DeployedServicesQuery(isolationSpace)
-    ))
-
-    queryResponse1.services.map(_.serviceId) should contain theSameElementsAs Seq(
-      "service1", "service2"
-    )
-
-    // non existing isolation space
-    val deleteResponse1 = await(executor.deleteDeployedServices(
-      DeployedServicesQuery(
-        isolationSpace = "other"
-      )
-    ))
-    deleteResponse1 shouldBe 0
-
-    replicaSetCount() shouldBe 2
-    secretCount() shouldBe 2
-
-    // not existing id
-    val deleteResponse3 = await(executor.deleteDeployedServices(
-      DeployedServicesQuery(
-        isolationSpace,
-        serviceId = Some("otherId")
-      )
-    ))
-    deleteResponse3 shouldBe 0
 
     // correct id
     val deleteResponse4 = await(executor.deleteDeployedServices(

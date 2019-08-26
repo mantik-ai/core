@@ -56,13 +56,15 @@ class ExecutorServer(
     }
 
     bind(ExecutorApi.nameAndVersion).to { _ =>
-      bindErrors(Future.successful(executor.nameAndVersion))
+      bindErrors(executor.nameAndVersion)
     }
 
     add {
       path("") {
         get {
-          complete("Executor Server, backend: " + executor.nameAndVersion)
+          onSuccess(executor.nameAndVersion) { version =>
+            complete("Executor Server, backend: " + version)
+          }
         }
       }
     }

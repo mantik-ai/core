@@ -78,9 +78,10 @@ class ExecutorClient(url: Uri)(implicit akkaRuntime: AkkaRuntime) extends Compon
     }
   }
 
-  override def nameAndVersion: String = {
-    val res = unpackError(versionCall(()))
-    Await.result(res, 10.seconds)
+  override def nameAndVersion: Future[String] = {
+    unpackError {
+      versionCall(())
+    }
   }
 }
 

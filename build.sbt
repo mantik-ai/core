@@ -83,6 +83,18 @@ def enableProtocolBuffer = Seq(
   )
 )
 
+def configureBuildInfo(packageName: String): Seq[Def.Setting[_]] =
+  Seq(
+    buildInfoKeys := Seq[BuildInfoKey](
+    name,
+    version,
+    scalaVersion,
+    BuildInfoKey("gitVersion", gitVersion),
+    BuildInfoKey("buildNum", buildNum)
+    ),
+    buildInfoPackage := packageName
+  )
+
 // Initializes a sub project with common settings
 def makeProject(directory: String, id: String = "") = {
   val idToUse = if (id.isEmpty){
@@ -97,6 +109,7 @@ def makeProject(directory: String, id: String = "") = {
       scalariformSettings,
       testSettings,
       addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+      publishSettings
     )
 }
 
@@ -124,8 +137,7 @@ lazy val ds = makeProject("ds")
 
       // SLF4J Api
       "org.slf4j" % "slf4j-api" % slf4jVersion
-    ),
-    publishSettings
+    )
   )
 
 // Utility stuff, may only depend on Akka, Http and JSON.
@@ -147,8 +159,7 @@ lazy val util = makeProject("util")
       "io.circe" %% "circe-java8" % circeVersion,
 
       "de.heikoseeberger" %% "akka-http-circe" % "1.25.2"
-    ),
-    publishSettings
+    )
   )
 
 lazy val elements = makeProject("elements")
@@ -176,8 +187,7 @@ lazy val componently = makeProject("componently")
 
       // Guice
       "com.google.inject" % "guice" % "4.2.2"
-    ),
-    publishSettings
+    )
   )
 
 
@@ -200,12 +210,36 @@ lazy val executorApi = makeProject("executor/api", "executorApi")
       // Logging
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-    ),
-    publishSettings
+    )
   )
 
-lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubernetes")
+lazy val executorCommon = makeProject("executor/common", "executorCommon")
   .dependsOn(executorApi)
+  .settings(
+    name := "executor-common"
+  )
+
+lazy val executorCommonTest = makeProject("executor/common-test", "executorCommonTest")
+  .dependsOn(testutils, executorApi, executorCommon)
+  .settings(
+    name := "executor-common-test"
+  )
+
+lazy val executorDocker = makeProject("executor/docker", "executorDocker")
+  .dependsOn(executorApi, executorCommon)
+  .dependsOn(executorCommonTest % "test")
+  .settings(
+    name := "executor-docker",
+    libraryDependencies ++= Seq(
+      "net.reactivecore" %% "fhttp-akka" % fhttpVersion
+    )
+  )
+  .enablePlugins(BuildInfoPlugin)
+  .settings(configureBuildInfo("ai.mantik.executor.docker.buildinfo"))
+
+lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubernetes")
+  .dependsOn(executorApi, executorCommon)
+  .dependsOn(executorCommonTest % "test")
   .settings(
     name := "executor-kubernetes",
     libraryDependencies ++= Seq(
@@ -225,26 +259,15 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
       "com.google.guava" % "guava" % "27.1-jre",
 
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-    ),
-    publishSettings
+    )
   )
   .enablePlugins(BuildInfoPlugin)
-  .settings(
-    buildInfoKeys := Seq[BuildInfoKey](
-      name,
-      version,
-      scalaVersion,
-      BuildInfoKey("gitVersion", gitVersion),
-      BuildInfoKey("buildNum", buildNum))
-    ,
-    buildInfoPackage := "ai.mantik.executor.kubernetes.buildinfo"
-  )
+  .settings(configureBuildInfo("ai.mantik.executor.kubernetes.buildinfo"))
 
 lazy val executorApp = makeProject("executor/app", "executorApp")
-  .dependsOn(executorKubernetes)
+  .dependsOn(executorKubernetes, executorDocker)
   .settings(
-    name := "executor-app",
-    publishSettings
+    name := "executor-app"
   )
   .enablePlugins(BuildInfoPlugin)
   .settings(
@@ -254,16 +277,7 @@ lazy val executorApp = makeProject("executor/app", "executorApp")
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
     )
   )
-  .settings(
-    buildInfoKeys := Seq[BuildInfoKey](
-      name,
-      version,
-      scalaVersion,
-      BuildInfoKey("gitVersion", gitVersion),
-      BuildInfoKey("buildNum", buildNum))
-    ,
-    buildInfoPackage := "ai.mantik.executor.buildinfo"
-  )
+  .settings(configureBuildInfo("ai.mantik.executor.buildinfo"))
   .enablePlugins(DockerPlugin, AshScriptPlugin)
   .settings(
     mainClass in Compile := Some("ai.mantik.executor.Main"),
@@ -291,7 +305,6 @@ lazy val planner = makeProject("planner")
       "org.xerial" % "sqlite-jdbc" % "3.18.0",
       "io.getquill" %% "quill-jdbc" % "3.2.0"
     ),
-    publishSettings,
     enableProtocolBuffer
   )
 
@@ -308,23 +321,13 @@ lazy val examples = makeProject("examples")
   )
 
 lazy val engine = makeProject("engine")
-  .dependsOn(planner, executorKubernetes)
+  .dependsOn(planner, executorKubernetes, executorDocker)
   .dependsOn(executorApp % "test")
   .settings(
-    name := "engine",
-    publishSettings
+    name := "engine"
   )
   .enablePlugins(BuildInfoPlugin)
-  .settings(
-    buildInfoKeys := Seq[BuildInfoKey](
-      name,
-      version,
-      scalaVersion,
-      BuildInfoKey("gitVersion", gitVersion),
-      BuildInfoKey("buildNum", buildNum))
-    ,
-    buildInfoPackage := "ai.mantik.engine.buildinfo"
-  )
+  .settings(configureBuildInfo("ai.mantik.engine.buildinfo"))
   .settings(
     enableProtocolBuffer
   )
@@ -337,7 +340,7 @@ lazy val engine = makeProject("engine")
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, elements, executorApi, executorKubernetes, executorApp, examples, planner, engine, componently, util)
+  .aggregate(testutils, ds, elements, executorApi, executorCommon, executorKubernetes, executorDocker, executorApp, examples, planner, engine, componently, util)
   .settings(
     name := "mantik-core",
     publish := {},

@@ -3,7 +3,7 @@ package ai.mantik.componently.utils
 import java.nio.charset.StandardCharsets
 import java.nio.file.{ Files, Path, Paths }
 
-import com.typesafe.config.{ Config, ConfigException }
+import com.typesafe.config.{ Config, ConfigException, ConfigFactory }
 import com.typesafe.scalalogging.Logger
 
 /**
@@ -16,7 +16,7 @@ import com.typesafe.scalalogging.Logger
  *
  * If nothing matches, it will return the plain value.
  */
-final class SecretReader(configKey: String, config: Config) {
+class SecretReader(configKey: String, config: Config) {
 
   private val logger = Logger(getClass)
 
@@ -41,6 +41,13 @@ object SecretReader {
   val PlainPrefix = "plain:"
   val FilePrefix = "file:"
   val EnvPrefix = "env:"
+
+  /** Generates a Fixed Secret reader. */
+  def fixed(value: String): SecretReader = new SecretReader("", ConfigFactory.empty()) {
+    override def read(): String = {
+      value
+    }
+  }
 
   /**
    * Read the secret value.

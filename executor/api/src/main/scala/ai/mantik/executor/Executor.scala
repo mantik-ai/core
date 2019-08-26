@@ -40,5 +40,5 @@ trait Executor extends Component {
   def deleteDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[Int]
 
   /** Returns the name and version string of the server (displayed on about page). */
-  def nameAndVersion: String
+  def nameAndVersion: Future[String]
 }

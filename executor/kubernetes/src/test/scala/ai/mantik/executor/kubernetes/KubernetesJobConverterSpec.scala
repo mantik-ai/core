@@ -1,5 +1,6 @@
 package ai.mantik.executor.kubernetes
 
+import ai.mantik.executor.common.CoordinatorPlan
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.{ Container, DockerConfig, DockerLogin }
 import ai.mantik.testutils.TestBase
@@ -11,20 +12,22 @@ class KubernetesJobConverterSpec extends TestBase {
   trait Env {
     private val oldConfig = Config.fromTypesafeConfig(typesafeConfig)
     def config = oldConfig.copy(
-      sideCar = Container("my_sidecar", Seq("sidecar_arg")),
-      coordinator = Container("my_coordinator", Seq("coordinator_arg")),
-      payloadPreparer = Container("payload_preparer"),
+      common = oldConfig.common.copy(
+        sideCar = Container("my_sidecar", Seq("sidecar_arg")),
+        coordinator = Container("my_coordinator", Seq("coordinator_arg")),
+        payloadPreparer = Container("payload_preparer"),
+        dockerConfig = DockerConfig(
+          defaultImageTag = Some("mytag"),
+          defaultImageRepository = Some("my-repo"),
+          logins = Seq(
+            DockerLogin("repo1", "user1", "password1")
+          )
+        )
+      ),
       kubernetes = oldConfig.kubernetes.copy(
         namespacePrefix = "systemtest-"
       ),
-      podTrackerId = "mantik-executor",
-      dockerConfig = DockerConfig(
-        defaultImageTag = Some("mytag"),
-        defaultImageRepository = Some("my-repo"),
-        logins = Seq(
-          DockerLogin("repo1", "user1", "password1")
-        )
-      )
+      podTrackerId = "mantik-executor"
     )
   }
 
@@ -123,7 +126,7 @@ class KubernetesJobConverterSpec extends TestBase {
         val spec = pod.spec.get
         spec.containers.size shouldBe 2
         val sidecar = spec.containers.find(_.name == "sidecar").get
-        sidecar.image shouldBe config.sideCar.image
+        sidecar.image shouldBe config.common.sideCar.image
         sidecar.args shouldBe Seq("sidecar_arg", "-url", "http://localhost:8502", "-shutdown")
       }
     }
@@ -169,8 +172,8 @@ class KubernetesJobConverterSpec extends TestBase {
     podSpec.restartPolicy shouldBe RestartPolicy.Never
     podSpec.containers.size shouldBe 1
     val container = podSpec.containers.head
-    container.image shouldBe config.coordinator.image
-    container.args shouldBe config.coordinator.parameters ++ List("-plan", "@/config/plan")
+    container.image shouldBe config.common.coordinator.image
+    container.args shouldBe config.common.coordinator.parameters ++ List("-plan", "@/config/plan")
     container.volumeMounts shouldBe List(
       Volume.Mount(
         "config-volume", mountPath = "/config"

@@ -9,7 +9,7 @@ import (
 func TestPlanSerialization(t *testing.T) {
 	jsonCode := `
 {
-	"nodes":{"A":{"address":"localhost:50501"}, "B":{"address":"localhost:50502"}, "C":{"url":"http://file-service"}}, 
+	"nodes":{"A":{"address":"localhost:50501"}, "B":{"address":"localhost:50502"}, "C":{"url":"http://file-service", "quitAfterwards": true}}, 
 	"flows":[[{"node": "A", "resource": "in", "contentType": "application/x-mantik-bundle"}, {"node": "B", "resource": "out"}, {"node": "C", "resource":"final"}]]
 }`
 	var p Plan
@@ -24,9 +24,9 @@ func TestPlanSerialization(t *testing.T) {
 
 	expected := Plan{
 		Nodes: map[string]Node{
-			"A": {&host1, nil},
-			"B": {&host2, nil},
-			"C": {nil, &url3},
+			"A": {&host1, nil, false},
+			"B": {&host2, nil, false},
+			"C": {nil, &url3, true},
 		},
 		Flows: []Flow{
 			{

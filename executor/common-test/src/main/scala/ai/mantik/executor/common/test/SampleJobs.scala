@@ -1,26 +1,25 @@
-package ai.mantik.executor.kubernetes.integration
+package ai.mantik.executor.common.test
 
-import ai.mantik.executor.kubernetes.Config
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{ ContainerService, ExecutorModelDefaults, Graph, Job, Link, Node, NodeResourceRef }
 
-class SampleJobs(config: Config) {
+object SampleJobs {
   val job = Job(
     "helloworld",
     graph = Graph(
       nodes = Map(
         "A" -> Node.source(
           ContainerService(
-            main = config.dockerConfig.resolveContainer(Container(
+            main = Container(
               image = "executor_sample_source"
-            ))
+            )
           )
         ),
         "B" -> Node.sink(
           ContainerService(
-            main = config.dockerConfig.resolveContainer(Container(
+            main = Container(
               image = "executor_sample_sink"
-            ))
+            )
           )
         )
       ),

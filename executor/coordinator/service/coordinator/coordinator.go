@@ -1,12 +1,14 @@
 package coordinator
 
 import (
+	"bytes"
 	"context"
 	"coordinator/service/protocol"
 	"coordinator/service/sidecar"
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -87,12 +89,15 @@ func optionalString(s *string) string {
 
 func (c *Coordinator) Run() error {
 	c.server.RunAsync()
-
-	defer c.server.QuitSideCars()
+	defer c.quitNodes()
 	log.Info("Initializing Connections...")
 	err := c.initializeConnections()
 	if err != nil {
 		return c.server.Ac.CombineErr(errors.Wrap(err, "Could not initialize connections"))
+	}
+	err = c.waitForWebServicesReachable()
+	if err != nil {
+		return c.server.Ac.CombineErr(errors.Wrap(err, "Waiting for reachable webservices failed"))
 	}
 	log.Info("Initializing Flows...")
 	err = c.initializeFlows()
@@ -215,6 +220,20 @@ func (c *Coordinator) initializeFlow(flowId int, flow Flow) (*FlowState, error) 
 		}
 	}
 	return &flowState, nil
+}
+
+func (c *Coordinator) waitForWebServicesReachable() error {
+	parallel := c.server.Ac.Parallel()
+	for _, node := range c.plan.Nodes {
+		if node.IsExternalNode() {
+			func(url string) {
+				parallel.Add(func() error {
+					return sidecar.HttpWaitReachable(c.server.Ac.Context, url, c.server.Settings)
+				})
+			}(*node.Url)
+		}
+	}
+	return parallel.Result()
 }
 
 func encodeFlowIdSubId(flowId int, subId int) string {
@@ -414,6 +433,47 @@ func (c *Coordinator) finalStatus() error {
 				return errors.Errorf("Unfinished node %d:%d", flowId, nodeId)
 			}
 		}
+	}
+	return nil
+}
+
+func (c *Coordinator) quitNodes() error {
+	err := c.server.QuitSideCars()
+	if err != nil {
+		log.Warn("Error quitting sidecars", err.Error())
+	}
+	// quit URL Nodes with enabled quit f lag
+	var lastError error
+	for name, i := range c.plan.Nodes {
+		if i.IsExternalNode() {
+			if i.QuitAfterwards {
+				// ignore result
+				err := sendQuitToNode(name, *i.Url)
+				if err != nil {
+					lastError = err
+				}
+			}
+		}
+	}
+	return lastError
+}
+
+func sendQuitToNode(name string, url string) error {
+	quitResource := "/admin/quit"
+	log.Infof("Quitting external node %s as being requested", name)
+	// do not use context, as we are probably in a shutdown phase anyway
+	quitUrl, err := resolveUrl(url, quitResource)
+	if err != nil {
+		log.Errorf("Could not resolve quit url of node %s %s (%s)", name, url, quitResource)
+		return err
+	}
+	response, err := http.Post(quitUrl, "", &bytes.Buffer{})
+	if err != nil {
+		log.Warnf("Could not send quit message %s", err.Error())
+		return err
+	}
+	if response.StatusCode >= 300 {
+		log.Warnf("Got http status %d on quitting node %s", response.StatusCode, name)
 	}
 	return nil
 }

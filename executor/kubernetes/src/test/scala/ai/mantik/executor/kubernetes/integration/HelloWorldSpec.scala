@@ -1,5 +1,6 @@
 package ai.mantik.executor.kubernetes.integration
 
+import ai.mantik.executor.common.test.SampleJobs
 import ai.mantik.executor.kubernetes.KubernetesConstants
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
@@ -12,7 +13,7 @@ import skuber.{ LabelSelector, ListResource, Pod }
 @IntegrationTest
 class HelloWorldSpec extends IntegrationTestBase {
 
-  val job = new SampleJobs(config).job
+  val job = SampleJobs.job
 
   it should "work" in new Env {
     val jobId = await(executor.schedule(job))

@@ -13,7 +13,7 @@ type Settings struct {
 	RetryTime time.Duration
 	// How long a side car waits for a coordinator
 	WaitForCoordinatorTimeout time.Duration
-	// How long a side car waits for a web service to be reachable upon startup
+	// How long a side car (and the coordinator) waits for a web service to be reachable upon startup
 	// Can be set to `0` to disable waiting
 	WaitForWebServiceReachable time.Duration
 	// Timeout for RPC Calls

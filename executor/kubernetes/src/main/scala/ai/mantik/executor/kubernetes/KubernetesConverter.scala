@@ -1,8 +1,8 @@
 package ai.mantik.executor.kubernetes
 
 import java.nio.charset.StandardCharsets
-import java.util.Base64
 
+import ai.mantik.executor.common.PayloadProvider
 import ai.mantik.executor.model.docker.DockerLogin
 import ai.mantik.executor.model.{ ContainerService, DataProvider, ExistingService, NodeService }
 import io.circe.Json
@@ -131,9 +131,9 @@ private[kubernetes] class KubernetesConverter(
 
     Container(
       name = KubernetesConstants.SidecarContainerName,
-      image = config.sideCar.image,
-      args = config.sideCar.parameters.toList ++ List("-url", urlForSideCar(nodeService)) ++ shutdownParameters,
-      imagePullPolicy = createImagePullPolicy(config.sideCar)
+      image = config.common.sideCar.image,
+      args = config.common.sideCar.parameters.toList ++ List("-url", urlForSideCar(nodeService)) ++ shutdownParameters,
+      imagePullPolicy = createImagePullPolicy(config.common.sideCar)
     )
   }
 
@@ -146,36 +146,23 @@ private[kubernetes] class KubernetesConverter(
 
   /** Creates the container definition of the payload_preparer. */
   private def createPayloadPreparer(dataProvider: DataProvider): Container = {
-    val mantikfileArgument = dataProvider.mantikfile.map { mantikfile =>
-      // The container expects the Mantikfile as base64 argument
-      val base64Encoder = Base64.getEncoder
-      val encodedMantikfile = base64Encoder.encodeToString(
-        mantikfile.getBytes(StandardCharsets.UTF_8)
-      )
-      List("-mantikfile", encodedMantikfile)
-    }.getOrElse(Nil)
-
-    val urlArgument = dataProvider.url.map { url =>
-      List("-url", url)
-    }.getOrElse(Nil)
-
-    val payloadDirArgument = dataProvider.directory.map { dir =>
-      List("-pdir", dir)
-    }.getOrElse(Nil)
+    val extraArguments = PayloadProvider.createExtraArguments(
+      dataProvider
+    )
 
     Container(
       name = "data-provider",
-      image = config.payloadPreparer.image,
-      args = config.payloadPreparer.parameters.toList ++ urlArgument ++ mantikfileArgument ++ payloadDirArgument,
+      image = config.common.payloadPreparer.image,
+      args = config.common.payloadPreparer.parameters.toList ++ extraArguments,
       volumeMounts = List(
         Volume.Mount(name = "data", mountPath = "/data")
       ),
-      imagePullPolicy = createImagePullPolicy(config.payloadPreparer)
+      imagePullPolicy = createImagePullPolicy(config.common.payloadPreparer)
     )
   }
 
   def createImagePullPolicy(container: ai.mantik.executor.model.docker.Container): Container.PullPolicy.Value = {
-    if (config.kubernetes.disablePull) {
+    if (config.common.disablePull) {
       return Container.PullPolicy.Never
     }
     // Overriding the policy to a similar behaviour to kubernetes default

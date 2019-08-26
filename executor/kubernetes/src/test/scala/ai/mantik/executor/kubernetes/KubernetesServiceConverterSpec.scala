@@ -169,7 +169,7 @@ class KubernetesServiceConverterSpec extends TestBase {
 
     val container = ps.containers.ensuring(_.size == 1).head
     container.name shouldBe "controller"
-    container.image shouldBe config.pipelineController.image
+    container.image shouldBe config.common.pipelineController.image
     container.args shouldBe List(
       "-port", "1234"
     )

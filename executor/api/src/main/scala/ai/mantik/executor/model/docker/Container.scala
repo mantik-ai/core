@@ -12,17 +12,22 @@ case class Container(
 
   /** Returns the docker image tag. */
   def imageTag: Option[String] = {
-    val slashIdx = image.indexOf('/')
-    val tagIdx = image.indexOf(':', slashIdx + 1)
-    if (tagIdx > 0) {
-      Some(image.substring(tagIdx + 1))
-    } else {
-      None
-    }
+    Container.splitImageRepoTag(image).map(_._2)
   }
 }
 
 object Container {
+
+  /** Strip tag from image. If there is no tag, returns "latest" */
+  def splitImageRepoTag(imageName: String): Option[(String, String)] = {
+    val slashIdx = imageName.indexOf('/')
+    val tagIdx = imageName.indexOf(':', slashIdx + 1)
+    if (tagIdx > 0) {
+      Some(imageName.take(tagIdx) -> imageName.drop(tagIdx + 1))
+    } else {
+      None
+    }
+  }
 
   /** Parses a Container from Typesafe Config. */
   @throws[ConfigException]
