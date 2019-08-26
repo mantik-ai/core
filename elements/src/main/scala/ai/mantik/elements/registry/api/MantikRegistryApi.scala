@@ -1,93 +1,56 @@
 package ai.mantik.elements.registry.api
 
 import ai.mantik.elements.MantikId
-import ai.mantik.util.http.SimpleHttpClient
 import akka.http.scaladsl.HttpExt
 import akka.http.scaladsl.model.Uri
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import org.slf4j.LoggerFactory
+import net.reactivecore.fhttp.akka.ApiClient
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 /** Implements raw API Calls to Mantik Registry. */
 class MantikRegistryApi(rootUri: Uri, http: HttpExt)(implicit ec: ExecutionContext, mat: Materializer) {
-  private val logger = LoggerFactory.getLogger(getClass)
-  val apiPath = Uri("api/").resolvedAgainst(rootUri)
-  val client = new SimpleHttpClient[ApiErrorResponse](apiPath, http, logger)
-  val TokenHeaderName = "AUTH_TOKEN"
+  val apiPath = Uri("api").resolvedAgainst(rootUri)
+  val apiClient = new ApiClient(http, apiPath)
+
+  private def orFail[A, T](in: A => Future[Either[(Int, ApiErrorResponse), T]]): A => Future[T] = {
+    arg =>
+      in(arg).flatMap {
+        case Left((code, failure)) => Future.failed(MantikRegistryApi.WrappedError(failure))
+        case Right(in)             => Future.successful(in)
+      }
+  }
 
   /** Execute a login call. */
-  def login(loginRequest: ApiLoginRequest): Future[ApiLoginResponse] = {
-    client
-      .post("login")
-      .withJsonPayload(loginRequest)
-      .withJsonResponse[ApiLoginResponse]
-      .execute()
-  }
+  val login: ApiLoginRequest => Future[ApiLoginResponse] = orFail(apiClient.prepare(MantikRegistryApiCalls.login))
 
   /** Execute a Login Status call. */
-  def loginStatus(token: String): Future[ApiLoginStatusResponse] = {
-    client
-      .get("login_status")
-      .addHeader(TokenHeaderName, token)
-      .withJsonResponse[ApiLoginStatusResponse]
-      .execute()
-  }
+  val loginStatus: String => Future[ApiLoginStatusResponse] = orFail(apiClient.prepare(MantikRegistryApiCalls.loginStatus))
 
   /** Retrieve an artifact. */
-  def artifact(token: String, mantikId: MantikId): Future[ApiGetArtifactResponse] = {
-    client
-      .get("artifact")
-      .addQuery("mantikId" -> mantikId.toString)
-      .addHeader(TokenHeaderName, token)
-      .withJsonResponse[ApiGetArtifactResponse]
-      .execute()
-  }
+  val artifact: ((String, MantikId)) => Future[ApiGetArtifactResponse] = orFail(apiClient.prepare(MantikRegistryApiCalls.artifact))
 
   /** Tag an Artifact. */
-  def tag(token: String, request: ApiTagRequest): Future[ApiTagResponse] = {
-    client
-      .post("artifact/tag")
-      .addHeader(TokenHeaderName, token)
-      .withJsonPayload(request)
-      .withJsonResponse[ApiTagResponse]
-      .execute()
-  }
+  val tag: ((String, ApiTagRequest)) => Future[ApiTagResponse] = orFail(apiClient.prepare(MantikRegistryApiCalls.tag))
 
   /**
    * Retrieve an artifact file.
+   * (With token and fileId)
    * @return content type and byte source.
    */
-  def file(token: String, fileId: String): Future[(String, Source[ByteString, _])] = {
-    client
-      .get("artifact/file")
-      .addQuery("fileId" -> fileId)
-      .addHeader(TokenHeaderName, token)
-      .executeStream()
-  }
+  val file: ((String, String)) => Future[(String, Source[ByteString, _])] = orFail(apiClient.prepare(MantikRegistryApiCalls.file))
 
-  /** Preperaes the upload of a file. */
-  def prepareUpload(token: String, request: ApiPrepareUploadRequest): Future[ApiPrepareUploadResponse] = {
-    client
-      .post("artifact")
-      .addHeader(TokenHeaderName, token)
-      .withJsonPayload(request)
-      .withJsonResponse[ApiPrepareUploadResponse]
-      .execute()
-  }
+  /** Prepares the upload of a file. */
+  val prepareUpload: ((String, ApiPrepareUploadRequest)) => Future[ApiPrepareUploadResponse] = orFail(apiClient.prepare(MantikRegistryApiCalls.prepareUpload))
 
-  /** Uploades the payload of an artifact. */
-  def uploadFile(token: String, itemId: String, contentType: String, data: Source[ByteString, _]): Future[ApiFileUploadResponse] = {
-    client
-      .post("artifact/file")
-      .addHeader(TokenHeaderName, token)
-      .withMultipartPayload(
-        _.addString("itemId", itemId)
-          .addBinaryStream("file", contentType, data, fileName = Some("file"))
-      )
-      .withJsonResponse[ApiFileUploadResponse]
-      .execute()
-  }
+  /** Uploads the payload of an artifact. */
+  val uploadFile: ((String, String, String, Source[ByteString, _])) => Future[ApiFileUploadResponse] = orFail(apiClient.prepare(MantikRegistryApiCalls.uploadFile))
+}
+
+object MantikRegistryApi {
+
+  // A Wrapped error from the API
+  case class WrappedError(apiErrorResponse: ApiErrorResponse) extends RuntimeException(apiErrorResponse.code + " " + apiErrorResponse.message.getOrElse(""))
 }
