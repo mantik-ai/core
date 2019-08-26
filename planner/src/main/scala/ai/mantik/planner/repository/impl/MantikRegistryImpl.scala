@@ -5,7 +5,6 @@ import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.registry.api._
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
 import ai.mantik.planner.repository.{ Errors, MantikArtifact, MantikRegistry }
-import ai.mantik.util.http.SimpleHttpClient
 import akka.http.scaladsl.Http
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import javax.inject.Inject
@@ -61,10 +60,10 @@ class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
   private def errorHandling[T](f: => Future[T]): Future[T] = {
     f.recoverWith {
       case e: Errors.RepositoryError => Future.failed(e) // already mapped
-      case e: SimpleHttpClient.ParsedErrorException[ApiErrorResponse @unchecked] =>
-        e.message.code match {
-          case x if x == ApiErrorResponse.NotFound => Future.failed(new Errors.NotFoundException(e.message.message.getOrElse("")))
-          case _                                   => Future.failed(e)
+      case f @ MantikRegistryApi.WrappedError(e) =>
+        e.code match {
+          case x if x == ApiErrorResponse.NotFound => Future.failed(new Errors.NotFoundException(e.message.getOrElse("")))
+          case _                                   => Future.failed(f)
         }
       case e => Future.failed(new Errors.RepositoryError(e.getMessage, e))
     }

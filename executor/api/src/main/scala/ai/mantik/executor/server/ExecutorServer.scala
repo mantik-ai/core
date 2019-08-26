@@ -1,116 +1,74 @@
 package ai.mantik.executor.server
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.executor.Errors.ExecutorException
+import ai.mantik.executor.{ Executor, ExecutorApi }
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.marshalling.{ Marshal, ToResponseMarshallable }
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.ExceptionHandler
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
-import ai.mantik.executor.{ Errors, Executor }
-import ai.mantik.executor.model.{ DeployServiceRequest, DeployedServicesQuery, Job, PublishServiceRequest }
-import akka.http.scaladsl.unmarshalling.FromRequestUnmarshaller
+import net.reactivecore.fhttp.akka.{ ApiServerRoute, RouteBuilder }
 
-import scala.concurrent.{ Await, Future }
-import scala.util.control.NonFatal
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
 /** Makes the Executor Interface reachable via HTTP. */
 class ExecutorServer(
     config: ServerConfig,
-    executor: Executor)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FailFastCirceSupport {
+    executor: Executor)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
 
-  implicit def exceptionHandler: ExceptionHandler = ExceptionHandler {
-    case e: Errors.ExecutorException =>
-      logger.warn("Executor exception", e)
-      complete(e.statusCode, e)
-    case NonFatal(exc) =>
-      logger.error("Internal exception", exc)
-      val e: Errors.ExecutorException = new Errors.InternalException("Internal error, please check logs")
-      complete(e.statusCode, e)
+  private def bindErrors[T](f: Future[T]): Future[Either[(Int, ExecutorException), T]] = {
+    f.map { result =>
+      Right(result)
+    }.recover {
+      case e: ExecutorException =>
+        Left(e.statusCode -> e)
+    }
   }
 
-  val route =
-    concat(
-      postRoute("schedule") {
-        executor.schedule
-      },
-      path("status") {
-        get {
-          parameters('isolationSpace, 'id) { (isolationSpace, jobId) =>
-            onSuccess(executor.status(isolationSpace, jobId)) { status =>
-              complete(status)
-            }
-          }
-        }
-      },
-      path("logs") {
-        get {
-          parameters('isolationSpace, 'id) { (isolationSpace, jobId) =>
-            onSuccess(executor.logs(isolationSpace, jobId)) { logs =>
-              complete(logs)
-            }
-          }
-        }
-      },
-      postRoute("publishService") {
-        executor.publishService
-      },
-      path("deployments") {
-        concat(
-          post {
-            entity(as[DeployServiceRequest]) { request =>
-              callService(request)(executor.deployService)
-            }
-          },
-          get {
-            parameterMap { parameters =>
-              val query = DeployedServicesQuery.fromQueryParameters(parameters) match {
-                case Left(error) => throw new IllegalArgumentException(error)
-                case Right(ok)   => ok
-              }
-              callService(query)(executor.queryDeployedServices)
-            }
-          },
-          delete {
-            parameterMap { parameters =>
-              val query = DeployedServicesQuery.fromQueryParameters(parameters) match {
-                case Left(error) => throw new IllegalArgumentException(error)
-                case Right(ok)   => ok
-              }
-              callService(query)(executor.deleteDeployedServices)
-            }
-          }
-        )
-      },
+  val route = new ApiServerRoute {
+
+    bind(ExecutorApi.schedule).to { job =>
+      bindErrors(executor.schedule(job))
+    }
+
+    bind(ExecutorApi.status).to {
+      case (isolationSpace, jobId) =>
+        bindErrors(executor.status(isolationSpace, jobId))
+    }
+
+    bind(ExecutorApi.logs).to {
+      case (isolationSpace, jobId) =>
+        bindErrors(executor.logs(isolationSpace, jobId))
+    }
+
+    bind(ExecutorApi.publishService).to { req =>
+      bindErrors(executor.publishService(req))
+    }
+
+    bind(ExecutorApi.deployService).to { req =>
+      bindErrors(executor.deployService(req))
+    }
+
+    bind(ExecutorApi.queryDeployedService).to { req =>
+      bindErrors(executor.queryDeployedServices(req))
+    }
+
+    bind(ExecutorApi.deleteDeployedServices).to { req =>
+      bindErrors(executor.deleteDeployedServices(req))
+    }
+
+    bind(ExecutorApi.nameAndVersion).to { _ =>
+      bindErrors(Future.successful(executor.nameAndVersion))
+    }
+
+    add {
       path("") {
         get {
           complete("Executor Server, backend: " + executor.nameAndVersion)
         }
-      },
-      path("version") {
-        get {
-          complete(executor.nameAndVersion)
-        }
       }
-    )
+    }
+  }
 
   private var openServerBinding: Option[Http.ServerBinding] = None
-
-  /** A Simple POST call which forwards calls to a handler. */
-  private def postRoute[In: FromRequestUnmarshaller, Out](
-    routePath: String
-  )(handler: In => Future[Out])(implicit f: Out => ToResponseMarshallable) = path(routePath) {
-    post {
-      entity(as[In]) { request =>
-        callService(request)(handler)
-      }
-    }
-  }
-
-  private def callService[In, Out](in: In)(handler: In => Future[Out])(implicit f: Out => ToResponseMarshallable) = {
-    onSuccess(handler(in)) { response =>
-      complete(response)
-    }
-  }
 
   // Timeout for initializing and de-initializing HTTP Server
   private val HttpUpDownTimeout = 60.seconds

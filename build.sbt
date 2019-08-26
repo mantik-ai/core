@@ -12,6 +12,7 @@ val akkaHttpVersion = "10.1.7"
 val scalaTestVersion = "3.0.5"
 val circeVersion = "0.11.1"
 val slf4jVersion = "1.7.25"
+val fhttpVersion = "0.2.1"
 
 import scalariform.formatter.preferences._
 val scalariformSettings = {
@@ -155,7 +156,8 @@ lazy val elements = makeProject("elements")
   .settings(
     name := "elements",
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-yaml" % "0.8.0"
+      "io.circe" %% "circe-yaml" % "0.8.0",
+      "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
     ),
     publishSettings
   )
@@ -184,6 +186,8 @@ lazy val executorApi = makeProject("executor/api", "executorApi")
   .settings(
     name := "executor-api",
     libraryDependencies ++= Seq(
+      "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
+
       // Akka
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       // Akka http Circe JSON,
