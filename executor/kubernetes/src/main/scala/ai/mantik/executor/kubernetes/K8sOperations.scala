@@ -14,14 +14,16 @@ import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 import com.typesafe.scalalogging.Logger
 import play.api.libs.json.{ Format, JsObject }
+import skuber.Container.Running
 import skuber.api.client.{ KubernetesClient, Status, WatchEvent }
+import skuber.api.patch.MetadataPatch
 import skuber.apps.v1.ReplicaSet
 import skuber.batch.Job
 import skuber.ext.Ingress
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
-import skuber.{ K8SException, LabelSelector, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition, Secret, Service }
+import skuber.{ Container, K8SException, LabelSelector, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition, Secret, Service }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Promise, TimeoutException }
@@ -160,13 +162,21 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
 
   /** Returns all Pods which are managed by this executor and which are in pending state. */
   def getAllManagedPendingPods(): Future[Map[String, List[Pod]]] = {
-    errorHandling(rootClient.getNamespaceNames).flatMap { namespaces =>
+    errorHandling(getManagedNamespaces).flatMap { namespaces =>
       val futures = namespaces.map { namespace =>
         getPendingPods(Some(namespace)).map { result =>
           namespace -> result
         }
       }
       Future.sequence(futures).map(_.toMap)
+    }
+  }
+
+  /** Return namespace names, where Mantik Managed state can live. */
+  private def getManagedNamespaces(): Future[List[String]] = {
+    val prefix = config.kubernetes.namespacePrefix
+    rootClient.getNamespaceNames.map { namespaceNames =>
+      namespaceNames.filter(_.startsWith(prefix))
     }
   }
 
@@ -282,7 +292,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   }
 
   def getManagedNonFinishedJobsForAllNamespaces(): Future[Seq[Job]] = {
-    errorHandling(rootClient.getNamespaceNames).flatMap { namespaces =>
+    errorHandling(getManagedNamespaces).flatMap { namespaces =>
       val futures = namespaces.map { namespace =>
         val jobs = getManagedNonFinishedJobs(Some(namespace))
         jobs
@@ -337,12 +347,17 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
       case None => Future.failed(new RuntimeException("Pod not found"))
       case Some(pod) =>
         errorHandling {
+          val killValue = pod.metadata.annotations.get(KubernetesConstants.KillAnnotationName)
+          val killSuffix = killValue.map { value =>
+            s"""
+               |** Killed because of ${value} **""".stripMargin
+          }.getOrElse("")
           rootClient.getPodLogSource(pod.name, Pod.LogQueryParams(), namespace).flatMap { source =>
             val collector = Sink.seq[ByteString]
             implicit val mat = ActorMaterializer()
             source.runWith(collector).map { byteStrings =>
               val combined = byteStrings.reduce(_ ++ _)
-              combined.utf8String
+              combined.utf8String ++ killSuffix
             }
           }
         }
@@ -368,40 +383,65 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     }
   }
 
-  /** Cancels a Mantik Pod. */
-  def cancelMantikPod(pod: Pod, reason: String): Future[Unit] = {
-    val containerNames = for {
-      status <- pod.status.toSeq
-      ct <- status.containerStatuses
-      if ct.name == KubernetesConstants.SidecarContainerName || ct.name == KubernetesConstants.CoordinatorContainerName
-      if ct.state.exists(_.id == "running")
-    } yield ct.name
+  /** Kills a Mantik Job. This works by removing the workers and cancelling the coordinators. */
+  def killMantikJob(namespace: String, jobId: String, reason: String): Future[Unit] = {
+    logger.info(s"Canceling Mantik job ${jobId}")
 
-    val containerName = containerNames match {
-      case x if x.isEmpty =>
-        logger.warn(s"Cannot cancel container ${pod.namespace}/${pod.name} as containers cannot be recognized...")
-        return Future.failed(
-          new RuntimeException(s"Pod ${pod.namespace}/${pod.name} is not a running mantik pod")
-        )
-      case x => x.head
+    def roleFiler(role: String): Pod => Boolean = {
+      pod => pod.metadata.labels.get(KubernetesConstants.RoleName).contains(role)
     }
 
-    logger.info(s"Issuing cancellation of ${pod.namespace}/${pod.name}")
+    for {
+      pods <- getPodsByJobId(Some(namespace), jobId)
+      workers = pods.filter(roleFiler(KubernetesConstants.WorkerRole))
+      coordinator = pods.filter(roleFiler(KubernetesConstants.CoordinatorRole))
+      _ = logger.debug(s"Job ${jobId} has ${workers.length} workers and ${coordinator.length} coordinators")
+      _ <- Future.sequence(coordinator.map(c => cancelMantikPod(c, reason)))
+      _ <- Future.sequence(workers.map { w => delete[Pod](Some(w.namespace), w.name) })
+    } yield {
+      ()
+    }
+  }
 
-    // Looks like skuber needs this sink
+  /** Cancels a Mantik Pod. */
+  def cancelMantikPod(pod: Pod, reason: String): Future[Unit] = {
+    val patch = MetadataPatch(annotations = Some(Map(
+      KubernetesConstants.KillAnnotationName -> reason
+    )))
+
+    for {
+      _ <- errorHandling(rootClient.patch[MetadataPatch, Pod](pod.name, patch, Some(pod.namespace)))
+      cancelableContainers = filterRunningSidecarOrCoordinator(pod).map(_.name).toList
+      _ = logger.info(s"Pod ${pod.name} cancellable containers: ${cancelableContainers}")
+      _ <- Future.sequence(cancelableContainers.map { c => sendCancelSignal(pod, c, reason) })
+    } yield {
+      ()
+    }
+  }
+
+  private def sendCancelSignal(pod: Pod, containerName: String, reason: String): Future[Unit] = {
     val outputSink: Sink[String, Future[Done]] = Sink.foreach { s =>
       logger.debug(s"Stdout of Cancel call: ${s}")
     }
     val stdErrSink: Sink[String, Future[Done]] = Sink.foreach { s =>
       logger.debug(s"Stderr of Cancel Call: ${s}")
     }
+    rootClient.usingNamespace(pod.namespace).exec(
+      // This is a bid hardcoded..
+      pod.name, command = List("/opt/bin/run", "cancel", "-reason", reason), maybeContainerName = Some(containerName), /*maybeStdout = Some(outputSink),*/ maybeStderr = Some(stdErrSink)
+    )
+  }
 
-    errorHandling {
-      rootClient.usingNamespace(pod.namespace).exec(
-        // This is a bid hardcoded..
-        pod.name, command = List("/opt/bin/run", "cancel", "-reason", reason), maybeContainerName = Some(containerName), /*maybeStdout = Some(outputSink),*/ maybeStderr = Some(stdErrSink)
-      )
-    }
+  /** Look for a running sidecar or coordinator inside a Mantik Pod */
+  def filterRunningSidecarOrCoordinator(pod: Pod): Option[skuber.Container.Status] = {
+    val result = for {
+      status <- pod.status.toList
+      containerStatus <- status.containerStatuses
+      if containerStatus.name == KubernetesConstants.SidecarContainerName || containerStatus.name == KubernetesConstants.CoordinatorContainerName
+      state <- containerStatus.state.toList
+      if state.isInstanceOf[Running]
+    } yield containerStatus
+    result.headOption
   }
 
   /** Some principal k8s Error handling. */

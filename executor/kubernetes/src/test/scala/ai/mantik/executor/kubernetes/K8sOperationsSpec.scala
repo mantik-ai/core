@@ -131,7 +131,10 @@ class K8sOperationsSpec extends KubernetesTestBase {
     val job1 = Job(
       metadata = ObjectMeta(
         name = "job1",
-        labels = Map(KubernetesConstants.TrackerIdLabel -> config.podTrackerId)
+        labels = Map(
+          KubernetesConstants.TrackerIdLabel -> config.podTrackerId,
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+        )
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))
     ).withTemplate(
@@ -142,7 +145,10 @@ class K8sOperationsSpec extends KubernetesTestBase {
     val job2 = Job(
       metadata = ObjectMeta(
         name = "job2",
-        labels = Map(KubernetesConstants.TrackerIdLabel -> "other_id")
+        labels = Map(
+          KubernetesConstants.TrackerIdLabel -> "other_id",
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+        )
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))
     ).withTemplate(
@@ -170,7 +176,8 @@ class K8sOperationsSpec extends KubernetesTestBase {
         name = "job1",
         labels = Map(
           KubernetesConstants.JobIdLabel -> "job1",
-          KubernetesConstants.TrackerIdLabel -> config.podTrackerId
+          KubernetesConstants.TrackerIdLabel -> config.podTrackerId,
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
         )
       ),
       spec = Some(Job.Spec(backoffLimit = Some(1)))

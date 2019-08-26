@@ -3,7 +3,7 @@ package ai.mantik.executor.docker.api
 import java.nio.file.Files
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.executor.docker.api.structures.{ ContainerWaitResponse, CreateContainerRequest, CreateContainerResponse, CreateVolumeRequest, CreateVolumeResponse, InspectContainerResponse, InspectImageResult, InspectVolumeResponse, ListContainerRequestFilter, ListContainerResponseRow, ListVolumeResponse, RemoveImageRow, VersionResponse }
+import ai.mantik.executor.docker.api.structures._
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.http.scaladsl.{ Http, HttpsConnectionContext }
 import akka.stream.scaladsl.{ Sink, Source }

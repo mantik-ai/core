@@ -29,7 +29,7 @@ abstract class KubernetesTestBase extends TestBase with AkkaSupport {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    _kubernetesClient = skuber.k8sInit(actorSystem, materializer)
+    _kubernetesClient = skuber.k8sInit(typesafeConfig)(actorSystem, materializer)
     implicit val clock = Clock.systemUTC()
     val cleaner = new KubernetesCleaner(_kubernetesClient, config)
     cleaner.deleteKubernetesContent()
