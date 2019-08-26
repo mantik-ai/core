@@ -56,6 +56,7 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
   }
 
   override protected def afterAll(): Unit = {
+    dockerClient.shutdown()
     super.afterAll()
   }
 

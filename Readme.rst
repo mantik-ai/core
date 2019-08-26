@@ -11,8 +11,10 @@ Content
   Mantikfile documentation <Mantikfile>
   Executor Documentation <Executor>
   Executor k8s <Executor.Microk8s>
+  Executor Docker <Executor.Docker>
   Samples <Samples>
   Debugging with Minikube <Minikube>
+  Mantik ID <MantikId>
 
 Code Structure
 --------------

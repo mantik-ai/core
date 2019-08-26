@@ -52,6 +52,7 @@ lazy val testutils = (project in file("testutils"))
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
       "org.slf4j" % "slf4j-api" % slf4jVersion,

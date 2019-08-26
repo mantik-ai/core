@@ -38,7 +38,7 @@ trait MissingImageSpecBase {
     }
     eventually {
       val log = await(executor.logs(job.isolationSpace, jobId)).toLowerCase()
-      val ok = log.contains("could not find image") || log.contains("no such image")
+      val ok = log.contains("image error") || log.contains("no such image")
       withClue(s"Log ${log} should indicate image error") {
         ok shouldBe true
       }

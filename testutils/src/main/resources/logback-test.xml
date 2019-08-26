@@ -9,6 +9,7 @@
   </appender>
 
   <logger name="ai.mantik" level="DEBUG"/>
+  <logger name="skuber.api" level="WARN"/>
 
   <root level="WARN">
     <appender-ref ref="STDOUT" />

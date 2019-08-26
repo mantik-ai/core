@@ -6,12 +6,12 @@ import java.util.UUID
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
-import ai.mantik.executor.kubernetes.tracker.KubernetesTracker
 import ai.mantik.executor.model._
 import ai.mantik.executor.{ Errors, Executor }
 import akka.actor.{ ActorSystem, Cancellable }
 import com.google.common.net.InetAddresses
 import javax.inject.{ Inject, Provider, Singleton }
+import skuber.Container.Running
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
@@ -25,8 +25,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     implicit
     akkaRuntime: AkkaRuntime
 ) extends ComponentBase with Executor {
-  val tracker = new KubernetesTracker(config, ops)
-
   val kubernetesHost = ops.clusterServer.authority.host.address()
   logger.info(s"Initializing with kubernetes at address ${kubernetesHost}")
   logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
@@ -62,7 +60,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       _ <- ops.create(Some(namespace), job)
     } yield {
       logger.info(s"Created ${podsWithIpAdresses.size} pods, config map and job ${job.name}")
-      tracker.subscribe(job)
       jobId
     }
   }
@@ -254,7 +251,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   private def checkPods(): Unit = {
-    logger.trace("Checking Pods")
+    logger.info("Checking Pods")
     val timestamp = clock.instant()
     checkBrokenImagePods(timestamp)
   }
@@ -264,52 +261,68 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     ops.getAllManagedPendingPods().foreach { pendingPods =>
       pendingPods.foreach {
         case (namespaceName, pendingPods) =>
-          val isMissingImage = pendingPods.filter(pod => isOldImageNotFound(borderTime, pod))
-          isMissingImage.foreach { pod =>
-            handleBrokenImagePod(pod)
+          for {
+            pod <- pendingPods
+            imageError <- podImageError(borderTime, pod)
+          } {
+            handleBrokenImagePod(pod, imageError)
           }
       }
     }
   }
 
-  private def handleBrokenImagePod(pod: Pod): Unit = {
+  private def handleBrokenImagePod(pod: Pod, imageError: String): Unit = {
     val maybeJobId = pod.metadata.labels.get(KubernetesConstants.JobIdLabel)
-    logger.info(s"Detected broken image in ${pod.namespace}/${pod.name}, jobId=${maybeJobId}")
-    logger.info(s"Deleting Pod...")
-    ops.delete[Pod](Some(pod.namespace), pod.name)
-    logger.info(s"Cancelling Job...")
-    maybeJobId.foreach { jobId =>
-      cancelPods(pod.namespace, jobId, "Pod could not find image")
+    logger.info(s"Detected broken image in ${pod.namespace}/${pod.name}, jobId=${maybeJobId} error=${imageError}")
+    val error = s"Pod has image error ${imageError}"
+    maybeJobId match {
+      case Some(id) =>
+        ops.killMantikJob(pod.namespace, id, error)
+      case None =>
+        // job without id ?!
+        ops.delete[Pod](Some(pod.namespace), pod.name)
     }
   }
 
-  private def cancelPods(namespace: String, jobId: String, reason: String): Unit = {
-    ops.getPodsByJobId(Some(namespace), jobId).foreach { pods =>
-      pods.foreach { pod =>
-        ops.cancelMantikPod(pod, reason)
+  /**
+   * Check if a pod has an image error, so that we can kill it.
+   * @return the first image error found.
+   */
+  private def podImageError(borderTime: Instant, pod: Pod): Option[String] = {
+    // See: https://github.com/kubernetes/kubernetes/blob/d24fe8a801748953a5c34fd34faa8005c6ad1770/pkg/kubelet/images/types.go
+    val Errors = Set(
+      "ImagePullBackOff",
+      "ErrImageNeverPull",
+      "InvalidImageName",
+      "ImageInspectError",
+      "ErrImagePull",
+      "RegistryUnavailable"
+    )
+
+    /** Looks for common image errors. */
+    def imageError(container: skuber.Container.Status): Option[String] = {
+      container.state match {
+        case Some(w: skuber.Container.Waiting) if w.reason.exists(Errors.contains) => w.reason
+        case _ => None
       }
     }
-  }
 
-  private def isOldImageNotFound(borderTime: Instant, pod: Pod): Boolean = {
-    def containerIsMissingImage(container: skuber.Container.Status): Boolean = {
-      !container.ready && (container.state match {
-        case Some(w: skuber.Container.Waiting) if w.reason.contains("ImagePullBackOff") => true
-        case _ => false
-      })
-    }
-
+    /** Check if startTime reached the timeout. */
     def reachedTimeout(startTime: skuber.Timestamp): Boolean = {
       startTime.toInstant.isBefore(borderTime)
     }
 
-    pod.status.exists { status =>
-      val isPending = status.phase.contains(Pod.Phase.Pending)
-      val isMissingContainerImage = status.containerStatuses.exists(containerIsMissingImage)
-      val isReachedTimeout = status.startTime.exists(reachedTimeout)
-      logger.trace(s"${pod.name} pending=${isPending} isMissingContainerImage=${isMissingContainerImage} isReachedTimeout=${isReachedTimeout}")
-      isPending && isMissingContainerImage && isReachedTimeout
-    }
+    val imageErrors = for {
+      status <- pod.status.toList
+      startTime <- status.startTime.toList
+      if reachedTimeout(startTime)
+      if status.phase.contains(Pod.Phase.Pending)
+      containerStatus <- status.containerStatuses
+      if !containerStatus.ready
+      imageError <- imageError(containerStatus)
+    } yield imageError
+
+    imageErrors.headOption
   }
 
   override def shutdown(): Unit = {

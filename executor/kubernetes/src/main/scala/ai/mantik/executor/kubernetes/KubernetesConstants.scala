@@ -26,4 +26,7 @@ object KubernetesConstants {
 
   val CoordinatorRole = "coordinator"
   val WorkerRole = "worker"
+
+  /** Name to store kill annotations */
+  val KillAnnotationName = "killed"
 }
