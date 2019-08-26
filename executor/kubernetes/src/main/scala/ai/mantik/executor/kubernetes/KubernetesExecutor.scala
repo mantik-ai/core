@@ -32,7 +32,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
   logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
   logger.info(s"Node collapsing:     ${config.enableExistingServiceNodeCollapse}")
-  logger.info(s"Disable Pull:        ${config.kubernetes.disablePull}")
+  logger.info(s"Disable Pull:        ${config.common.disablePull}")
 
   override def schedule(job: Job): Future[String] = {
     val jobId = UUID.randomUUID().toString
@@ -316,7 +316,10 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     checkPodCancellation.cancel()
   }
 
-  override def nameAndVersion: String = s"KubernetesExecutor ${BuildInfo.version}  (${BuildInfo.gitVersion}-${BuildInfo.buildNum})"
+  override def nameAndVersion: Future[String] = {
+    val str = s"KubernetesExecutor ${BuildInfo.version}  (${BuildInfo.gitVersion}-${BuildInfo.buildNum})"
+    Future.successful(str)
+  }
 }
 
 class KubernetesExecutorProvider @Inject() (implicit akkaRuntime: AkkaRuntime) extends Provider[KubernetesExecutor] {

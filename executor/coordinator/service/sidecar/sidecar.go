@@ -3,11 +3,9 @@ package sidecar
 import (
 	"bytes"
 	"coordinator/service/protocol"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
-	"time"
 )
 
 type SideCar struct {
@@ -62,58 +60,15 @@ func (s *SideCar) ForceQuit() {
 }
 
 func (s *SideCar) waitWebServiceReachable() {
-	if s.server.Settings.WaitForWebServiceReachable == 0 {
-		log.Infof("Waiting for webservice disabled...")
-		s.lock.Lock()
-		defer s.lock.Unlock()
-		s.webserviceReachable = true
+	err := HttpWaitReachable(s.server.Ac.Context, s.url.String(), s.server.Settings)
+	if err != nil {
+		s.server.Ac.Fail(err)
 		return
 	}
-	timeout := time.Now().Add(s.server.Settings.WaitForWebServiceReachable)
-	trials := 0
-	for {
-		err := s.tryAccessWebService()
-		if err == nil {
-			log.Infof("URL %s reachable", s.url)
-			s.lock.Lock()
-			defer s.lock.Unlock()
-			s.webserviceReachable = true
-			return
-		}
-		if s.server.Ac.Context.Err() != nil {
-			return
-		}
-		trials++
-		if time.Now().After(timeout) {
-			log.Warnf("Giving up accessing %s after %d trials in %s", s.url, trials, s.server.Settings.WaitForWebServiceReachable.String())
-			log.Warnf("Last error %s", err.Error())
-			s.server.Ac.Fail(errors.Wrapf(err, "Timeout accessing %s (%s)", s.url, s.server.Settings.WaitForCoordinatorTimeout.String()))
-			return
-		}
-		select {
-		case <-time.After(s.server.Settings.RetryTime):
-		case <-s.server.Ac.Context.Done():
-		}
-	}
-}
-
-func (s *SideCar) tryAccessWebService() error {
-	req, err := http.NewRequest(http.MethodGet, s.url.String(), nil)
-	if err != nil {
-		return err
-	}
-	req = req.WithContext(s.server.Ac.Context)
-	head, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	// Accept 2xx Status as OK.
-	if head.StatusCode < 200 || head.StatusCode >= 300 {
-		log.Infof("Server not yet reachable, status %d", head.StatusCode)
-		err = errors.Errorf("URL %s returned %d", s.url, head.StatusCode)
-		return err
-	}
-	return nil
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.webserviceReachable = true
+	return
 }
 
 func (s *SideCar) shutdownWebServiceIfEnabled() {

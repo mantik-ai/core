@@ -1,4 +1,4 @@
-package ai.mantik.executor.kubernetes
+package ai.mantik.executor.common
 
 import io.circe.{ Decoder, Encoder }
 
@@ -11,7 +11,8 @@ case class CoordinatorPlan(
 object CoordinatorPlan {
   case class Node(
       address: Option[String] = None,
-      url: Option[String] = None
+      url: Option[String] = None,
+      quitAfterwards: Option[Boolean] = None // defaults to false
   ) {
     require(address.isDefined != url.isDefined, "Either Adress or URL must be defined, but not both")
   }

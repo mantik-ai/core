@@ -7,6 +7,9 @@ type Node struct {
 	Address *string `json:"address"`
 	// If address not set, URL of external service
 	Url *string `json:"url"`
+	// If true, send an explicit shutdown command via POST /admin/quit to the URL on end
+	// Makes only sense for URLs
+	QuitAfterwards bool `json:"quitAfterwards"`
 }
 
 func (n *Node) Str() string {

@@ -158,7 +158,7 @@ class KubernetesServiceConverter(
   }
 
   private def convertPipelinePodSpec(pipeline: DeployableService.Pipeline): Pod.Spec = {
-    val resolved = config.pipelineController
+    val resolved = config.common.pipelineController
     val args = resolved.parameters.toList ++ List(
       "-port", pipeline.port.toString
     )

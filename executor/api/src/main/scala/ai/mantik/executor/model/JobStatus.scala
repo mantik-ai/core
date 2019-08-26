@@ -4,7 +4,9 @@ import io.circe.Decoder.Result
 import io.circe._
 import io.circe.generic.JsonCodec
 
-sealed abstract class JobState(val name: String)
+sealed abstract class JobState(val name: String) {
+  def isTerminal: Boolean = false
+}
 
 case object JobState {
 
@@ -12,9 +14,13 @@ case object JobState {
 
   case object Running extends JobState("running")
 
-  case object Finished extends JobState("finished")
+  case object Finished extends JobState("finished") {
+    override def isTerminal: Boolean = true
+  }
 
-  case object Failed extends JobState("failed")
+  case object Failed extends JobState("failed") {
+    override def isTerminal: Boolean = true
+  }
 
   val All = Seq(Pending, Running, Finished, Failed)
 

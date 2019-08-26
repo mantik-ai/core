@@ -37,10 +37,20 @@ echo "** Stage 1 Executor Integration Tests **"
 # The kubernetes client should now find Minkube via ~/.kube/config
 unset SKUBER_URL
 
-sbt executorApp/it:test
+set +e
+
+sbt executorKubernetes/it:test
+result1=$?
+
+sbt executorDocker/it:test
+result2=$?
 
 echo "** Stage 2 Planner Integration Tests **"
 sbt planner/it:test
+result3=$?
 
 echo "** Stage 3 Engine Integration Tests **"
 sbt engine/it:test
+result4=$?
+
+! (( $result1 || $result2 || $result3 || $result4 ))

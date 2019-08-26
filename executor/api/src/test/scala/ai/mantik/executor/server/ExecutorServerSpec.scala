@@ -87,7 +87,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
         )
       }
 
-      override def nameAndVersion: String = "Super Executor v1.01"
+      override def nameAndVersion: Future[String] = Future.successful("Super Executor v1.01")
 
     }
     lazy val server = new ExecutorServer(config, executorMock)
@@ -152,7 +152,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       await(client.deleteDeployedServices(deployedServicesQuery)) shouldBe 5
       receivedDeployedServicesQuery shouldBe deployedServicesQuery
 
-      client.nameAndVersion shouldBe "Super Executor v1.01"
+      await(client.nameAndVersion) shouldBe "Super Executor v1.01"
     }
   }
 
@@ -191,7 +191,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
         Future.failed(internal)
       }
 
-      override def nameAndVersion: String = ???
+      override def nameAndVersion: Future[String] = Future { ??? }
     }
 
     server.start()
@@ -219,7 +219,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
         await(client.deleteDeployedServices(deployedServicesQuery))
       }
       intercept[Errors.InternalException] {
-        client.nameAndVersion
+        await(client.nameAndVersion)
       }
     }
   }

@@ -27,6 +27,7 @@ object Errors {
           case 404 => new NotFoundException(msg)
           case 409 => new ConflictException(msg)
           case 500 => new InternalException(msg)
+          case 502 => new CouldNotExecutePayload(msg)
           case _   => new ExecutorException(msg, code)
         }
       }
@@ -44,4 +45,7 @@ object Errors {
 
   /** A strange internal error. */
   class InternalException(msg: String) extends ExecutorException(msg, 500)
+
+  /** There was a problem with the payload. */
+  class CouldNotExecutePayload(msg: String) extends ExecutorException(msg, 502)
 }

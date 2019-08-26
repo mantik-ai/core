@@ -1,4 +1,4 @@
-package ai.mantik.executor.kubernetes
+package ai.mantik.executor.common
 
 import ai.mantik.testutils.TestBase
 import io.circe.parser
@@ -10,17 +10,17 @@ class CoordinatorPlanSpec extends TestBase {
     val json =
       """
         |{
-        |	"nodes":{"A":{"address":"localhost:50501"}, "B":{"address":"localhost:50502"}, "C":{"url":"http://file-service"}},
+        |	"nodes":{"A":{"address":"localhost:50501"}, "B":{"address":"localhost:50502"}, "C":{"url":"http://file-service", "quitAfterwards": true}},
         |	"flows":[[{"node": "A", "resource": "in", "contentType": "application/x-mantik-bundle"}, {"node": "B", "resource": "out"}, {"node": "C", "resource":"final"}]]
         |}
       """.stripMargin
-    val parsedJson = parser.parse(json).getOrElse(fail)
-    val plan = parsedJson.as[CoordinatorPlan].getOrElse(fail)
+    val parsedJson = parser.parse(json).forceRight
+    val plan = parsedJson.as[CoordinatorPlan].forceRight
     plan shouldBe CoordinatorPlan(
       nodes = Map(
         "A" -> CoordinatorPlan.Node(Some("localhost:50501")),
         "B" -> CoordinatorPlan.Node(Some("localhost:50502")),
-        "C" -> CoordinatorPlan.Node(url = Some("http://file-service"))
+        "C" -> CoordinatorPlan.Node(url = Some("http://file-service"), quitAfterwards = Some(true))
       ),
       flows = Seq(
         Seq(
@@ -33,3 +33,4 @@ class CoordinatorPlanSpec extends TestBase {
     plan.asJson.as[CoordinatorPlan].right.get shouldBe plan
   }
 }
+

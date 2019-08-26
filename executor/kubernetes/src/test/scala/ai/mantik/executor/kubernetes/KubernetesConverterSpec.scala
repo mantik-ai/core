@@ -12,20 +12,22 @@ class KubernetesConverterSpec extends TestBase {
   trait Env {
     private val oldConfig = Config.fromTypesafeConfig(typesafeConfig)
     def config = oldConfig.copy(
-      sideCar = Container("my_sidecar", Seq("sidecar_arg")),
-      coordinator = Container("my_coordinator", Seq("coordinator_arg")),
-      payloadPreparer = Container("payload_preparer"),
+      common = oldConfig.common.copy(
+        sideCar = Container("my_sidecar", Seq("sidecar_arg")),
+        coordinator = Container("my_coordinator", Seq("coordinator_arg")),
+        payloadPreparer = Container("payload_preparer"),
+        dockerConfig = DockerConfig(
+          defaultImageTag = Some("mytag"),
+          defaultImageRepository = Some("my-repo"),
+          logins = Seq(
+            DockerLogin("repo1", "user1", "password1")
+          )
+        )
+      ),
       kubernetes = oldConfig.kubernetes.copy(
         namespacePrefix = "systemtest-"
       ),
-      podTrackerId = "mantik-executor",
-      dockerConfig = DockerConfig(
-        defaultImageTag = Some("mytag"),
-        defaultImageRepository = Some("my-repo"),
-        logins = Seq(
-          DockerLogin("repo1", "user1", "password1")
-        )
-      )
+      podTrackerId = "mantik-executor"
     )
 
     lazy val converter = new KubernetesConverter(
@@ -50,7 +52,7 @@ class KubernetesConverterSpec extends TestBase {
     override def config: Config = {
       val before = super.config
       super.config.copy(
-        kubernetes = before.kubernetes.copy(
+        common = before.common.copy(
           disablePull = true
         )
       )
@@ -76,11 +78,11 @@ class KubernetesConverterSpec extends TestBase {
     val converted = converter.convertNode("A", nodeService)
     val spec = converted.spec.get
     spec.containers.size shouldBe 2 // sidecar, main
-    spec.containers.map(_.image) should contain theSameElementsAs Seq("repo/runner:latest", config.sideCar.image)
+    spec.containers.map(_.image) should contain theSameElementsAs Seq("repo/runner:latest", config.common.sideCar.image)
     spec.containers.find(_.name == "main").get.volumeMounts.map(_.name) shouldBe List("data")
     spec.initContainers.size shouldBe 1
     spec.initContainers.head.image shouldBe "payload_preparer"
-    spec.initContainers.head.args shouldBe List("-url", "url1", "-mantikfile", "bWYx", "-pdir", "dir1")
+    spec.initContainers.head.args shouldBe List("-mantikfile", "bWYx", "-url", "url1", "-pdir", "dir1")
     spec.initContainers.head.volumeMounts.map(_.name) shouldBe List("data")
     spec.volumes.map(_.name) shouldBe List("data")
     spec.containers.foreach(_.imagePullPolicy shouldBe skuber.Container.PullPolicy.Always)

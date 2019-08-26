@@ -27,8 +27,8 @@ class K8sOperationsSpec extends KubernetesTestBase {
     containers = List(
       Container(
         name = KubernetesConstants.SidecarContainerName,
-        image = config.sideCar.image,
-        args = config.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
+        image = config.common.sideCar.image,
+        args = config.common.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
       )
     ),
     restartPolicy = RestartPolicy.Never
@@ -75,8 +75,8 @@ class K8sOperationsSpec extends KubernetesTestBase {
         containers = List(
           Container(
             name = "sidecar1",
-            image = config.sideCar.image,
-            args = config.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
+            image = config.common.sideCar.image,
+            args = config.common.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
           )
         ),
         restartPolicy = RestartPolicy.Never
@@ -97,8 +97,8 @@ class K8sOperationsSpec extends KubernetesTestBase {
         containers = List(
           Container(
             name = KubernetesConstants.SidecarContainerName,
-            image = config.sideCar.image,
-            args = config.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
+            image = config.common.sideCar.image,
+            args = config.common.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
           )
         ),
         restartPolicy = RestartPolicy.Never

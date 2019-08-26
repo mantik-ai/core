@@ -1,13 +1,13 @@
-package ai.mantik.executor.kubernetes.integration
+package ai.mantik.executor.common.test.integration
 
-import ai.mantik.executor.model._
+import ai.mantik.executor.model.{ ContainerService, ExecutorModelDefaults, Graph, Job, JobState, Link, Node, NodeResourceRef }
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.testutils.tags.IntegrationTest
+import ai.mantik.testutils.TestBase
 
-@IntegrationTest
-class HelloTransformationSpec extends IntegrationTestBase {
+trait TransformationSpecBase {
+  self: IntegrationBase with TestBase =>
 
-  it should "work" in new Env {
+  it should "work" in withExecutor { executor =>
     val job = Job(
       "transformer",
       graph = Graph(
@@ -49,4 +49,3 @@ class HelloTransformationSpec extends IntegrationTestBase {
     }
   }
 }
-

@@ -1,5 +1,6 @@
 package ai.mantik.executor.kubernetes
 
+import ai.mantik.executor.common.CoordinatorPlan
 import ai.mantik.executor.model._
 import io.circe.syntax._
 import skuber.{ ConfigMap, Container, LocalObjectReference, ObjectMeta, Pod, RestartPolicy, Volume }
@@ -97,8 +98,8 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) extends Ku
                   containers = List(
                     Container(
                       name = KubernetesConstants.CoordinatorContainerName,
-                      image = config.coordinator.image,
-                      args = (config.coordinator.parameters ++ Seq("-plan", "@/config/plan")).toList,
+                      image = config.common.coordinator.image,
+                      args = (config.common.coordinator.parameters ++ Seq("-plan", "@/config/plan")).toList,
                       volumeMounts = List(
                         Volume.Mount(
                           "config-volume", mountPath = "/config"
@@ -111,7 +112,7 @@ class KubernetesJobConverter(config: Config, job: Job, jobId: String) extends Ku
                           skuber.EnvVar.FieldRef("status.podIP")
                         )
                       ),
-                      imagePullPolicy = createImagePullPolicy(config.coordinator)
+                      imagePullPolicy = createImagePullPolicy(config.common.coordinator)
                     )
                   ),
                   volumes = List(

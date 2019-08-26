@@ -1,6 +1,7 @@
 package ai.mantik.executor.kubernetes.integration
 
 import ai.mantik.executor.client.ExecutorClient
+import ai.mantik.executor.common.test.SampleJobs
 import ai.mantik.executor.model.JobState
 import ai.mantik.executor.server.{ ExecutorServer, ServerConfig }
 import ai.mantik.testutils.tags.IntegrationTest
@@ -19,7 +20,7 @@ class EndToEndTest extends IntegrationTestBase {
   }
 
   it should "run the hello world example" in new Env {
-    val job = new SampleJobs(config).job
+    val job = SampleJobs.job
 
     server.start()
     val jobId = await(client.schedule(job))
