@@ -65,13 +65,13 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
       val ip = result.status.flatMap(_.podIP)
       ip match {
         case Some(ip) =>
-          logger.info(s"Get IP in direct response")
+          logger.debug(s"Get IP in direct response")
           Future.successful(ip)
         case None =>
           val getPodAddressResult = getPodAddress(namespace, result.name)
           getPodAddressResult.foreach { ip =>
             val endTime = clock.instant()
-            logger.info(s"Got IP Address of new pod ${result.name} ${ip} within ${endTime.toEpochMilli - startTime.toEpochMilli}ms")
+            logger.debug(s"Got IP Address of new pod ${result.name} ${ip} within ${endTime.toEpochMilli - startTime.toEpochMilli}ms")
           }
           getPodAddressResult
       }

@@ -99,7 +99,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       val fileMeta = loadMeta(id)
       val fileExits = fileName(id).toFile.isFile()
       if (!optimistic && !fileExits) {
-        logger.info(s"File ${id} is not existing and request is not optimistic")
+        logger.warn(s"File ${id} is not existing and request is not optimistic")
         throw new Errors.NotFoundException(s"File ${id} is not yet written")
       }
       FileGetResult(
@@ -117,7 +117,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     } yield {
       sink.mapMaterializedValue { writeResult =>
         writeResult.map { ioResult =>
-          logger.info(s"Written ${ioResult.count} bytes to ${part}, moving to ${file}")
+          logger.debug(s"Written ${ioResult.count} bytes to ${part}, moving to ${file}")
           Files.move(part, file, StandardCopyOption.ATOMIC_MOVE)
           val newMeta = meta.copy(contentType = Some(contentType))
           saveMeta(id, newMeta)

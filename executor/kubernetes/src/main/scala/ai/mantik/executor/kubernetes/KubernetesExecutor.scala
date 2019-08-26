@@ -35,13 +35,13 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   override def schedule(job: Job): Future[String] = {
     val jobId = UUID.randomUUID().toString
     val namespace = namespaceForIsolationSpace(job.isolationSpace)
-    logger.info(s"Creating job ${jobId} in namespace ${namespace}...")
+    logger.debug(s"Creating job ${jobId} in namespace ${namespace}...")
 
     val converter = try {
       new KubernetesJobConverter(config, job, jobId)
     } catch {
       case e: GraphAnalysis.AnalyzerException =>
-        logger.warn(s"Graph analysis failed", e)
+        logger.error(s"Graph analysis failed", e)
         return Future.failed(new Errors.BadRequestException(s"Graph analysis failed: e: ${e.getMessage}"))
     }
 
@@ -251,7 +251,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   private def checkPods(): Unit = {
-    logger.info("Checking Pods")
+    logger.debug("Checking Pods")
     val timestamp = clock.instant()
     checkBrokenImagePods(timestamp)
   }

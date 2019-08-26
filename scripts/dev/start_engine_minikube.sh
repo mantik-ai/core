@@ -7,4 +7,4 @@ cd $MYDIR/../..
 unset SKUBER_URL
 
 
-sbt -Dconfig.resource=application_local_minikube.conf engine/run
+sbt -Dconfig.resource=application_local_minikube.conf engineApp/run
