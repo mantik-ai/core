@@ -321,9 +321,9 @@ lazy val examples = makeProject("examples")
     publishLocal := {}
   )
 
+/** Engine implementation and API. */
 lazy val engine = makeProject("engine")
-  .dependsOn(planner, executorKubernetes, executorDocker)
-  .dependsOn(executorApp % "test")
+  .dependsOn(planner, executorKubernetes % "test", executorDocker % "test")
   .settings(
     name := "engine"
   )
@@ -331,6 +331,13 @@ lazy val engine = makeProject("engine")
   .settings(configureBuildInfo("ai.mantik.engine.buildinfo"))
   .settings(
     enableProtocolBuffer
+  )
+
+/** Runable Main Class */
+lazy val engineApp = makeProject("engine-app", "engineApp")
+  .dependsOn(engine, executorKubernetes, executorDocker)
+  .settings(
+    name := "engine-app"
   )
   .settings(
     libraryDependencies ++= Seq(
@@ -341,7 +348,7 @@ lazy val engine = makeProject("engine")
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, elements, executorApi, executorCommon, executorKubernetes, executorDocker, executorApp, examples, planner, engine, componently, util)
+  .aggregate(testutils, ds, elements, executorApi, executorCommon, executorKubernetes, executorDocker, executorApp, examples, planner, engine, engineApp, componently, util)
   .settings(
     name := "mantik-core",
     publish := {},
