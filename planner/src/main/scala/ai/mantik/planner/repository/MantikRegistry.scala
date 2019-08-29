@@ -1,23 +1,30 @@
 package ai.mantik.planner.repository
 
-import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
+import ai.mantik.componently.Component
 import ai.mantik.elements.{ ItemId, MantikId }
-import ai.mantik.planner.repository.impl.MantikRegistryImpl
+import ai.mantik.planner.repository.MantikRegistry.PayloadSource
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import com.google.inject.ImplementedBy
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
-/** Represents the Mantik Registry (Mantik Hub). */
-@ImplementedBy(classOf[MantikRegistryImpl])
+/**
+ * Represents the MantikRegistry, which handles
+ * MantikArtifacts payload files.
+ *
+ * This can either be local or remote (Mantik Hub).
+ */
 trait MantikRegistry extends Component {
 
   /** Retrieves an Artifact from the Mantik Registry. */
   def get(mantikId: MantikId): Future[MantikArtifact]
 
-  /** A source for content type and payload */
-  type PayloadSource = (String, Source[ByteString, _])
+  /** Like get, but returns None if the item doesn't exist. */
+  def maybeGet(mantikId: MantikId)(implicit ec: ExecutionContext): Future[Option[MantikArtifact]] = {
+    get(mantikId).map(Some(_)).recover {
+      case e: Errors.NotFoundException => None
+    }
+  }
 
   /** Retrieves item payload from Mantik Registry. */
   def getPayload(fileId: String): Future[PayloadSource]
@@ -38,19 +45,6 @@ trait MantikRegistry extends Component {
 }
 
 object MantikRegistry {
-
-  /** Returns an empty no-op registry. */
-  def empty(implicit akkaRuntime: AkkaRuntime): MantikRegistry = new ComponentBase with MantikRegistry {
-    private val NotFound = Future.failed(new Errors.NotFoundException("Empty Registry"))
-
-    override def get(mantikId: MantikId): Future[MantikArtifact] = NotFound
-
-    override def ensureMantikId(itemId: ItemId, mantikId: MantikId): Future[Boolean] = NotFound
-
-    override def getPayload(fileId: String): Future[PayloadSource] = NotFound
-
-    override def addMantikArtifact(mantikArtifact: MantikArtifact, payload: Option[(String, Source[ByteString, _])]): Future[MantikArtifact] = {
-      NotFound
-    }
-  }
+  /** A source for content type and payload */
+  type PayloadSource = (String, Source[ByteString, _])
 }

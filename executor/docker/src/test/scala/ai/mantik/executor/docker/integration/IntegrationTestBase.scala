@@ -55,22 +55,18 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
     }
   }
 
-  override protected def afterAll(): Unit = {
-    dockerClient.shutdown()
-    super.afterAll()
-  }
-
   override protected lazy val typesafeConfig: Config = {
     ConfigFactory.load("systemtest.conf")
   }
 
   override def withExecutor[T](f: Executor => T): Unit = {
     val config = DockerExecutorConfig.fromTypesafeConfig(typesafeConfig)
-    val executor = new DockerExecutor(dockerClient, config)
+    val extraLifecycle = akkaRuntime.withExtraLifecycle()
+    val executor = new DockerExecutor(dockerClient, config)(extraLifecycle)
     try {
       f(executor)
     } finally {
-      executor.shutdown()
+      extraLifecycle.shutdown()
     }
   }
 }

@@ -1,28 +1,29 @@
 package ai.mantik.planner.repository.impl
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{ Files, Path }
+import java.nio.file.{Files, Path}
 
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.utils.FutureHelper
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.ds.helper.ZipUtils
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
+import ai.mantik.elements.{ItemId, MantikId, Mantikfile}
 import ai.mantik.planner.impl.ReferencingItemLoader
 import ai.mantik.planner.repository._
-import akka.stream.scaladsl.{ FileIO, Source }
+import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import org.apache.commons.io.FileUtils
+import cats.implicits._
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 /** Responsible for pulling/pushing Mantik Artifacts from local repository and remote registry. */
 @Singleton
 private[mantik] class MantikArtifactRetrieverImpl @Inject() (
-    repository: Repository,
-    fileRepository: FileRepository,
-    registry: MantikRegistry
+    localMantikRegistry: LocalMantikRegistry,
+    remoteMantikRegistry: RemoteMantikRegistry,
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with MantikArtifactRetriever {
 
   private val dbLookupTimeout = config.getFiniteDuration("mantik.planner.dbLookupTimeout")
@@ -42,10 +43,10 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   private val repositoryLoader = new ReferencingMantikArtifactLoader(localRepoGet)
 
   private def localRepoGet(mantikId: MantikId): Future[MantikArtifact] =
-    FutureHelper.addTimeout(repository.get(mantikId), "Loading Mantikfile from local repository", dbLookupTimeout)
+    FutureHelper.addTimeout(localMantikRegistry.get(mantikId), "Loading Mantikfile from local repository", dbLookupTimeout)
 
   private def registryGet(mantikId: MantikId): Future[MantikArtifact] =
-    FutureHelper.addTimeout(registry.get(mantikId), "Loading Mantikfile from remote Registry", registryTimeout)
+    FutureHelper.addTimeout(remoteMantikRegistry.get(mantikId), "Loading Mantikfile from remote Registry", registryTimeout)
 
   override def pull(id: MantikId): Future[MantikArtifactWithHull] = {
     logger.info(s"Pulling ${id}")
@@ -93,27 +94,27 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
       mantikfile.header.id.getOrElse(throw new IllegalArgumentException("Mantikfile has no id and no id is given"))
     }
     val itemId = ItemId.generate()
-    val fileIdFuture: Future[Option[String]] = mantikfile.definition.directory.map { dataDir =>
-      // Uploading File Content
+
+    val payloadSource: Option[(String, Source[ByteString, _])] = mantikfile.definition.directory.map { dataDir =>
       val resolved = dir.resolve(dataDir)
       require(resolved.startsWith(dir), "Data directory may not escape root directory")
       val tempFile = Files.createTempFile("mantik_context", ".zip")
       ZipUtils.zipDirectory(resolved, tempFile)
-      for {
-        fileStorage <- FutureHelper.addTimeout(fileRepository.requestFileStorage(false), "Requesting Storage", dbLookupTimeout)
-        sink <- FutureHelper.addTimeout(fileRepository.storeFile(fileStorage.fileId, ContentTypes.ZipFileContentType), "Requesting Storage sink", dbLookupTimeout)
-        source = FileIO.fromPath(tempFile)
-        _ <- FutureHelper.addTimeout(source.runWith(sink), "Uploading File", fileTransferTimeout)
-      } yield Some(fileStorage.fileId)
-    }.getOrElse(Future.successful(None))
+      val source = FileIO.fromPath(tempFile)
+      ContentTypes.ZipFileContentType -> source
+    }
 
-    for {
-      maybeFileid <- fileIdFuture
-      artifact = MantikArtifact(mantikfile, maybeFileid, idToUse, itemId)
-      _ <- FutureHelper.addTimeout(repository.store(artifact), "Storing Artifact", dbLookupTimeout)
-    } yield {
+    val artifact =  MantikArtifact(mantikfile, None, idToUse, itemId)
+    val timeout = if (payloadSource.isDefined){
+      fileTransferTimeout
+    } else {
+      dbLookupTimeout
+    }
+    FutureHelper.addTimeout(
+      localMantikRegistry.addMantikArtifact(artifact, payloadSource), "Uploading Artifact", timeout
+    ).map { generatedArtifact =>
       logger.info(s"Stored ${artifact.id} done, itemId=${itemId}, fileId=${artifact.fileId}")
-      artifact
+      generatedArtifact
     }
   }
 
@@ -122,53 +123,48 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   }
 
   private def pullRemoteItemToLocal(remote: MantikArtifact): Future[MantikArtifact] = {
-    logger.debug(s"Pulling remote item ${remote.id}")
+    copyItem(
+      "Pulling",
+      remote,
+      remoteMantikRegistry,
+      localMantikRegistry,
+      fileTransferTimeout,
+      dbLookupTimeout
+    )
+  }
 
-    val localExistanceFuture: Future[Option[MantikArtifact]] =
-      localRepoGet(MantikId.anonymous(remote.itemId))
-        .map(Some(_))
-        .recover {
-          case e: Errors.NotFoundException => None
-        }
+  /** Copy an item to the `to` Registry. */
+  private def copyItem(
+    operationName: String,
+    fromArtifact: MantikArtifact,
+    from: MantikRegistry,
+    to: MantikRegistry,
+    fileTransferTimeout: FiniteDuration,
+    changeTimeout: FiniteDuration
+  ): Future[MantikArtifact] = {
+    logger.debug(s"${operationName} ${fromArtifact.id}")
 
-    localExistanceFuture.flatMap {
+    val existing = to.maybeGet(MantikId.anonymous(fromArtifact.itemId))
+
+    existing.flatMap {
       case Some(existant) =>
-        logger.info(s"${remote.itemId} already exists, ensuring id ${remote.id}")
-        FutureHelper.addTimeout(repository.ensureMantikId(existant.itemId, remote.id), "Tagging MantikArtifact", dbLookupTimeout).map { _ =>
-          val updated = existant.copy(
-            id = remote.id
-          )
-          updated
+        logger.info(s"${fromArtifact.itemId} already exists, ensuring id ${fromArtifact.id}")
+        FutureHelper.addTimeout(
+          to.ensureMantikId(existant.itemId, fromArtifact.id), "Tagging", changeTimeout
+        ).map { _ =>
+          existant.copy(id = fromArtifact.id)
         }
       case None =>
-        logger.info(s"${remote.id} doesn't exist locally, pulling completely")
-        // Locally not existing...
-        for {
-          maybeLocalFileId <- forwardPayloadToInternalRepositoryIfExists(remote.fileId)
-          localMantikArtifact = remote.copy(fileId = maybeLocalFileId)
-          _ <- FutureHelper.addTimeout(repository.store(localMantikArtifact), "Adding Local MantikArtifact", dbLookupTimeout)
-        } yield {
-          localMantikArtifact
+        logger.debug(s"${fromArtifact.itemId} doesn't exist yet, pulling completely")
+        val timeout = if (fromArtifact.fileId.isDefined) {
+          fileTransferTimeout
+        } else {
+          changeTimeout
         }
-    }
-  }
-
-  private def forwardPayloadToInternalRepositoryIfExists(remoteFileId: Option[String]): Future[Option[String]] = {
-    remoteFileId match {
-      case Some(remoteFileId) => forwardPayloadToInternalRepository(remoteFileId).map(Some(_))
-      case None               => Future.successful(None)
-    }
-  }
-
-  /** Forward a remote file to the local file repository, returning the local file id. */
-  private def forwardPayloadToInternalRepository(remoteFileId: String): Future[String] = {
-    for {
-      fileHandle <- FutureHelper.addTimeout(fileRepository.requestFileStorage(false), "Requesting Storage", dbLookupTimeout)
-      (contentType, remoteSource) <- FutureHelper.addTimeout(registry.getPayload(remoteFileId), "Requesting Payload", registryTimeout)
-      fileSink <- fileRepository.storeFile(fileHandle.fileId, contentType)
-      _ <- FutureHelper.addTimeout(remoteSource.runWith(fileSink), "Copying remote to local file", fileTransferTimeout)
-    } yield {
-      fileHandle.fileId
+        for {
+          source <- FutureHelper.addTimeout(fromArtifact.fileId.map(from.getPayload).sequence, "Getting File", timeout)
+          localArtifact <- FutureHelper.addTimeout(to.addMantikArtifact(fromArtifact, source), "Storing Artifact", timeout)
+        } yield localArtifact
     }
   }
 
@@ -184,52 +180,13 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
 
   /** Push a single local item to remote registry. */
   private def pushLocalItemToRemote(local: MantikArtifact): Future[MantikArtifact] = {
-    // Does it exist?
-    val maybeExistsFuture = registryGet(MantikId.anonymous(local.itemId)).map(Some(_)).recover {
-      case e: Errors.NotFoundException => None
-    }
-    maybeExistsFuture.flatMap {
-      case Some(existant) =>
-        logger.info(s"${local.id} exists remote, tagging it.")
-        FutureHelper.addTimeout(
-          registry.ensureMantikId(existant.itemId, local.id), "Tagging MantikArtifact", registryTimeout
-        ).map { _ =>
-            val updated = existant.copy(
-              id = local.id
-            )
-            updated
-          }
-      case None =>
-        logger.info(s"${local.id} doesn't exist remotely, uploading...")
-        for {
-          payload <- local.fileId match {
-            case None         => Future.successful(None)
-            case Some(fileId) => localFileSource(fileId).map(Some(_))
-          }
-          response <- FutureHelper.addTimeout(
-            registry.addMantikArtifact(local, payload), "Uploading Mantikfile", fileTransferTimeout
-          )
-        } yield {
-          response
-        }
-    }
-  }
-
-  /**
-   * Forward a local payload to a remote repository.
-   * Returns content type and file source
-   */
-  private def localFileSource(fileId: String): Future[(String, Source[ByteString, _])] = {
-    for {
-      fileInfo <- fileRepository.requestFileGet(fileId)
-      fileSource <- fileRepository.loadFile(fileId)
-    } yield {
-      // mm, content type missing?!
-      val contentType = fileInfo.contentType.getOrElse {
-        logger.warn(s"No content type for local file ${fileId}, assuming zip")
-        ContentTypes.ZipFileContentType
-      }
-      contentType -> fileSource
-    }
+    copyItem(
+      "pushing",
+      local,
+      localMantikRegistry,
+      remoteMantikRegistry,
+      fileTransferTimeout,
+      registryTimeout
+    )
   }
 }

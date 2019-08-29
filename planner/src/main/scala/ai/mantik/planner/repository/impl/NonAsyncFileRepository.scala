@@ -30,11 +30,11 @@ trait NonAsyncFileRepository extends FileRepository {
     await(this.requestFileGet(id, optimistic))
   }
 
-  def getFileContentSync(id: String)(implicit materializer: Materializer): ByteString = {
-    val source = await(this.loadFile(id))
+  def getFileContentSync(id: String)(implicit materializer: Materializer): (String, ByteString) = {
+    val (contentType, source) = await(this.loadFile(id))
     val sink = Sink.seq[ByteString]
     val byteBlobs = await(source.runWith(sink))
-    byteBlobs.foldLeft(ByteString.empty)(_ ++ _)
+    contentType -> byteBlobs.foldLeft(ByteString.empty)(_ ++ _)
   }
 
   private def await[T](f: Future[T]): T = {

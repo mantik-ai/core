@@ -12,7 +12,7 @@ trait SessionBase {
   def id: String
 
   /** Shutdown the session. */
-  private[session] def shutdown(): Unit
+  private[session] def quitSession(): Unit
 }
 
 /**
@@ -49,7 +49,7 @@ class SessionManagerBase[S <: SessionBase](sessionFactory: String => S)(implicit
     }
     Future {
       logger.info(s"Shutting down ${sessionId}")
-      session.foreach(_.shutdown())
+      session.foreach(_.quitSession())
     }
   }
 

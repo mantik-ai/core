@@ -1,31 +1,29 @@
-package ai.mantik.planner.repository.impl
+package ai.mantik.planner.repository
 
-import java.net.{ Inet4Address, InetAddress, InetSocketAddress, NetworkInterface }
+import java.net.{ Inet4Address, InetAddress, NetworkInterface }
 
+import ai.mantik.componently.utils.HostPort
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.planner.repository.{ Errors, FileRepository }
-import akka.actor.ActorSystem
+import ai.mantik.planner.ClientConfig
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ HttpEntity, MediaType, MediaTypes }
-import akka.http.scaladsl.server.Directives.{ complete, concat, extractRequest, get, path, post }
-import com.typesafe.config.Config
 import akka.http.scaladsl.server.Directives._
-import akka.stream.Materializer
-import org.slf4j.{ Logger, LoggerFactory }
+import javax.inject.{ Inject, Singleton }
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
-/** Implements the HTTP server parts from the [[FileRepository]] trait. */
-abstract class FileRepositoryServer(implicit runtime: AkkaRuntime) extends ComponentBase with FileRepository {
+/** HTTP Server for FileRepository, to make it accessible from Executor. */
+@Singleton
+private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileRepository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
   val HelloMessage = "This is a Mantik File Repository"
 
-  protected val subConfig = runtime.config.getConfig("mantik.repository.fileRepository")
-  protected val port = subConfig.getInt("port")
-  protected val interface = subConfig.getString("interface")
+  private val subConfig = config.getConfig("mantik.fileRepositoryServer")
+  private val port = subConfig.getInt("port")
+  private val interface = subConfig.getString("interface")
 
-  val route = concat(
+  private val route = concat(
     path("/") {
       get(
         complete(HelloMessage)
@@ -45,7 +43,7 @@ abstract class FileRepositoryServer(implicit runtime: AkkaRuntime) extends Compo
       post {
         extractRequest { req =>
           val contentType = req.entity.contentType.value
-          val result = storeFile(id, contentType).flatMap { sink =>
+          val result = fileRepository.storeFile(id, contentType).flatMap { sink =>
             req.entity.dataBytes.runWith(sink)
           }
           onComplete(result) {
@@ -58,16 +56,9 @@ abstract class FileRepositoryServer(implicit runtime: AkkaRuntime) extends Compo
         }
       } ~
         get {
-          onComplete(for {
-            fileGet <- requestFileGet(id)
-            fileSource <- loadFile(id)
-          } yield {
-            fileGet.contentType -> fileSource
-          }) {
+          onComplete(fileRepository.loadFile(id)) {
             case Success((contentType, fileSource)) =>
-              val mediaType = contentType.map(findAkkaMediaType).getOrElse(
-                MediaTypes.`application/octet-stream`
-              )
+              val mediaType = findAkkaMediaType(contentType)
               complete(
                 HttpEntity(mediaType, fileSource)
               )
@@ -103,25 +94,20 @@ abstract class FileRepositoryServer(implicit runtime: AkkaRuntime) extends Compo
   val bindResult = Await.result(Http().bindAndHandle(route, interface, port), 60.seconds)
   logger.info(s"Listening on ${interface}:${boundPort}, external ${address}")
 
-  override def shutdown(): Unit = {
+  addShutdownHook {
     bindResult.terminate(60.seconds)
-    super.shutdown()
   }
 
   def boundPort: Int = {
     bindResult.localAddress.getPort
   }
 
-  /** Returns the relative path under which a file is available via HTTP. */
-  protected def makePath(id: String): String = {
-    "files/" + id
-  }
-
-  override def address(): InetSocketAddress = _address
+  /** Returns the address of the repository (must be reachable from the executor). */
+  def address(): HostPort = _address
 
   private lazy val _address = figureOutAddress()
 
-  private def figureOutAddress(): InetSocketAddress = {
+  private def figureOutAddress(): HostPort = {
     // This is tricky: https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
     // We can't know which one is available from kubernetes
     // hopefully the first non-loopback is it.
@@ -135,7 +121,9 @@ abstract class FileRepositoryServer(implicit runtime: AkkaRuntime) extends Compo
     val address = addresses.collectFirst {
       case ipv4: Inet4Address => ipv4
     }.orElse(addresses.headOption).getOrElse(InetAddress.getLocalHost)
-    logger.info(s"Choosing ${address} from ${addresses}")
-    new InetSocketAddress(address, boundPort)
+
+    val result = HostPort(address.getHostAddress, boundPort)
+    logger.info(s"Choosing ${result} from ${addresses}")
+    result
   }
 }

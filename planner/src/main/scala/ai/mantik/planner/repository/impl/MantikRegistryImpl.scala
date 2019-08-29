@@ -4,7 +4,8 @@ import ai.mantik.componently.utils.SecretReader
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.registry.api._
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
-import ai.mantik.planner.repository.{ Errors, MantikArtifact, MantikRegistry }
+import ai.mantik.planner.repository.MantikRegistry.PayloadSource
+import ai.mantik.planner.repository.{ Errors, MantikArtifact, RemoteMantikRegistry }
 import akka.http.scaladsl.Http
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import javax.inject.Inject
@@ -13,7 +14,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
-  extends ComponentBase with MantikRegistry with FailFastCirceSupport {
+  extends ComponentBase with RemoteMantikRegistry with FailFastCirceSupport {
 
   private val configRoot = config.getConfig("mantik.core.registry")
   private val url = configRoot.getString("url")

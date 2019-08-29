@@ -37,7 +37,4 @@ trait Context extends CoreComponents {
    * @return Mantik id which was used in the end.
    */
   def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): MantikId
-
-  /** Shutdown the context. */
-  def shutdown(): Unit
 }

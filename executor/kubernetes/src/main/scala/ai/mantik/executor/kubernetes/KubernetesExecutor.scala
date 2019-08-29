@@ -325,8 +325,9 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     imageErrors.headOption
   }
 
-  override def shutdown(): Unit = {
+  addShutdownHook {
     checkPodCancellation.cancel()
+    Future.successful(())
   }
 
   override def nameAndVersion: Future[String] = {

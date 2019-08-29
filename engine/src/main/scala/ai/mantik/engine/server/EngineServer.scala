@@ -24,6 +24,8 @@ import io.grpc.netty.NettyServerBuilder
 import io.grpc.Server
 import javax.inject.Inject
 
+import scala.concurrent.Future
+
 class EngineServer @Inject() (
     aboutService: AboutService,
     sessionService: SessionService,
@@ -74,7 +76,12 @@ class EngineServer @Inject() (
     instance.awaitTermination()
   }
 
-  override def shutdown(): Unit = {
+  addShutdownHook {
+    stop()
+    Future.successful(())
+  }
+
+  def stop(): Unit = {
     executorServer.foreach(_.stop())
     if (this.server.isEmpty) {
       logger.info("Server not running, cancelling shutdown")

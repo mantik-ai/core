@@ -7,7 +7,7 @@ import java.time.temporal.{ ChronoUnit, Temporal, TemporalUnit }
 import java.time.{ Clock, Instant }
 import java.util.UUID
 
-import ai.mantik.componently.AkkaRuntime
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.planner.repository.{ Errors, FileRepository }
 import ai.mantik.planner.repository.Errors.RepositoryError
@@ -38,7 +38,7 @@ import scala.collection.JavaConverters._
  * Temporary files are cleaned up periodically. This should scale to some 1000 files but not more.
  */
 @Singleton
-class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) extends FileRepositoryServer {
+class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FileRepository {
 
   @Inject
   def this()(implicit akkaRuntime: AkkaRuntime) {
@@ -47,6 +47,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
 
   logger.info(s"Initializing Local File Repository in directory ${directory}")
 
+  protected val subConfig = config.getConfig("mantik.repository.fileRepository")
   val cleanupInterval = Duration.fromNanos(subConfig.getDuration("local.cleanupInterval").toNanos)
   val cleanupTimeout = Duration.fromNanos(subConfig.getDuration("local.cleanupTimeout").toNanos)
 
@@ -68,9 +69,9 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       removeTimeoutedFiles()
     }
 
-  override def shutdown(): Unit = {
+  addShutdownHook {
     timeoutScheduler.cancel()
-    super.shutdown()
+    Future.successful(())
   }
 
   private def makeNewId(): String = UUID.randomUUID().toString
@@ -89,7 +90,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
 
       FileStorageResult(
         fileId = id,
-        path = makePath(id)
+        path = FileRepository.makePath(id)
       )
     }
   }
@@ -103,7 +104,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
         throw new Errors.NotFoundException(s"File ${id} is not yet written")
       }
       FileGetResult(
-        id, makePath(id), fileMeta.contentType
+        id, FileRepository.makePath(id), fileMeta.contentType
       )
     }
   }
@@ -127,14 +128,18 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     }
   }
 
-  override def loadFile(id: String): Future[Source[ByteString, _]] = {
+  override def loadFile(id: String): Future[(String, Source[ByteString, _])] = {
     Future {
       val name = fileName(id)
+      val meta = loadMeta(id)
       val exists = Files.isRegularFile(name)
       if (!exists) {
         throw new Errors.NotFoundException(s"File ${id} doesn't exist")
       }
-      FileIO.fromPath(name)
+      val contentType = meta.contentType.getOrElse {
+        throw new Errors.NotFoundException(s"FIle ${id} has no content type")
+      }
+      contentType -> FileIO.fromPath(name)
     }
   }
 
@@ -235,9 +240,10 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
 class TempFileRepository @Inject() (implicit akkaRuntime: AkkaRuntime) extends LocalFileRepository(
   Files.createTempDirectory("mantik_simple_storage")
 ) {
-  override def shutdown(): Unit = {
-    super.shutdown()
+
+  addShutdownHook {
     FileUtils.deleteDirectory(directory.toFile)
+    Future.successful(())
   }
 }
 

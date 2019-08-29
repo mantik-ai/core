@@ -11,12 +11,8 @@ abstract class ExampleBase {
     implicit val akkaRuntime = AkkaRuntime.createNew()
     try {
       val engineClient = EngineClient.create()
-      try {
-        val context = engineClient.createContext()
-        run(context)
-      } finally {
-        engineClient.shutdown()
-      }
+      val context = engineClient.createContext()
+      run(context)
     } finally {
       akkaRuntime.shutdown()
     }

@@ -4,7 +4,7 @@ import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
 import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.FileRepository
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryService
-import ai.mantik.planner.repository.protos.file_repository.{ AddressResponse, DeleteFileRequest, DeleteFileResponse, LoadFileRequest, LoadFileResponse, RequestFileGetRequest, RequestFileGetResponse, RequestFileStorageRequest, RequestFileStorageResponse, StoreFileRequest, StoreFileResponse }
+import ai.mantik.planner.repository.protos.file_repository.{ DeleteFileRequest, DeleteFileResponse, LoadFileRequest, LoadFileResponse, RequestFileGetRequest, RequestFileGetResponse, RequestFileStorageRequest, RequestFileStorageResponse, StoreFileRequest, StoreFileResponse }
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
@@ -77,25 +77,17 @@ class FileRepositoryServiceImpl @Inject() (backend: FileRepository)(implicit akk
 
   override def loadFile(request: LoadFileRequest, responseObserver: StreamObserver[LoadFileResponse]): Unit = {
     backend.loadFile(request.fileId).onComplete {
-      case Success(source) =>
-        val adaptedSource = source.map { byteString =>
+      case Success((contentType, source)) =>
+        val header = Source.single(LoadFileResponse(
+          contentType = contentType
+        ))
+        val adaptedSource: Source[LoadFileResponse, _] = source.map { byteString =>
           LoadFileResponse(RpcConversions.encodeByteString(byteString))
         }
-        StreamConversions.pumpSourceIntoStreamObserver(adaptedSource, responseObserver)
+        val combined = header ++ adaptedSource
+        StreamConversions.pumpSourceIntoStreamObserver(combined, responseObserver)
       case Failure(failure) =>
         responseObserver.onError(Conversions.encodeErrorIfPossible(failure))
-    }
-  }
-
-  override def address(request: Empty): Future[AddressResponse] = {
-    Conversions.encodeErrorsIn {
-      Future {
-        val addr = backend.address()
-        AddressResponse(
-          host = addr.getAddress.getHostAddress,
-          port = addr.getPort
-        )
-      }
     }
   }
 }

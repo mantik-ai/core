@@ -3,8 +3,8 @@ package ai.mantik.engine.testutil
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.planner.bridge.BridgesProvider
 import ai.mantik.planner.impl.PlannerImpl
-import ai.mantik.planner.repository.impl.{ MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
-import ai.mantik.planner.repository.{ FileRepository, MantikArtifactRetriever, MantikRegistry, Repository }
+import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
+import ai.mantik.planner.repository.{ FileRepository, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
 import ai.mantik.planner.{ CoreComponents, Plan, PlanExecutor, Planner }
 import org.apache.commons.io.FileUtils
 
@@ -12,14 +12,13 @@ import scala.concurrent.Future
 
 class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with CoreComponents {
 
-  override lazy val fileRepository = new TempFileRepository()
-
-  override lazy val repository: Repository = new TempRepository()
-
-  private lazy val registry: MantikRegistry = MantikRegistry.empty
+  lazy val fileRepository = new TempFileRepository()
+  lazy val repository: Repository = new TempRepository()
+  override lazy val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
+  private lazy val registry: RemoteMantikRegistry = RemoteMantikRegistry.empty
 
   override def retriever: MantikArtifactRetriever = new MantikArtifactRetrieverImpl(
-    repository, fileRepository, registry
+    localRegistry, registry
   )
 
   private val bridges = new BridgesProvider(config).get()
@@ -39,26 +38,12 @@ class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
     }
   }
 
-  override def shutdown(): Unit = {
+  addShutdownHook {
     FileUtils.deleteDirectory(fileRepository.directory.toFile)
-    fileRepository.shutdown()
+    Future.successful(())
   }
 
   /** Create a shared copy, which doesn't shut down on shutdown() */
-  def shared(): CoreComponents = {
-    val me = this
-    new CoreComponents {
-      override def fileRepository: FileRepository = me.fileRepository
-
-      override def repository: Repository = me.repository
-
-      override def retriever: MantikArtifactRetriever = me.retriever
-
-      override def planner: Planner = me.planner
-
-      override def planExecutor: PlanExecutor = me.planExecutor
-
-      override def shutdown(): Unit = {}
-    }
-  }
+  def shared(): CoreComponents = this
+  // TODO: Remove me
 }

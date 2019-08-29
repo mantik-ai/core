@@ -1,97 +1,74 @@
 package ai.mantik.planner.repository.impl
 
-import java.nio.file.Files
-
 import ai.mantik.planner.repository.{ ContentTypes, Errors }
-import ai.mantik.testutils.FakeClock
-import com.typesafe.config.{ Config, ConfigValueFactory }
-import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
 
 class LocalFileRepositorySpec extends FileRepositorySpecBase {
 
-  override protected def config: Config = {
-    val tempDir = Files.createTempDirectory("mantik_local_storage_test")
-    super.config.withValue(
-      "mantik.repository.fileRepository.local.directory", ConfigValueFactory.fromAnyRef(tempDir.toString)
-    )
+  override type RepoType = LocalFileRepository with NonAsyncFileRepository
+
+  protected def createRepo(): RepoType = {
+    new LocalFileRepository(tempDirectory) with NonAsyncFileRepository
   }
 
-  override type FileRepoType = LocalFileRepository with NonAsyncFileRepository
-
-  override protected def createRepo: FileRepoType = new LocalFileRepository() with NonAsyncFileRepository {
-    override def shutdown(): Unit = {
-      super.shutdown()
-      FileUtils.deleteDirectory(directory.toFile)
-    }
+  trait Env {
+    val repo = new LocalFileRepository(tempDirectory) with NonAsyncFileRepository
   }
 
-  it should "parse timeout config values" in {
-    withRepo { repo =>
-      repo.cleanupInterval shouldBe 1.hours
-      repo.cleanupTimeout shouldBe 48.hours
-      repo.timeoutScheduler.isCancelled shouldBe false
-    }
-  }
-
-  it should "disable the scheduler on shutdown" in {
-    val repo = new LocalFileRepository()
+  it should "parse timeout config values" in new Env {
+    repo.cleanupInterval shouldBe 1.hours
+    repo.cleanupTimeout shouldBe 48.hours
     repo.timeoutScheduler.isCancelled shouldBe false
-    repo.shutdown()
+  }
+
+  it should "disable the scheduler on shutdown" in new Env {
+    repo.timeoutScheduler.isCancelled shouldBe false
+    akkaRuntime.shutdown()
     repo.timeoutScheduler.isCancelled shouldBe true
-    FileUtils.deleteDirectory(repo.directory.toFile)
   }
 
-  "listFiles" should "work" in {
-    withRepo { repo =>
-      val req1 = repo.requestFileStorageSync(true)
-      val req2 = repo.requestAndStoreSync(true, ContentTypes.MantikBundleContentType, testBytes)
-      val req3 = repo.requestAndStoreSync(false, ContentTypes.MantikBundleContentType, testBytes)
-      repo.listFiles().toIndexedSeq should contain theSameElementsAs Seq(req1.fileId, req2.fileId, req3.fileId)
+  "listFiles" should "work" in new Env {
+    val req1 = repo.requestFileStorageSync(true)
+    val req2 = repo.requestAndStoreSync(true, ContentTypes.MantikBundleContentType, testBytes)
+    val req3 = repo.requestAndStoreSync(false, ContentTypes.MantikBundleContentType, testBytes)
+    repo.listFiles().toIndexedSeq should contain theSameElementsAs Seq(req1.fileId, req2.fileId, req3.fileId)
+  }
+
+  "automatic cleanup" should "automatically clean temporary files" in new Env {
+    val storeResult = repo.requestAndStoreSync(true, ContentTypes.MantikBundleContentType, testBytes)
+    clock.setTimeOffset(repo.cleanupTimeout.minus(1.seconds))
+    repo.removeTimeoutedFiles()
+    repo.getFileContentSync(storeResult.fileId) shouldBe (ContentTypes.MantikBundleContentType -> testBytes)
+
+    clock.setTimeOffset(repo.cleanupTimeout.plus(1.seconds))
+    repo.removeTimeoutedFiles()
+    intercept[Errors.NotFoundException] {
+      repo.getFileContentSync(storeResult.fileId)
     }
   }
 
-  "automatic cleanup" should "automatically clean temporary files" in {
-    withRepo { repo =>
-      val storeResult = repo.requestAndStoreSync(true, ContentTypes.MantikBundleContentType, testBytes)
-      fakeClock.setTimeOffset(repo.cleanupTimeout.minus(1.seconds))
-      repo.removeTimeoutedFiles()
-      repo.getFileContentSync(storeResult.fileId) shouldBe testBytes
+  it should "automatically clean up files without content" in new Env {
+    val storeResult = await(repo.requestFileStorage(true))
+    clock.setTimeOffset(repo.cleanupTimeout.minus(1.seconds))
+    repo.removeTimeoutedFiles()
 
-      fakeClock.setTimeOffset(repo.cleanupTimeout.plus(1.seconds))
-      repo.removeTimeoutedFiles()
-      intercept[Errors.NotFoundException] {
-        repo.getFileContentSync(storeResult.fileId)
-      }
+    repo.listFiles().toSet should contain(storeResult.fileId)
+
+    clock.setTimeOffset(repo.cleanupTimeout.plus(1.seconds))
+    repo.removeTimeoutedFiles()
+    repo.listFiles().toSet should not(contain(storeResult.fileId))
+
+    intercept[Errors.NotFoundException] {
+      await(repo.storeFile(storeResult.fileId, "somecontenttype"))
     }
   }
 
-  it should "automatically clean up files without content" in {
-    withRepo { repo =>
-      val storeResult = await(repo.requestFileStorage(true))
-      fakeClock.setTimeOffset(repo.cleanupTimeout.minus(1.seconds))
-      repo.removeTimeoutedFiles()
-
-      repo.listFiles().toSet should contain(storeResult.fileId)
-
-      fakeClock.setTimeOffset(repo.cleanupTimeout.plus(1.seconds))
-      repo.removeTimeoutedFiles()
-      repo.listFiles().toSet should not(contain(storeResult.fileId))
-
-      intercept[Errors.NotFoundException] {
-        await(repo.storeFile(storeResult.fileId, "somecontenttype"))
-      }
-    }
-  }
-
-  it should "not remove non-temporary files" in {
-    withRepo { repo =>
-      val storeResult = repo.requestAndStoreSync(false, ContentTypes.MantikBundleContentType, testBytes)
-      fakeClock.setTimeOffset(repo.cleanupTimeout.plus(1.hour))
-      repo.removeTimeoutedFiles()
-      repo.getFileContentSync(storeResult.fileId) shouldBe testBytes
-      repo.listFiles().toSet should contain(storeResult.fileId)
-    }
+  it should "not remove non-temporary files" in new Env {
+    val storeResult = repo.requestAndStoreSync(false, ContentTypes.MantikBundleContentType, testBytes)
+    clock.setTimeOffset(repo.cleanupTimeout.plus(1.hour))
+    repo.removeTimeoutedFiles()
+    repo.getFileContentSync(storeResult.fileId) shouldBe (ContentTypes.MantikBundleContentType -> testBytes)
+    repo.listFiles().toSet should contain(storeResult.fileId)
   }
 }

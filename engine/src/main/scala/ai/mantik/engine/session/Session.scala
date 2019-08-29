@@ -37,11 +37,11 @@ class Session(
     }
   }
 
-  def shutdown(): Unit = {
+  def quitSession(): Unit = {
     this.synchronized {
       alive = false
     }
-    components.shutdown()
+    // More can be done in subclasses.
   }
 
   /** Add an item to the session, returns the id. */

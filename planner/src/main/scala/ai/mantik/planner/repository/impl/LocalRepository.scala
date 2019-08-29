@@ -201,9 +201,9 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
     }
   }
 
-  override def shutdown(): Unit = {
-    super.shutdown()
+  addShutdownHook {
     db.shutdown()
+    Future.successful(())
   }
 
   /**
@@ -260,10 +260,10 @@ class TempRepository @Inject() (implicit akkaRuntime: AkkaRuntime) extends Local
   Files.createTempDirectory("mantik_db")
 ) {
 
-  override def shutdown(): Unit = {
-    super.shutdown()
+  addShutdownHook {
     logger.debug(s"Deleting temp directory ${directory}")
     FileUtils.deleteDirectory(directory.toFile)
+    Future.successful(())
   }
 }
 

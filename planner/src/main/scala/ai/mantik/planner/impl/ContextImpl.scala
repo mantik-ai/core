@@ -9,9 +9,9 @@ import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
-import ai.mantik.planner.impl.exec.PlanExecutorImpl
-import ai.mantik.planner.repository.impl.{ MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
-import ai.mantik.planner.repository.{ Errors, FileRepository, MantikArtifactRetriever, MantikRegistry, Repository }
+import ai.mantik.planner.impl.exec.{ FileRepositoryServerRemotePresence, PlanExecutorImpl }
+import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
+import ai.mantik.planner.repository.{ Errors, FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
 import javax.inject.Inject
 
 import scala.concurrent.duration._
@@ -19,11 +19,10 @@ import scala.concurrent.{ Await, Future }
 import scala.reflect.ClassTag
 
 private[planner] class ContextImpl @Inject() (
-    val repository: Repository,
-    val fileRepository: FileRepository,
+    val localRegistry: LocalMantikRegistry,
     val planner: Planner,
     val planExecutor: PlanExecutor,
-    val registry: MantikRegistry,
+    val remoteRegistry: RemoteMantikRegistry,
     val retriever: MantikArtifactRetriever
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Context {
   private val jobTimeout = config.getFiniteDuration("mantik.planner.jobTimeout")
@@ -72,11 +71,6 @@ private[planner] class ContextImpl @Inject() (
   override def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): MantikId = {
     await(retriever.addLocalDirectoryToRepository(dir, id)).id
   }
-
-  override def shutdown(): Unit = {
-    fileRepository.shutdown()
-    repository.shutdown()
-  }
 }
 
 private[mantik] object ContextImpl {
@@ -85,28 +79,37 @@ private[mantik] object ContextImpl {
   def constructTempClient()(implicit akkaRuntime: AkkaRuntime): Context = {
     val repository = new TempRepository()
     val fileRepo = new TempFileRepository()
+    val fileRepoServer = new FileRepositoryServer(fileRepo)
     val executor = constructExecutorClient()
-    val registry = MantikRegistry.empty
-    constructWithComponents(repository, fileRepo, executor, registry)
+    val registry = RemoteMantikRegistry.empty
+    constructWithComponents(repository, fileRepo, fileRepoServer, executor, registry)
   }
 
   /** Construct a context with a running local stateful services (e.g. the Engine). */
   private def constructWithComponents(
     repository: Repository,
     fileRepository: FileRepository,
+    fileRepositoryServer: FileRepositoryServer,
     executor: Executor,
-    registry: MantikRegistry
+    registry: RemoteMantikRegistry
   )(implicit akkaRuntime: AkkaRuntime): Context = {
     val bridges: Bridges = Bridges.loadFromConfig(akkaRuntime.config)
     val planner = new PlannerImpl(bridges)
-    val retriever = new MantikArtifactRetrieverImpl(repository, fileRepository, registry)
+    val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
+    val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
+    val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
+    val clientConfig = ClientConfig(
+      remoteFileRepositoryAddress = fileRepositoryServerRemotePresence.assembledRemoteUri()
+    )
+
     val planExecutor = new PlanExecutorImpl(
       fileRepository,
       repository,
       executor,
-      retriever
+      retriever,
+      clientConfig
     )
-    new ContextImpl(repository, fileRepository, planner, planExecutor, registry, retriever)
+    new ContextImpl(localRegistry, planner, planExecutor, registry, retriever)
   }
 
   private def constructExecutorClient()(implicit akkaRuntime: AkkaRuntime): Executor = {

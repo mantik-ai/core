@@ -5,11 +5,11 @@ import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{ Keep, Sink, Source }
 import io.grpc.stub.StreamObserver
 import org.reactivestreams.{ Subscriber, Subscription }
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.{ Failure, Success, Try }
 
 /** Helper for converting gRpc Stream Fundamentals into Akka Counterparts. */
@@ -171,5 +171,47 @@ object StreamConversions {
       }
     }
     streamObserver -> promise.future
+  }
+
+  /**
+   * Generate a StreamObserver with a special handling for the first element
+   * and a generic handling for all elements (including first).
+   * This can be used, when requesting streamy data, where the first element contains some extra information.
+   *
+   * @param decodeHeader the method which decodes the first element
+   * @param decodeAll the method which decodes all elemensts, including the first
+   * @param errorDecoder a partial fucntion for error decoding.
+   *
+   * @tparam T the element type of the StreamObserver
+   * @tparam H the decoded header type
+   * @tparam A the decoded type for the whole stream.
+   *
+   * @return A stream observer, and a future to the decoded header and a source for the result of decodeAll.
+   */
+  def headerStreamSource[T, H, A](
+    decodeHeader: T => H,
+    decodeAll: T => A,
+    errorDecoder: PartialFunction[Throwable, Throwable] = PartialFunction.empty
+  )(implicit ec: ExecutionContext, materializer: Materializer): (StreamObserver[T], Future[(H, Source[A, _])]) = {
+    val promise = Promise[(H, Source[A, _])]
+    val observer = StreamConversions.splitFirst[T] {
+      case Success(value) =>
+        val header = decodeHeader(value)
+        val constructed: Source[A, StreamObserver[T]] = StreamConversions
+          .streamObserverSource[T]().prependMat(Source.single(value))(Keep.left)
+          .map(decodeAll)
+          .mapError(errorDecoder)
+        val (observer, source) = constructed.preMaterialize()
+        promise.trySuccess(header -> source)
+        observer
+      case Failure(error) =>
+        promise.tryFailure(error)
+        StreamConversions.empty
+    }
+    observer -> promise.future.transform {
+      case Success(ok)                               => Success(ok)
+      case Failure(e) if errorDecoder.isDefinedAt(e) => Failure(errorDecoder(e))
+      case Failure(e)                                => Failure(e)
+    }
   }
 }
