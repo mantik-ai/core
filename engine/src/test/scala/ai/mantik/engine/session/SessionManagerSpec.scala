@@ -6,7 +6,7 @@ class SessionManagerSpec extends TestBase with AkkaSupport {
 
   class DummySession(val id: String) extends SessionBase {
     var isShutdown = false
-    override def shutdown(): Unit = {
+    override def quitSession(): Unit = {
       isShutdown = true
     }
   }

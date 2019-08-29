@@ -7,14 +7,16 @@ import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.FileRepository
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryService
 import ai.mantik.planner.repository.protos.file_repository.{ DeleteFileRequest, LoadFileRequest, LoadFileResponse, RequestFileGetRequest, RequestFileStorageRequest, StoreFileRequest, StoreFileResponse }
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.util.ByteString
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
+import io.grpc.stub.{ StreamObserver, StreamObservers }
 import javax.inject.{ Inject, Singleton }
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration._
+import scala.util.{ Failure, Success }
 
 @Singleton
 class FileRepositoryClientImpl @Inject() (service: FileRepositoryService)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FileRepository {
@@ -73,27 +75,13 @@ class FileRepositoryClientImpl @Inject() (service: FileRepositoryService)(implic
     }
   }
 
-  override def loadFile(id: String): Future[Source[ByteString, _]] = {
-    Conversions.decodeErrorsIn {
-      Future {
-        val source = StreamConversions.streamObserverSource[LoadFileResponse]()
-        val adapted = source.mapMaterializedValue { streamObserver =>
-          service.loadFile(LoadFileRequest(fileId = id), streamObserver)
-        }.map { response =>
-          RpcConversions.decodeByteString(response.chunk)
-        }.mapError(Conversions.decodeErrors)
-        adapted
-      }
-    }
-  }
-
-  override def address(): InetSocketAddress = {
-    val response = Await.result(
-      Conversions.decodeErrorsIn {
-        service.address(Empty())
-      }, 60.seconds
+  override def loadFile(id: String): Future[(String, Source[ByteString, _])] = {
+    val (observer, result) = StreamConversions.headerStreamSource[LoadFileResponse, String, ByteString](
+      decodeHeader = x => x.contentType,
+      decodeAll = x => RpcConversions.decodeByteString(x.chunk),
+      errorDecoder = Conversions.decodeErrors
     )
-    val addr = InetAddress.getByName(response.host)
-    new InetSocketAddress(addr, response.port)
+    service.loadFile(LoadFileRequest(fileId = id), observer)
+    result
   }
 }

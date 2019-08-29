@@ -8,13 +8,10 @@ abstract class TestBaseWithSessions extends TestBaseWithAkkaRuntime {
   protected var sessionManager: SessionManager = _
 
   override protected def beforeEach(): Unit = {
+    super.beforeEach()
     components = new DummyComponents()
     sessionManager = new SessionManager({ id =>
       new Session(id, components.shared())
     })
-  }
-
-  override protected def afterEach(): Unit = {
-    components.shutdown()
   }
 }

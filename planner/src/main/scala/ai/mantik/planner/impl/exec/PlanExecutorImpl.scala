@@ -1,5 +1,7 @@
 package ai.mantik.planner.impl.exec
 
+import java.net.InetSocketAddress
+
 import ai.mantik
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
@@ -12,10 +14,10 @@ import ai.mantik.planner
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner._
 import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
-import ai.mantik.planner.repository.{ DeploymentInfo, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
+import ai.mantik.planner.repository.{ DeploymentInfo, FileRepository, FileRepositoryServer, MantikArtifact, MantikArtifactRetriever, Repository }
 import akka.http.scaladsl.model.Uri
 import io.circe.syntax._
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{ Inject, Named, Singleton }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
@@ -26,12 +28,13 @@ private[planner] class PlanExecutorImpl(
     repository: Repository, executor: Executor,
     isolationSpace: String,
     dockerConfig: DockerConfig,
-    artifactRetriever: MantikArtifactRetriever
+    artifactRetriever: MantikArtifactRetriever,
+    clientConfig: ClientConfig
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
 
   @Singleton
   @Inject
-  def this(fileRepository: FileRepository, repository: Repository, executor: Executor, retriever: MantikArtifactRetriever)(implicit akkaRuntime: AkkaRuntime) {
+  def this(fileRepository: FileRepository, repository: Repository, executor: Executor, retriever: MantikArtifactRetriever, clientConfig: ClientConfig)(implicit akkaRuntime: AkkaRuntime) {
     this(
       fileRepository,
       repository,
@@ -40,7 +43,8 @@ private[planner] class PlanExecutorImpl(
       dockerConfig = DockerConfig.parseFromConfig(
         akkaRuntime.config.getConfig("mantik.bridge.docker")
       ),
-      retriever
+      retriever,
+      clientConfig
     )
   }
 
@@ -52,33 +56,12 @@ private[planner] class PlanExecutorImpl(
 
   def execute[T](plan: Plan[T]): Future[T] = {
     for {
-      _ <- prepareKubernetesFileServiceResult
       openFiles <- FutureHelper.time(logger, "Open Files") {
         openFilesBuilder.openFiles(plan.cacheGroups, plan.files)
       }
       result <- executeOp(plan.op)(openFiles)
     } yield result.asInstanceOf[T]
   }
-
-  private lazy val prepareKubernetesFileServiceResult = FutureHelper.time(logger, "Prepare File Service") {
-    val kubernetesName = config.getString("mantik.core.fileServiceKubernetesName")
-    val address = fileRepository.address()
-    val request = PublishServiceRequest(
-      isolationSpace = isolationSpace,
-      serviceName = kubernetesName,
-      port = address.getPort,
-      externalName = address.getAddress.getHostAddress,
-      externalPort = address.getPort
-    )
-    logger.debug(s"Preparing FileService ${request.asJson}")
-    executor.publishService(request).map { response =>
-      logger.info(s"FileService is published with ${response.name}")
-      Uri(s"http://${response.name}") // is of format domain:port
-    }
-  }
-
-  /** Access to the URI of the FileService.*/
-  private def fileServiceUri: Uri = Await.result(prepareKubernetesFileServiceResult, Duration.Inf)
 
   def executeOp(planOp: PlanOp)(implicit files: ExecutionOpenFiles): Future[Any] = {
     planOp match {
@@ -103,9 +86,10 @@ private[planner] class PlanExecutorImpl(
       case PlanOp.LoadBundleFromFile(_, fileRef) =>
         val fileId = files.resolveFileId(fileRef)
         FutureHelper.time(logger, s"Bundle Pull $fileId") {
-          fileRepository.loadFile(fileId).flatMap { source =>
-            val sink = Bundle.fromStreamWithHeader()
-            source.runWith(sink)
+          fileRepository.loadFile(fileId).flatMap {
+            case (_, source) =>
+              val sink = Bundle.fromStreamWithHeader()
+              source.runWith(sink)
           }
         }
       case PlanOp.AddMantikItem(item, fileReference) =>
@@ -141,7 +125,7 @@ private[planner] class PlanExecutorImpl(
           artifactRetriever.push(mantikId)
         }
       case PlanOp.RunGraph(graph) =>
-        val jobGraphConverter = new JobGraphConverter(fileServiceUri, isolationSpace, files, dockerConfig.logins)
+        val jobGraphConverter = new JobGraphConverter(clientConfig.remoteFileRepositoryAddress, isolationSpace, files, dockerConfig.logins)
         val job = jobGraphConverter.translateGraphIntoJob(graph)
         FutureHelper.time(logger, s"Executing Job in isolationSpace ${job.isolationSpace}") {
           executeJobAndWaitForReady(job)
@@ -163,7 +147,7 @@ private[planner] class PlanExecutorImpl(
         }
       case da: PlanOp.DeployAlgorithm =>
         FutureHelper.time(logger, s"Deploying Algorithm ${da.item.mantikId} -> ${da.serviceId}/${da.serviceNameHint}") {
-          val jobGraphConverter = new JobGraphConverter(fileServiceUri, isolationSpace, files, dockerConfig.logins)
+          val jobGraphConverter = new JobGraphConverter(clientConfig.remoteFileRepositoryAddress, isolationSpace, files, dockerConfig.logins)
           val deployServiceRequest = jobGraphConverter.createDeployServiceRequest(da.serviceId, da.serviceNameHint, da.container)
 
           for {

@@ -190,7 +190,6 @@ trait DeployServiceSpecBase {
     queryResponse1.services shouldBe List(
       DeployedServicesEntry("service1", response.url)
     )
-    executor.shutdown()
 
     withExecutor { executor2 =>
       val queryResponse2 = await(executor2.queryDeployedServices(query))

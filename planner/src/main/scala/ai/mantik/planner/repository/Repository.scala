@@ -6,7 +6,7 @@ import ai.mantik.elements.{ ItemId, MantikId }
 import scala.concurrent.Future
 
 /** Gives access to Mantik objects. */
-trait Repository extends Component {
+private[mantik] trait Repository extends Component {
   /** Retrieves a Mantik artefact. */
   def get(id: MantikId): Future[MantikArtifact]
 

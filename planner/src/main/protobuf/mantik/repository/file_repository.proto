@@ -18,9 +18,6 @@ service FileRepositoryService {
 
     // Load a file content
     rpc LoadFile(LoadFileRequest) returns (stream LoadFileResponse){}
-
-    // Figures out the Adress of the HTTP Backend
-    rpc Address(google.protobuf.Empty) returns (AddressResponse){}
 }
 
 message RequestFileStorageRequest {
@@ -72,15 +69,12 @@ message DeleteFileResponse {
     bool existed = 1;
 }
 
-message AddressResponse {
-    string host = 1;
-    int32 port = 2;
-}
-
 message LoadFileRequest {
     string file_id = 1;
 }
 
 message LoadFileResponse {
     bytes chunk = 1;
+    // Content Type (only need to be present in first call)
+    string content_type = 2;
 }

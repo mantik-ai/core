@@ -61,10 +61,7 @@ class HelloWorldSpec extends IntegrationTestBase {
   it should "give access to a context" in {
     val context = engineClient.createContext()
     intercept[Errors.NotFoundException] {
-      await(context.repository.get("Not-existing"))
-    }
-    intercept[Errors.NotFoundException] {
-      await(context.fileRepository.requestFileGet("foo"))
+      await(context.localRegistry.get("Not-existing"))
     }
   }
 }

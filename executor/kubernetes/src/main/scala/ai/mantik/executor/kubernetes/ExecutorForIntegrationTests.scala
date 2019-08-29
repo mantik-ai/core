@@ -20,9 +20,8 @@ class ExecutorForIntegrationTests(config: TypesafeConfig)(implicit akkaRuntime: 
 
   server.start()
 
-  def shutdown(): Unit = {
+  def stop(): Unit = {
     server.stop()
-    executor.shutdown()
     kubernetesClient.close
   }
 }

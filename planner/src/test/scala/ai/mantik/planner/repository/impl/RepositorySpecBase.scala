@@ -20,11 +20,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
 
   protected def withRepo[T](f: RepoType => T): T = {
     val repo = createRepo()
-    try {
-      f(repo)
-    } finally {
-      repo.shutdown()
-    }
+    f(repo)
   }
 
   val artifact1 = repository.MantikArtifact(

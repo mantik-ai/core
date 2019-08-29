@@ -129,9 +129,9 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
     }
   }
 
-  override def shutdown(): Unit = {
-    super.shutdown()
+  addShutdownHook {
     Files.delete(intermediateTempFile)
+    Future.successful(())
   }
 }
 

@@ -26,8 +26,8 @@ abstract class IntegrationTestBase extends TestBaseWithAkkaRuntime {
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     embeddedExecutor = new ExecutorForIntegrationTests(typesafeConfig)
-    context = ContextImpl.constructTempClient()
     scrapKubernetes()
+    context = ContextImpl.constructTempClient()
   }
 
   private def scrapKubernetes(): Unit = {
@@ -36,8 +36,7 @@ abstract class IntegrationTestBase extends TestBaseWithAkkaRuntime {
   }
 
   override protected def afterAll(): Unit = {
-    embeddedExecutor.shutdown()
-    context.shutdown()
+    embeddedExecutor.stop()
     super.afterAll()
   }
 }

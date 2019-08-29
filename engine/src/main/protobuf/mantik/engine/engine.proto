@@ -7,6 +7,9 @@ import "google/protobuf/empty.proto";
 /** Returns information about the Engine process. */
 service AboutService {
     rpc Version (google.protobuf.Empty) returns (VersionResponse) {}
+
+    // Request client configuration
+    rpc ClientConfig(google.protobuf.Empty) returns (ClientConfigResponse){}
 }
 
 /**
@@ -14,4 +17,9 @@ Contains the current Mantik Engine version.
 */
 message VersionResponse {
     string version = 1;
+}
+
+message ClientConfigResponse {
+    // JSON Serialized Client Config
+    string config = 1;
 }

@@ -1,7 +1,5 @@
 package ai.mantik.planner.repository
 
-import java.net.InetSocketAddress
-
 import ai.mantik.componently.Component
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
@@ -9,7 +7,7 @@ import akka.util.ByteString
 import scala.concurrent.Future
 
 /** Responsible for File Storage. */
-trait FileRepository extends Component {
+private[mantik] trait FileRepository extends Component {
 
   /** Request the storage of a new file. */
   def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult]
@@ -27,10 +25,7 @@ trait FileRepository extends Component {
   def deleteFile(id: String): Future[Boolean]
 
   /** Request retrieval of a file. */
-  def loadFile(id: String): Future[Source[ByteString, _]]
-
-  /** Returns the address of the repository (must be reachable from the executor). */
-  def address(): InetSocketAddress
+  def loadFile(id: String): Future[(String, Source[ByteString, _])]
 }
 
 object FileRepository {
@@ -52,4 +47,12 @@ object FileRepository {
 
   /** Content Type for Mantik Bundles. */
   val MantikBundleContentType = "application/x-mantik-bundle"
+
+  /**
+   * Returns the path, under which the FileRepositoryServer serves files of a fileId.
+   * Do not change, without changing the server.
+   */
+  def makePath(id: String): String = {
+    "files/" + id
+  }
 }

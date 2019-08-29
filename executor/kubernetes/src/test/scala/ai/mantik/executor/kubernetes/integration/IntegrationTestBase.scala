@@ -21,11 +21,6 @@ abstract class IntegrationTestBase extends KubernetesTestBase with IntegrationBa
     _executor = new KubernetesExecutor(config, k8sOperations)
   }
 
-  override protected def afterAll(): Unit = {
-    _executor.shutdown()
-    super.afterAll()
-  }
-
   protected trait Env extends super.Env {
     val executor: Executor = _executor
   }

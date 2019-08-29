@@ -8,25 +8,16 @@ import javax.inject.{ Inject, Singleton }
 @Singleton
 class SessionManagerForLocalRunning @Inject() (context: Context)(implicit akkaRuntime: AkkaRuntime) extends SessionManager(
   id => {
+    // Note: We could override the quitSession method
+    // if the session should do some cleanup here.
     new Session(id, SessionManagerForLocalRunning.createViewForSession(context))
   }
 )(akkaRuntime.executionContext)
 
 object SessionManagerForLocalRunning {
-  /** Create a view on to the context for a session (effectivly disabling the shutdown method). */
-  private def createViewForSession(context: Context): CoreComponents = {
-    new CoreComponents {
-      override def fileRepository: FileRepository = context.fileRepository
-
-      override def repository: Repository = context.repository
-
-      override def retriever: MantikArtifactRetriever = context.retriever
-
-      override def planner: Planner = context.planner
-
-      override def planExecutor: PlanExecutor = context.planExecutor
-
-      override def shutdown(): Unit = {} // disabled
-    }
-  }
+  /**
+   * Create a view on to the context for a session.
+   * Here we could create special views for the session.
+   */
+  private def createViewForSession(context: Context): CoreComponents = context
 }
