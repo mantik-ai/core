@@ -3,7 +3,7 @@ package ai.mantik.planner
 import java.util.UUID
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ ItemId, MantikId }
+import ai.mantik.elements.{ ItemId, NamedMantikId }
 
 /** Defines where a MantikItem comes from. */
 case class Source(
@@ -27,7 +27,7 @@ sealed trait DefinitionSource
 
 object DefinitionSource {
   /** The item was loaded from the repository. */
-  case class Loaded(mantikId: MantikId, itemId: ItemId) extends DefinitionSource
+  case class Loaded(mantikId: Option[NamedMantikId], itemId: ItemId) extends DefinitionSource
 
   /** The item was artificially constructed (e.g. literals, calculations, ...) */
   case class Constructed() extends DefinitionSource

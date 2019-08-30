@@ -24,11 +24,11 @@ case class MantikHeader(
 ) {
 
   /** Returns a MantikId for this Item, when a name is given. */
-  def id: Option[MantikId] = name.map { name =>
-    MantikId(
+  def id: Option[NamedMantikId] = name.map { name =>
+    NamedMantikId(
       name = name,
-      version = version.getOrElse(MantikId.DefaultVersion),
-      account = account.getOrElse(MantikId.DefaultAccount)
+      version = version.getOrElse(NamedMantikId.DefaultVersion),
+      account = account.getOrElse(NamedMantikId.DefaultAccount)
     )
   }
 }

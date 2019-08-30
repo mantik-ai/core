@@ -2,7 +2,7 @@ package ai.mantik.engine.server.services
 
 import java.io.File
 
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.debug.{ AddLocalMantikDirectoryRequest, AddLocalMantikDirectoryResponse }
 import ai.mantik.engine.protos.debug.DebugServiceGrpc.DebugService
 import ai.mantik.planner.Context
@@ -16,7 +16,7 @@ class DebugServiceImpl @Inject() (context: Context) extends DebugService {
     val mantikId = if (request.name.isEmpty) {
       None
     } else {
-      Some(MantikId.fromString(request.name))
+      Some(NamedMantikId.fromString(request.name))
     }
     val idToUse = context.pushLocalMantikFile(
       new File(request.directory).toPath,

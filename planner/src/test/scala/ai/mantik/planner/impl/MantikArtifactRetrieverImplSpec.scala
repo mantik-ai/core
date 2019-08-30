@@ -2,7 +2,7 @@ package ai.mantik.planner.impl
 
 import java.nio.file.Paths
 
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.NamedMantikId
 import ai.mantik.planner.repository.{ ContentTypes, FileRepositoryServer, RemoteMantikRegistry }
 import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalMantikRegistryImpl, LocalRepository, MantikArtifactRetrieverImpl }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
@@ -27,9 +27,9 @@ class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempD
   private val sampleDir = Paths.get("bridge/binary/test/mnist")
 
   "addLocalDirectoryToRepository" should "work" in new Env {
-    val id = MantikId("mnist_test")
+    val id = NamedMantikId("mnist_test")
     val got = await(retriever.addLocalDirectoryToRepository(sampleDir))
-    got.id shouldBe id
+    got.namedId shouldBe Some(id)
     await(localRegistry.get(id)) shouldBe got
     val (contentType, payloadSource) = await(localRegistry.getPayload(got.fileId.get))
     contentType shouldBe ContentTypes.ZipFileContentType
@@ -39,9 +39,9 @@ class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempD
   }
 
   it should "accept another mantik id" in new Env {
-    val otherId = MantikId("boom")
+    val otherId = NamedMantikId("boom")
     val got = await(retriever.addLocalDirectoryToRepository(sampleDir, Some(otherId)))
-    got.id shouldBe otherId
+    got.namedId shouldBe Some(otherId)
     await(localRegistry.get(otherId)) shouldBe got
   }
 

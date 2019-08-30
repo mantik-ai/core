@@ -1,7 +1,7 @@
 package ai.mantik.planner.repository
 
 import ai.mantik.componently.Component
-import ai.mantik.elements.{ ItemId, MantikId }
+import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
@@ -41,7 +41,7 @@ trait MantikRegistry extends Component {
    * Ensure that the given item is referenced by mantikId.
    * @return true if the item was found and updated, false if already existant.
    */
-  def ensureMantikId(itemId: ItemId, mantikId: MantikId): Future[Boolean]
+  def ensureMantikId(itemId: ItemId, mantikId: NamedMantikId): Future[Boolean]
 }
 
 object MantikRegistry {

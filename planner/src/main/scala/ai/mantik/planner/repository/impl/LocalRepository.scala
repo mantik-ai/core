@@ -5,7 +5,7 @@ import java.nio.file.{ Files, Path }
 import java.sql.Timestamp
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
+import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
 import ai.mantik.planner.repository.impl.LocalRepository.DirectoryConfigKey
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
 import ai.mantik.planner.repository.impl.LocalRepositoryDb._
@@ -38,32 +38,56 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
 
   import db.quill.context._
 
+  case class DbArtifact(
+      name: Option[DbMantikName],
+      item: DbMantikItem,
+      depl: Option[DbDeploymentInfo]
+  )
+
   override def get(id: MantikId): Future[MantikArtifact] = {
     Future {
-      val items = run(getByIdQuery(id))
+      val maybeItem = id match {
+        case i: ItemId        => getByItemId(i)
+        case n: NamedMantikId => getByName(n)
+      }
 
-      items.headOption match {
+      maybeItem match {
         case None => throw new Errors.NotFoundException(s"Artifact with id ${id} not found")
-        case Some((name, item, depl)) =>
-          decodeDbArtifact(name, item, depl)
+        case Some(item) =>
+          decodeDbArtifact(item)
       }
     }
   }
 
-  private def getByIdQuery(id: MantikId) = {
-    quote {
+  private def getByName(id: NamedMantikId): Option[DbArtifact] = {
+    run {
       for {
         name <- db.names.filter { n => n.name == lift(id.name) && n.version == lift(id.version) }
         item <- db.items.join(_.itemId == name.currentItemId)
         depl <- db.deployments.leftJoin(_.itemId == item.itemId)
       } yield (name, item, depl)
+    }.headOption.map {
+      case (name, item, depl) =>
+        DbArtifact(Some(name), item, depl)
     }
   }
 
-  override def store(mantikArtefact: MantikArtifact): Future[Unit] = {
+  private def getByItemId(id: ItemId): Option[DbArtifact] = {
+    run {
+      for {
+        item <- db.items.filter(_.itemId == lift(id.toString))
+        depl <- db.deployments.leftJoin(_.itemId == item.itemId)
+      } yield (item, depl)
+    }.headOption.map {
+      case (item, depl) =>
+        DbArtifact(None, item, depl)
+    }
+  }
+
+  override def store(mantikArtifact: MantikArtifact): Future[Unit] = {
     Future {
-      val converted = encodeDbArtefact(mantikArtefact)
-      val mantikId = mantikArtefact.id
+      val converted = encodeDbArtifact(mantikArtifact)
+      val namedId = mantikArtifact.namedId
 
       // This could be improved by using an upsert.
       transaction {
@@ -75,70 +99,60 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
           )
         } catch {
           case s: SQLiteException if s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY =>
-            throw new Errors.OverwriteNotAllowedException("Items may not be overwritten with the same itemId")
+            throw new Errors.ConflictException("Items may not be overwritten with the same itemId")
         }
 
-        val exists = run {
-          db.names.filter { e => e.account == lift(mantikId.account) && e.name == lift(mantikId.name) && e.version == lift(mantikId.version) }.map(_.id)
-        }.headOption
-
-        exists match {
-          case Some(id) =>
-            // already exists, overwrite current item id.
-            run {
-              db.names.filter(_.id == lift(id)).update(_.currentItemId -> lift(converted.itemId))
-            }
-          case None =>
-            // doesn't exit, insert
-            val convertedName = DbMantikName(
-              account = mantikId.account,
-              name = mantikId.name,
-              version = mantikId.version,
-              currentItemId = converted.itemId
-            )
-            run {
-              db.names.insert(lift(convertedName))
-            }
+        namedId.foreach { mantikId =>
+          tagItemExec(mantikArtifact.itemId, mantikId)
         }
-        updateDeploymentStateOp(mantikArtefact.itemId, mantikArtefact.deploymentInfo)
+
+        updateDeploymentStateOp(mantikArtifact.itemId, mantikArtifact.deploymentInfo)
       }
     }
   }
 
-  override def ensureMantikId(id: ItemId, mantikId: MantikId): Future[Boolean] = {
-    Future {
-      val nameElement = DbMantikName(
-        account = mantikId.account,
-        name = mantikId.name,
-        version = mantikId.version,
-        currentItemId = id.toString
-      )
+  /**
+   * Forces mantikId to point to itemId.
+   * @return true if something changed.
+   */
+  private def tagItemExec(itemId: ItemId, mantikId: NamedMantikId): Boolean = {
+    val nameElement = DbMantikName(
+      account = mantikId.account,
+      name = mantikId.name,
+      version = mantikId.version,
+      currentItemId = itemId.toString
+    )
 
-      transaction {
-        val exists = run {
-          db.names.filter { e =>
-            e.account == lift(mantikId.account) &&
-              e.name == lift(mantikId.name) &&
-              e.version == lift(mantikId.version)
-          }.map(x => (x.id, x.currentItemId))
-        }.headOption
+    val exists = run {
+      db.names.filter { e =>
+        e.account == lift(mantikId.account) &&
+          e.name == lift(mantikId.name) &&
+          e.version == lift(mantikId.version)
+      }.map(x => (x.id, x.currentItemId))
+    }.headOption
 
-        exists match {
-          case Some((_, itemId)) if itemId == id.toString =>
-            // No change
-            false
-          case Some((id, _)) =>
-            // Current Item points to another item
-            // drop it and rewrite it
-            run(db.names.filter(_.id == lift(id)).delete)
-            run(db.names.insert(lift(nameElement)))
-            true
-          case None =>
-            run {
-              db.names.insert(lift(nameElement))
-            }
-            true
+    exists match {
+      case Some((_, itemId)) if itemId == nameElement.currentItemId =>
+        // No change
+        false
+      case Some((id, _)) =>
+        // Current Item points to another item
+        // drop it and rewrite it
+        run(db.names.filter(_.id == lift(id)).delete)
+        run(db.names.insert(lift(nameElement)))
+        true
+      case None =>
+        run {
+          db.names.insert(lift(nameElement))
         }
+        true
+    }
+  }
+
+  override def ensureMantikId(id: ItemId, mantikId: NamedMantikId): Future[Boolean] = {
+    Future {
+      transaction {
+        tagItemExec(id, mantikId)
       }
     }
   }
@@ -179,25 +193,42 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
           }
 
         }
-
-      /*
-        // upsert hasn't worked (error [SQLITE_ERROR] SQL error or missing database (near "AS": syntax error) )
-        run {
-          db.deployments.insert(lift(converted)).onConflictUpdate(_.itemId)((e,t) => e -> t)
-        }.toInt
-         */
     }
   }
 
   override def remove(id: MantikId): Future[Boolean] = {
     Future {
-      run {
-        // note: the item itself is not deleted, but dereferenced.
-        // it can still be referenced by other things (e.g. deployments)
-        db.names.filter { n =>
-          n.name == lift(id.name) && n.version == lift(id.version)
-        }.delete
-      } > 0
+      id match {
+        case named: NamedMantikId =>
+          // note: the item itself is not deleted, but dereferenced.
+          // it can still be referenced by other things (e.g. deployments)
+          run {
+            db.names.filter { n =>
+              n.account == lift(named.account) && n.name == lift(named.name) && n.version == lift(named.version)
+            }.delete
+          } > 0
+        case i: ItemId =>
+          // note: this will fail, if it's still referenced by names / deployments
+          transaction {
+            val existingNames = run {
+              db.names.filter(_.currentItemId == lift(i.toString))
+            }
+            if (existingNames.nonEmpty) {
+              throw new Errors.ConflictException("There are existing names for this item")
+            }
+            val existingDeployments = run {
+              db.deployments.filter(_.itemId == lift(i.toString))
+            }
+            if (existingDeployments.nonEmpty) {
+              throw new Errors.ConflictException("There are existing deployments for this item")
+            }
+            run {
+              db.items.filter { n =>
+                n.itemId == lift(i.toString)
+              }.delete
+            } > 0
+          }
+      }
     }
   }
 
@@ -210,28 +241,30 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
    * Convert a DB Artifact to a artifact
    * @throws Errors.RepositoryError on illegal mantikfiles.
    */
-  private def decodeDbArtifact(name: DbMantikName, item: DbMantikItem, maybeDeployed: Option[DbDeploymentInfo]): MantikArtifact = {
+  private def decodeDbArtifact(dbArtifact: DbArtifact): MantikArtifact = {
     val mantikfile = (for {
-      json <- parser.parse(item.mantikfile)
+      json <- parser.parse(dbArtifact.item.mantikfile)
       mf <- Mantikfile.parseSingleDefinition(json)
     } yield {
       mf
     }) match {
       case Left(error) =>
-        logger.error(s"Could not parse stored mantikfile of ${name.id}, code: ${item.mantikfile}", error)
+        logger.error(s"Could not parse stored mantikfile of ${dbArtifact.item.itemId}, code: ${dbArtifact.item.mantikfile}", error)
         throw new Errors.RepositoryError("Could not parse Mantikfile", error)
       case Right(ok) => ok
     }
     MantikArtifact(
       mantikfile = mantikfile,
-      id = MantikId(
-        account = name.account,
-        name = name.name,
-        version = name.version
-      ),
-      fileId = item.fileId,
-      itemId = ItemId(item.itemId),
-      deploymentInfo = maybeDeployed.map { depl =>
+      namedId = dbArtifact.name.map { name =>
+        NamedMantikId(
+          account = name.account,
+          name = name.name,
+          version = name.version
+        )
+      },
+      fileId = dbArtifact.item.fileId,
+      itemId = ItemId.fromString(dbArtifact.item.itemId),
+      deploymentInfo = dbArtifact.depl.map { depl =>
         DeploymentInfo(
           name = depl.name,
           internalUrl = depl.internalUrl,
@@ -246,7 +279,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
    * Encode a DB Artefact.
    * Each Db Artefacts have different Ids, so it can come to collisions.
    */
-  private def encodeDbArtefact(a: MantikArtifact): DbMantikItem = {
+  private def encodeDbArtifact(a: MantikArtifact): DbMantikItem = {
     DbMantikItem(
       mantikfile = a.mantikfile.toJson,
       fileId = a.fileId,

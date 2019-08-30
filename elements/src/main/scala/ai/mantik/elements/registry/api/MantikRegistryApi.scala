@@ -1,8 +1,7 @@
 package ai.mantik.elements.registry.api
 
-import ai.mantik.elements.MantikId
-import akka.http.scaladsl.HttpExt
-import akka.http.scaladsl.model.Uri
+import ai.mantik.elements.{ MantikId, NamedMantikId }
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, Uri }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
@@ -11,9 +10,9 @@ import net.reactivecore.fhttp.akka.ApiClient
 import scala.concurrent.{ ExecutionContext, Future }
 
 /** Implements raw API Calls to Mantik Registry. */
-class MantikRegistryApi(rootUri: Uri, http: HttpExt)(implicit ec: ExecutionContext, mat: Materializer) {
+class MantikRegistryApi(rootUri: Uri, executor: ApiClient.RequestExecutor)(implicit ec: ExecutionContext, mat: Materializer) {
   val apiPath = Uri("api").resolvedAgainst(rootUri)
-  val apiClient = new ApiClient(http, apiPath)
+  val apiClient = new ApiClient(executor, apiPath)
 
   private def orFail[A, T](in: A => Future[Either[(Int, ApiErrorResponse), T]]): A => Future[T] = {
     arg =>

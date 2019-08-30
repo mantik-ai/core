@@ -1,7 +1,7 @@
 package ai.mantik.engine.server.services
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_executor.{ DeployItemRequest, DeployItemResponse, FetchItemRequest, FetchItemResponse, SaveItemRequest, SaveItemResponse }
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
 import ai.mantik.engine.session.{ ItemNotFoundException, ItemWrongTypeException, Session, SessionManager }
@@ -34,7 +34,7 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
       item = session.getItem(request.itemId).getOrElse {
         throw new ItemNotFoundException(request.itemId)
       }
-      mantikId = MantikId.fromString(request.name)
+      mantikId = NamedMantikId.fromString(request.name)
       saveAction = item.save(mantikId)
       savePlan = session.components.planner.convert(saveAction)
       _ <- session.components.planExecutor.execute(savePlan)

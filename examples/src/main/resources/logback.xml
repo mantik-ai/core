@@ -8,7 +8,7 @@
     </encoder>
   </appender>
 
-  <logger name="ai.mantik" level="INFO"/>
+  <logger name="ai.mantik" level="DEBUG"/>
 
   <root level="INFO">
     <appender-ref ref="STDOUT" />

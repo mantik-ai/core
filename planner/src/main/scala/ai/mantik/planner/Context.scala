@@ -2,7 +2,7 @@ package ai.mantik.planner
 
 import java.nio.file.Path
 
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.{ MantikId, NamedMantikId }
 
 /** Main Mantik Context used as main access points for Scala Apps. */
 trait Context extends CoreComponents {
@@ -36,5 +36,5 @@ trait Context extends CoreComponents {
    * Push a local mantik file including payload to the repository
    * @return Mantik id which was used in the end.
    */
-  def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): MantikId
+  def pushLocalMantikFile(dir: Path, id: Option[NamedMantikId] = None): MantikId
 }

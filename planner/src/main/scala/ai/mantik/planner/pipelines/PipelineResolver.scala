@@ -4,7 +4,7 @@ import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.elements.PipelineStep.MetaVariableSetting
-import ai.mantik.elements.{ MantikId, Mantikfile, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{ MantikId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep }
 import ai.mantik.planner.{ Algorithm, MantikItem }
 import ai.mantik.planner.select.Select
 import ai.mantik.elements.meta.MetaVariableException

@@ -7,7 +7,7 @@ import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.ds.helper.ZipUtils
-import ai.mantik.elements.{ItemId, MantikId, Mantikfile}
+import ai.mantik.elements.{ItemId, MantikId, Mantikfile, NamedMantikId}
 import ai.mantik.planner.impl.ReferencingItemLoader
 import ai.mantik.planner.repository._
 import akka.stream.scaladsl.{FileIO, Source}
@@ -81,7 +81,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     }
   }
 
-  override def addLocalDirectoryToRepository(dir: Path, id: Option[MantikId] = None): Future[MantikArtifact] = {
+  override def addLocalDirectoryToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact] = {
     logger.info(s"Adding local Directory ${dir} with Mantikfile")
     val file = dir.resolve("Mantikfile")
     val fileContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
@@ -90,9 +90,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
       case Left(error) => throw new IllegalArgumentException("Could not parse mantik file", error)
       case Right(ok)   => ok
     }
-    val idToUse = id.getOrElse {
-      mantikfile.header.id.getOrElse(throw new IllegalArgumentException("Mantikfile has no id and no id is given"))
-    }
+    val mantikId = id.orElse(mantikfile.header.id)
     val itemId = ItemId.generate()
 
     val payloadSource: Option[(String, Source[ByteString, _])] = mantikfile.definition.directory.map { dataDir =>
@@ -104,7 +102,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
       ContentTypes.ZipFileContentType -> source
     }
 
-    val artifact =  MantikArtifact(mantikfile, None, idToUse, itemId)
+    val artifact =  MantikArtifact(mantikfile, None, mantikId, itemId)
     val timeout = if (payloadSource.isDefined){
       fileTransferTimeout
     } else {
@@ -113,7 +111,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     FutureHelper.addTimeout(
       localMantikRegistry.addMantikArtifact(artifact, payloadSource), "Uploading Artifact", timeout
     ).map { generatedArtifact =>
-      logger.info(s"Stored ${artifact.id} done, itemId=${itemId}, fileId=${artifact.fileId}")
+      logger.info(s"Stored ${artifact.itemId} done, name=${artifact.namedId}, fileId=${artifact.fileId}")
       generatedArtifact
     }
   }
@@ -142,25 +140,32 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     fileTransferTimeout: FiniteDuration,
     changeTimeout: FiniteDuration
   ): Future[MantikArtifact] = {
-    logger.debug(s"${operationName} ${fromArtifact.id}")
+    logger.debug(s"${operationName} ${fromArtifact.mantikId}")
 
-    val existing = to.maybeGet(MantikId.anonymous(fromArtifact.itemId))
+    val existing = to.maybeGet(fromArtifact.itemId)
 
     existing.flatMap {
       case Some(existant) =>
-        logger.info(s"${fromArtifact.itemId} already exists, ensuring id ${fromArtifact.id}")
-        FutureHelper.addTimeout(
-          to.ensureMantikId(existant.itemId, fromArtifact.id), "Tagging", changeTimeout
-        ).map { _ =>
-          existant.copy(id = fromArtifact.id)
+        fromArtifact.namedId match {
+          case Some(namedId) =>
+            logger.info(s"${fromArtifact.itemId} already exists, ensuring id $namedId")
+            FutureHelper.addTimeout(
+              to.ensureMantikId(existant.itemId, namedId), "Tagging", changeTimeout
+            ).map { _ =>
+              existant.copy(namedId = Some(namedId))
+            }
+          case None =>
+            logger.info(s"${fromArtifact.itemId} already exists, and is anonymous, no change.")
+            Future.successful(existant)
         }
       case None =>
-        logger.debug(s"${fromArtifact.itemId} doesn't exist yet, pulling completely")
+        logger.info(s"${fromArtifact.itemId} doesn't exist yet, copying entirely")
         val timeout = if (fromArtifact.fileId.isDefined) {
           fileTransferTimeout
         } else {
           changeTimeout
         }
+
         for {
           source <- FutureHelper.addTimeout(fromArtifact.fileId.map(from.getPayload).sequence, "Getting File", timeout)
           localArtifact <- FutureHelper.addTimeout(to.addMantikArtifact(fromArtifact, source), "Storing Artifact", timeout)

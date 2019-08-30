@@ -1,7 +1,7 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.NamedMantikId
 
 /**
  * An Action is something the user requests to be executed.
@@ -18,10 +18,10 @@ object Action {
   case class FetchAction(dataSet: DataSet) extends Action[Bundle]
 
   /** An item should be saved */
-  case class SaveAction(item: MantikItem, id: MantikId) extends Action[Unit]
+  case class SaveAction(item: MantikItem, id: NamedMantikId) extends Action[Unit]
 
   /** An item should be pushed (indicates also saving). */
-  case class PushAction(item: MantikItem, id: MantikId) extends Action[Unit]
+  case class PushAction(item: MantikItem, id: NamedMantikId) extends Action[Unit]
 
   /**
    * Deploy some item.

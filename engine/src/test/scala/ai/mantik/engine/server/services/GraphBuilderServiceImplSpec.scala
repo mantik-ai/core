@@ -4,7 +4,7 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
 import ai.mantik.{ elements, planner }
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, SelectRequest, TrainRequest }
@@ -28,7 +28,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val dataset1 = MantikArtifact(
       Mantikfile.pure(DataSetDefinition(format = DataSet.NaturalFormatName, `type` = FundamentalType.Int32)),
       fileId = Some("1234"),
-      id = "Dataset1",
+      namedId = Some(NamedMantikId("Dataset1")),
       itemId = ItemId.generate()
     )
     val dataset2 = MantikArtifact(
@@ -36,13 +36,13 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         "x" -> FundamentalType.Int32
       ))),
       fileId = Some("1234"),
-      id = "Dataset2",
+      namedId = Some(NamedMantikId("Dataset2")),
       itemId = ItemId.generate()
     )
     val algorithm1 = MantikArtifact(
       Mantikfile.pure(AlgorithmDefinition(stack = "stack1", `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))),
       fileId = Some("1236"),
-      id = "Algorithm1",
+      namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
     val trainable1 = MantikArtifact(
@@ -59,7 +59,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         )
       ),
       fileId = Some("5000"),
-      id = "Trainable1",
+      namedId = Some(NamedMantikId("Trainable1")),
       itemId = ItemId.generate()
     )
     val pipeline1 = MantikArtifact(
@@ -71,7 +71,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         )
       ),
       fileId = None,
-      id = "Pipeline1",
+      namedId = Some(NamedMantikId("Pipeline1")),
       itemId = ItemId.generate()
     )
     await(components.repository.store(dataset1))
@@ -88,7 +88,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     intercept[ArtefactNotFoundException] {
       await(graphBuilder.get(GetRequest(session1.id, "foo")))
     }
-    val response = await(graphBuilder.get(GetRequest(session1.id, dataset1.id.toString)))
+    val response = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
     response.itemId shouldBe "1"
     response.item.get.kind shouldBe ObjectKind.KIND_DATASET
     response.item.get.getDataset.`type`.get.json shouldBe "\"int32\""
@@ -97,7 +97,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   it should "get algorithms" in new Env {
-    val algoGet = await(graphBuilder.get(GetRequest(session1.id, algorithm1.id.toString)))
+    val algoGet = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
     algoGet.itemId shouldBe "1"
     algoGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_ALGORITHM
 
@@ -108,7 +108,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   it should "get trainable algorithms" in new Env {
-    val trainableGet = await(graphBuilder.get(GetRequest(session1.id, trainable1.id.toString)))
+    val trainableGet = await(graphBuilder.get(GetRequest(session1.id, trainable1.mantikId.toString)))
     trainableGet.itemId shouldBe "1"
     trainableGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_TRAINABLE_ALGORITHM
 
@@ -122,7 +122,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   it should "get pipelines" in new Env {
-    val pipelineGet = await(graphBuilder.get(GetRequest(session1.id, pipeline1.id.toString)))
+    val pipelineGet = await(graphBuilder.get(GetRequest(session1.id, pipeline1.mantikId.toString)))
     pipelineGet.itemId shouldBe "1"
     pipelineGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_PIPELINE
 
@@ -134,8 +134,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   "algorithmApply" should "apply algorithms upon datasets" in new Env {
-    val ds1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.id.toString)))
-    val algo1 = await(graphBuilder.get(GetRequest(session1.id, algorithm1.id.toString)))
+    val ds1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
+    val algo1 = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
     val applied = await(graphBuilder.algorithmApply(
       ApplyRequest(session1.id, ds1.itemId, algo1.itemId)
     ))
@@ -148,8 +148,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   it should "apply pipelines upon datasets" in new Env {
-    val ds1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.id.toString)))
-    val pipe1 = await(graphBuilder.get(GetRequest(session1.id, pipeline1.id.toString)))
+    val ds1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
+    val pipe1 = await(graphBuilder.get(GetRequest(session1.id, pipeline1.mantikId.toString)))
     val applied = await(graphBuilder.algorithmApply(
       ApplyRequest(session1.id, ds1.itemId, pipe1.itemId)
     ))
@@ -190,7 +190,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   "cached" should "place a cached literal in the graph" in new Env {
-    val element1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.id.toString)))
+    val element1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
     val element2 = await(graphBuilder.cached(CacheRequest(session1.id, element1.itemId)))
     element2.itemId shouldBe "2"
     element2.item.get.kind shouldBe ObjectKind.KIND_DATASET
@@ -204,8 +204,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     withCaching <- Seq(false, true)
   } {
     "train" should s"place a trained nodes in the graph (caching=${withCaching})" in new Env {
-      val dataset = await(graphBuilder.get(GetRequest(session1.id, dataset1.id.toString)))
-      val trainable = await(graphBuilder.get(GetRequest(session1.id, trainable1.id.toString)))
+      val dataset = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
+      val trainable = await(graphBuilder.get(GetRequest(session1.id, trainable1.mantikId.toString)))
 
       val result = await(graphBuilder.train(
         TrainRequest(
@@ -230,7 +230,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   "select" should "create select statements" in new Env {
-    val dataset = await(graphBuilder.get(GetRequest(session1.id, dataset2.id.toString)))
+    val dataset = await(graphBuilder.get(GetRequest(session1.id, dataset2.mantikId.toString)))
     val selected = await(graphBuilder.select(
       SelectRequest(
         sessionId = session1.id,
@@ -259,11 +259,11 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         )
       )),
       fileId = Some("1236"),
-      id = "Algorithm1",
+      namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
     await(components.repository.store(algorithm1))
-    val algorithm1Item = await(graphBuilder.get(GetRequest(session1.id, algorithm1.id.toString)))
+    val algorithm1Item = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
   }
 
   "buildPipeline" should "work" in new EnvForPipeline {

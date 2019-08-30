@@ -4,7 +4,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.{ AlgorithmStep, SelectStep }
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, PipelineStep }
+import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, NamedMantikId, PipelineStep }
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.select.Select
 import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
@@ -13,7 +13,7 @@ import ai.mantik.testutils.TestBase
 class PipelineBuilderSpec extends TestBase {
 
   val algorithm1 = Algorithm(
-    source = Source(DefinitionSource.Loaded("algo1", ItemId.generate()), PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)),
+    source = Source(DefinitionSource.Loaded(Some("algo1"), ItemId.generate()), PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)),
     Mantikfile.pure(
       AlgorithmDefinition(
         stack = "stack1",
@@ -56,9 +56,9 @@ class PipelineBuilderSpec extends TestBase {
 
     withClue("Algorithms which are loaded are using their real ids") {
       val algo1 = pipeline.resolved.steps.head
-      algo1.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm shouldNot be('anonymous)
+      algo1.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm shouldBe an[NamedMantikId]
       val algo2 = pipeline.resolved.steps(1)
-      algo2.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm shouldBe 'anonymous
+      algo2.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm shouldBe an[ItemId]
 
       pipeline.mantikfile.definition.referencedItems.size shouldBe 2
     }

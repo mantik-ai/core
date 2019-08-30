@@ -16,6 +16,8 @@ object ApiErrorResponse {
 
   val NotFound = "NotFound"
 
+  val NoPermission = "NoPermission"
+
   val InvalidMantikfile = "InvalidMantikfile"
 
   val InvalidMantikId = "InvalidMantikId"

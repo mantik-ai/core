@@ -4,7 +4,7 @@ import java.nio.file.Path
 
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.{ MantikId, NamedMantikId }
 import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
@@ -68,8 +68,8 @@ private[planner] class ContextImpl @Inject() (
     Await.result(future, timeout)
   }
 
-  override def pushLocalMantikFile(dir: Path, id: Option[MantikId] = None): MantikId = {
-    await(retriever.addLocalDirectoryToRepository(dir, id)).id
+  override def pushLocalMantikFile(dir: Path, id: Option[NamedMantikId] = None): MantikId = {
+    await(retriever.addLocalDirectoryToRepository(dir, id)).mantikId
   }
 }
 

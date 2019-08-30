@@ -3,7 +3,12 @@ Mantik Ids
 
 In order to find Mantik Artifacts (or Items), Mantik is using so called Mantik Ids.
 
-They correspond roughly to Docker Image names/tags, but have some slight differences.
+There are two forms of MantikIds: `NamedMantikId` and `ItemId`.  There may be multiple `NamedMantikIds` 
+pointing to the same `ItemId`.
+
+## Named Mantik Ids
+
+Named Mantik Ids correspond roughly to Docker Image names/tags, but have some slight differences.
 
 Their basic format is as follows:
 
@@ -26,7 +31,6 @@ is immutable. There may not be two items of the same `ItemId`.
 
 In the moment, they are created randomly by Mantik Core (see Issue #110).
 
-## Anonymous Mantik Ids
+ItemIds are the second form of MantikIds.
 
-There are items who don't have a name, but may be referenced by other Artifacts (e.g. Pipelines). They get
-an anonymous Mantik Id of the form `@itemId`, without any account or version.
+Their text representation starts with `@`, which is also used for disambiguation. 

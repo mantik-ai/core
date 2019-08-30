@@ -1,7 +1,7 @@
 package ai.mantik.planner.repository
 
 import ai.mantik.componently.Component
-import ai.mantik.elements.{ ItemId, MantikId }
+import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 
 import scala.concurrent.Future
 
@@ -15,7 +15,7 @@ private[mantik] trait Repository extends Component {
    * @return if the new tag was created or false if it was already existant.
    * Throws if the item was not found.
    */
-  def ensureMantikId(id: ItemId, newName: MantikId): Future[Boolean]
+  def ensureMantikId(id: ItemId, newName: NamedMantikId): Future[Boolean]
 
   /** Stores a Mantik artefact. */
   def store(mantikArtefact: MantikArtifact): Future[Unit]

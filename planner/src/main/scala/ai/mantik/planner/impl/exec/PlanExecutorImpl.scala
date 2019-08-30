@@ -6,7 +6,7 @@ import ai.mantik
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.NamedMantikId
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.DockerConfig
@@ -95,8 +95,8 @@ private[planner] class PlanExecutorImpl(
       case PlanOp.AddMantikItem(item, fileReference) =>
         val fileId = fileReference.map(files.resolveFileId)
         val mantikfile = item.mantikfile
-        val id = MantikId.anonymous(item.itemId)
-        val artifact = MantikArtifact(mantikfile, fileId, id, item.itemId)
+        val id = item.itemId
+        val artifact = MantikArtifact(mantikfile, fileId, None, item.itemId)
         FutureHelper.time(logger, s"Adding Mantik Item $id") {
           repository.store(artifact).map { _ =>
             item.state.update { state =>
@@ -111,7 +111,7 @@ private[planner] class PlanExecutorImpl(
           repository.ensureMantikId(item.itemId, id).map { _ =>
             item.state.update { state =>
               state.copy(
-                mantikId = Some(id)
+                namedMantikItem = Some(id)
               )
             }
           }

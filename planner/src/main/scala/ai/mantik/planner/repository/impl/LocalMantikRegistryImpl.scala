@@ -1,7 +1,7 @@
 package ai.mantik.planner.repository.impl
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.{ ItemId, MantikId }
+import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.{ FileRepository, LocalMantikRegistry, MantikArtifact, Repository }
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
@@ -48,7 +48,7 @@ class LocalMantikRegistryImpl @Inject() (
     }
   }
 
-  override def ensureMantikId(itemId: ItemId, mantikId: MantikId): Future[Boolean] = {
+  override def ensureMantikId(itemId: ItemId, mantikId: NamedMantikId): Future[Boolean] = {
     repository.ensureMantikId(itemId, mantikId)
   }
 }

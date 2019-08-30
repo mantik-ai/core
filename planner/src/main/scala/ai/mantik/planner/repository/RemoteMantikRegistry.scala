@@ -1,7 +1,7 @@
 package ai.mantik.planner.repository
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.{ ItemId, MantikId }
+import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
 import ai.mantik.planner.repository.impl.MantikRegistryImpl
 import akka.stream.scaladsl.Source
@@ -24,7 +24,7 @@ object RemoteMantikRegistry {
 
     override def get(mantikId: MantikId): Future[MantikArtifact] = NotFound
 
-    override def ensureMantikId(itemId: ItemId, mantikId: MantikId): Future[Boolean] = NotFound
+    override def ensureMantikId(itemId: ItemId, mantikId: NamedMantikId): Future[Boolean] = NotFound
 
     override def getPayload(fileId: String): Future[PayloadSource] = NotFound
 

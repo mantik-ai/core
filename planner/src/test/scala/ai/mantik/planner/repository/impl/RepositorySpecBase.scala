@@ -5,7 +5,7 @@ import java.time.temporal.ChronoUnit
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikId, Mantikfile }
+import ai.mantik.elements.{ AlgorithmDefinition, ItemId, NamedMantikId, Mantikfile }
 import ai.mantik.planner.repository
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
@@ -32,10 +32,10 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       )
     )),
     fileId = Some("1234"),
-    id = MantikId(
-      "func1",
-      "version1"
-    ),
+    namedId = Some(NamedMantikId(
+      name = "func1",
+      version = "version1"
+    )),
     itemId = ItemId.generate()
   )
 
@@ -53,16 +53,16 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
   )
 
   val artifact1DifferentVersion = artifact1.copy(
-    id = artifact1.id.copy(
+    namedId = Some(artifact1.namedId.get.copy(
       version = "version2"
-    ),
+    )),
     itemId = ItemId.generate()
   )
 
   val artifact1DifferentName = artifact1.copy(
-    id = artifact1.id.copy(
+    namedId = Some(artifact1.namedId.get.copy(
       name = "other_name"
-    ),
+    )),
     itemId = ItemId.generate()
   )
 
@@ -75,33 +75,40 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       )
     )),
     fileId = None,
-    id = MantikId(
-      "func2",
-      "version2"
-    ),
+    namedId = Some(NamedMantikId(
+      name = "func2",
+      version = "version2"
+    )),
     itemId = ItemId.generate()
   )
 
   it should "store and retrieve artifacts" in {
     withRepo { repo =>
       intercept[Errors.NotFoundException] {
-        await(repo.get(artifact1.id))
+        await(repo.get(artifact1.namedId.get))
+      }
+      intercept[Errors.NotFoundException] {
+        await(repo.get(artifact1.itemId))
       }
 
       await(repo.store(artifact1))
-      val back = await(repo.get(artifact1.id))
+      val back = await(repo.get(artifact1.namedId.get))
       back shouldBe artifact1
 
       intercept[Errors.NotFoundException] {
-        await(repo.get(artifact2.id))
+        await(repo.get(artifact2.namedId.get))
       }
 
       await(repo.store(artifact2))
-      val back2 = await(repo.get(artifact2.id))
+      val back2 = await(repo.get(artifact2.namedId.get))
       back2 shouldBe artifact2
 
-      val back3 = await(repo.get(artifact1.id))
+      val back3 = await(repo.get(artifact1.namedId.get))
       back3 shouldBe artifact1
+
+      withClue("Pure items can also be pulled") {
+        await(repo.get(artifact1.itemId)) shouldBe artifact1.copy(namedId = None)
+      }
     }
   }
 
@@ -110,17 +117,17 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.store(artifact1))
       await(repo.store(artifact2))
 
-      await(repo.ensureMantikId(artifact1.itemId, artifact1.id)) shouldBe false // already existing
+      await(repo.ensureMantikId(artifact1.itemId, artifact1.namedId.get)) shouldBe false // already existing
 
-      val newName = MantikId("newname")
+      val newName = NamedMantikId("newname")
       await(repo.ensureMantikId(artifact1.itemId, newName)) shouldBe true
 
-      val back1 = await(repo.get(artifact1.id))
+      val back1 = await(repo.get(artifact1.namedId.get))
       back1 shouldBe artifact1
 
       val back2 = await(repo.get(newName))
       back2.itemId shouldBe back1.itemId
-      back2 shouldBe artifact1.copy(id = newName)
+      back2 shouldBe artifact1.copy(namedId = Some(newName))
 
       // Tricky: Giving a new itemId
       await(repo.ensureMantikId(artifact2.itemId, newName)) shouldBe true
@@ -141,7 +148,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
         itemId = ItemId.generate()
       )
       await(repo.store(updated))
-      await(repo.get(artifact1.id)) shouldBe updated
+      await(repo.get(artifact1.namedId.get)) shouldBe updated
     }
   }
 
@@ -155,7 +162,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
           )
         )
       )
-      intercept[Errors.OverwriteNotAllowedException] {
+      intercept[Errors.ConflictException] {
         await(repo.store(updated))
       }
     }
@@ -168,14 +175,47 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.store(artifact1DifferentVersion))
       await(repo.remove("someId")) shouldBe false
 
-      await(repo.remove(artifact1.id)) shouldBe true
+      await(repo.remove(artifact1.namedId.get)) shouldBe true
       intercept[Errors.NotFoundException] {
-        await(repo.get(artifact1.id))
+        await(repo.get(artifact1.namedId.get))
       }
       withClue("Other names/versions should still exists") {
-        await(repo.get(artifact1DifferentName.id)) shouldBe artifact1DifferentName
-        await(repo.get(artifact1DifferentVersion.id)) shouldBe artifact1DifferentVersion
+        await(repo.get(artifact1DifferentName.namedId.get)) shouldBe artifact1DifferentName
+        await(repo.get(artifact1DifferentVersion.namedId.get)) shouldBe artifact1DifferentVersion
       }
+    }
+  }
+
+  it should "allow deleting pure items" in {
+    withRepo { repo =>
+      val rawItem = artifact1.copy(namedId = None)
+      await(repo.store(rawItem))
+      await(repo.get(artifact1.itemId)) shouldBe rawItem
+      await(repo.remove(artifact1.itemId)) shouldBe true
+    }
+  }
+
+  it should "deny removing the bare element if there is a deployment" in {
+    withRepo { repo =>
+      val rawItemWithDeployment = artifact1.copy(
+        namedId = None,
+        deploymentInfo = Some(deploymentInfo1)
+      )
+      await(repo.store(rawItemWithDeployment))
+      intercept[Errors.ConflictException] {
+        await(repo.remove(rawItemWithDeployment.itemId))
+      }
+      await(repo.get(rawItemWithDeployment.itemId)) shouldBe rawItemWithDeployment
+    }
+  }
+
+  it should "deny removing the bare element if there is a name on it" in {
+    withRepo { repo =>
+      await(repo.store(artifact1))
+      intercept[Errors.ConflictException] {
+        await(repo.remove(artifact1.itemId))
+      }
+      await(repo.get(artifact1.namedId.get)) shouldBe artifact1
     }
   }
 
@@ -187,8 +227,8 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.store(artifact1WithDeployment))
       await(repo.store(artifact2))
 
-      val back1 = await(repo.get(artifact1.id))
-      val back2 = await(repo.get(artifact2.id))
+      val back1 = await(repo.get(artifact1.namedId.get))
+      val back2 = await(repo.get(artifact2.namedId.get))
       back1 shouldBe artifact1WithDeployment
       back2 shouldBe artifact2
     }
@@ -203,19 +243,19 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.store(artifact2))
 
       await(repo.setDeploymentInfo(artifact1.itemId, Some(deploymentInfo1))) shouldBe true
-      val back1 = await(repo.get(artifact1.id))
+      val back1 = await(repo.get(artifact1.namedId.get))
       back1 shouldBe artifact1.copy(deploymentInfo = Some(deploymentInfo1))
       await(repo.setDeploymentInfo(artifact1.itemId, Some(deploymentInfo2))) shouldBe true
 
-      val back2 = await(repo.get(artifact1.id))
+      val back2 = await(repo.get(artifact1.namedId.get))
       back2 shouldBe artifact1.copy(deploymentInfo = Some(deploymentInfo2))
 
       await(repo.setDeploymentInfo(artifact1.itemId, None))
 
-      val back3 = await(repo.get(artifact1.id))
+      val back3 = await(repo.get(artifact1.namedId.get))
       back3 shouldBe artifact1
 
-      await(repo.get(artifact2.id)) shouldBe artifact2
+      await(repo.get(artifact2.namedId.get)) shouldBe artifact2
     }
   }
 }

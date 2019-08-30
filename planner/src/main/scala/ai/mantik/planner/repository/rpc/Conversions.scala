@@ -4,7 +4,7 @@ import java.time.Instant
 
 import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.ds.helper.circe.CirceJson
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
+import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact }
 import ai.mantik.planner.repository.protos.types.{ MantikArtifact => ProtoMantikArtifact }
 import ai.mantik.planner.repository.protos.types.{ DeploymentInfo => ProtoDeploymentInfo }
@@ -24,6 +24,14 @@ private[rpc] object Conversions {
     MantikId.fromString(str)
   }
 
+  def encodeNamedMantikId(namedMantikId: NamedMantikId): String = {
+    namedMantikId.toString
+  }
+
+  def decodeNamedMantikId(str: String): NamedMantikId = {
+    NamedMantikId.fromString(str)
+  }
+
   def encodeItemId(itemId: ItemId): String = {
     itemId.toString
   }
@@ -36,7 +44,7 @@ private[rpc] object Conversions {
     ProtoMantikArtifact(
       mantikfile = item.mantikfile.toJson,
       fileId = RpcConversions.encodeOptionalString(item.fileId),
-      mantikId = encodeMantikId(item.id),
+      mantikId = RpcConversions.encodeOptionalString(item.namedId.map(encodeMantikId)),
       itemId = encodeItemId(item.itemId),
       deploymentInfo = item.deploymentInfo.map(encodeDeploymentInfo)
     )
@@ -47,7 +55,7 @@ private[rpc] object Conversions {
     MantikArtifact(
       mantikfile = Mantikfile.parseSingleDefinition(mantikfileJson).force,
       fileId = RpcConversions.decodeOptionalString(item.fileId),
-      id = decodeMantikId(item.mantikId),
+      namedId = RpcConversions.decodeOptionalString(item.mantikId).map(Conversions.decodeNamedMantikId),
       itemId = decodeItemId(item.itemId),
       deploymentInfo = item.deploymentInfo.map(decodeDeploymentInfo)
     )
@@ -74,7 +82,7 @@ private[rpc] object Conversions {
   val encodeErrors: PartialFunction[Throwable, Throwable] = {
     case e: Errors.NotFoundException =>
       wrapError(e, Code.NOT_FOUND)
-    case e: Errors.OverwriteNotAllowedException =>
+    case e: Errors.ConflictException =>
       wrapError(e, Code.FAILED_PRECONDITION)
   }
 
@@ -104,7 +112,7 @@ private[rpc] object Conversions {
       new Errors.NotFoundException(e.getStatus.getDescription)
     case e: StatusRuntimeException if e.getStatus.getCode == Code.FAILED_PRECONDITION =>
       // TODO: This is hack
-      new Errors.OverwriteNotAllowedException(e.getStatus.getDescription)
+      new Errors.ConflictException(e.getStatus.getDescription)
   }
 
   def decodeErrorsIn[T](f: => Future[T])(implicit ec: ExecutionContext): Future[T] = {

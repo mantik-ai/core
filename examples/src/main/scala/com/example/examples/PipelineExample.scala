@@ -1,7 +1,7 @@
 package com.example.examples
 import java.io.File
 
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.NamedMantikId
 import ai.mantik.planner.{ Context, Pipeline }
 
 object PipelineExample extends ExampleBase {
@@ -20,12 +20,12 @@ object PipelineExample extends ExampleBase {
     val result = context.execute(pipeline.deploy(ingressName = Some("mnist")))
     println(s"Pipeline deployed at ${result.externalUrl.get}")
 
-    val pushMantikId = MantikId("nob/mnist1")
+    val pushMantikId = NamedMantikId("nob/mnist1")
     context.execute(pipeline.push(pushMantikId))
     println(s"Pipeline pushed to ${pushMantikId}")
 
     // This still fails, see #114
-    // val pulled = context.pull("nob/mnist1")
-    // println(s"Pulled pipeline ${pulled.mantikId}")
+    val pulled = context.pull("nob/mnist1")
+    println(s"Pulled pipeline ${pulled.mantikId}")
   }
 }

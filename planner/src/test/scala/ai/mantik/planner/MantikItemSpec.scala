@@ -1,7 +1,7 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ AlgorithmDefinition, MantikId, Mantikfile }
+import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, NamedMantikId }
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.testutils.TestBase
 
@@ -25,15 +25,15 @@ class MantikItemSpec extends TestBase {
 
   "withMetaVariable" should "update meta variables" in {
     sample.mantikfile.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(123)
-    sample.mantikId shouldBe 'anonymous
-    sample.state.update(_.copy(mantikId = Some("foo")))
-    sample.mantikId shouldBe MantikId(name = "foo")
+    sample.mantikId shouldBe an[ItemId]
+    sample.state.update(_.copy(namedMantikItem = Some("foo")))
+    sample.mantikId shouldBe NamedMantikId(name = "foo")
 
     val after = sample.withMetaValue("x", 100)
     after.mantikfile.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(100)
     after.payloadSource shouldBe sample.payloadSource
     after.source.definition shouldBe an[DefinitionSource.Derived]
     after.mantikfile.definition shouldBe an[AlgorithmDefinition]
-    after.mantikId shouldBe 'anonymous
+    after.mantikId shouldBe an[ItemId]
   }
 }
