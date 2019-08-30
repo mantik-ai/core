@@ -34,7 +34,7 @@ class RepositoryServiceImpl @Inject() (repository: Repository)(implicit akkaRunt
   override def ensureMantikId(request: EnsureMantikIdRequest): Future[EnsureMantikIdResponse] = {
     errorHandling {
       val itemId = Conversions.decodeItemId(request.itemId)
-      val mantikId = Conversions.decodeMantikId(request.mantikId)
+      val mantikId = Conversions.decodeNamedMantikId(request.mantikId)
       repository.ensureMantikId(itemId, mantikId).map { changed =>
         EnsureMantikIdResponse(changed = changed)
       }

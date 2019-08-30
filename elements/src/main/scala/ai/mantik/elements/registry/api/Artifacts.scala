@@ -2,35 +2,34 @@ package ai.mantik.elements.registry.api
 
 import java.time.Instant
 
+import ai.mantik.elements.{ ItemId, NamedMantikId }
 import io.circe.generic.JsonCodec
 
-@JsonCodec // TODO: This will probably change.
+@JsonCodec
 case class ApiGetArtifactResponse(
     mantikDefinition: String,
     mantikDefinitionJson: String, // as string so that it doesn't confuse golang's JSON unmarshal
-    account: String,
-    name: String,
-    version: String,
-    revision: Int,
+    namedId: Option[NamedMantikId] = None,
+    revision: Option[Int] = None,
     kind: String,
     creationTimestamp: Instant,
     uploadState: String,
     fileId: Option[String],
-    itemId: String
+    itemId: ItemId
 )
 
 @JsonCodec
 case class ApiPrepareUploadRequest(
-    mantikId: Option[String] = None,
-    itemId: String,
+    namedId: Option[NamedMantikId] = None,
+    itemId: ItemId,
     mantikfile: String,
     hasFile: Boolean
 )
 
 @JsonCodec
 case class ApiTagRequest(
-    itemId: String,
-    mantikId: String
+    itemId: ItemId,
+    mantikId: NamedMantikId
 )
 
 @JsonCodec
@@ -40,7 +39,7 @@ case class ApiTagResponse(
 
 @JsonCodec
 case class ApiPrepareUploadResponse(
-    itemId: String
+    revision: Option[Int] = None
 )
 
 @JsonCodec

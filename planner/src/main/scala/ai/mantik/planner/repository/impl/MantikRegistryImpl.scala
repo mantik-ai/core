@@ -3,17 +3,18 @@ package ai.mantik.planner.repository.impl
 import ai.mantik.componently.utils.SecretReader
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.registry.api._
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile }
+import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
 import ai.mantik.planner.repository.{ Errors, MantikArtifact, RemoteMantikRegistry }
 import akka.http.scaladsl.Http
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import javax.inject.Inject
+import net.reactivecore.fhttp.akka.ApiClient
 
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.{ Success, Try }
 
-class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
+private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
   extends ComponentBase with RemoteMantikRegistry with FailFastCirceSupport {
 
   private val configRoot = config.getConfig("mantik.core.registry")
@@ -22,9 +23,19 @@ class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
   private val user = configRoot.getString("username")
   private val password = new SecretReader("password", configRoot)
 
-  private val http = Http()
-  private val api = new MantikRegistryApi(url, http)
+  private val executor: ApiClient.RequestExecutor = { request =>
+    val t0 = System.currentTimeMillis()
+    Http().singleRequest(request).andThen {
+      case Success(response) =>
+        val t1 = System.currentTimeMillis()
+        logger.debug(s"Calling ${request.method.name()} ${request.uri} ${response.status.intValue()} within ${t1 - t0}ms")
+    }
+  }
+  private val api = new MantikRegistryApi(url, executor)
   private val tokenProvider = new MantikRegistryTokenProvider(api, user, password)
+
+  /** Provides a token. */
+  def token(): Future[String] = tokenProvider.getToken()
 
   override def get(mantikId: MantikId): Future[MantikArtifact] = {
     errorHandling {
@@ -36,11 +47,11 @@ class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
     }
   }
 
-  override def ensureMantikId(itemId: ItemId, mantikId: MantikId): Future[Boolean] = {
+  override def ensureMantikId(itemId: ItemId, mantikId: NamedMantikId): Future[Boolean] = {
     errorHandling {
       for {
         token <- tokenProvider.getToken()
-        response <- api.tag(token, ApiTagRequest(itemId.toString, mantikId.toString))
+        response <- api.tag(token, ApiTagRequest(itemId, mantikId))
       } yield response.updated
     }
   }
@@ -52,8 +63,8 @@ class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
       MantikArtifact(
         mantikfile,
         fileId = apiGetArtifactResponse.fileId,
-        id = mantikId,
-        itemId = ItemId(apiGetArtifactResponse.itemId)
+        namedId = apiGetArtifactResponse.namedId,
+        itemId = apiGetArtifactResponse.itemId
       )
     }
   }
@@ -86,16 +97,18 @@ class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
         uploadResponse <- api.prepareUpload(
           token,
           ApiPrepareUploadRequest(
-            mantikId = Option(mantikArtifact.id).filterNot(_.isAnonymous).map(_.toString),
-            itemId = mantikArtifact.itemId.toString,
+            namedId = mantikArtifact.namedId,
+            itemId = mantikArtifact.itemId,
             mantikfile = mantikArtifact.mantikfile.toJson,
             hasFile = payload.nonEmpty
           )
         )
         remoteFileId <- payload match {
           case Some((contentType, source)) =>
+            // Akka HTTP Crashes on empty Chunks.
+            val withoutEmptyChunks = source.filter(_.nonEmpty)
             api.uploadFile(
-              token, uploadResponse.itemId, contentType, source
+              token, mantikArtifact.itemId.toString, contentType, withoutEmptyChunks
             ).map(response => Some(response.fileId))
           case None =>
             Future.successful(None)

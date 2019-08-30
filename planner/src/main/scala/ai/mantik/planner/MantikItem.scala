@@ -2,7 +2,7 @@ package ai.mantik.planner
 
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikId, Mantikfile, PipelineDefinition, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikId, Mantikfile, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver }
 import ai.mantik.elements.meta.MetaVariableException
 import ai.mantik.planner.repository.{ ContentTypes, Errors, MantikArtifact }
@@ -27,8 +27,8 @@ trait MantikItem {
 
   /** The state of the mantik Item. */
   private[planner] val state: AtomicReference[MantikItemState] = new AtomicReference({
-    val (mantikId, loaded): (Option[MantikId], Boolean) = source.definition match {
-      case DefinitionSource.Loaded(mantikId, _) => Some(mantikId) -> true
+    val (mantikId, loaded): (Option[NamedMantikId], Boolean) = source.definition match {
+      case DefinitionSource.Loaded(mantikId, _) => mantikId -> true
       case _                                    => None -> false
     }
     val file = source.payload match {
@@ -39,20 +39,20 @@ trait MantikItem {
   })
 
   /** Save an item back in the local database */
-  def save(id: MantikId): Action.SaveAction = Action.SaveAction(this, id)
+  def save(id: NamedMantikId): Action.SaveAction = Action.SaveAction(this, id)
 
   /** Pushes an item to the registry. */
-  def push(id: MantikId): Action.PushAction = Action.PushAction(this, id)
+  def push(id: NamedMantikId): Action.PushAction = Action.PushAction(this, id)
 
   /** Returns the type's stack. */
   def stack: String = mantikfile.definition.stack
 
   /**
-   * Returns the [[MantikId]] of the Item. This can be anonymous.
+   * Returns the [[NamedMantikId]] of the Item. This can be anonymous.
    * Note: this doesn't mean that the item is stored.
    */
   def mantikId: MantikId = {
-    state.get.mantikId.getOrElse(itemId.asAnonymousMantikId)
+    state.get.namedMantikItem.getOrElse(itemId)
   }
 
   /**
@@ -130,7 +130,7 @@ object MantikItem {
     }.getOrElse(PayloadSource.Empty)
 
     val source = Source(
-      DefinitionSource.Loaded(artifact.id, artifact.itemId),
+      DefinitionSource.Loaded(artifact.namedId, artifact.itemId),
       payloadSource
     )
 
@@ -142,7 +142,7 @@ object MantikItem {
       case t: TrainableAlgorithmDefinition => TrainableAlgorithm(source, forceExtract)
       case p: PipelineDefinition =>
         val referenced = hull.map { item =>
-          item.id -> fromMantikArtifact(item)
+          item.mantikId -> fromMantikArtifact(item)
         }.toMap
         PipelineBuilder.buildOrFailFromMantikfile(source.definition, forceExtract, referenced)
     }

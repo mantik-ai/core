@@ -4,7 +4,7 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikId, Mantikfile, PipelineStep }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, NamedMantikId, Mantikfile, PipelineStep }
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner._
@@ -22,16 +22,16 @@ class PlannerImplSpec extends TestBase {
     }
 
     val algorithm1 = Algorithm(
-      Source(DefinitionSource.Loaded("algo1:version1", ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+      Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
     )
     val dataset1 = DataSet(
-      Source(DefinitionSource.Loaded("dataset1:version1", ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1
+      Source(DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1
     )
 
     // Create a Source for loaded Items
-    def makeLoadedSource(file: String, contentType: String = ContentTypes.MantikBundleContentType, mantikId: MantikId = "item1234"): Source = {
+    def makeLoadedSource(file: String, contentType: String = ContentTypes.MantikBundleContentType, mantikId: NamedMantikId = "item1234"): Source = {
       Source(
-        DefinitionSource.Loaded(mantikId, ItemId.generate()),
+        DefinitionSource.Loaded(Some(mantikId), ItemId.generate()),
         PayloadSource.Loaded(file, contentType)
       )
     }

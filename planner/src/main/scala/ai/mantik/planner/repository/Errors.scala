@@ -6,8 +6,8 @@ object Errors {
   /** Some item was not found. */
   class NotFoundException(msg: String) extends RepositoryError(msg)
 
-  /** An item may not be overwritten with the same [[ai.mantik.elements.ItemId]]. */
-  class OverwriteNotAllowedException(msg: String) extends RepositoryError(msg)
+  /** There is some database conflict. */
+  class ConflictException(msg: String) extends RepositoryError(msg)
 
   /** If some item is not the expected type. */
   class WrongTypeException(msg: String, cause: Throwable = null) extends RepositoryError(msg, cause)

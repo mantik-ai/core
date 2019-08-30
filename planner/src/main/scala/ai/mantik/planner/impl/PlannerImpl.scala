@@ -1,6 +1,6 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.elements.{ MantikId, PipelineStep }
+import ai.mantik.elements.{ MantikId, NamedMantikId, PipelineStep }
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
@@ -100,7 +100,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
     }
   }
 
-  def ensureItemWithDependenciesStoredWithName(item: MantikItem, id: MantikId): State[PlanningState, PlanOp] = {
+  def ensureItemWithDependenciesStoredWithName(item: MantikItem, id: NamedMantikId): State[PlanningState, PlanOp] = {
     ensureItemWithDependenciesStored(item).map { preOp =>
       PlanOp.seq(preOp, PlanOp.TagMantikItem(item, id))
     }

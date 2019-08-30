@@ -1,6 +1,6 @@
 package ai.mantik.elements.registry.api
 
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.{ MantikId, NamedMantikId }
 import net.reactivecore.fhttp.{ ApiBuilder, Output }
 
 import scala.util.Try
@@ -28,7 +28,7 @@ object MantikRegistryApiCalls extends ApiBuilder {
   }
 
   val MantikIdMapping = input.pureMapping[String, MantikId](
-    { x: String => Try(MantikId.fromString(x)).toEither.left.map(_.toString) },
+    { x: String => MantikId.decodeString(x).left.map(_.message) },
     { y: MantikId => Right(y.toString) }
   )
 

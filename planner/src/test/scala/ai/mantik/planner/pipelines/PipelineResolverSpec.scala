@@ -4,7 +4,7 @@ import ai.mantik.ds.{ DataType, FundamentalType, TabularData, Tensor }
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.MetaVariableSetting
-import ai.mantik.elements.{ AlgorithmDefinition, MantikId, Mantikfile, OptionalFunctionType, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{ AlgorithmDefinition, NamedMantikId, Mantikfile, OptionalFunctionType, PipelineDefinition, PipelineStep }
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
 import ai.mantik.testutils.TestBase
@@ -58,8 +58,8 @@ class PipelineResolverSpec extends TestBase {
           )
         )
       )), Map(
-        MantikId(name = "a") -> a,
-        MantikId(name = "b") -> b
+        NamedMantikId(name = "a") -> a,
+        NamedMantikId(name = "b") -> b
       )
     )
   }
@@ -83,7 +83,7 @@ class PipelineResolverSpec extends TestBase {
           )
         )
       )), Map(
-        MantikId(name = "b") -> b
+        NamedMantikId(name = "b") -> b
       )
     )
   }
@@ -180,8 +180,8 @@ class PipelineResolverSpec extends TestBase {
           ))
         )
       )), Map(
-        MantikId(name = "a") -> algorithm1,
-        MantikId(name = "b") -> algorithm3
+        NamedMantikId(name = "a") -> algorithm1,
+        NamedMantikId(name = "b") -> algorithm3
       )
     ).forceRight
     resolvedWithApplication.functionType.output shouldBe TabularData("z" -> Tensor(FundamentalType.Float32, List(10)))

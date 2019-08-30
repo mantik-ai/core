@@ -1,7 +1,7 @@
 package ai.mantik.planner.repository.rpc
 
 import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
-import ai.mantik.elements.{ ItemId, MantikId }
+import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.protos.repository.{ EnsureMantikIdRequest, GetItemRequest, RemoveRequest, SetDeploymentInfoRequest, StoreRequest }
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
@@ -32,7 +32,7 @@ class RepositoryClientImpl @Inject() (service: RepositoryService)(implicit akkaR
     }
   }
 
-  override def ensureMantikId(id: ItemId, newName: MantikId): Future[Boolean] = {
+  override def ensureMantikId(id: ItemId, newName: NamedMantikId): Future[Boolean] = {
     decodeErrors {
       service.ensureMantikId(EnsureMantikIdRequest(
         itemId = id.toString,

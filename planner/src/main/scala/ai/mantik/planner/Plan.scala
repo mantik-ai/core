@@ -2,7 +2,7 @@ package ai.mantik.planner
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ ItemId, MantikDefinition, MantikId, Mantikfile }
+import ai.mantik.elements.{ ItemId, MantikDefinition, NamedMantikId, Mantikfile }
 import ai.mantik.executor.model.Graph
 import ai.mantik.executor.model.docker.Container
 
@@ -75,7 +75,7 @@ object PlanOp {
   case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference]) extends PlanOp
 
   /** Tag some Item.  */
-  case class TagMantikItem(item: MantikItem, id: MantikId) extends PlanOp
+  case class TagMantikItem(item: MantikItem, id: NamedMantikId) extends PlanOp
 
   /**
    * Push a Mantik Item to a remote registry.

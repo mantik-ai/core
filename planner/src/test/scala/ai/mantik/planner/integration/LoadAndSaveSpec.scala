@@ -1,7 +1,7 @@
 package ai.mantik.planner.integration
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.NamedMantikId
 import ai.mantik.planner.DataSet
 import ai.mantik.testutils.tags.IntegrationTest
 
@@ -23,7 +23,7 @@ class LoadAndSaveSpec extends IntegrationTestBase {
       context.execute(item2.save("other_name"))
 
       val item3 = context.loadDataSet("other_name")
-      item3.mantikId shouldBe MantikId("other_name")
+      item3.mantikId shouldBe NamedMantikId("other_name")
       item3.itemId shouldBe item.itemId
     }
   }

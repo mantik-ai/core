@@ -3,7 +3,7 @@ package ai.mantik.planner.repository
 import java.nio.file.Path
 
 import ai.mantik.componently.Component
-import ai.mantik.elements.MantikId
+import ai.mantik.elements.{ MantikId, NamedMantikId }
 import ai.mantik.planner.repository.impl.MantikArtifactRetrieverImpl
 import com.google.inject.ImplementedBy
 
@@ -26,5 +26,5 @@ trait MantikArtifactRetriever extends Component {
   def push(id: MantikId): Future[MantikArtifactWithHull]
 
   /** Add a local directory to the local repository. */
-  def addLocalDirectoryToRepository(dir: Path, id: Option[MantikId] = None): Future[MantikArtifact]
+  def addLocalDirectoryToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact]
 }
