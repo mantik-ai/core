@@ -10,4 +10,6 @@ package object planner {
   /** A group of cached element which can either be resolved all together or nothing of them. */
   private[mantik] type CacheKeyGroup = List[CacheKey]
 
+  /** Identifies a slot in the memory during execution of plans. */
+  private[mantik] type MemoryId = String
 }

@@ -7,7 +7,7 @@ import ai.mantik.{ elements, planner }
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, SelectRequest, TrainRequest }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, SelectRequest, TagRequest, TrainRequest }
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager, SessionNotFoundException }
 import ai.mantik.engine.testutil.{ DummyComponents, TestBaseWithSessions }
@@ -309,5 +309,13 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     pipeItem.item.get.kind shouldBe ObjectKind.KIND_PIPELINE
     val realPipeline = session1.getItemAs[Pipeline](pipeItem.itemId)
     realPipeline.stepCount shouldBe 2
+  }
+
+  "tag" should "work" in new Env {
+    val response = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
+    val response2 = await(graphBuilder.tag(TagRequest(session1.id, response.itemId, "new_name")))
+    val original = session1.getItem(response.itemId).get
+    val modified = session1.getItem(response2.itemId).get
+    modified shouldBe original.tag("new_name")
   }
 }

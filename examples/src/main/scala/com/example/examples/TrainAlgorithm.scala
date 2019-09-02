@@ -35,7 +35,7 @@ object TrainAlgorithm extends ExampleBase {
     val (trained, stats) = kmeans.train(DataSet.literal(learningData))
 
     context.execute(
-      trained.save("kmeans_trained")
+      trained.tag("kmeans_trained").save()
     )
 
     val trainedAgain = context.loadAlgorithm("kmeans_trained")

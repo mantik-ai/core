@@ -9,7 +9,7 @@ import ai.mantik.testutils.tags.IntegrationTest
 class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
 
   it should "deploy a simple bridged algorithm" in new EnvWithAlgorithm {
-    doubleMultiply.state.get.isStored shouldBe true
+    doubleMultiply.state.get.itemStored shouldBe true
     doubleMultiply.state.get.deployment shouldBe empty
     val result = context.execute(
       doubleMultiply.deploy()
@@ -40,21 +40,21 @@ class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
       "select * where x = 10"
     ).forceRight)
     select.state.get.deployment shouldBe empty
-    select.state.get.isStored shouldBe false
+    select.state.get.itemStored shouldBe false
     val deployed = context.execute(
       select.deploy()
     )
     select.state.get.deployment shouldBe Some(deployed)
-    select.state.get.isStored shouldBe true
+    select.state.get.itemStored shouldBe true
   }
 
   it should "deploy a derived algorithm" in new EnvWithTrainedAlgorithm {
-    trained.state.get.isStored shouldBe false
+    trained.state.get.itemStored shouldBe false
     trained.state.get.deployment shouldBe None
     val result = context.execute(trained.deploy())
     result.name shouldNot be(empty)
     result.internalUrl shouldNot be(empty)
-    trained.state.get.isStored shouldBe true
+    trained.state.get.itemStored shouldBe true
     trained.state.get.deployment shouldBe Some(result)
   }
 

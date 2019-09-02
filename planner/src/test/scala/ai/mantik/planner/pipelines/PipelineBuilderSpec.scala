@@ -52,13 +52,13 @@ class PipelineBuilderSpec extends TestBase {
     val pipeline = PipelineBuilder.build(Seq(algorithm1, algorithm2)).forceRight
     pipeline.definitionSource shouldBe DefinitionSource.Constructed()
     pipeline.payloadSource shouldBe PayloadSource.Empty
-    pipeline.resolved.steps.map(_.algorithm) shouldBe Seq(algorithm1, algorithm2)
+    pipeline.resolved.steps shouldBe Seq(algorithm1, algorithm2)
 
     withClue("Algorithms which are loaded are using their real ids") {
       val algo1 = pipeline.resolved.steps.head
-      algo1.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm shouldBe an[NamedMantikId]
+      algo1.mantikId shouldBe an[NamedMantikId]
       val algo2 = pipeline.resolved.steps(1)
-      algo2.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm shouldBe an[ItemId]
+      algo2.mantikId shouldBe an[ItemId]
 
       pipeline.mantikfile.definition.referencedItems.size shouldBe 2
     }
@@ -67,10 +67,10 @@ class PipelineBuilderSpec extends TestBase {
   it should "insert select steps, if possible" in {
     val pipeline = PipelineBuilder.build(Seq(selectAlgorithm, algorithm2)).forceRight
     val step1 = pipeline.resolved.steps.head
-    val encodedStep = step1.pipelineStep.asInstanceOf[SelectStep]
-    encodedStep.select shouldBe selectAlgorithm.select.get.toSelectStatement
+    val encodedStep = step1
+    encodedStep shouldBe selectAlgorithm
     val step2 = pipeline.resolved.steps(1)
-    step2.pipelineStep shouldBe an[AlgorithmStep]
+    step2.select shouldBe empty
 
     pipeline.mantikfile.definition.referencedItems.size shouldBe 1 // select is not referenced
   }

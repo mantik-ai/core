@@ -34,7 +34,7 @@ private[planner] object PipelineResolver {
       val (steps, outputType) = foldingMap(mantikfile.definition.steps.zipWithIndex, inputType) {
         case ((step, stepNum), currentType) =>
           val resolvedPipelineStep = resolvePipelineStep(stepNum, currentType, step, algorithms)
-          resolvedPipelineStep -> resolvedPipelineStep.algorithm.functionType.output
+          resolvedPipelineStep -> resolvedPipelineStep.functionType.output
       }
       mantikfile.definition.outputType.foreach { expectedOutputType =>
         if (expectedOutputType != outputType) {
@@ -81,7 +81,7 @@ private[planner] object PipelineResolver {
       mantikfile.definition.steps.headOption match {
         case None => throw new InvalidPipelineException("Empty Pipeline")
         case Some(as: PipelineStep.AlgorithmStep) =>
-          resolveAlgorithmPipelineStep(0, None, as, algorithms).algorithm.functionType.input
+          resolveAlgorithmPipelineStep(0, None, as, algorithms).functionType.input
         case Some(other) =>
           throw new InvalidPipelineException(s"Cannot deduct input type of pipeline, either describe it or let it start with algorithm, got ${other}")
       }
@@ -97,7 +97,7 @@ private[planner] object PipelineResolver {
     inputDataType: DataType,
     pipelineStep: PipelineStep,
     algorithms: ReferencedAlgorithms
-  ): ResolvedPipelineStep = {
+  ): Algorithm = {
     pipelineStep match {
       case as: PipelineStep.AlgorithmStep =>
         resolveAlgorithmPipelineStep(stepNum, Some(inputDataType), as, algorithms)
@@ -106,7 +106,7 @@ private[planner] object PipelineResolver {
     }
   }
 
-  private def resolveAlgorithmPipelineStep(stepNum: Int, incomingDataType: Option[DataType], as: PipelineStep.AlgorithmStep, algorithms: ReferencedAlgorithms): ResolvedPipelineStep = {
+  private def resolveAlgorithmPipelineStep(stepNum: Int, incomingDataType: Option[DataType], as: PipelineStep.AlgorithmStep, algorithms: ReferencedAlgorithms): Algorithm = {
     algorithms.get(as.algorithm) match {
       case None => throw new InvalidPipelineException(s"Missing element ${as.algorithm}")
       case Some(algorithm: Algorithm) =>
@@ -121,16 +121,13 @@ private[planner] object PipelineResolver {
             throw new PipelineTypeException(s"Type mismatch on step${stepNum}, input ${inputDataType} expected ${algorithmWithMetaVariables.functionType.input}")
           }
         }
-        ResolvedPipelineStep(
-          as,
-          algorithmWithMetaVariables
-        )
+        algorithmWithMetaVariables
       case Some(other) =>
         throw new InvalidPipelineException(s"${as.algorithm} references no algorithm but an ${other.getClass.getSimpleName}")
     }
   }
 
-  private def resolveSelectStep(stepNum: Int, inputDataType: DataType, s: PipelineStep.SelectStep): ResolvedPipelineStep = {
+  private def resolveSelectStep(stepNum: Int, inputDataType: DataType, s: PipelineStep.SelectStep): Algorithm = {
     val select = inputDataType match {
       case t: TabularData =>
         Select.parse(t, s.select) match {
@@ -142,7 +139,7 @@ private[planner] object PipelineResolver {
     }
 
     val algorithm = Algorithm.fromSelect(select)
-    ResolvedPipelineStep(s, algorithm)
+    algorithm
   }
 
   /**

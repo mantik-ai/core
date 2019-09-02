@@ -7,6 +7,8 @@ import ai.mantik.planner.{ Context, DataSet }
 object ShowDataSet extends ExampleBase {
 
   override protected def run(context: Context): Unit = {
+    val id = "sample1"
+
     val ds = DataSet.literal(
       Bundle.build(
         TabularData(
@@ -16,11 +18,10 @@ object ShowDataSet extends ExampleBase {
       ).row(1, "Hello")
         .row(2, "World")
         .result
-    )
-    val id = "sample1"
+    ).tag(id)
 
     context.execute(
-      ds.save(id)
+      ds.save()
     )
 
     val result = context.execute(

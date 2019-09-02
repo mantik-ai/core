@@ -37,8 +37,8 @@ class AnonymousPipelineSpec extends IntegrationTestBase {
 
     val (trained, _) = kmeans.train(DataSet.literal(learningData))
 
-    val pipeline = Pipeline.build(trained)
-    context.execute(pipeline.save("pipeline1234"))
+    val pipeline = Pipeline.build(trained).tag("pipeline1234")
+    context.execute(pipeline.save())
 
     val sampleData = Bundle.build(learningData.model)
       .row(makeTensor(1.0, 2.0))

@@ -37,7 +37,7 @@ class PlannerImplSpec extends TestBase {
     }
 
     def splitOps(op: PlanOp): Seq[PlanOp] = {
-      op match {
+      PlanOp.compress(op) match {
         case PlanOp.Sequential(parts) => parts
         case PlanOp.Empty             => Nil
         case other                    => Seq(other)
@@ -61,8 +61,8 @@ class PlannerImplSpec extends TestBase {
     )
     result.files.head.ref shouldBe PlanFileReference(1)
     state.files.head.ref shouldBe PlanFileReference(1)
-    state.itemStorage(ds)._2.get.payload.get.ref shouldBe PlanFileReference(1)
-    ds.state.get.isStored shouldBe false // items are NOT updated by Planner
+    state.overrideState(ds).payloadAvailable.get.head.ref shouldBe PlanFileReference(1)
+    ds.state.get.itemStored shouldBe false // items are NOT updated by Planner
   }
 
   "ensureItemStored" should "do nothing if the item is alrady stored" in new Env {
@@ -89,14 +89,16 @@ class PlannerImplSpec extends TestBase {
   "ensureAlgorithmDeployed" should "ensure an algorithm is deployed" in new Env {
     val (state, result) = runWithEmptyState(planner.ensureAlgorithmDeployed(algorithm1))
     algorithm1.state.get.deployment shouldBe empty // no state change
-    state.itemDeployed(algorithm1) shouldBe defined
+    state.overrideState(algorithm1).deployed shouldBe Some(Right("var1"))
     val ops = splitOps(result)
-    // no storage, as algorithm1 is already stored
-    ops.find(_.isInstanceOf[PlanOp.DeployAlgorithm]) shouldBe defined
+    ops.size shouldBe 2
+    ops(0) shouldBe an[PlanOp.DeployAlgorithm]
+    ops(1) shouldBe an[PlanOp.MemoryWriter]
 
     val (state2, result2) = planner.ensureAlgorithmDeployed(algorithm1).run(state).value
     state2 shouldBe state
-    result2 shouldBe PlanOp.Empty
+    val ops2 = splitOps(result2)
+    ops2.size shouldBe 0
   }
 
   "deployPipeline" should "do nothing, if already deployed" in new Env {
@@ -112,12 +114,12 @@ class PlannerImplSpec extends TestBase {
     val pipe = Pipeline.build(algorithm1)
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
     pipe.state.get.deployment shouldBe empty // no state changes
-    state.itemDeployed(pipe) shouldBe defined
+    state.overrideState(pipe).deployed shouldBe Some(Right("var2"))
     withClue("dependent items are also deployed") {
-      state.itemDeployed(algorithm1) shouldBe defined
+      state.overrideState(algorithm1).deployed shouldBe Some(Right("var1"))
     }
     withClue("It must also be stored") {
-      state.itemStorage(pipe)._2 shouldBe defined
+      state.overrideState(pipe).stored shouldBe true
     }
   }
 
@@ -131,15 +133,15 @@ class PlannerImplSpec extends TestBase {
     val pipe = Pipeline.build(unstored)
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
 
-    state.itemStorage(unstored)._2 shouldBe defined
-    state.itemStorage(pipe)._2 shouldBe defined
+    state.overrideState(unstored).stored shouldBe true
+    state.overrideState(pipe).stored shouldBe true
   }
 
   "convert" should "convert a simple save action" in new Env {
     val item = DataSet.literal(lit)
     val plan = planner.convert(
       Action.SaveAction(
-        item, "item1"
+        item
       )
     )
 
@@ -147,9 +149,22 @@ class PlannerImplSpec extends TestBase {
       PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
       PlanOp.AddMantikItem(
         item, Some(PlanFileReference(1))
-      ),
-      PlanOp.TagMantikItem(
-        item, "item1"
+      )
+    )
+  }
+
+  it should "work with a tag and save" in new Env {
+    val item = DataSet.literal(lit).tag("hello1")
+    val plan = planner.convert(
+      Action.SaveAction(
+        item
+      )
+    )
+
+    plan.op shouldBe PlanOp.seq(
+      PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
+      PlanOp.AddMantikItem(
+        item, Some(PlanFileReference(1))
       )
     )
   }
@@ -166,10 +181,10 @@ class PlannerImplSpec extends TestBase {
     )
     val plan = planner.convert(
       Action.SaveAction(
-        pipeline, "pipe1"
+        pipeline
       )
     )
-    val algorithmName = pipeline.resolved.steps.head.pipelineStep.asInstanceOf[PipelineStep.AlgorithmStep].algorithm
+    val algorithmName = pipeline.resolved.steps.head
     plan.op shouldBe PlanOp.seq(
       PlanOp.AddMantikItem(
         algorithm2,
@@ -178,10 +193,6 @@ class PlannerImplSpec extends TestBase {
       PlanOp.AddMantikItem(
         pipeline,
         None
-      ),
-      PlanOp.TagMantikItem(
-        pipeline,
-        "pipe1"
       )
     )
   }
@@ -194,17 +205,26 @@ class PlannerImplSpec extends TestBase {
     )
     val plan = planner.convert(
       Action.SaveAction(
-        pipeline, "pipe1"
+        pipeline
       )
     )
     splitOps(plan.op) shouldBe Seq(
       PlanOp.AddMantikItem(
         pipeline,
         None
-      ),
+      ))
+  }
+
+  it should "tag an item if it was loaded before and is just going to be resaved" in new Env {
+    val tagged = algorithm1.tag("newname")
+    val plan = planner.convert(
+      Action.SaveAction(
+        tagged
+      )
+    )
+    splitOps(plan.op) shouldBe Seq(
       PlanOp.TagMantikItem(
-        pipeline,
-        "pipe1"
+        tagged, "newname"
       )
     )
   }
@@ -255,7 +275,10 @@ class PlannerImplSpec extends TestBase {
   it should "convert a deploy action algorithm action" in new Env {
     val deployAction = algorithm1.deploy() // algorithm1 is loaded, so it doesn't have to be stored.
     val plan = planner.convert(deployAction)
-    plan.op shouldBe an[PlanOp.DeployAlgorithm]
+    val ops = splitOps(plan.op)
+    ops.size shouldBe 2
+    ops.head shouldBe an[PlanOp.DeployAlgorithm]
+    ops(1) shouldBe an[PlanOp.MemoryWriter]
   }
 
   it should "save a non-loaded algorithm first" in new Env {
@@ -271,14 +294,13 @@ class PlannerImplSpec extends TestBase {
 
   it should "convert a push operation" in new Env {
     val a = DataSet.literal(lit)
-    val pushAction = a.push("foo1")
+    val pushAction = a.tag("foo1").push()
     val plan = planner.convert(pushAction)
     val ops = splitOps(plan.op)
-    ops.size shouldBe 4
+    ops.size shouldBe 3
     ops(0) shouldBe an[PlanOp.StoreBundleToFile]
     ops(1) shouldBe an[PlanOp.AddMantikItem]
-    ops(2) shouldBe an[PlanOp.TagMantikItem]
-    ops(3) shouldBe an[PlanOp.PushMantikItem]
+    ops(2) shouldBe an[PlanOp.PushMantikItem]
   }
 
   "caching" should "cache simple values in files" in new Env {
@@ -318,26 +340,25 @@ class PlannerImplSpec extends TestBase {
     val a = DataSet.literal(lit)
     val b = a.select("select x as y").cached
     val cacheKey = b.payloadSource.asInstanceOf[PayloadSource.Cached].cacheGroup.head
-    val action = b.save("foo1")
+    val action = b.tag("foo1").save()
     val plan = planner.convert(action)
     plan.files shouldBe List(
       PlanFile(PlanFileReference(1), read = true, write = true, temporary = true),
       PlanFile(PlanFileReference(2), read = true, write = true, temporary = false, cacheKey = Some(cacheKey))
     )
     val parts = splitOps(plan.op)
-    parts.size shouldBe 3 // CacheOp, AddMantikItem, TagMantikItem
+    parts.size shouldBe 2
     parts.head shouldBe an[PlanOp.CacheOp]
     parts(1) shouldBe an[PlanOp.AddMantikItem]
-    parts(2) shouldBe an[PlanOp.TagMantikItem]
   }
 
   it should "automatically cache training outputs" in new Env {
-    val trainable = TrainableAlgorithm(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.learning1)
+    val trainable = TrainableAlgorithm(MantikItemCore(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.learning1))
     val trainData = DataSet.literal(Bundle.fundamental(5))
     val (trained, stats) = trainable.train(trainData)
 
-    val trainedPlan = planner.convert(trained.save("algo1"))
-    val statsPlan = planner.convert(stats.save("stats1"))
+    val trainedPlan = planner.convert(trained.save())
+    val statsPlan = planner.convert(stats.save())
     trainedPlan.cacheGroups shouldNot be(empty)
     statsPlan.cacheGroups shouldNot be(empty)
     trainedPlan.cacheGroups shouldBe statsPlan.cacheGroups

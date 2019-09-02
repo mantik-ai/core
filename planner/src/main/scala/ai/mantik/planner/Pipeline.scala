@@ -10,34 +10,34 @@ import ai.mantik.elements.{ Mantikfile, PipelineDefinition }
  *
  * They can be stored independently in the Repository and can be deployed.
  */
-class Pipeline private[planner] (
-    private[planner] val definitionSource: DefinitionSource,
-    private[planner] val mantikfile: Mantikfile[PipelineDefinition],
+case class Pipeline private[planner] (
+    core: MantikItemCore[PipelineDefinition],
     private[planner] val resolved: ResolvedPipeline
 ) extends MantikItem with ApplicableMantikItem {
 
+  def this(definitionSource: DefinitionSource, mantikfile: Mantikfile[PipelineDefinition], resolved: ResolvedPipeline) = {
+    this(MantikItemCore(Source(definitionSource, PayloadSource.Empty), mantikfile), resolved)
+  }
+
   override type DefinitionType = PipelineDefinition
   override type OwnType = Pipeline
-
-  /** Pipelines do not have a source. */
-  override val payloadSource: PayloadSource = PayloadSource.Empty
-
-  override def source: Source = Source(definitionSource, payloadSource)
 
   override def functionType: FunctionType = resolved.functionType
 
   /** Returns the number of steps. */
   def stepCount: Int = resolved.steps.size
 
-  override protected def withMantikfile(mantikfile: Mantikfile[PipelineDefinition]): Pipeline = {
+  override protected def withCore(updated: MantikItemCore[PipelineDefinition]): Pipeline = {
+    if (updated.mantikfile == core.mantikfile) {
+      return copy(core = updated)
+    }
     // Note: this is an expensive operation here
     // as we have to re-resolve the pipeline.
     val referenced = resolved.referencedAlgorithms
     PipelineResolver.resolvePipeline(mantikfile, referenced) match {
       case Left(error) => throw error
-      case Right(resolved) => new Pipeline(
-        DefinitionSource.Derived(definitionSource), mantikfile, resolved
-      )
+      case Right(resolved) =>
+        Pipeline(updated, resolved)
     }
   }
 }

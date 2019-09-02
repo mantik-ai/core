@@ -21,6 +21,7 @@ import javax.inject.{ Inject, Named, Singleton }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.util.Success
 
 /** Responsible for executing plans. */
 private[planner] class PlanExecutorImpl(
@@ -59,15 +60,22 @@ private[planner] class PlanExecutorImpl(
       openFiles <- FutureHelper.time(logger, "Open Files") {
         openFilesBuilder.openFiles(plan.cacheGroups, plan.files)
       }
-      result <- executeOp(plan.op)(openFiles)
+      memory = new Memory()
+      result <- executeOp(plan.op)(openFiles, memory)
     } yield result.asInstanceOf[T]
   }
 
-  def executeOp(planOp: PlanOp)(implicit files: ExecutionOpenFiles): Future[Any] = {
+  def executeOp(planOp: PlanOp)(implicit files: ExecutionOpenFiles, memory: Memory): Future[Any] = {
+    executeOpInner(planOp).andThen {
+      case Success(value) => memory.setLast(value)
+    }
+  }
+
+  private def executeOpInner(planOp: PlanOp)(implicit files: ExecutionOpenFiles, memory: Memory): Future[Any] = {
     planOp match {
       case PlanOp.Sequential(parts) =>
         FutureHelper.time(logger, s"Running ${parts.length} sub tasks") {
-          FutureHelper.afterEachOtherStateful(parts, "empty start": Any) {
+          FutureHelper.afterEachOtherStateful(parts, memory.getLastOrNull()) {
             case (_, part) =>
               executeOp(part)
           }
@@ -96,12 +104,15 @@ private[planner] class PlanExecutorImpl(
         val fileId = fileReference.map(files.resolveFileId)
         val mantikfile = item.mantikfile
         val id = item.itemId
-        val artifact = MantikArtifact(mantikfile, fileId, None, item.itemId)
+        val namedId = item.name
+        val artifact = MantikArtifact(mantikfile, fileId, namedId, item.itemId)
         FutureHelper.time(logger, s"Adding Mantik Item $id") {
           repository.store(artifact).map { _ =>
             item.state.update { state =>
               state.copy(
-                isStored = true
+                itemStored = true,
+                nameStored = namedId.isDefined,
+                namedMantikItem = namedId
               )
             }
           }
@@ -117,7 +128,7 @@ private[planner] class PlanExecutorImpl(
           }
         }
       case PlanOp.PushMantikItem(item) =>
-        if (!item.state.get.isStored) {
+        if (!item.state.get.itemStored) {
           throw new InconsistencyException("Item is not stored")
         }
         val mantikId = item.mantikId
@@ -195,6 +206,12 @@ private[planner] class PlanExecutorImpl(
         }
       case c: PlanOp.Const =>
         Future.successful(c.value)
+      case c: PlanOp.MemoryReader =>
+        Future.successful(memory.get(c.memoryId))
+      case c: PlanOp.MemoryWriter =>
+        val last = memory.getLast()
+        memory.put(c.memoryId, last)
+        Future.successful(last)
     }
   }
 

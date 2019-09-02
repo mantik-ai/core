@@ -1,9 +1,9 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.elements.ItemId
-import ai.mantik.planner.impl.PlanningState.{ ItemDeployed, ItemStored }
-import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.{ CacheKey, CacheKeyGroup, DataSet, MantikItem, PayloadSource, PlanFile, PlanFileReference }
+import ai.mantik.elements.{ ItemId, NamedMantikId }
+import ai.mantik.planner.impl.PlanningState.ItemStateOverride
+import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo }
+import ai.mantik.planner.{ CacheKey, CacheKeyGroup, DataSet, DeploymentState, MantikItem, MantikItemState, MemoryId, PayloadSource, PlanFile, PlanFileReference }
 import cats.data.State
 
 /**
@@ -11,15 +11,16 @@ import cats.data.State
  * @param nextNodeId the next available node id.
  * @param nextFileReferenceId the next available file reference id
  * @param filesRev requested files (reverse).
- * @param stored items which were stored within the plan.
+ * @param stateOverrides override of Mantik State (where the planner decided a new target state)
+ * @param nextMemoryId the next available id for memoized values.
  */
 private[impl] case class PlanningState(
     private val nextNodeId: Int = 1,
     private val nextFileReferenceId: Int = 1,
     private val filesRev: List[PlanFile] = Nil, // reverse requested files
     cacheGroups: List[CacheKeyGroup] = Nil,
-    private val stored: Map[ItemId, PlanningState.ItemStored] = Map.empty,
-    private val deployed: Map[ItemId, PlanningState.ItemDeployed] = Map.empty
+    private val stateOverrides: Map[ItemId, ItemStateOverride] = Map.empty,
+    private val nextMemoryId: Int = 1
 ) {
 
   /** Returns files in request order. */
@@ -28,6 +29,11 @@ private[impl] case class PlanningState(
   /** Fetches a new Node Id and returns the next planning state. */
   def withNextNodeId: (PlanningState, String) = {
     copy(nextNodeId = nextNodeId + 1) -> nextNodeId.toString
+  }
+
+  /** Generates a new memorisation id. */
+  def withNextMemoryId: (PlanningState, String) = {
+    copy(nextMemoryId = nextMemoryId + 1) -> ("var" + nextMemoryId.toString)
   }
 
   /** Mark files as cache files. */
@@ -88,94 +94,50 @@ private[impl] case class PlanningState(
     ) -> file
   }
 
-  /** Add an item to the stored values. */
-  def withItemStored(itemId: ItemId, storage: PlanningState.ItemStored): PlanningState = {
-    copy(
-      stored = stored + (itemId -> storage)
+  /** Returns overriding state for an item. */
+  def overrideState(item: MantikItem): ItemStateOverride = {
+    stateOverrides.getOrElse(item.itemId, initialOverrideState(item))
+  }
+
+  private def initialOverrideState(item: MantikItem): ItemStateOverride = {
+    val itemState = item.state.get
+    ItemStateOverride(
+      stored = itemState.itemStored,
+      storedWithName = itemState.namedMantikItem.filter(_ => itemState.nameStored),
+      deployed = itemState.deployment.map { state =>
+        Left(state)
+      }
     )
   }
 
-  /**
-   * Figures out the stored payload of an item.
-   * This can either be already persistent storage, or it was
-   * added in an earlier stage.
-   */
-  def itemStorage(item: MantikItem): (PlanningState, Option[ItemStored]) = {
-    stored.get(item.itemId) match {
-      case Some(already) =>
-        // is stored inside the state
-        this -> Some(already)
-      case None =>
-        // maybe it's already stored in the item?
-        val state = item.state.get
-        if (state.isStored) {
-          // it is stored, access the payload, if it has some...
-          state.payloadFile match {
-            case Some(payloadFile) =>
-              val (nextState, file) = readFile(payloadFile)
-              val contentType = itemPayloadContentType(item)
-              val fileWithContentType = PlanFileWithContentType(file.ref, contentType)
-              nextState -> Some(ItemStored(payload = Some(fileWithContentType)))
-            case None =>
-              // item is stored, but has no payload file
-              this -> Some(ItemStored(payload = None))
-          }
-        } else {
-          // not yet stored
-          this -> None
-        }
-    }
-  }
-
-  /**
-   * Figures out, if an item is deployed, either before or within this plan.
-   */
-  def itemDeployed(item: MantikItem): Option[ItemDeployed] = {
-    deployed.get(item.itemId) match {
-      case Some(already) =>
-        // already deployed
-        Some(already)
-      case None =>
-        // maybe it's already deployed?
-        val state = item.state.get
-        state.deployment match {
-          case Some(deployment) =>
-            // ok, deployed in advance
-            Some(ItemDeployed())
-          case None =>
-            // not yet deployed
-            None
-        }
-    }
-  }
-
-  /** Add a deployment state to the item. */
-  def withItemDeployed(item: ItemId, deploy: ItemDeployed): PlanningState = {
+  /** Set an item override. */
+  def withOverrideState(item: MantikItem, o: ItemStateOverride): PlanningState = {
     copy(
-      deployed = deployed + (item -> deploy)
+      stateOverrides = stateOverrides + (item.itemId -> o)
     )
   }
 
-  private def itemPayloadContentType(item: MantikItem): String = {
-    // TODO: We need a better place for this distinguishment
-    // Also the format content type may be runtime specific.
-    item match {
-      case ds: DataSet if ds.stack == DataSet.NaturalFormatName =>
-        ContentTypes.MantikBundleContentType
-      case _ => ContentTypes.ZipFileContentType
-    }
+  /** Set an item override, modifying the current one. */
+  def withOverrideFunc(item: MantikItem, f: ItemStateOverride => ItemStateOverride): PlanningState = {
+    val current = overrideState(item)
+    val modified = f(current)
+    withOverrideState(item, modified)
   }
 }
 
 private[impl] object PlanningState {
 
-  /** Information about an item which was stored within the plan. */
-  case class ItemStored(
-      payload: Option[PlanFileWithContentType]
-  )
-
-  /** Information about an item which was deployed within the plan. */
-  case class ItemDeployed( // no data yet
+  /** Overridden information on items. */
+  case class ItemStateOverride(
+      // If set, the payload is already requested
+      payloadAvailable: Option[IndexedSeq[PlanFileWithContentType]] = None,
+      // True if the item was saved
+      stored: Boolean,
+      // True if the item was saved under a mantik id.
+      storedWithName: Option[NamedMantikId],
+      // if item was deployed, contains either deployment info or a memory id
+      // where the deployment info can be picked up.
+      deployed: Option[Either[DeploymentState, MemoryId]]
   )
 
   /**
@@ -206,6 +168,14 @@ private[impl] object PlanningState {
    */
   def apply[T](f: PlanningState => (PlanningState, T)): State[PlanningState, T] = {
     State(f)
+  }
+
+  def inspect[T](f: PlanningState => T): State[PlanningState, T] = {
+    State.inspect(f)
+  }
+
+  def modify[T](f: PlanningState => PlanningState): State[PlanningState, Unit] = {
+    State.modify(f)
   }
 
   /** A Non-state-changing function. */

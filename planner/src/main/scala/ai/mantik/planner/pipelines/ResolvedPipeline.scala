@@ -9,21 +9,14 @@ import ai.mantik.planner.Algorithm
  * All pipeline steps are matched to algorithms.
  */
 private[planner] case class ResolvedPipeline(
-    steps: List[ResolvedPipelineStep],
+    steps: List[Algorithm],
     functionType: FunctionType
 ) {
 
   /** Build a Map of Referenced Algorithms. */
   private[planner] def referencedAlgorithms: PipelineResolver.ReferencedAlgorithms = {
     steps.collect {
-      case ResolvedPipelineStep(as: PipelineStep.AlgorithmStep, algorithm) =>
-        as.algorithm -> algorithm
+      case algorithm if algorithm.select.isEmpty => algorithm.mantikId -> algorithm
     }.toMap
   }
 }
-
-/** A Resolved pipeline step. */
-private[planner] case class ResolvedPipelineStep(
-    pipelineStep: PipelineStep,
-    algorithm: Algorithm
-)

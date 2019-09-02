@@ -188,7 +188,7 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements) {
     val steps = pipeline.resolved.steps
     require(steps.nonEmpty, "Pipelines may not be empty")
     steps.map { step =>
-      manifestAlgorithm(step.algorithm)
+      manifestAlgorithm(step)
     }.sequence.map { plans: List[ResourcePlan] =>
       val resultPlan = plans.reduce[ResourcePlan] { (c, n) =>
         n.application(c)
