@@ -7,12 +7,14 @@ import ai.mantik.elements.{ ItemId, NamedMantikId }
  * Note: this state is mutable inside a Mantik Item.
  *
  * @param namedMantikItem the mantik id if the Item is stored/loaded inside the repository.
- * @param isStored the item is stored (this doesn't require that it has a mantik Id).
+ * @param itemStored the item itself is stored (this doesn't require that it has a mantik id)
+ * @param nameStored the name is stored (this also requires that the item is stored).
  * @param deployment information about deployment
  */
 case class MantikItemState(
     namedMantikItem: Option[NamedMantikId] = None,
-    isStored: Boolean = false,
+    itemStored: Boolean = false,
+    nameStored: Boolean = false,
     payloadFile: Option[String] = None,
     deployment: Option[DeploymentState] = None
 )

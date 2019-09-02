@@ -23,17 +23,45 @@ object Source {
 }
 
 /** Represents the way [[MantikItem]](s) get their Definition data from. */
-sealed trait DefinitionSource
+sealed trait DefinitionSource {
+  /** Returns true if the source is indicating that the name is stored. */
+  def nameStored: Boolean = false
+  /** Returns tre if the source is indicating that the item is stored. */
+  def itemStored: Boolean = false
+  /** Returns a name if the source indicates that the item has one. */
+  def name: Option[NamedMantikId] = None
+  /** Returns an item id if the source indicates that the item has one. */
+  def storedItemId: Option[ItemId] = None
+}
 
 object DefinitionSource {
   /** The item was loaded from the repository. */
-  case class Loaded(mantikId: Option[NamedMantikId], itemId: ItemId) extends DefinitionSource
+  case class Loaded(mantikId: Option[NamedMantikId], itemId: ItemId) extends DefinitionSource {
+    override def nameStored: Boolean = mantikId.isDefined
+
+    override def itemStored: Boolean = true
+
+    override def name: Option[NamedMantikId] = mantikId
+
+    override def storedItemId: Option[ItemId] = Some(itemId)
+  }
 
   /** The item was artificially constructed (e.g. literals, calculations, ...) */
   case class Constructed() extends DefinitionSource
 
   /** The item was somehow derived from another one (e.g. changing Mantikfile) */
   case class Derived(other: DefinitionSource) extends DefinitionSource
+
+  /** The item was tagged with a name. */
+  case class Tagged(namedId: NamedMantikId, from: DefinitionSource) extends DefinitionSource {
+    override def nameStored: Boolean = false
+
+    override def itemStored: Boolean = from.itemStored
+
+    override def name: Option[NamedMantikId] = Some(namedId)
+
+    override def storedItemId: Option[ItemId] = from.storedItemId
+  }
 }
 
 /** Defines an operation. */

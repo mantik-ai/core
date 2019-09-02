@@ -13,8 +13,7 @@ class ConversionNotApplicableException(msg: String) extends IllegalArgumentExcep
 
 /** Represents a DataSet. */
 case class DataSet(
-    source: Source,
-    private [planner] val mantikfile: Mantikfile[DataSetDefinition]
+  core: MantikItemCore[DataSetDefinition]
 ) extends MantikItem {
 
   override type DefinitionType = DataSetDefinition
@@ -79,14 +78,14 @@ case class DataSet(
           DefinitionSource.Derived(source.definition),
           PayloadSource.Cached(source.payload)
         )
-        new DataSet(updatedSource, mantikfile)
+        copy(
+          core = core.copy(source = updatedSource)
+        )
     }
   }
 
-  override protected def withMantikfile(mantikfile: Mantikfile[DataSetDefinition]): DataSet = {
-    DataSet(
-      source.derive, mantikfile
-    )
+  override protected def withCore(core: MantikItemCore[DataSetDefinition]): DataSet = {
+    copy(core = core)
   }
 }
 
@@ -96,6 +95,11 @@ object DataSet {
     natural(
       Source.constructed(PayloadSource.BundleLiteral(bundle)), bundle.model
     )
+  }
+
+
+  def apply(source: Source, mantikfile: Mantikfile[DataSetDefinition]): DataSet = {
+    DataSet(MantikItemCore(source, mantikfile))
   }
 
   /** Creates a natural data source, with serialized data coming direct from a flow. */

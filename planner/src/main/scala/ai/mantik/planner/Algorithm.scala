@@ -9,8 +9,7 @@ import ai.mantik.planner.select.Select
 
 /** Some A => B Transformation Algorithm */
 case class Algorithm(
-    source: Source,
-    private[planner] val mantikfile: Mantikfile[AlgorithmDefinition],
+    core: MantikItemCore[AlgorithmDefinition],
     private[planner] val select: Option[Select] = None
 ) extends ApplicableMantikItem {
 
@@ -19,15 +18,16 @@ case class Algorithm(
 
   override def functionType: FunctionType = mantikfile.definition.`type`
 
-  override protected def withMantikfile(mantikfile: Mantikfile[AlgorithmDefinition]): Algorithm = {
-    copy(
-      source = source.derive,
-      mantikfile = mantikfile
-    )
+  override protected def withCore(core: MantikItemCore[AlgorithmDefinition]): Algorithm = {
+    copy(core = core)
   }
 }
 
 object Algorithm {
+
+  def apply(source: Source, mantikfile: Mantikfile[AlgorithmDefinition]): Algorithm = {
+    Algorithm(MantikItemCore(source, mantikfile))
+  }
 
   /** Convert a Select statement into an algorithm. */
   def fromSelect(select: Select): Algorithm = {
@@ -37,6 +37,6 @@ object Algorithm {
         throw new FeatureNotSupported(s"Could not compile select ${error}")
       case Right(ok) => ok
     }
-    Algorithm(Source.constructed(), mantikFile, Some(select))
+    Algorithm(MantikItemCore(Source.constructed(), mantikFile), Some(select))
   }
 }

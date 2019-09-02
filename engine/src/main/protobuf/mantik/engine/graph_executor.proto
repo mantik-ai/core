@@ -29,12 +29,15 @@ message SaveItemRequest {
     string session_id = 1;
     string item_id = 2;
     // Name under which the item is to be stored (can be name:version)
+    // if not given, the current name is used (see tag command)
     string name = 3;
 }
 
 message SaveItemResponse {
-    // Name under which the item has been saved
+    // Name under which the item has been saved, can be empty
     string name = 1;
+    // Mantik Item Id under which this item has been saved.
+    string mantik_item_id = 2;
 }
 
 message DeployItemRequest {

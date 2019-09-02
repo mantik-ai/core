@@ -18,31 +18,51 @@ trait MantikItem {
   type DefinitionType <: MantikDefinition
   type OwnType <: MantikItem
 
+  private[mantik] val core: MantikItemCore[DefinitionType]
+
   /** Returns where the Item comes from. */
-  private[mantik] def source: Source
+  private[mantik] def source: Source = core.source
   /** Returns where the item payload comes from. */
   private[mantik] def payloadSource: PayloadSource = source.payload
+  /** Returns where the mantikfile / item comes from. */
+  private[mantik] def definitionSource: DefinitionSource = source.definition
   /** Returns the item's Mantikfile with definition. */
-  private[planner] def mantikfile: Mantikfile[DefinitionType]
+  private[planner] def mantikfile: Mantikfile[DefinitionType] = core.mantikfile
 
   /** The state of the mantik Item. */
   private[planner] val state: AtomicReference[MantikItemState] = new AtomicReference({
-    val (mantikId, loaded): (Option[NamedMantikId], Boolean) = source.definition match {
-      case DefinitionSource.Loaded(mantikId, _) => mantikId -> true
-      case _                                    => None -> false
-    }
     val file = source.payload match {
       case PayloadSource.Loaded(fileId, _) => Some(fileId)
       case _                               => None
     }
-    MantikItemState(mantikId, loaded, file)
+    MantikItemState(
+      namedMantikItem = source.definition.name,
+      itemStored = source.definition.itemStored,
+      nameStored = source.definition.nameStored,
+      payloadFile = file
+    )
   })
 
+  /**
+   * Tag the item, giving it an additional name.
+   *
+   * Note: this will only have an effect, if the Item is saved or pushed.
+   *
+   * @return the tagged item.
+   */
+  def tag(name: NamedMantikId): OwnType = withCore(
+    core.copy(
+      source = source.copy(
+        definition = DefinitionSource.Tagged(name, source.definition)
+      )
+    )
+  )
+
   /** Save an item back in the local database */
-  def save(id: NamedMantikId): Action.SaveAction = Action.SaveAction(this, id)
+  def save(): Action.SaveAction = Action.SaveAction(this)
 
   /** Pushes an item to the registry. */
-  def push(id: NamedMantikId): Action.PushAction = Action.PushAction(this, id)
+  def push(): Action.PushAction = Action.PushAction(this)
 
   /** Returns the type's stack. */
   def stack: String = mantikfile.definition.stack
@@ -52,16 +72,18 @@ trait MantikItem {
    * Note: this doesn't mean that the item is stored.
    */
   def mantikId: MantikId = {
-    state.get.namedMantikItem.getOrElse(itemId)
+    name.getOrElse(itemId)
+  }
+
+  /** Returns the name of the item, if it has one. */
+  def name: Option[NamedMantikId] = {
+    state.get.namedMantikItem
   }
 
   /**
    * Returns the [[ItemId]] of the item. This is a new value if the item was not loaded.
    */
-  lazy val itemId: ItemId = source.definition match {
-    case l: DefinitionSource.Loaded => l.itemId
-    case _                          => ItemId.generate()
-  }
+  lazy val itemId: ItemId = source.definition.storedItemId.getOrElse(ItemId.generate())
 
   /**
    * Update Meta Variables.
@@ -84,19 +106,39 @@ trait MantikItem {
   }
 
   /** Override the mantik file (not this can be dangerous). */
-  protected def withMantikfile(mantikfile: Mantikfile[DefinitionType]): OwnType
+  protected def withMantikfile(mantikfile: Mantikfile[DefinitionType]): OwnType = {
+    withCore(
+      MantikItemCore(
+        source = source.derive,
+        mantikfile = mantikfile
+      )
+    )
+  }
 
   override def toString: String = {
-    val simpleName = getClass.getSimpleName
-    val id = mantikId
-    val stored = if (state.get.isStored) {
-      "stored"
-    } else {
-      ""
+    val builder = StringBuilder.newBuilder
+    builder ++= getClass.getSimpleName
+    builder += ' '
+    builder ++= mantikId.toString
+    val s = state.get
+    if (s.itemStored) {
+      builder ++= " itemStored"
     }
-    s"${simpleName}(${id} ${stored})"
+    if (s.nameStored) {
+      builder ++= " nameStored"
+    }
+    builder.result()
   }
+
+  /** Override the current source type. */
+  protected def withCore(updated: MantikItemCore[DefinitionType]): OwnType
 }
+
+/** Contains the common base data for every MantikItem. */
+case class MantikItemCore[T <: MantikDefinition](
+    source: Source,
+    mantikfile: Mantikfile[T]
+)
 
 /** A Mantik Item which can be applied to DataSets (e.g. Algorithms). */
 trait ApplicableMantikItem extends MantikItem {
@@ -134,17 +176,20 @@ object MantikItem {
       payloadSource
     )
 
-    def forceExtract[T <: MantikDefinition: ClassTag]: Mantikfile[T] = artifact.mantikfile.cast[T].right.get
+    def forceExtract[T <: MantikDefinition: ClassTag]: MantikItemCore[T] = {
+      val mantikfile = artifact.mantikfile.cast[T].right.get
+      MantikItemCore(source, mantikfile)
+    }
 
     val item = artifact.mantikfile.definition match {
-      case a: AlgorithmDefinition          => Algorithm(source, forceExtract)
-      case d: DataSetDefinition            => DataSet(source, forceExtract)
-      case t: TrainableAlgorithmDefinition => TrainableAlgorithm(source, forceExtract)
+      case a: AlgorithmDefinition          => Algorithm(forceExtract)
+      case d: DataSetDefinition            => DataSet(forceExtract)
+      case t: TrainableAlgorithmDefinition => TrainableAlgorithm(forceExtract)
       case p: PipelineDefinition =>
         val referenced = hull.map { item =>
           item.mantikId -> fromMantikArtifact(item)
         }.toMap
-        PipelineBuilder.buildOrFailFromMantikfile(source.definition, forceExtract, referenced)
+        PipelineBuilder.buildOrFailFromMantikfile(source.definition, forceExtract[PipelineDefinition].mantikfile, referenced)
     }
 
     artifact.deploymentInfo.foreach { deploymentInfo =>

@@ -11,7 +11,7 @@ object PipelineExample extends ExampleBase {
   override protected def run(context: Context): Unit = {
     context.pushLocalMantikFile(mnistAnnotated, id = Some("mnist_annotated"))
 
-    val mnist = context.loadAlgorithm("mnist_annotated")
+    val mnist = context.loadAlgorithm("mnist_annotated").tag("nob/mnist_annotated") //otherwise it can't be pushed
 
     val pipeline = Pipeline.build(
       mnist
@@ -21,7 +21,8 @@ object PipelineExample extends ExampleBase {
     println(s"Pipeline deployed at ${result.externalUrl.get}")
 
     val pushMantikId = NamedMantikId("nob/mnist1")
-    context.execute(pipeline.push(pushMantikId))
+    val named = pipeline.tag("nob/mnist1")
+    context.execute(named.push())
     println(s"Pipeline pushed to ${pushMantikId}")
 
     // This still fails, see #114

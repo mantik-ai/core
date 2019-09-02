@@ -1,8 +1,9 @@
 package ai.mantik.engine.server.services
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, NodeResponse, SelectRequest, TrainRequest, TrainResponse }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, NodeResponse, SelectRequest, TagRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager }
 import ai.mantik.planner.repository.Errors
@@ -107,6 +108,17 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
       val inputType = request.inputType.map(Converters.decodeDataType)
       val pipeline = Pipeline.buildFromSteps(steps, inputType)
       placeInGraph(session, pipeline)
+    }
+  }
+
+  override def tag(request: TagRequest): Future[NodeResponse] = {
+    for {
+      session <- sessionManager.get(request.sessionId)
+      item = session.getItemAs[MantikItem](request.itemId)
+      mantikId = NamedMantikId.fromString(request.namedMantikId)
+      tagged = item.tag(mantikId)
+    } yield {
+      placeInGraph(session, tagged)
     }
   }
 }

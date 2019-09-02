@@ -2,13 +2,15 @@ package ai.mantik.planner
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ ItemId, MantikDefinition, NamedMantikId, Mantikfile }
+import ai.mantik.elements.{ ItemId, MantikDefinition, Mantikfile, NamedMantikId }
 import ai.mantik.executor.model.Graph
 import ai.mantik.executor.model.docker.Container
 
 /**
  * A plan is something which can be executed. They are created by the [[Planner]]
  * and are executed by the [[PlanExecutor]].
+ *
+ * They should be serializable in future (however this is tricky because of MantikItem references)
  */
 case class Plan[T](
     op: PlanOp,
@@ -117,6 +119,15 @@ object PlanOp {
 
   /** Plan Op which just returns a fixed value. */
   case class Const(value: AnyRef) extends PlanOp
+
+  /**
+   * Plan op which stores the result of the last operation into the memory.
+   * Also returns the value again to make it transparent
+   */
+  case class MemoryWriter(memoryId: MemoryId) extends PlanOp
+
+  /** Plan op which reads the result of another one from the memory. Must be called later. */
+  case class MemoryReader(memoryId: MemoryId) extends PlanOp
 
   /** Convenience method for constructing Sequential Plans. */
   def seq(plans: PlanOp*): Sequential = Sequential(plans)

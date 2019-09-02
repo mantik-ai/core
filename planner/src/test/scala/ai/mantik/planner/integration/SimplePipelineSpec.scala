@@ -45,7 +45,7 @@ class SimplePipelineSpec extends IntegrationTestBase {
   }
 
   it should "be possible to save and restore a pipeline" in new Env {
-    context.execute(pipeline.save("pipeline1"))
+    context.execute(pipeline.tag("pipeline1").save())
     val loadedAgain = context.loadPipeline("pipeline1")
 
     val applied = loadedAgain.apply(inputDataSet)

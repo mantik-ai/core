@@ -21,6 +21,8 @@ service GraphBuilderService {
     rpc Select(SelectRequest) returns (NodeResponse) {}
     /** Build a pipeline from Algorithms. */
     rpc BuildPipeline(BuildPipelineRequest) returns (NodeResponse){}
+    /* Returns the item using a new name. */
+    rpc Tag(TagRequest) returns(NodeResponse) {}
 }
 
 message GetRequest {
@@ -92,3 +94,9 @@ message BuildPipelineStep {
     }
 }
 
+// A Single tag Request
+message TagRequest {
+    string session_id = 1;
+    string item_id = 2;
+    string named_mantik_id = 3;
+}

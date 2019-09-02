@@ -16,6 +16,8 @@ import javax.inject.{ Inject, Singleton }
 import org.apache.commons.io.FileUtils
 import org.sqlite.{ SQLiteErrorCode, SQLiteException }
 
+import scala.util.{ Failure, Success }
+
 /** A local repository for artifacts based upon Sqlite. */
 @Singleton
 class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Repository {
@@ -45,7 +47,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   )
 
   override def get(id: MantikId): Future[MantikArtifact] = {
-    Future {
+    dbOperation(s"get $id") {
       val maybeItem = id match {
         case i: ItemId        => getByItemId(i)
         case n: NamedMantikId => getByName(n)
@@ -85,7 +87,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   }
 
   override def store(mantikArtifact: MantikArtifact): Future[Unit] = {
-    Future {
+    dbOperation(s"store ${mantikArtifact.namedId.getOrElse("")} ${mantikArtifact.itemId}") {
       val converted = encodeDbArtifact(mantikArtifact)
       val namedId = mantikArtifact.namedId
 
@@ -123,6 +125,15 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       currentItemId = itemId.toString
     )
 
+    val existingItem = run {
+      db.items.filter(_.itemId == lift(itemId.toString)).nonEmpty
+    }
+
+    // The database would also tell us, but DB Exceptions are hard to debug.
+    if (!existingItem) {
+      throw new Errors.NotFoundException(s"Item ${itemId} doesn't exist")
+    }
+
     val exists = run {
       db.names.filter { e =>
         e.account == lift(mantikId.account) &&
@@ -150,7 +161,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   }
 
   override def ensureMantikId(id: ItemId, mantikId: NamedMantikId): Future[Boolean] = {
-    Future {
+    dbOperation(s"ensureMantikId ${id} ${mantikId}") {
       transaction {
         tagItemExec(id, mantikId)
       }
@@ -158,7 +169,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   }
 
   override def setDeploymentInfo(itemId: ItemId, info: Option[DeploymentInfo]): Future[Boolean] = {
-    Future {
+    dbOperation(s"setDeploymentInfo ${itemId}") {
       transaction(updateDeploymentStateOp(itemId, info))
     }
   }
@@ -197,7 +208,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   }
 
   override def remove(id: MantikId): Future[Boolean] = {
-    Future {
+    dbOperation(s"remove ${id}") {
       id match {
         case named: NamedMantikId =>
           // note: the item itself is not deleted, but dereferenced.
@@ -285,6 +296,17 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       fileId = a.fileId,
       itemId = a.itemId.toString
     )
+  }
+
+  /** Run a DB Operation, looks for unhandled errors */
+  private def dbOperation[T](name: => String)(f: => T): Future[T] = {
+    Future(f).andThen {
+      case Success(_) =>
+        logger.debug(s"Executed ${name}")
+      case Failure(e: Errors.RegistryException) => // ok, handled
+      case Failure(e) =>
+        logger.error(s"Unhandled database error in $name", e)
+    }
   }
 }
 

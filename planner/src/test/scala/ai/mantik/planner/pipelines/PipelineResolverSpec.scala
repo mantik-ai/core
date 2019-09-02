@@ -99,8 +99,8 @@ class PipelineResolverSpec extends TestBase {
   it should "resolve a simple pipeline" in {
     val resolved = resolvePipeline2(algorithm1, algorithm2).forceRight
     resolved.steps shouldBe List(
-      ResolvedPipelineStep(PipelineStep.AlgorithmStep("a"), algorithm1),
-      ResolvedPipelineStep(PipelineStep.AlgorithmStep("b"), algorithm2)
+      algorithm1,
+      algorithm2
     )
     resolved.functionType shouldBe FunctionType(
       input = algorithm1.functionType.input,
@@ -167,7 +167,7 @@ class PipelineResolverSpec extends TestBase {
     resolved.functionType.output shouldBe TabularData("z" -> Tensor(FundamentalType.Float32, List(2)))
 
     // no change in algorithm, so still constructed.
-    resolved.steps(1).algorithm.source.definition shouldBe an[DefinitionSource.Constructed]
+    resolved.steps(1).source.definition shouldBe an[DefinitionSource.Constructed]
 
     val resolvedWithApplication = PipelineResolver.resolvePipeline(
       Mantikfile.pure(PipelineDefinition(
@@ -185,7 +185,7 @@ class PipelineResolverSpec extends TestBase {
       )
     ).forceRight
     resolvedWithApplication.functionType.output shouldBe TabularData("z" -> Tensor(FundamentalType.Float32, List(10)))
-    resolvedWithApplication.steps(1).algorithm.source.definition shouldBe an[DefinitionSource.Derived]
+    resolvedWithApplication.steps(1).source.definition shouldBe an[DefinitionSource.Derived]
 
   }
 

@@ -50,7 +50,8 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
       session1.id, dataset1Id, "foo1"
     )))
     response.name shouldBe "foo1"
-    components.lastPlan shouldBe components.planner.convert(dataset.save("foo1"))
+    response.mantikItemId shouldNot be(empty)
+    components.lastPlan shouldBe components.planner.convert(dataset.tag("foo1").save())
   }
 
   "deploy" should "deploy elements" in new Env {

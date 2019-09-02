@@ -1,10 +1,10 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.elements.{ MantikId, NamedMantikId, PipelineStep }
+import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId, PipelineStep }
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
-import ai.mantik.planner.pipelines.ResolvedPipelineStep
+import ai.mantik.planner.repository.ContentTypes
 import cats.data.State
 import cats.implicits._
 import javax.inject.Inject
@@ -31,7 +31,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
   def convertSingleAction[T](action: Action[T]): State[PlanningState, PlanOp] = {
     action match {
       case s: Action.SaveAction =>
-        ensureItemWithDependenciesStoredWithName(s.item, s.id)
+        ensureItemWithDependenciesStored(s.item)
       case p: Action.FetchAction =>
         resourcePlanBuilder.manifestDataSetAsFile(p.dataSet, canBeTemporary = true).map { filesPlan =>
           val fileRef = filesPlan.fileRefs.head
@@ -41,7 +41,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
           )
         }
       case p: Action.PushAction =>
-        ensureItemWithDependenciesStoredWithName(p.item, p.id).map { op =>
+        ensureItemWithDependenciesStored(p.item).map { op =>
           PlanOp.seq(op, PlanOp.PushMantikItem(p.item))
         }
       case d: Action.Deploy =>
@@ -67,29 +67,89 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
 
   /** Ensure that the item is stored inside the database. */
   def ensureItemStored(item: MantikItem): State[PlanningState, FilesPlan] = {
-    PlanningState(_.itemStorage(item)).flatMap {
-      case None =>
-        // not yet stored
-        storeSingleItem(item)
-      case Some(stored) =>
-        // already stored
-        PlanningState.pure {
-          FilesPlan(
-            PlanOp.Empty,
-            stored.payload.toIndexedSeq
-          )
-        }
+    PlanningState.inspect(_.overrideState(item)).flatMap { itemState =>
+      item.mantikId match {
+        case i: ItemId =>
+          if (itemState.stored) {
+            readPayloadFile(item)
+          } else {
+            storeSingleItem(item)
+          }
+        case n: NamedMantikId =>
+          if (itemState.stored) {
+            if (itemState.storedWithName.contains(n)) {
+              // already existing under this name
+              readPayloadFile(item)
+            } else {
+              // exists, however needs a tagging
+              for {
+                plan <- readPayloadFile(item)
+                withTag = plan.copy(preOp = PlanOp.combine(plan.preOp, PlanOp.TagMantikItem(item, n)))
+                _ <- PlanningState.modify(_.withOverrideFunc(item, _.copy(storedWithName = Some(n))))
+              } yield {
+                withTag
+              }
+            }
+          } else {
+            // full saving
+            storeSingleItem(item)
+          }
+      }
+    }
+  }
+
+  /** An empty operation which returns the payload file of an item, with a given itemState. */
+  private def readPayloadFile(item: MantikItem): State[PlanningState, FilesPlan] = {
+    PlanningState { planningState =>
+      val overrideState = planningState.overrideState(item)
+      val itemState = item.state.get
+      overrideState.payloadAvailable match {
+        case Some(already) =>
+          // Payload already loaded
+          val plan = FilesPlan(PlanOp.Empty, already)
+          planningState -> plan
+        case None =>
+          // Load from content
+          itemState.payloadFile match {
+            case Some(fileId) =>
+              // request read of the file
+              val (updatedState, readFile) = planningState.readFile(fileId)
+              val contentType = itemPayloadContentType(item)
+              val readFileWithContentType = PlanFileWithContentType(readFile.ref, contentType)
+              val files = IndexedSeq(readFileWithContentType)
+              val updatedState2 = updatedState.withOverrideFunc(
+                item,
+                _.copy(payloadAvailable = Some(files))
+              )
+              updatedState2 -> FilesPlan(
+                PlanOp.Empty,
+                files = files
+              )
+            case None =>
+              // there is nothing to read
+              planningState -> FilesPlan(PlanOp.Empty, IndexedSeq.empty)
+          }
+      }
+    }
+  }
+
+  private def itemPayloadContentType(item: MantikItem): String = {
+    // TODO: We need a better place for this distinguishment
+    // Also the format content type may be runtime specific.
+    item match {
+      case ds: DataSet if ds.stack == DataSet.NaturalFormatName =>
+        ContentTypes.MantikBundleContentType
+      case _ => ContentTypes.ZipFileContentType
     }
   }
 
   /** Ensure that an item with it's dependencies is stored. */
   def ensureItemWithDependenciesStored(item: MantikItem): State[PlanningState, PlanOp] = {
-    val dependent = dependentItems(item)
+    val dependent = dependentItemsForSaving(item)
 
     for {
-      dependentOps <- (dependent.map {
-        case (_, dependent) =>
-          ensureItemWithDependenciesStored(dependent)
+      dependentOps <- (dependent.map { dependent =>
+        ensureItemWithDependenciesStored(dependent)
       }).sequence
       mainOp <- ensureItemStored(item)
     } yield {
@@ -100,129 +160,134 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
     }
   }
 
-  def ensureItemWithDependenciesStoredWithName(item: MantikItem, id: NamedMantikId): State[PlanningState, PlanOp] = {
-    ensureItemWithDependenciesStored(item).map { preOp =>
-      PlanOp.seq(preOp, PlanOp.TagMantikItem(item, id))
-    }
-  }
-
   /** Store an item and also returns the file referencing to it. */
   def storeSingleItem(item: MantikItem): State[PlanningState, FilesPlan] = {
     resourcePlanBuilder.translateItemPayloadSourceAsFiles(item.payloadSource, canBeTemporary = false).flatMap { filesPlan =>
-      val file = filesPlan.files.headOption
-      val fileRef = file.map(_.ref)
-      val itemStored = PlanningState.ItemStored(payload = file)
+      val files = filesPlan.files
       PlanningState.apply { state =>
-        val updatedState = state.withItemStored(item.itemId, itemStored)
+        val updatedState = state.withOverrideFunc(item, e => e.copy(
+          payloadAvailable = Some(files),
+          stored = true,
+          storedWithName = item.name.orElse(e.storedWithName)
+        )
+        )
+        val fileRef = files.headOption.map(_.ref)
         val combinedOps = PlanOp.seq(
           filesPlan.preOp,
           PlanOp.AddMantikItem(item, fileRef)
         )
         updatedState -> FilesPlan(
           combinedOps,
-          file.toIndexedSeq
+          files
         )
       }
     }
   }
 
   private def storeDependentItems(item: MantikItem): State[PlanningState, PlanOp] = {
-    dependentItems(item).map {
-      case (mantikId, item) =>
-        if (item.state.get.isStored && item.mantikId == mantikId) {
-          // nothing to save
-          // already loaded under this name
-          PlanningState.pure(PlanOp.Empty: PlanOp)
-        } else {
-          storeItemWithDependencies(item)
-        }
+    dependentItemsForSaving(item).map { item =>
+      ensureItemWithDependenciesStored(item)
     }.sequence.map { changes =>
       PlanOp.seq(changes: _*)
     }
   }
 
   /** Returns dependent referenced items. */
-  private def dependentItems(item: MantikItem): List[(MantikId, MantikItem)] = {
+  private def dependentItemsForSaving(item: MantikItem): List[MantikItem] = {
     item match {
       case p: Pipeline =>
-        // do not collect select steps, they are stored as plain SQL elements.
         p.resolved.steps.collect {
-          case ResolvedPipelineStep(as: PipelineStep.AlgorithmStep, algorithm) =>
-            as.algorithm -> algorithm
+          case a if a.select.isEmpty => a
         }
       case _ => Nil
     }
   }
 
   private def deployAlgorithm(algorithm: Algorithm, nameHint: Option[String]): State[PlanningState, PlanOp] = {
-    // already deployed?
-    algorithm.state.get.deployment match {
-      case Some(existing) => return PlanningState.pure(PlanOp.Const(existing))
-      case None           => // continue
-    }
-
-    // Item must be present inside the database
-    // Then it can be deployed directly.
-
-    ensureItemStored(algorithm).flatMap { filePlan =>
-      val file = filePlan.files.headOption
-      val container = elements.algorithmContainer(algorithm.mantikfile, file.map(_.ref))
-      val serviceId = algorithm.itemId.toString
-      val op = PlanOp.DeployAlgorithm(
-        container,
-        serviceId,
-        nameHint,
-        algorithm
-      )
-      val combined = PlanOp.seq(
-        filePlan.preOp,
-        op
-      )
-      PlanningState { state =>
-        val updatedState = state.withItemDeployed(algorithm.itemId, PlanningState.ItemDeployed())
-        updatedState -> combined
+    PlanningState.flat { state =>
+      state.overrideState(algorithm).deployed match {
+        case Some(Left(existing)) =>
+          // already deployed before the planner ran
+          PlanningState.pure(PlanOp.Const(existing))
+        case Some(Right(memory)) =>
+          // already deployed withing planner
+          PlanningState.pure(PlanOp.MemoryReader(memory))
+        case None =>
+          // not yet deployed
+          for {
+            filePlan <- ensureItemStored(algorithm)
+            memoryId <- PlanningState.apply(_.withNextMemoryId)
+            _ <- PlanningState.modify { _.withOverrideFunc(algorithm, _.copy(deployed = Some(Right(memoryId)))) }
+          } yield {
+            val file = filePlan.files.headOption
+            val container = elements.algorithmContainer(algorithm.mantikfile, file.map(_.ref))
+            val serviceId = algorithm.itemId.toString
+            val op = PlanOp.DeployAlgorithm(
+              container,
+              serviceId,
+              nameHint,
+              algorithm
+            )
+            val combined = PlanOp.seq(
+              filePlan.preOp,
+              op,
+              PlanOp.MemoryWriter(memoryId)
+            )
+            combined
+          }
       }
     }
   }
 
   /** Deploy a pipeline. */
   def deployPipeline(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp] = {
-    // already deployed?
-    pipeline.state.get.deployment match {
-      case Some(existing) => return PlanningState.pure(PlanOp.Const(existing))
-      case None           => // continue
-    }
-
-    for {
-      stepDeployment <- ensureStepsDeployed(pipeline)
-      pipelineStorage <- ensureItemStored(pipeline)
-      pipeDeployment <- buildPipelineDeployment(pipeline, nameHint, ingress)
-    } yield {
-      PlanOp.seq(
-        stepDeployment,
-        pipelineStorage.preOp,
-        pipeDeployment
-      )
+    PlanningState.flat { state =>
+      state.overrideState(pipeline).deployed match {
+        case Some(Left(existing)) =>
+          // already deployed before the planner ran
+          PlanningState.pure(PlanOp.Const(existing))
+        case Some(Right(memory)) =>
+          // already deployed withing planner
+          PlanningState.pure(PlanOp.MemoryReader(memory))
+        case None =>
+          for {
+            stepDeployment <- ensureStepsDeployed(pipeline)
+            pipelineStorage <- ensureItemStored(pipeline)
+            pipeDeployment <- buildPipelineDeployment(pipeline, nameHint, ingress)
+          } yield {
+            PlanOp.seq(
+              stepDeployment,
+              pipelineStorage.preOp,
+              pipeDeployment
+            )
+          }
+      }
     }
   }
 
   private def buildPipelineDeployment(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp] = {
-    PlanningState { state =>
+    for {
+      memoryId <- PlanningState.apply(_.withNextMemoryId)
+      _ <- PlanningState.modify(_.withOverrideFunc(pipeline, _.copy(
+        deployed = Some(Right(memoryId))
+      )))
+    } yield {
       val serviceId = pipeline.itemId.toString
-      val op = PlanOp.DeployPipeline(
+      val op1 = PlanOp.DeployPipeline(
         item = pipeline,
         serviceId = serviceId,
         serviceNameHint = nameHint,
         ingress = ingress,
-        steps = pipeline.resolved.steps.map(_.algorithm)
+        steps = pipeline.resolved.steps
       )
-      state.withItemDeployed(pipeline.itemId, PlanningState.ItemDeployed()) -> op
+      val op2 = PlanOp.MemoryWriter(memoryId)
+      PlanOp.seq(op1, op2)
     }
   }
 
   /** Ensure that steps of a pipeline are deployed. */
   private def ensureStepsDeployed(pipeline: Pipeline): State[PlanningState, PlanOp] = {
-    val algorithms = pipeline.resolved.steps.map(_.algorithm)
+    val algorithms = pipeline.resolved.steps
     algorithms.map { algorithm =>
       ensureAlgorithmDeployed(algorithm)
     }.sequence.map { ops =>
@@ -233,12 +298,11 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
   /** Ensure that an algorithm is deployed. */
   def ensureAlgorithmDeployed(algorithm: Algorithm): State[PlanningState, PlanOp] = {
     PlanningState.flat { state =>
-      state.itemDeployed(algorithm) match {
-        case Some(_) =>
-          // already deployed
-          PlanningState.pure(PlanOp.Empty)
-        case None =>
-          deployAlgorithm(algorithm, None)
+      if (state.overrideState(algorithm).deployed.isDefined) {
+        // already deployed
+        PlanningState.pure(PlanOp.Empty)
+      } else {
+        deployAlgorithm(algorithm, None)
       }
     }
   }

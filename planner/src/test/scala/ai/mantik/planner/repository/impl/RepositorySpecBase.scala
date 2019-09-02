@@ -133,6 +133,28 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.ensureMantikId(artifact2.itemId, newName)) shouldBe true
       val back3 = await(repo.get(newName))
       back3.itemId shouldBe artifact2.itemId
+
+      intercept[Errors.NotFoundException] {
+        await(repo.ensureMantikId(ItemId.generate(), "new_name"))
+      }
+    }
+  }
+
+  it should "allow tagging different elements" in {
+    withRepo { repo =>
+      await(repo.store(artifact1))
+      await(repo.store(artifact2))
+      val otherName = NamedMantikId("my/name")
+      val thirdName = NamedMantikId("mo/name")
+      await(repo.ensureMantikId(artifact1.itemId, otherName))
+      await(repo.ensureMantikId(artifact2.itemId, otherName))
+      await(repo.ensureMantikId(artifact2.itemId, thirdName))
+      await(repo.get(otherName)) shouldBe artifact2.copy(
+        namedId = Some(otherName)
+      )
+      await(repo.get(thirdName)) shouldBe artifact2.copy(
+        namedId = Some(otherName)
+      )
     }
   }
 
