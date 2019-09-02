@@ -1,21 +1,31 @@
+"""Computes y = 2*x on the sklearn stack via mantik."""
+
 import logging
 
-from mantik.engine import *
+import mantik.engine
+import mantik.types
 
 logging.basicConfig(level=logging.DEBUG)
 
-bundle = Bundle(
-    data_type=DataType(json='{"columns":{"x":"float64"}}'),
-    encoding=ENCODING_JSON,
-    encoded=b"[[1.0],[2.0]]",
-)
+columns = mantik.types.DataType.from_kw(x="float64")
+bundle = mantik.types.Bundle(columns, [[1.0], [2.0]])
 
-with Client("localhost", 8087) as client:
+with mantik.engine.Client("localhost", 8087) as client:
     client._add_algorithm("bridge/sklearn/simple_learn/example/multiply")
     with client.enter_session():
-        promise = client.apply("multiply", bundle)
-        result = promise.compute().bundle
+        result = client.apply("multiply", bundle).compute()
 
+print(f"Result: {result.bundle}")
+
+
+def flat(x):
+    import itertools
+    return itertools.chain.from_iterable(x)
+
+
+assert all(2*x == y for x, y in zip(flat(bundle.value), flat(result.bundle.value)))
+
+<<<<<<< HEAD
 <<<<<<< HEAD
 tagged_application_result = graph_builder_service.Tag(TagRequest(
     session_id=session.session_id,
@@ -36,3 +46,5 @@ print("Closed session {}".format(session.session_id))
 =======
 print(f"Execution Result Node {result.data_type.json} {result.encoded}")
 >>>>>>> hide protobuf code in python wrapper
+=======
+>>>>>>> convert between different bundle types

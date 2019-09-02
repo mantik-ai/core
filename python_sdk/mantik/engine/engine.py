@@ -1,28 +1,49 @@
-from functools import wraps
+from __future__ import annotations
+
 import logging
+import functools
 import contextlib
 
 from google.protobuf.empty_pb2 import Empty
 
+import mantik.types
 from .compat import *
 
 logger = logging.getLogger(__name__)
+
+
+@functools.singledispatch
+def _convert(bundle: mantik.types.Bundle) -> Bundle:
+    """Convert mantik.types.Bundle to its protobuf equivalent."""
+    return Bundle(
+        data_type=DataType(json=bundle.type.to_json()),
+        encoding=ENCODING_JSON,
+        encoded=bundle.encode_json().encode("utf-8"),
+    )
+
+
+@_convert.register
+def _(bundle: Bundle) -> mantik.types.Bundle:
+    return mantik.types.Bundle.decode_json(
+        bundle.encoded,
+        assumed_type=mantik.types.DataType.from_json(bundle.data_type.json)
+    )
 
 
 class Result:
     def __str__(self):
         return str(self.result)
 
-    def compute(self) -> Bundle:
-        execution_response = self._graph_executor_service.FetchDataSet(
+    def compute(self) -> Result:
+        self.response = self._graph_executor_service.FetchDataSet(
             FetchItemRequest(
                 session_id=self.session.session_id,
                 dataset_id=self.result.item_id,
                 encoding=ENCODING_JSON,
             )
         )
-        self.bundle = execution_response.bundle
-        return execution_response
+        self.bundle = _convert(self.response.bundle)
+        return self
 
 
 class Client(object):
@@ -55,7 +76,7 @@ class Client(object):
             GetRequest(session_id=self.session.session_id, name=algorithm)
         )
         dataset = self._graph_builder_service.Literal(
-            LiteralRequest(session_id=self.session.session_id, bundle=bundle)
+            LiteralRequest(session_id=self.session.session_id, bundle=_convert(bundle))
         )
         logger.debug("Created Literal Node %s", dataset.item_id)
         result = self._graph_builder_service.AlgorithmApply(

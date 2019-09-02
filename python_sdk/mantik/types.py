@@ -38,6 +38,10 @@ class DataType:
     """Initializes from the parsed JSON representation."""
 
     @classmethod
+    def from_kw(cls, **kwargs):
+        return cls(dict(columns=kwargs))
+
+    @classmethod
     def from_json(cls, json_string) -> DataType:
         """Construct DataType from its json representation.
 
