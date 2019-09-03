@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import logging
-import functools
 import contextlib
+import functools
+import logging
+from typing import List
 
 from google.protobuf.empty_pb2 import Empty
 
 import mantik.types
-from .compat import *
+from mantik.engine.compat import *
 
 logger = logging.getLogger(__name__)
 
@@ -71,10 +72,24 @@ class Client(object):
         logger.debug("Added item %s", response.name)
         return response.name
 
-    def apply(self, algorithm: str, bundle):
-        algo = self._graph_builder_service.Get(
-            GetRequest(session_id=self.session.session_id, name=algorithm)
+    def make_pipeline(self, steps: List[str]):
+        pipe_steps = [
+            BuildPipelineStep(
+                algorithm_id=self._graph_builder_service.Get(
+                    GetRequest(session_id=self.session.session_id, name=s)
+                ).item_id
+            )
+            for s in steps
+        ]
+        pipe = self._graph_builder_service.BuildPipeline(
+            BuildPipelineRequest(
+                session_id=self.session.session_id,
+                steps=pipe_steps
+            )
         )
+        return pipe
+
+    def apply(self, pipe, bundle: mantik.types.Bundle):
         dataset = self._graph_builder_service.Literal(
             LiteralRequest(session_id=self.session.session_id, bundle=_convert(bundle))
         )
@@ -82,16 +97,16 @@ class Client(object):
         result = self._graph_builder_service.AlgorithmApply(
             ApplyRequest(
                 session_id=self.session.session_id,
-                algorithm_id=algo.item_id,
+                algorithm_id=pipe.item_id,
                 dataset_id=dataset.item_id,
             )
         )
-        cache_result = self._graph_builder_service.Cached(
-            CacheRequest(session_id=self.session.session_id, item_id=result.item_id)
-        )
+        # cache_result = self._graph_builder_service.Cached(
+        #     CacheRequest(session_id=self.session.session_id, item_id=result.item_id)
+        # )
         promise = Result()
         promise.session = self.session
-        promise.result = cache_result
+        promise.result = result
         promise._graph_executor_service = self._graph_executor_service
 
         return promise

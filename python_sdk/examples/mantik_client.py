@@ -5,15 +5,18 @@ import logging
 import mantik.engine
 import mantik.types
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 columns = mantik.types.DataType.from_kw(x="float64")
 bundle = mantik.types.Bundle(columns, [[1.0], [2.0]])
 
 with mantik.engine.Client("localhost", 8087) as client:
+    # TODO (mq): We should be able to search/list all existing algorithms.
     client._add_algorithm("bridge/sklearn/simple_learn/example/multiply")
     with client.enter_session():
-        result = client.apply("multiply", bundle).compute()
+        pipeline = client.make_pipeline(steps=["multiply"])
+        print(pipeline)
+        result = client.apply(pipeline, bundle).compute()
 
 print(f"Result: {result.bundle}")
 
