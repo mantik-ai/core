@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import logging
-from typing import List
+from typing import List, Optional
 
 from google.protobuf.empty_pb2 import Empty
 
@@ -72,19 +72,35 @@ class Client(object):
         logger.debug("Added item %s", response.name)
         return response.name
 
-    def make_pipeline(self, steps: List[str]):
-        pipe_steps = [
-            BuildPipelineStep(
-                algorithm_id=self._graph_builder_service.Get(
-                    GetRequest(session_id=self.session.session_id, name=s)
-                ).item_id
-            )
-            for s in steps
-        ]
+    def make_pipeline(self, steps: List[str], bundle: Optional[mantik.types.Bundle] = None):
+        # TODO (mq): allow for literals
+
+        ds = _convert(bundle) if bundle is not None else bundle
+        pipe_steps = []
+        for s in steps:
+            if s.startswith("select "):
+                pipe_steps.append(self._graph_builder_service.Select(
+                    SelectRequest(
+                        session_id=self.session.session_id,
+                        dataset_id=ds.item_id,
+                        select_query=s
+                    )
+                )
+                )
+            else:
+                pipe_steps.append(self._graph_builder_service.Get(
+                    GetRequest(
+                        session_id=self.session.session_id,
+                        name=s
+                    )
+                )
+                )
+            ds = pipe_steps[-1]
+        # TODO (mq): catch and convert exceptions to be pythonic
         pipe = self._graph_builder_service.BuildPipeline(
             BuildPipelineRequest(
                 session_id=self.session.session_id,
-                steps=pipe_steps
+                steps=[BuildPipelineStep(algorithm_id=step.item_id) for step in pipe_steps]
             )
         )
         return pipe
