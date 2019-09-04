@@ -1,3 +1,4 @@
 flask
 msgpack
 pyyaml
+scitkit-learn

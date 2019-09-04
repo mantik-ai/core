@@ -5,9 +5,10 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
+sklearn = "*"
 
 [packages]
-mantik = {editable = true, path = "."}
+mantik = {editable = true,path = "."}
 grpcio-tools = "*"
 
 [requires]

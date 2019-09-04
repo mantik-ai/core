@@ -9,22 +9,22 @@ logging.basicConfig(level=logging.INFO)
 
 columns = mantik.types.DataType.from_kw(x="float64")
 bundle = mantik.types.Bundle(columns, [[1.0], [2.0]])
-steps = ["multiply", "select y + CAST(1.5 as float64)"]
-steps2 = ["select x + CAST(1.5 as float64)"]
+pipe = ["multiply"]
+pipe2 = ["select x * CAST(2 as float64) as y"]
 
 with mantik.engine.Client("localhost", 8087) as client:
     # TODO (mq): We should be able to search/list all existing algorithms.
     client._add_algorithm("bridge/sklearn/simple_learn/example/multiply")
     with client.enter_session():
-        pipeline = client.make_pipeline(steps)
-        result = client.apply(pipeline, bundle).compute()
+        result = client.apply(pipe, bundle).fetch()
         print(f"Result: {result.bundle}")
-
+        # you can explicitly upload a bundle.
+        # however, just passing the bundle works, too!
         data = client.upload_bundle(bundle)
-        pipe2 = client.make_pipeline(steps2, data)
-        result2 = client.apply(pipe2, data).compute()
+        result2 = client.apply(pipe2, data).fetch()
         print(f"Result2: {result2.bundle}")
 
+assert result.bundle == result2.bundle
 
 
 <<<<<<< HEAD

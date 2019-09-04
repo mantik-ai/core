@@ -398,7 +398,7 @@ class Bundle:
         return self.encode_json()
 
     def encode_json(self):
-        return json.dumps(self.value)
+        return json.dumps(self.value, ensure_ascii=False).encode("utf8")
 
     def encode_json_bundle(self):
         if self.type is None:
