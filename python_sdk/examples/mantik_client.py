@@ -23,12 +23,12 @@ with mantik.engine.Client("localhost", 8087) as client:
 print(f"Result: {result.bundle}")
 
 
-def flat(x):
-    import itertools
-    return itertools.chain.from_iterable(x)
-
-
-assert all(2*x == y for x, y in zip(flat(bundle.value), flat(result.bundle.value)))
+# def flat(x):
+#     import itertools
+#     return itertools.chain.from_iterable(x)
+#
+#
+# assert all(2*x == y for x, y in zip(flat(bundle.value), flat(result.bundle.value)))
 
 <<<<<<< HEAD
 <<<<<<< HEAD
