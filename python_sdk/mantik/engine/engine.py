@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import logging
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from google.protobuf.empty_pb2 import Empty
 
@@ -36,7 +36,7 @@ class Result:
         return str(self.result)
 
     def compute(self) -> Result:
-        self.response = self._graph_executor_service.FetchDataSet(
+        self.response = self._graph_executor.FetchDataSet(
             FetchItemRequest(
                 session_id=self.session.session_id,
                 dataset_id=self.result.item_id,
@@ -72,52 +72,68 @@ class Client(object):
         logger.debug("Added item %s", response.name)
         return response.name
 
-    def make_pipeline(self, steps: List[str], bundle: Optional[mantik.types.Bundle] = None):
+    def upload_bundle(self, bundle: mantik.types.Bundle):
+        """Upload the bundle and create a mantik data literal."""
+        # TODO (mq): cache this
+        return self._graph_builder.Literal(
+            LiteralRequest(session_id=self.session.session_id, bundle=_convert(bundle))
+        )
 
-        ds = _convert(bundle) if bundle is not None else bundle
-        pipe_steps = []
-        for s in steps:
-            if s.startswith("select "):
-                pipe_steps.append(BuildPipelineStep(select=s))
-            else:
-                pipe_steps.append(BuildPipelineStep(algorithm_id=
-                    self._graph_builder_service.Get(
+    def make_pipeline(self, steps: List[str], data=None):
+        """Translate a list of references to a mantik Pipeline.
+
+        A reference is either the name of an algorithm or a select literal.
+        If the first pipeline step is a select literal, the input datatype must be supplied via a bundle.
+
+        """
+        def guess_input_type(data):
+            if isinstance(data, mantik.types.Bundle):
+                return DataType(json=data.type.to_json())
+            # it should be a Literal
+            return data.item.dataset.type
+
+        def build_step(s):
+            if s.startswith("select "):  # is a select literal
+                # we need to supply the input data type
+                return BuildPipelineStep(select=s)
+            algorithm = self._graph_builder.Get(
                             GetRequest(
                                 session_id=self.session.session_id,
                                 name=s
                             )
-                        ).item_id
-                    )
-                )
-            ds = pipe_steps[-1]
+                        )
+            return BuildPipelineStep(algorithm_id=algorithm.item_id)
+
+        pipe_steps = map(build_step, steps)
+
+        request_args = dict(session_id=self.session.session_id, steps=pipe_steps)
+        if steps[0].startswith("select "):  # pipe starts with select, need to supply input datatype
+            request_args["input_type"] = guess_input_type(data)
+
         # TODO (mq): catch and convert exceptions to be pythonic
-        pipe = self._graph_builder_service.BuildPipeline(
+        pipe = self._graph_builder.BuildPipeline(
             BuildPipelineRequest(
-                session_id=self.session.session_id,
-                steps=pipe_steps,
+                **request_args
             )
         )
         return pipe
 
-    def apply(self, pipe, bundle: mantik.types.Bundle):
-        dataset = self._graph_builder_service.Literal(
-            LiteralRequest(session_id=self.session.session_id, bundle=_convert(bundle))
-        )
+    def apply(self, pipe, data):
+        """Execute the pipeline pipe on some data."""
+        dataset = self.upload_bundle(data) if isinstance(data, mantik.types.Bundle) else data
         logger.debug("Created Literal Node %s", dataset.item_id)
-        result = self._graph_builder_service.AlgorithmApply(
+        result = self._graph_builder.AlgorithmApply(
             ApplyRequest(
                 session_id=self.session.session_id,
                 algorithm_id=pipe.item_id,
                 dataset_id=dataset.item_id,
             )
         )
-        # cache_result = self._graph_builder_service.Cached(
-        #     CacheRequest(session_id=self.session.session_id, item_id=result.item_id)
-        # )
+
         promise = Result()
         promise.session = self.session
         promise.result = result
-        promise._graph_executor_service = self._graph_executor_service
+        promise._graph_executor = self._graph_executor
 
         return promise
 
@@ -140,8 +156,8 @@ class Client(object):
         self._about_service = AboutServiceStub(channel)
         self._session_service = SessionServiceStub(channel)
         self._debug_service = DebugServiceStub(channel)
-        self._graph_builder_service = GraphBuilderServiceStub(channel)
-        self._graph_executor_service = GraphExecutorServiceStub(channel)
+        self._graph_builder = GraphBuilderServiceStub(channel)
+        self._graph_executor = GraphExecutorServiceStub(channel)
 
         self._connected = True
         logger.info("Connected to version %s", self.version)
