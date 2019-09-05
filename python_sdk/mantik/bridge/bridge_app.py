@@ -28,9 +28,7 @@ def create_bridge_app(mantikfile: mantik.types.Mantikfile, algorithm: Algorithm)
 
     @app.route("/training_type")
     def training_type():
-        return Response(
-            mantikfile.training_type.to_json(), content_type="application/json"
-        )
+        return Response(mantikfile.training_type.to_json(), content_type="application/json")
 
     @app.route("/stat_type")
     def stat_type():
@@ -43,9 +41,7 @@ def create_bridge_app(mantikfile: mantik.types.Mantikfile, algorithm: Algorithm)
         if algorithm.is_trained:
             return make_response("Algorithm already trained", 429)
 
-        decoded = mantik.types.Bundle.decode(
-            request.content_type, request.stream, mantikfile.training_type
-        )
+        decoded = mantik.types.Bundle.decode(request.content_type, request.stream, mantikfile.training_type)
         algorithm.train(decoded)
         # Stat result is catched by algorihtm wrapper.
         return Response("")
@@ -55,13 +51,9 @@ def create_bridge_app(mantikfile: mantik.types.Mantikfile, algorithm: Algorithm)
         if not algorithm.is_trained:
             return make_response("Algorithm not trained", 400)
 
-        decoded = mantik.types.Bundle.decode(
-            request.content_type, request.stream, mantikfile.type.input
-        )
+        decoded = mantik.types.Bundle.decode(request.content_type, request.stream, mantikfile.type.input)
         result = algorithm.apply(decoded)
-        result = (result or mantik.types.Bundle()).__add__(
-            mantikfile.type.output
-        )
+        result = (result or mantik.types.Bundle()).__add__(mantikfile.type.output)
         encoded = result.encode(request.content_type)
         return Response(encoded, content_type=request.content_type)
 

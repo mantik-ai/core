@@ -1,4 +1,4 @@
-#noinspection UnusedImport
+# noinspection UnusedImport
 
 from ._stubs.mantik.engine.engine_pb2_grpc import *
 from ._stubs.mantik.engine.engine_pb2 import *

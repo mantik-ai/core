@@ -128,9 +128,7 @@ class FunctionType(object):
 
     def to_json(self):
         """Serializes to json."""
-        return json.dumps(
-            {"input": self.input.representation, "output": self.output.representation}
-        )
+        return json.dumps({"input": self.input.representation, "output": self.output.representation})
 
 
 @dataclasses.dataclass
@@ -293,9 +291,7 @@ class MetaVariables(dict):
     def from_parsed(cls, parsed_json, key="metaVariables", default=None):
         """Construct a MetaVariable List from parsed json."""
         default = default or ""
-        variables = [
-            MetaVariable.from_json(var) for var in parsed_json.get(key, default)
-        ]
+        variables = [MetaVariable.from_json(var) for var in parsed_json.get(key, default)]
         return MetaVariables({var.name: var for var in variables})
 
     def get(self, key: str, default=None):
@@ -303,9 +299,7 @@ class MetaVariables(dict):
             return self[key].bundle.value
         except KeyError:
             if default is None:
-                raise ValueError(
-                    f"No meta variable called {key} found and no default given"
-                )
+                raise ValueError(f"No meta variable called {key} found and no default given")
             return default
 
 
