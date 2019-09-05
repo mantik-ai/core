@@ -87,7 +87,7 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
     response.name shouldBe "name1"
     response.internalUrl shouldBe "internalUrl1"
     response.externalUrl shouldBe "externalUrl1"
-    val ops = components.lastPlan.op.asInstanceOf[PlanOp.Sequential].plans
+    val ops = components.lastPlan.op.asInstanceOf[PlanOp.Sequential[_]].plans
     val deployOp = ops.collectFirst {
       case x: PlanOp.DeployPipeline => x
     }.get

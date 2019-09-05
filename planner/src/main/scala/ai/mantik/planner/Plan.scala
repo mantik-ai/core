@@ -13,7 +13,7 @@ import ai.mantik.executor.model.docker.Container
  * They should be serializable in future (however this is tricky because of MantikItem references)
  */
 case class Plan[T](
-    op: PlanOp,
+    op: PlanOp[T],
     files: List[PlanFile],
     cacheGroups: List[CacheKeyGroup]
 )
@@ -58,32 +58,35 @@ object PlanNodeService {
 }
 
 /** An operation inside a plan. */
-sealed trait PlanOp
+sealed trait PlanOp[T]
 
 object PlanOp {
+  /** PlanOps which do not produce any values. */
+  sealed trait ProceduralPlanOp extends PlanOp[Unit]
+
   /** Nothing to do. */
-  case object Empty extends PlanOp
+  case object Empty extends ProceduralPlanOp
 
   /** Run a job. */
-  case class RunGraph(graph: Graph[PlanNodeService]) extends PlanOp
+  case class RunGraph(graph: Graph[PlanNodeService]) extends ProceduralPlanOp
 
   /** Stores a Bundle Content as File. */
-  case class StoreBundleToFile(bundle: Bundle, fileReference: PlanFileReference) extends PlanOp
+  case class StoreBundleToFile(bundle: Bundle, fileReference: PlanFileReference) extends ProceduralPlanOp
 
   /** Loads a Bundle from a File. */
-  case class LoadBundleFromFile(dataType: DataType, fileReference: PlanFileReference) extends PlanOp
+  case class LoadBundleFromFile(dataType: DataType, fileReference: PlanFileReference) extends PlanOp[Bundle]
 
   /** Add some mantik item (only the itemId) */
-  case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference]) extends PlanOp
+  case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference]) extends ProceduralPlanOp
 
   /** Tag some Item.  */
-  case class TagMantikItem(item: MantikItem, id: NamedMantikId) extends PlanOp
+  case class TagMantikItem(item: MantikItem, id: NamedMantikId) extends ProceduralPlanOp
 
   /**
    * Push a Mantik Item to a remote registry.
    * (Must be added first)
    */
-  case class PushMantikItem(item: MantikItem) extends PlanOp
+  case class PushMantikItem(item: MantikItem) extends ProceduralPlanOp
 
   /** Deploy an algorithm. */
   case class DeployAlgorithm(
@@ -91,7 +94,7 @@ object PlanOp {
       serviceId: String,
       serviceNameHint: Option[String],
       item: MantikItem
-  ) extends PlanOp
+  ) extends PlanOp[DeploymentState]
 
   /** Deploy a Pipeline. */
   case class DeployPipeline(
@@ -100,13 +103,13 @@ object PlanOp {
       serviceNameHint: Option[String],
       ingress: Option[String],
       steps: Seq[Algorithm]
-  ) extends PlanOp
+  ) extends PlanOp[DeploymentState]
 
   /**
    * Evaluate the alternative, if any of the given files do not exist.
    * @param files the files to cache. It's keys form a CacheGroup
    */
-  case class CacheOp(files: List[(CacheKey, PlanFileReference)], alternative: PlanOp) extends PlanOp {
+  case class CacheOp(files: List[(CacheKey, PlanFileReference)], alternative: PlanOp[_]) extends ProceduralPlanOp {
     /** Returns the cache group for this operation. */
     def cacheGroup: CacheKeyGroup = files.map(_._1)
   }
@@ -115,39 +118,55 @@ object PlanOp {
    * Run something sequentially, waiting for each other.
    * The result of the last is returned.
    */
-  case class Sequential(plans: Seq[PlanOp]) extends PlanOp
+  case class Sequential[T](prefix: Seq[PlanOp[_]], last: PlanOp[T]) extends PlanOp[T] {
+    def size: Int = prefix.size + 1
+
+    def plans: Seq[PlanOp[_]] = prefix :+ last
+  }
 
   /** Plan Op which just returns a fixed value. */
-  case class Const(value: AnyRef) extends PlanOp
+  case class Const[T](value: T) extends PlanOp[T]
 
   /**
    * Plan op which stores the result of the last operation into the memory.
    * Also returns the value again to make it transparent
    */
-  case class MemoryWriter(memoryId: MemoryId) extends PlanOp
+  case class MemoryWriter[T](memoryId: MemoryId) extends PlanOp[T]
 
   /** Plan op which reads the result of another one from the memory. Must be called later. */
-  case class MemoryReader(memoryId: MemoryId) extends PlanOp
+  case class MemoryReader[T](memoryId: MemoryId) extends PlanOp[T]
 
   /** Convenience method for constructing Sequential Plans. */
-  def seq(plans: PlanOp*): Sequential = Sequential(plans)
+  def seq(): Sequential[Unit] = Sequential(Nil, PlanOp.Empty)
+  def seq[T](a: PlanOp[T]): Sequential[T] = Sequential(Nil, a)
+  def seq[T](a: PlanOp[_], b: PlanOp[T]): Sequential[T] = Sequential(Seq(a), b)
+  def seq[T](a: PlanOp[_], b: PlanOp[_], c: PlanOp[T]): Sequential[T] = Sequential(Seq(a, b), c)
+  def seq[T](a: PlanOp[_], b: PlanOp[_], c: PlanOp[_], d: PlanOp[T]): Sequential[T] = Sequential(Seq(a, b, c), d)
 
   /** Combine two plan ops so that they are executed afterwards, compressing on the fly. */
-  def combine(plan1: PlanOp, plan2: PlanOp): PlanOp = {
+  def combine[T](plan1: PlanOp[_], plan2: PlanOp[T]): PlanOp[T] = {
     plan1 match {
-      case PlanOp.Empty               => plan2
-      case x if plan2 == PlanOp.Empty => x
-      case PlanOp.Sequential(elements) =>
+      case PlanOp.Empty => plan2
+      case PlanOp.Sequential(elements, last) =>
         plan2 match {
-          case PlanOp.Sequential(nextElements) =>
-            PlanOp.Sequential(elements ++ nextElements)
+          case PlanOp.Sequential(nextElements, last2) =>
+            PlanOp.Sequential((elements :+ last) ++ nextElements, last2)
           case other =>
-            PlanOp.Sequential(elements :+ other)
+            PlanOp.Sequential(elements :+ last, other)
+        }
+      case x: PlanOp.ProceduralPlanOp =>
+        plan2 match {
+          case PlanOp.Empty =>
+            x
+          case PlanOp.Sequential(nextElements, last) =>
+            PlanOp.Sequential(x +: nextElements, last)
+          case other =>
+            PlanOp.seq(x, other)
         }
       case x =>
         plan2 match {
-          case PlanOp.Sequential(nextElements) =>
-            PlanOp.Sequential(x +: nextElements)
+          case PlanOp.Sequential(nextElements, last) =>
+            PlanOp.Sequential(x +: nextElements, last)
           case other =>
             PlanOp.seq(x, other)
         }
@@ -155,21 +174,33 @@ object PlanOp {
   }
 
   /** Compress a plan op by removing chains of [[PlanOp.Sequential]]. */
-  def compress(planOp: PlanOp): PlanOp = {
-    def subCompress(plan: PlanOp): Seq[PlanOp] = {
-      plan match {
-        case PlanOp.Empty => Nil
-        case PlanOp.Sequential(elements) =>
-          elements.flatMap(subCompress)
-        case c: PlanOp.CacheOp =>
-          Seq(c.copy(alternative = compress(c.alternative)))
-        case other => Seq(other)
-      }
-    }
+  def compress[T](planOp: PlanOp[T]): PlanOp[T] = {
     subCompress(planOp) match {
-      case s if s.isEmpty => PlanOp.Empty
-      case Seq(single)    => single
-      case multiple       => PlanOp.Sequential(multiple)
+      case (elements, last) if elements.isEmpty => last
+      case (elements, last)                     => PlanOp.Sequential(elements, last)
+    }
+  }
+
+  private def subCompress[T](plan: PlanOp[T]): (Seq[PlanOp[_]], PlanOp[T]) = {
+    import scala.language.existentials
+    plan match {
+      case PlanOp.Empty => Nil -> plan
+      case PlanOp.Sequential(elements, last) =>
+        val (lastCompressed, lastCompressedTail) = subCompress(last)
+        val parts = (elements ++ lastCompressed).flatMap { x =>
+          val (prefix, tail) = subCompress(x)
+          if (tail == PlanOp.Empty) {
+            prefix
+          } else {
+            prefix :+ tail
+          }
+        }
+        parts -> lastCompressedTail
+      case c: PlanOp.CacheOp =>
+        val c2 = c.copy(alternative = compress(c.alternative))
+        Nil -> c2
+      case other =>
+        Nil -> other
     }
   }
 }

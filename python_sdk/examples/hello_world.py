@@ -73,5 +73,19 @@ print(
     )
 )
 
+tagged_application_result = graph_builder_service.Tag(TagRequest(
+    session_id=session.session_id,
+    item_id=application_result.item_id,
+    named_mantik_id="mein_item"
+))
+
+save_response = graph_executor_service.SaveItem(
+    SaveItemRequest(
+        session_id=session.session_id,
+        item_id=tagged_application_result.item_id
+    )
+)
+print("Saved item as {}".format(save_response.mantik_item_id))
+
 session_service.CloseSession(CloseSessionRequest(session_id=session.session_id))
 print("Closed session {}".format(session.session_id))

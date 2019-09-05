@@ -44,6 +44,16 @@ class GraphBuilderServiceStub(object):
         request_serializer=mantik_dot_engine_dot_graph__builder__pb2.SelectRequest.SerializeToString,
         response_deserializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.FromString,
         )
+    self.BuildPipeline = channel.unary_unary(
+        '/ai.mantik.engine.protos.GraphBuilderService/BuildPipeline',
+        request_serializer=mantik_dot_engine_dot_graph__builder__pb2.BuildPipelineRequest.SerializeToString,
+        response_deserializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.FromString,
+        )
+    self.Tag = channel.unary_unary(
+        '/ai.mantik.engine.protos.GraphBuilderService/Tag',
+        request_serializer=mantik_dot_engine_dot_graph__builder__pb2.TagRequest.SerializeToString,
+        response_deserializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.FromString,
+        )
 
 
 class GraphBuilderServiceServicer(object):
@@ -58,7 +68,7 @@ class GraphBuilderServiceServicer(object):
     raise NotImplementedError('Method not implemented!')
 
   def AlgorithmApply(self, request, context):
-    """* Applies an algorithm to a dataset. 
+    """* Applies an algorithm (or pipeline) to a dataset. 
     """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
@@ -87,6 +97,20 @@ class GraphBuilderServiceServicer(object):
 
   def Select(self, request, context):
     """* Run a select query on the dataset item. 
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def BuildPipeline(self, request, context):
+    """* Build a pipeline from Algorithms. 
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def Tag(self, request, context):
+    """Returns the item using a new name. 
     """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
@@ -123,6 +147,16 @@ def add_GraphBuilderServiceServicer_to_server(servicer, server):
       'Select': grpc.unary_unary_rpc_method_handler(
           servicer.Select,
           request_deserializer=mantik_dot_engine_dot_graph__builder__pb2.SelectRequest.FromString,
+          response_serializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.SerializeToString,
+      ),
+      'BuildPipeline': grpc.unary_unary_rpc_method_handler(
+          servicer.BuildPipeline,
+          request_deserializer=mantik_dot_engine_dot_graph__builder__pb2.BuildPipelineRequest.FromString,
+          response_serializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.SerializeToString,
+      ),
+      'Tag': grpc.unary_unary_rpc_method_handler(
+          servicer.Tag,
+          request_deserializer=mantik_dot_engine_dot_graph__builder__pb2.TagRequest.FromString,
           response_serializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.SerializeToString,
       ),
   }

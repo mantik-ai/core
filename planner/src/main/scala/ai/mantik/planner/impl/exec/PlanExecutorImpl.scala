@@ -65,19 +65,23 @@ private[planner] class PlanExecutorImpl(
     } yield result.asInstanceOf[T]
   }
 
-  def executeOp(planOp: PlanOp)(implicit files: ExecutionOpenFiles, memory: Memory): Future[Any] = {
+  def executeOp[T](planOp: PlanOp[T])(implicit files: ExecutionOpenFiles, memory: Memory): Future[T] = {
     executeOpInner(planOp).andThen {
       case Success(value) => memory.setLast(value)
     }
   }
 
-  private def executeOpInner(planOp: PlanOp)(implicit files: ExecutionOpenFiles, memory: Memory): Future[Any] = {
+  private def executeOpInner[T](planOp: PlanOp[T])(implicit files: ExecutionOpenFiles, memory: Memory): Future[T] = {
     planOp match {
-      case PlanOp.Sequential(parts) =>
+      case PlanOp.Sequential(parts, last) =>
         FutureHelper.time(logger, s"Running ${parts.length} sub tasks") {
           FutureHelper.afterEachOtherStateful(parts, memory.getLastOrNull()) {
             case (_, part) =>
               executeOp(part)
+          }
+        }.flatMap { _ =>
+          FutureHelper.time(logger, s"Running last part") {
+            executeOp(last)
           }
         }
       case PlanOp.Empty =>
@@ -107,25 +111,27 @@ private[planner] class PlanExecutorImpl(
         val namedId = item.name
         val artifact = MantikArtifact(mantikfile, fileId, namedId, item.itemId)
         FutureHelper.time(logger, s"Adding Mantik Item $id") {
-          repository.store(artifact).map { _ =>
-            item.state.update { state =>
-              state.copy(
-                itemStored = true,
-                nameStored = namedId.isDefined,
-                namedMantikItem = namedId
-              )
-            }
+          repository.store(artifact).andThen {
+            case Success(_) =>
+              item.state.update { state =>
+                state.copy(
+                  itemStored = true,
+                  nameStored = namedId.isDefined,
+                  namedMantikItem = namedId
+                )
+              }
           }
         }
       case PlanOp.TagMantikItem(item, id) =>
         FutureHelper.time(logger, s"Tagging Mantik Item") {
-          repository.ensureMantikId(item.itemId, id).map { _ =>
-            item.state.update { state =>
-              state.copy(
-                namedMantikItem = Some(id)
-              )
-            }
-          }
+          repository.ensureMantikId(item.itemId, id).andThen {
+            case Success(_) =>
+              item.state.update { state =>
+                state.copy(
+                  namedMantikItem = Some(id)
+                )
+              }
+          }.map(_ => ())
         }
       case PlanOp.PushMantikItem(item) =>
         if (!item.state.get.itemStored) {
@@ -134,7 +140,7 @@ private[planner] class PlanExecutorImpl(
         val mantikId = item.mantikId
         FutureHelper.time(logger, s"Pushing Artifact ${mantikId}") {
           artifactRetriever.push(mantikId)
-        }
+        }.map { _ => () }
       case PlanOp.RunGraph(graph) =>
         val jobGraphConverter = new JobGraphConverter(clientConfig.remoteFileRepositoryAddress, isolationSpace, files, dockerConfig.logins)
         val job = jobGraphConverter.translateGraphIntoJob(graph)
@@ -204,12 +210,12 @@ private[planner] class PlanExecutorImpl(
             deploymentState
           }
         }
-      case c: PlanOp.Const =>
+      case c: PlanOp.Const[T] =>
         Future.successful(c.value)
-      case c: PlanOp.MemoryReader =>
-        Future.successful(memory.get(c.memoryId))
-      case c: PlanOp.MemoryWriter =>
-        val last = memory.getLast()
+      case c: PlanOp.MemoryReader[T] =>
+        Future.successful(memory.get(c.memoryId).asInstanceOf[T])
+      case c: PlanOp.MemoryWriter[T] =>
+        val last = memory.getLast().asInstanceOf[T]
         memory.put(c.memoryId, last)
         Future.successful(last)
     }

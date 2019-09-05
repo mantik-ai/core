@@ -13,9 +13,9 @@ import javax.inject.Inject
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService {
+class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService with RpcServiceBase {
 
-  override def get(request: GetRequest): Future[NodeResponse] = {
+  override def get(request: GetRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       (artifact, hull) <- session.components.retriever.get(request.name).recover {
@@ -35,7 +35,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     )
   }
 
-  override def algorithmApply(request: ApplyRequest): Future[NodeResponse] = {
+  override def algorithmApply(request: ApplyRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       algorithm = session.getItemAs[ApplicableMantikItem](request.algorithmId)
@@ -46,7 +46,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     }
   }
 
-  override def literal(request: LiteralRequest): Future[NodeResponse] = {
+  override def literal(request: LiteralRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       bundle <- Converters.decodeBundle(request.bundle.getOrElse(
@@ -58,7 +58,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     }
   }
 
-  override def cached(request: CacheRequest): Future[NodeResponse] = {
+  override def cached(request: CacheRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       dataset = session.getItemAs[DataSet](request.itemId)
@@ -68,7 +68,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     }
   }
 
-  override def train(request: TrainRequest): Future[TrainResponse] = {
+  override def train(request: TrainRequest): Future[TrainResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       trainable = session.getItemAs[TrainableAlgorithm](request.trainableId)
@@ -84,7 +84,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     }
   }
 
-  override def select(request: SelectRequest): Future[NodeResponse] = {
+  override def select(request: SelectRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       dataset = session.getItemAs[DataSet](request.datasetId)
@@ -94,7 +94,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     }
   }
 
-  override def buildPipeline(request: BuildPipelineRequest): Future[NodeResponse] = {
+  override def buildPipeline(request: BuildPipelineRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
     } yield {
@@ -111,7 +111,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     }
   }
 
-  override def tag(request: TagRequest): Future[NodeResponse] = {
+  override def tag(request: TagRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       item = session.getItemAs[MantikItem](request.itemId)

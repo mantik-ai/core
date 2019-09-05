@@ -12,9 +12,9 @@ import javax.inject.Inject
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphExecutorService {
+class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphExecutorService with RpcServiceBase {
 
-  override def fetchDataSet(request: FetchItemRequest): Future[FetchItemResponse] = {
+  override def fetchDataSet(request: FetchItemRequest): Future[FetchItemResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       dataset = session.getItemAs[DataSet](request.datasetId)
@@ -29,7 +29,7 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
     }
   }
 
-  override def saveItem(request: SaveItemRequest): Future[SaveItemResponse] = {
+  override def saveItem(request: SaveItemRequest): Future[SaveItemResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       item = session.getItem(request.itemId).getOrElse {
@@ -48,7 +48,7 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
     }
   }
 
-  override def deployItem(request: DeployItemRequest): Future[DeployItemResponse] = {
+  override def deployItem(request: DeployItemRequest): Future[DeployItemResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       item = session.getItemAs[ApplicableMantikItem](request.itemId)

@@ -36,11 +36,11 @@ class PlannerImplSpec extends TestBase {
       )
     }
 
-    def splitOps(op: PlanOp): Seq[PlanOp] = {
+    def splitOps(op: PlanOp[_]): Seq[PlanOp[_]] = {
       PlanOp.compress(op) match {
-        case PlanOp.Sequential(parts) => parts
-        case PlanOp.Empty             => Nil
-        case other                    => Seq(other)
+        case PlanOp.Sequential(parts, last) => parts :+ last
+        case PlanOp.Empty                   => Nil
+        case other                          => Seq(other)
       }
     }
   }
@@ -93,12 +93,11 @@ class PlannerImplSpec extends TestBase {
     val ops = splitOps(result)
     ops.size shouldBe 2
     ops(0) shouldBe an[PlanOp.DeployAlgorithm]
-    ops(1) shouldBe an[PlanOp.MemoryWriter]
+    ops(1) shouldBe an[PlanOp.MemoryWriter[_]]
 
     val (state2, result2) = planner.ensureAlgorithmDeployed(algorithm1).run(state).value
     state2 shouldBe state
-    val ops2 = splitOps(result2)
-    ops2.size shouldBe 0
+    result2 shouldBe an[PlanOp.MemoryReader[_]]
   }
 
   "deployPipeline" should "do nothing, if already deployed" in new Env {
@@ -268,7 +267,8 @@ class PlannerImplSpec extends TestBase {
     val c = b.select("select y as z")
     val action = c.fetch
     val plan = planner.convert(action)
-    plan.op.asInstanceOf[PlanOp.Sequential].plans.size shouldBe 3 // pushing, calculation and pulling
+    val ops = splitOps(plan.op)
+    ops.size shouldBe 3 // pushing, calculation and pulling
     plan.files.size shouldBe 2 // push file, calculation
   }
 
@@ -278,7 +278,7 @@ class PlannerImplSpec extends TestBase {
     val ops = splitOps(plan.op)
     ops.size shouldBe 2
     ops.head shouldBe an[PlanOp.DeployAlgorithm]
-    ops(1) shouldBe an[PlanOp.MemoryWriter]
+    ops(1) shouldBe an[PlanOp.MemoryWriter[_]]
   }
 
   it should "save a non-loaded algorithm first" in new Env {
@@ -287,7 +287,7 @@ class PlannerImplSpec extends TestBase {
     )
     val deployAction = algorithm2.deploy()
     val plan = planner.convert(deployAction)
-    val ops = plan.op.asInstanceOf[PlanOp.Sequential].plans
+    val ops = splitOps(plan.op)
     ops.find(_.isInstanceOf[PlanOp.AddMantikItem]) shouldBe defined
     ops.find(_.isInstanceOf[PlanOp.DeployAlgorithm]) shouldBe defined
   }
@@ -308,7 +308,8 @@ class PlannerImplSpec extends TestBase {
     val b = a.select("select x as y").cached
     val c = b.select("select y as z")
     val plan = planner.convert(c.fetch)
-    plan.op.asInstanceOf[PlanOp.Sequential].plans.size shouldBe 3 // cached(pushing, calculation), calculation 2 and pulling
+    val ops = splitOps(plan.op)
+    ops.size shouldBe 3 // cached(pushing, calculation), calculation 2 and pulling
     val cacheKey = b.payloadSource.asInstanceOf[PayloadSource.Cached].cacheGroup.head
     plan.files.size shouldBe 3 // push, cache, calculation
     plan.files shouldBe List(
@@ -317,17 +318,17 @@ class PlannerImplSpec extends TestBase {
       PlanFile(PlanFileReference(3), read = true, write = true, temporary = true)
     )
     plan.cacheGroups shouldBe List(List(cacheKey))
-    val cachePlan = plan.op.asInstanceOf[PlanOp.Sequential].plans(0).asInstanceOf[PlanOp.CacheOp]
+    val cachePlan = plan.op.asInstanceOf[PlanOp.Sequential[_]].plans(0).asInstanceOf[PlanOp.CacheOp]
     cachePlan.files shouldBe List(cacheKey -> PlanFileReference(2))
-    cachePlan.alternative shouldBe an[PlanOp.Sequential]
-    val parts = cachePlan.alternative.asInstanceOf[PlanOp.Sequential].plans
+    cachePlan.alternative shouldBe an[PlanOp.Sequential[_]]
+    val parts = splitOps(cachePlan.alternative)
     parts.head shouldBe an[PlanOp.StoreBundleToFile]
     parts(1) shouldBe an[PlanOp.RunGraph]
 
     withClue("It should use the same key for a 2nd invocation referring to the same data") {
       val c2 = b.select("select y as m")
       val plan = planner.convert(c2.fetch)
-      val parts = plan.op.asInstanceOf[PlanOp.Sequential].plans
+      val parts = splitOps(plan.op)
       parts.size shouldBe 3 // calculation of cached, calculation 2 and pulling
       parts.head shouldBe an[PlanOp.CacheOp]
       parts.head.asInstanceOf[PlanOp.CacheOp].cacheGroup shouldBe List(cacheKey)
