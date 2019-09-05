@@ -28,7 +28,8 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
     Plan(compressed, planningState.files, planningState.cacheGroups)
   }
 
-  def convertSingleAction[T](action: Action[T]): State[PlanningState, PlanOp] = {
+  def convertSingleAction[T](action: Action[T]): State[PlanningState, PlanOp[T]] = {
+    // Note: IntelliJ likes to mark the return code red, however it's correct checked by scala compiler
     action match {
       case s: Action.SaveAction =>
         ensureItemWithDependenciesStored(s.item)
@@ -53,15 +54,6 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
           case other =>
             throw new InconsistencyException(s"Can only deploy algorithms, got ${other.getClass.getSimpleName}")
         }
-    }
-  }
-
-  /** Store an item and all its dependencies. */
-  private def storeItemWithDependencies(item: MantikItem): State[PlanningState, PlanOp] = {
-    storeDependentItems(item).flatMap { dependentStoreAction =>
-      storeSingleItem(item).map { filesPlan =>
-        PlanOp.seq(dependentStoreAction, filesPlan.preOp)
-      }
     }
   }
 
@@ -144,7 +136,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
   }
 
   /** Ensure that an item with it's dependencies is stored. */
-  def ensureItemWithDependenciesStored(item: MantikItem): State[PlanningState, PlanOp] = {
+  def ensureItemWithDependenciesStored(item: MantikItem): State[PlanningState, PlanOp[Unit]] = {
     val dependent = dependentItemsForSaving(item)
 
     for {
@@ -153,10 +145,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
       }).sequence
       mainOp <- ensureItemStored(item)
     } yield {
-      PlanOp.seq(
-        PlanOp.seq(dependentOps: _*),
-        mainOp.preOp
-      )
+      PlanOp.Sequential(dependentOps, mainOp.preOp)
     }
   }
 
@@ -184,14 +173,6 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
     }
   }
 
-  private def storeDependentItems(item: MantikItem): State[PlanningState, PlanOp] = {
-    dependentItemsForSaving(item).map { item =>
-      ensureItemWithDependenciesStored(item)
-    }.sequence.map { changes =>
-      PlanOp.seq(changes: _*)
-    }
-  }
-
   /** Returns dependent referenced items. */
   private def dependentItemsForSaving(item: MantikItem): List[MantikItem] = {
     item match {
@@ -203,7 +184,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
     }
   }
 
-  private def deployAlgorithm(algorithm: Algorithm, nameHint: Option[String]): State[PlanningState, PlanOp] = {
+  private def deployAlgorithm(algorithm: Algorithm, nameHint: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
       state.overrideState(algorithm).deployed match {
         case Some(Left(existing)) =>
@@ -211,7 +192,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
           PlanningState.pure(PlanOp.Const(existing))
         case Some(Right(memory)) =>
           // already deployed withing planner
-          PlanningState.pure(PlanOp.MemoryReader(memory))
+          PlanningState.pure(PlanOp.MemoryReader[DeploymentState](memory))
         case None =>
           // not yet deployed
           for {
@@ -231,7 +212,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
             val combined = PlanOp.seq(
               filePlan.preOp,
               op,
-              PlanOp.MemoryWriter(memoryId)
+              PlanOp.MemoryWriter[DeploymentState](memoryId)
             )
             combined
           }
@@ -240,7 +221,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
   }
 
   /** Deploy a pipeline. */
-  def deployPipeline(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp] = {
+  def deployPipeline(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
       state.overrideState(pipeline).deployed match {
         case Some(Left(existing)) =>
@@ -265,7 +246,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
     }
   }
 
-  private def buildPipelineDeployment(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp] = {
+  private def buildPipelineDeployment(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
     for {
       memoryId <- PlanningState.apply(_.withNextMemoryId)
       _ <- PlanningState.modify(_.withOverrideFunc(pipeline, _.copy(
@@ -280,29 +261,32 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
         ingress = ingress,
         steps = pipeline.resolved.steps
       )
-      val op2 = PlanOp.MemoryWriter(memoryId)
+      val op2 = PlanOp.MemoryWriter[DeploymentState](memoryId)
       PlanOp.seq(op1, op2)
     }
   }
 
   /** Ensure that steps of a pipeline are deployed. */
-  private def ensureStepsDeployed(pipeline: Pipeline): State[PlanningState, PlanOp] = {
+  private def ensureStepsDeployed(pipeline: Pipeline): State[PlanningState, PlanOp[Unit]] = {
     val algorithms = pipeline.resolved.steps
     algorithms.map { algorithm =>
       ensureAlgorithmDeployed(algorithm)
     }.sequence.map { ops =>
-      PlanOp.seq(ops: _*)
+      PlanOp.Sequential(ops, PlanOp.Empty)
     }
   }
 
   /** Ensure that an algorithm is deployed. */
-  def ensureAlgorithmDeployed(algorithm: Algorithm): State[PlanningState, PlanOp] = {
+  def ensureAlgorithmDeployed(algorithm: Algorithm): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
-      if (state.overrideState(algorithm).deployed.isDefined) {
-        // already deployed
-        PlanningState.pure(PlanOp.Empty)
-      } else {
-        deployAlgorithm(algorithm, None)
+      state.overrideState(algorithm).deployed match {
+        case Some(Left(deploymentState)) =>
+          // already deployed
+          PlanningState.pure(PlanOp.Const(deploymentState))
+        case Some(Right(memoryId)) =>
+          PlanningState.pure(PlanOp.MemoryReader[DeploymentState](memoryId))
+        case None =>
+          deployAlgorithm(algorithm, None)
       }
     }
   }

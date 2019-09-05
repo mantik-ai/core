@@ -14,7 +14,7 @@ private[impl] case class PlanFileWithContentType(
  * @param files the files which make it available.
  */
 private[impl] case class FilesPlan(
-    preOp: PlanOp = PlanOp.Empty,
+    preOp: PlanOp[Unit] = PlanOp.Empty,
     files: IndexedSeq[PlanFileWithContentType] = IndexedSeq.empty
 ) {
 

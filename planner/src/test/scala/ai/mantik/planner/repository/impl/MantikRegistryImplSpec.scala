@@ -17,7 +17,7 @@ import scala.concurrent.Future
 
 class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
 
-  private val dummyPort = 9001
+  private val dummyPort = 9002
 
   override protected lazy val typesafeConfig: Config = ConfigFactory.load().withValue(
     "mantik.core.registry.url", ConfigValueFactory.fromAnyRef(s"http://localhost:${dummyPort}")

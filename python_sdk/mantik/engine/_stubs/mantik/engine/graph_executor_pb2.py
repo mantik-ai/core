@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ai.mantik.engine.protos',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\"mantik/engine/graph_executor.proto\x12\x17\x61i.mantik.engine.protos\x1a\x16mantik/engine/ds.proto\"u\n\x10\x46\x65tchItemRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x12\n\ndataset_id\x18\x02 \x01(\t\x12\x39\n\x08\x65ncoding\x18\x03 \x01(\x0e\x32\'.ai.mantik.engine.protos.BundleEncoding\"D\n\x11\x46\x65tchItemResponse\x12/\n\x06\x62undle\x18\x01 \x01(\x0b\x32\x1f.ai.mantik.engine.protos.Bundle\"D\n\x0fSaveItemRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07item_id\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\" \n\x10SaveItemResponse\x12\x0c\n\x04name\x18\x01 \x01(\t2\xe2\x01\n\x14GraphExecutorService\x12g\n\x0c\x46\x65tchDataSet\x12).ai.mantik.engine.protos.FetchItemRequest\x1a*.ai.mantik.engine.protos.FetchItemResponse\"\x00\x12\x61\n\x08SaveItem\x12(.ai.mantik.engine.protos.SaveItemRequest\x1a).ai.mantik.engine.protos.SaveItemResponse\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\"mantik/engine/graph_executor.proto\x12\x17\x61i.mantik.engine.protos\x1a\x16mantik/engine/ds.proto\"u\n\x10\x46\x65tchItemRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x12\n\ndataset_id\x18\x02 \x01(\t\x12\x39\n\x08\x65ncoding\x18\x03 \x01(\x0e\x32\'.ai.mantik.engine.protos.BundleEncoding\"D\n\x11\x46\x65tchItemResponse\x12/\n\x06\x62undle\x18\x01 \x01(\x0b\x32\x1f.ai.mantik.engine.protos.Bundle\"D\n\x0fSaveItemRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07item_id\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\"8\n\x10SaveItemResponse\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x16\n\x0emantik_item_id\x18\x02 \x01(\t\"a\n\x11\x44\x65ployItemRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07item_id\x18\x02 \x01(\t\x12\x14\n\x0cingress_name\x18\x03 \x01(\t\x12\x11\n\tname_hint\x18\x04 \x01(\t\"N\n\x12\x44\x65ployItemResponse\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0cinternal_url\x18\x02 \x01(\t\x12\x14\n\x0c\x65xternal_url\x18\x03 \x01(\t2\xcb\x02\n\x14GraphExecutorService\x12g\n\x0c\x46\x65tchDataSet\x12).ai.mantik.engine.protos.FetchItemRequest\x1a*.ai.mantik.engine.protos.FetchItemResponse\"\x00\x12\x61\n\x08SaveItem\x12(.ai.mantik.engine.protos.SaveItemRequest\x1a).ai.mantik.engine.protos.SaveItemResponse\"\x00\x12g\n\nDeployItem\x12*.ai.mantik.engine.protos.DeployItemRequest\x1a+.ai.mantik.engine.protos.DeployItemResponse\"\x00\x62\x06proto3')
   ,
   dependencies=[mantik_dot_engine_dot_ds__pb2.DESCRIPTOR,])
 
@@ -163,6 +163,13 @@ _SAVEITEMRESPONSE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='mantik_item_id', full_name='ai.mantik.engine.protos.SaveItemResponse.mantik_item_id', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -176,7 +183,104 @@ _SAVEITEMRESPONSE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=346,
-  serialized_end=378,
+  serialized_end=402,
+)
+
+
+_DEPLOYITEMREQUEST = _descriptor.Descriptor(
+  name='DeployItemRequest',
+  full_name='ai.mantik.engine.protos.DeployItemRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='session_id', full_name='ai.mantik.engine.protos.DeployItemRequest.session_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='item_id', full_name='ai.mantik.engine.protos.DeployItemRequest.item_id', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='ingress_name', full_name='ai.mantik.engine.protos.DeployItemRequest.ingress_name', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='name_hint', full_name='ai.mantik.engine.protos.DeployItemRequest.name_hint', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=404,
+  serialized_end=501,
+)
+
+
+_DEPLOYITEMRESPONSE = _descriptor.Descriptor(
+  name='DeployItemResponse',
+  full_name='ai.mantik.engine.protos.DeployItemResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='ai.mantik.engine.protos.DeployItemResponse.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='internal_url', full_name='ai.mantik.engine.protos.DeployItemResponse.internal_url', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='external_url', full_name='ai.mantik.engine.protos.DeployItemResponse.external_url', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=503,
+  serialized_end=581,
 )
 
 _FETCHITEMREQUEST.fields_by_name['encoding'].enum_type = mantik_dot_engine_dot_ds__pb2._BUNDLEENCODING
@@ -185,6 +289,8 @@ DESCRIPTOR.message_types_by_name['FetchItemRequest'] = _FETCHITEMREQUEST
 DESCRIPTOR.message_types_by_name['FetchItemResponse'] = _FETCHITEMRESPONSE
 DESCRIPTOR.message_types_by_name['SaveItemRequest'] = _SAVEITEMREQUEST
 DESCRIPTOR.message_types_by_name['SaveItemResponse'] = _SAVEITEMRESPONSE
+DESCRIPTOR.message_types_by_name['DeployItemRequest'] = _DEPLOYITEMREQUEST
+DESCRIPTOR.message_types_by_name['DeployItemResponse'] = _DEPLOYITEMRESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 FetchItemRequest = _reflection.GeneratedProtocolMessageType('FetchItemRequest', (_message.Message,), dict(
@@ -215,6 +321,20 @@ SaveItemResponse = _reflection.GeneratedProtocolMessageType('SaveItemResponse', 
   ))
 _sym_db.RegisterMessage(SaveItemResponse)
 
+DeployItemRequest = _reflection.GeneratedProtocolMessageType('DeployItemRequest', (_message.Message,), dict(
+  DESCRIPTOR = _DEPLOYITEMREQUEST,
+  __module__ = 'mantik.engine.graph_executor_pb2'
+  # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.DeployItemRequest)
+  ))
+_sym_db.RegisterMessage(DeployItemRequest)
+
+DeployItemResponse = _reflection.GeneratedProtocolMessageType('DeployItemResponse', (_message.Message,), dict(
+  DESCRIPTOR = _DEPLOYITEMRESPONSE,
+  __module__ = 'mantik.engine.graph_executor_pb2'
+  # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.DeployItemResponse)
+  ))
+_sym_db.RegisterMessage(DeployItemResponse)
+
 
 
 _GRAPHEXECUTORSERVICE = _descriptor.ServiceDescriptor(
@@ -223,8 +343,8 @@ _GRAPHEXECUTORSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=381,
-  serialized_end=607,
+  serialized_start=584,
+  serialized_end=915,
   methods=[
   _descriptor.MethodDescriptor(
     name='FetchDataSet',
@@ -242,6 +362,15 @@ _GRAPHEXECUTORSERVICE = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=_SAVEITEMREQUEST,
     output_type=_SAVEITEMRESPONSE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='DeployItem',
+    full_name='ai.mantik.engine.protos.GraphExecutorService.DeployItem',
+    index=2,
+    containing_service=None,
+    input_type=_DEPLOYITEMREQUEST,
+    output_type=_DEPLOYITEMRESPONSE,
     serialized_options=None,
   ),
 ])

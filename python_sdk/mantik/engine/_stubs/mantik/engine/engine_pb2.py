@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ai.mantik.engine.protos',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x1amantik/engine/engine.proto\x12\x17\x61i.mantik.engine.protos\x1a\x1bgoogle/protobuf/empty.proto\"\"\n\x0fVersionResponse\x12\x0f\n\x07version\x18\x01 \x01(\t2]\n\x0c\x41\x62outService\x12M\n\x07Version\x12\x16.google.protobuf.Empty\x1a(.ai.mantik.engine.protos.VersionResponse\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x1amantik/engine/engine.proto\x12\x17\x61i.mantik.engine.protos\x1a\x1bgoogle/protobuf/empty.proto\"\"\n\x0fVersionResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\"&\n\x14\x43lientConfigResponse\x12\x0e\n\x06\x63onfig\x18\x01 \x01(\t2\xb6\x01\n\x0c\x41\x62outService\x12M\n\x07Version\x12\x16.google.protobuf.Empty\x1a(.ai.mantik.engine.protos.VersionResponse\"\x00\x12W\n\x0c\x43lientConfig\x12\x16.google.protobuf.Empty\x1a-.ai.mantik.engine.protos.ClientConfigResponse\"\x00\x62\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,])
 
@@ -58,7 +58,39 @@ _VERSIONRESPONSE = _descriptor.Descriptor(
   serialized_end=118,
 )
 
+
+_CLIENTCONFIGRESPONSE = _descriptor.Descriptor(
+  name='ClientConfigResponse',
+  full_name='ai.mantik.engine.protos.ClientConfigResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='config', full_name='ai.mantik.engine.protos.ClientConfigResponse.config', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=120,
+  serialized_end=158,
+)
+
 DESCRIPTOR.message_types_by_name['VersionResponse'] = _VERSIONRESPONSE
+DESCRIPTOR.message_types_by_name['ClientConfigResponse'] = _CLIENTCONFIGRESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 VersionResponse = _reflection.GeneratedProtocolMessageType('VersionResponse', (_message.Message,), dict(
@@ -68,6 +100,13 @@ VersionResponse = _reflection.GeneratedProtocolMessageType('VersionResponse', (_
   ))
 _sym_db.RegisterMessage(VersionResponse)
 
+ClientConfigResponse = _reflection.GeneratedProtocolMessageType('ClientConfigResponse', (_message.Message,), dict(
+  DESCRIPTOR = _CLIENTCONFIGRESPONSE,
+  __module__ = 'mantik.engine.engine_pb2'
+  # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.ClientConfigResponse)
+  ))
+_sym_db.RegisterMessage(ClientConfigResponse)
+
 
 
 _ABOUTSERVICE = _descriptor.ServiceDescriptor(
@@ -76,8 +115,8 @@ _ABOUTSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=120,
-  serialized_end=213,
+  serialized_start=161,
+  serialized_end=343,
   methods=[
   _descriptor.MethodDescriptor(
     name='Version',
@@ -86,6 +125,15 @@ _ABOUTSERVICE = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=_VERSIONRESPONSE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='ClientConfig',
+    full_name='ai.mantik.engine.protos.AboutService.ClientConfig',
+    index=1,
+    containing_service=None,
+    input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
+    output_type=_CLIENTCONFIGRESPONSE,
     serialized_options=None,
   ),
 ])

@@ -20,6 +20,11 @@ class AboutServiceStub(object):
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=mantik_dot_engine_dot_engine__pb2.VersionResponse.FromString,
         )
+    self.ClientConfig = channel.unary_unary(
+        '/ai.mantik.engine.protos.AboutService/ClientConfig',
+        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+        response_deserializer=mantik_dot_engine_dot_engine__pb2.ClientConfigResponse.FromString,
+        )
 
 
 class AboutServiceServicer(object):
@@ -33,6 +38,13 @@ class AboutServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def ClientConfig(self, request, context):
+    """Request client configuration
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_AboutServiceServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -40,6 +52,11 @@ def add_AboutServiceServicer_to_server(servicer, server):
           servicer.Version,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=mantik_dot_engine_dot_engine__pb2.VersionResponse.SerializeToString,
+      ),
+      'ClientConfig': grpc.unary_unary_rpc_method_handler(
+          servicer.ClientConfig,
+          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+          response_serializer=mantik_dot_engine_dot_engine__pb2.ClientConfigResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

@@ -24,6 +24,11 @@ class GraphExecutorServiceStub(object):
         request_serializer=mantik_dot_engine_dot_graph__executor__pb2.SaveItemRequest.SerializeToString,
         response_deserializer=mantik_dot_engine_dot_graph__executor__pb2.SaveItemResponse.FromString,
         )
+    self.DeployItem = channel.unary_unary(
+        '/ai.mantik.engine.protos.GraphExecutorService/DeployItem',
+        request_serializer=mantik_dot_engine_dot_graph__executor__pb2.DeployItemRequest.SerializeToString,
+        response_deserializer=mantik_dot_engine_dot_graph__executor__pb2.DeployItemResponse.FromString,
+        )
 
 
 class GraphExecutorServiceServicer(object):
@@ -44,6 +49,13 @@ class GraphExecutorServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def DeployItem(self, request, context):
+    """* Deploys an Item to the cluster. 
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_GraphExecutorServiceServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -56,6 +68,11 @@ def add_GraphExecutorServiceServicer_to_server(servicer, server):
           servicer.SaveItem,
           request_deserializer=mantik_dot_engine_dot_graph__executor__pb2.SaveItemRequest.FromString,
           response_serializer=mantik_dot_engine_dot_graph__executor__pb2.SaveItemResponse.SerializeToString,
+      ),
+      'DeployItem': grpc.unary_unary_rpc_method_handler(
+          servicer.DeployItem,
+          request_deserializer=mantik_dot_engine_dot_graph__executor__pb2.DeployItemRequest.FromString,
+          response_serializer=mantik_dot_engine_dot_graph__executor__pb2.DeployItemResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

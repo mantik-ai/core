@@ -16,13 +16,13 @@ import ai.mantik.planner
  * Node: resources may be input and output at the same time.
  */
 private[impl] case class ResourcePlan(
-    pre: PlanOp = PlanOp.Empty,
+    pre: PlanOp[Unit] = PlanOp.Empty,
     graph: Graph[PlanNodeService] = Graph.empty,
     inputs: Seq[NodeResourceRef] = Nil,
     outputs: Seq[NodeResourceRef] = Nil
 ) {
 
-  def prependOp(plan: PlanOp): ResourcePlan = {
+  def prependOp(plan: PlanOp[_]): ResourcePlan = {
     copy(
       pre = PlanOp.combine(plan, pre)
     )

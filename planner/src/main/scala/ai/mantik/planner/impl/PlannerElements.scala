@@ -16,7 +16,7 @@ class PlannerElements(bridges: Bridges) {
   import ai.mantik.planner.repository.ContentTypes._
 
   /** Converts a plan to a job. */
-  def sourcePlanToJob(sourcePlan: ResourcePlan): PlanOp = {
+  def sourcePlanToJob(sourcePlan: ResourcePlan): PlanOp[Unit] = {
     PlanOp.combine(
       sourcePlan.pre,
       PlanOp.RunGraph(sourcePlan.graph)
@@ -24,7 +24,7 @@ class PlannerElements(bridges: Bridges) {
   }
 
   /** Converts a Literal into a push plan. */
-  def literalToPushBundle(literal: PayloadSource.Literal, fileReference: PlanFile): PlanOp = {
+  def literalToPushBundle(literal: PayloadSource.Literal, fileReference: PlanFile): PlanOp[Unit] = {
     literal match {
       case PayloadSource.BundleLiteral(content) =>
         PlanOp.StoreBundleToFile(content, fileReference.ref)
@@ -36,6 +36,7 @@ class PlannerElements(bridges: Bridges) {
     val node = Node.sink(PlanNodeService.File(fileReference.ref), contentType)
     PlanningState.stateChange(_.withNextNodeId) { nodeId =>
       ResourcePlan(
+        pre = PlanOp.Empty,
         graph = Graph(
           Map(
             nodeId -> node
@@ -57,6 +58,7 @@ class PlannerElements(bridges: Bridges) {
         links = Seq.empty
       )
       ResourcePlan(
+        pre = PlanOp.Empty,
         graph = graph,
         outputs = Seq(NodeResourceRef(nodeId, ExecutorModelDefaults.SourceResource))
       )
@@ -124,6 +126,7 @@ class PlannerElements(bridges: Bridges) {
         )
       )
       ResourcePlan(
+        pre = PlanOp.Empty,
         graph = graph,
         inputs = Seq(NodeResourceRef(nodeId, applyResource)),
         outputs = Seq(NodeResourceRef(nodeId, applyResource))
