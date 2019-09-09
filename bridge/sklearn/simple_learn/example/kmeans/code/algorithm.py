@@ -34,8 +34,8 @@ def train(bundle: mantik.types.Bundle) -> mantik.types.Bundle:
     model = KMeans(n_clusters=cluster_count).fit(learn_data)
     with (open(MODEL_FILE, "wb")) as f:
         pickle.dump(model, f)
-    values = [model.cluster_centers_.reshape(-1).tolist(), model.inertia_, model.n_iter_]
-    return mantik.types.Bundle(type=mantik.types.DataType.from_json(stats_type), value=values)
+    value = [[model.cluster_centers_.reshape(-1).tolist(), model.inertia_, model.n_iter_]]
+    return mantik.types.Bundle(value=value)
 
 
 def try_init():
