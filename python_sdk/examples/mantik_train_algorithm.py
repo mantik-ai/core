@@ -2,11 +2,12 @@
 
 import numpy as np
 from sklearn.datasets.samples_generator import make_blobs
+from sklearn.metrics import accuracy_score
 
 import mantik.engine
 import mantik.types
 
-data, label = make_blobs(n_samples=1000, n_features=2, centers=2)
+data, label = make_blobs(n_samples=100, n_features=2, centers=2)
 
 ds = """
 {
@@ -30,11 +31,9 @@ with mantik.engine.Client("localhost", 8087) as client:
     with client.enter_session():
         [*_, trained_algorithm], stats = client.train([kmeans], bundle)
         kmeans_trained = client.tag(trained_algorithm, "kmeans_trained").save()
-        print(kmeans_trained)
-        exit()
         result = client.apply([kmeans_trained.item], bundle).fetch()
         print(result)
 
 prediction = np.array(result.bundle.value).reshape(-1)
-print(prediction)
-print(label)
+score = accuracy_score(label, prediction)
+print(f"Accuracy score: {score}")

@@ -13,7 +13,14 @@ trainingType:
       shape: [2]
       componentType: float64
 # The type for statistic after training
-statType: void
+statType:
+  columns:
+    centers:
+      type: tensor
+      shape: [2]
+      componentType: float64
+    inertia: float64
+    n_iter: int32
 # The type when trained
 type:
   input:
