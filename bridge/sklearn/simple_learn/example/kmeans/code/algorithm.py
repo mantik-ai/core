@@ -1,30 +1,13 @@
-import pathlib
-
-from sklearn.cluster import KMeans
 import pickle
+
 import numpy as np
+from sklearn.cluster import KMeans
+
 import mantik
 import mantik.types
 
-MODEL_FILE = "model.pickle"
 
-stats_type = """
-{
-    "format": {
-        "columns": {
-            "centers": 
-                {
-                    "type": "tensor",
-                    "shape": [2],
-                    "componentType": "float64"
-                },
-            "inertia": "float64",
-            "n_iter": "int64"
-        }
-    }   
-}
-"""
-# MANTIKFILE = mantik.types.Mantikfile.load(pathlib.Path(__file__).parent / "Mantikfile")
+MODEL_FILE = "model.pickle"
 
 
 def train(bundle: mantik.types.Bundle) -> mantik.types.Bundle:

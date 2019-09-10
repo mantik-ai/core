@@ -1,1 +1,1 @@
-from ._sklearn_compat import MantikModel
+# from ._sklearn_compat import MantikModel

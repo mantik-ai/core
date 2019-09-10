@@ -5,7 +5,8 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
-sklearn = "*"
+scikit-learn = "*"
+numpy = "*"
 
 [packages]
 mantik = {editable = true,path = "."}
