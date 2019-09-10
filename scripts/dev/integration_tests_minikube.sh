@@ -53,4 +53,7 @@ echo "** Stage 3 Engine Integration Tests **"
 sbt engine/it:test
 result4=$?
 
-! (( $result1 || $result2 || $result3 || $result4 ))
+./scripts/dev/run_python_integration_test.sh
+result5=$?
+
+! (( $result1 || $result2 || $result3 || $result4 || $result5 ))
