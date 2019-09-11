@@ -23,6 +23,8 @@ service GraphBuilderService {
     rpc BuildPipeline(BuildPipelineRequest) returns (NodeResponse){}
     /* Returns the item using a new name. */
     rpc Tag(TagRequest) returns(NodeResponse) {}
+    /* Set Meta Variables of an Item. */
+    rpc SetMetaVariables(SetMetaVariableRequest) returns (NodeResponse){}
 }
 
 message GetRequest {
@@ -99,4 +101,24 @@ message TagRequest {
     string session_id = 1;
     string item_id = 2;
     string named_mantik_id = 3;
+}
+
+// A Request for setting meta variables
+message SetMetaVariableRequest {
+    string session_id = 1;
+    string item_id = 2;
+    repeated MetaVariableValue values = 3;
+}
+
+// A Single set meta variable
+message MetaVariableValue {
+    // Name of the meta variable
+    string name = 1;
+
+    oneof value {
+        // Value to be set as JSON (with omitted type)
+        string json = 2;
+        // Value to be set as Bundle (automatic conversion will be done, if possible)
+        Bundle bundle = 3;
+    }
 }

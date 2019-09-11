@@ -29,7 +29,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 private[engine] object Converters {
 
   def encodeMantikItem(mantikItem: MantikItem): ProtoMantikItem = {
-    mantikItem match {
+    val protoResponse = mantikItem match {
       case a: Algorithm => ProtoMantikItem(
         kind = ObjectKind.KIND_ALGORITHM,
         item = Item.Algorithm(
@@ -70,6 +70,9 @@ private[engine] object Converters {
         )
       )
     }
+    protoResponse.copy(
+      mantikfileJson = mantikItem.mantikfile.toJson
+    )
   }
 
   /**
