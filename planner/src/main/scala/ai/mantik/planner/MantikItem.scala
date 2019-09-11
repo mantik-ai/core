@@ -27,7 +27,7 @@ trait MantikItem {
   /** Returns where the mantikfile / item comes from. */
   private[mantik] def definitionSource: DefinitionSource = source.definition
   /** Returns the item's Mantikfile with definition. */
-  private[planner] def mantikfile: Mantikfile[DefinitionType] = core.mantikfile
+  private[mantik] def mantikfile: Mantikfile[DefinitionType] = core.mantikfile
 
   /** The state of the mantik Item. */
   private[planner] val state: AtomicReference[MantikItemState] = new AtomicReference({

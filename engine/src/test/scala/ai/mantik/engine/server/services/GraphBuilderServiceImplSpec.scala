@@ -2,12 +2,13 @@ package ai.mantik.engine.server.services
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
 import ai.mantik.{ elements, planner }
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, SelectRequest, TagRequest, TrainRequest }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager, SessionNotFoundException }
 import ai.mantik.engine.testutil.{ DummyComponents, TestBaseWithSessions }
@@ -92,6 +93,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     response.itemId shouldBe "1"
     response.item.get.kind shouldBe ObjectKind.KIND_DATASET
     response.item.get.getDataset.`type`.get.json shouldBe "\"int32\""
+    CirceJson.forceParseJson(response.item.get.mantikfileJson) shouldBe dataset1.mantikfile.toJsonValue
     session1.getItem("1").get shouldBe an[DataSet]
     session2 shouldBe empty
   }
@@ -317,5 +319,71 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val original = session1.getItem(response.itemId).get
     val modified = session1.getItem(response2.itemId).get
     modified shouldBe original.tag("new_name")
+  }
+
+  "setMetaVariables" should "work" in new PlainEnv {
+    val algorithm1 = MantikArtifact(
+      Mantikfile.fromYamlWithType[AlgorithmDefinition](
+        """kind: algorithm
+          |stack: foo1
+          |type:
+          |  input: int32
+          |  output: int32
+          |metaVariables:
+          |  - name: a
+          |    type: string
+          |    value: "hello"
+          |  - name: b
+          |    type: int32
+          |    value: 42
+          |""".stripMargin).forceRight,
+      fileId = Some("1236"),
+      namedId = Some(NamedMantikId("Algorithm1")),
+      itemId = ItemId.generate()
+    )
+    await(components.repository.store(algorithm1))
+    val algorithm = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
+    val nameChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(
+      sessionId = session1.id,
+      itemId = algorithm.itemId,
+      values = Seq(
+        // type1: directly use JSON
+        MetaVariableValue("a", MetaVariableValue.Value.Json("\"boom\""))
+      )
+    )))
+    val nameChangedBack = session1.getItemAs[Algorithm](nameChanged.itemId)
+    nameChangedBack.mantikfile.metaJson.metaVariable("a").get.value shouldBe Bundle.fundamental("boom")
+    val intChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(
+      sessionId = session1.id,
+      itemId = algorithm.itemId,
+      values = Seq(
+        // type1: directly use JSON
+        MetaVariableValue("b", MetaVariableValue.Value.Bundle(await(Converters.encodeBundle(Bundle.fundamental(100), BundleEncoding.ENCODING_MSG_PACK)))
+        )
+      ))))
+    val intChangedBack = session1.getItemAs[Algorithm](intChanged.itemId)
+    intChangedBack.mantikfile.metaJson.metaVariable("b").get.value shouldBe Bundle.fundamental(100)
+
+    val bothChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(
+      sessionId = session1.id,
+      itemId = algorithm.itemId,
+      values = Seq(
+        // type1: directly use JSON
+        MetaVariableValue("b", MetaVariableValue.Value.Bundle(await(Converters.encodeBundle(Bundle.fundamental(123), BundleEncoding.ENCODING_MSG_PACK)))),
+        MetaVariableValue("a", MetaVariableValue.Value.Bundle(await(Converters.encodeBundle(Bundle.fundamental("Bam"), BundleEncoding.ENCODING_JSON))))
+      ))))
+    val bothChangedBack = session1.getItemAs[Algorithm](bothChanged.itemId)
+    bothChangedBack.mantikfile.metaJson.metaVariables.map { x => x.name -> x.value }.toMap shouldBe Map(
+      "a" -> Bundle.fundamental("Bam"),
+      "b" -> Bundle.fundamental(123)
+    )
+
+    // TODO: Various error scenarios (not existing Meta Variable etc?!)
+
+    withClue("the response contains the serialized Mantikfile, so that gRpc users can evaluate Meta variables") {
+      CirceJson.forceParseJson(
+        bothChanged.item.get.mantikfileJson
+      ) shouldBe bothChangedBack.core.mantikfile.toJsonValue
+    }
   }
 }

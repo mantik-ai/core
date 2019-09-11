@@ -1,13 +1,17 @@
 package ai.mantik.engine.server.services
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
+import ai.mantik.ds.formats.json.JsonFormat
+import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, NodeResponse, SelectRequest, TagRequest, TrainRequest, TrainResponse }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager }
 import ai.mantik.planner.repository.Errors
 import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
+import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
 import javax.inject.Inject
 
@@ -120,5 +124,48 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     } yield {
       placeInGraph(session, tagged)
     }
+  }
+
+  override def setMetaVariables(request: SetMetaVariableRequest): Future[NodeResponse] = {
+    for {
+      session <- sessionManager.get(request.sessionId)
+      item = session.getItemAs[MantikItem](request.itemId)
+      values <- decodeMetaVariableBundles(item, request)
+      applied = item.withMetaValues(values: _*)
+    } yield {
+      placeInGraph(session, applied)
+    }
+  }
+
+  private def decodeMetaVariableBundles(item: MantikItem, request: SetMetaVariableRequest): Future[Seq[(String, SingleElementBundle)]] = {
+    import FastFuture._
+
+    def toSingle(bundle: Bundle): SingleElementBundle = {
+      bundle match {
+        case s: SingleElementBundle => s
+        case other                  => throw new IllegalArgumentException(s"Expected single element bundle, got ${other}")
+      }
+    }
+
+    val decodeRequests: Seq[Future[(String, SingleElementBundle)]] = request.values.map { value =>
+      val metaVariable = item.core.mantikfile.metaJson.metaVariable(value.name).getOrElse {
+        throw new IllegalArgumentException(s"Meta variable ${value.name} not found")
+      }
+      val decodedValue = value.value match {
+        case MetaVariableValue.Value.Json(json) =>
+          val parsedJson = CirceJson.forceParseJson(json)
+          val parsedMetaValue = JsonFormat.deserializeBundleValue(metaVariable.value.model, parsedJson).fold(error =>
+            { throw new IllegalArgumentException("Could not parse value", error) }, { x => x }
+          )
+          FastFuture.successful(toSingle(parsedMetaValue))
+        case b: MetaVariableValue.Value.Bundle =>
+          Converters.decodeBundle(b.value).fast.map(toSingle)
+        case _ => throw new IllegalArgumentException(s"Missing value for ${value.name}")
+      }
+      decodedValue.fast.map { value =>
+        metaVariable.name -> value
+      }
+    }
+    Future.sequence(decodeRequests)
   }
 }

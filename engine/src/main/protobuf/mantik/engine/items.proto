@@ -12,6 +12,8 @@ message MantikItem {
         TrainableAlgorithm trainable_algorithm = 4;
         Pipeline pipeline = 5;
     }
+    // JSON mantikfile
+    string mantikfile_json = 6;
 }
 
 /* A Dataset item. */
