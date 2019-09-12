@@ -14,7 +14,9 @@ abstract class IntegrationTestBase extends TestBaseWithAkkaRuntime {
 
   protected var embeddedExecutor: ExecutorForIntegrationTests = _
   override protected lazy val typesafeConfig: Config = ConfigFactory.load("systemtest.conf")
-  protected var context: Context = _
+  private var _context: Context = _
+
+  implicit def context: Context = _context
 
   override protected val timeout: FiniteDuration = 30.seconds
 
@@ -27,7 +29,7 @@ abstract class IntegrationTestBase extends TestBaseWithAkkaRuntime {
     super.beforeAll()
     embeddedExecutor = new ExecutorForIntegrationTests(typesafeConfig)
     scrapKubernetes()
-    context = ContextImpl.constructTempClient()
+    _context = ContextImpl.constructTempClient()
   }
 
   private def scrapKubernetes(): Unit = {

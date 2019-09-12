@@ -1,11 +1,11 @@
 package ai.mantik.engine.testutil
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.planner.bridge.BridgesProvider
 import ai.mantik.planner.impl.PlannerImpl
-import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
-import ai.mantik.planner.repository.{ FileRepository, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
-import ai.mantik.planner.{ CoreComponents, Plan, PlanExecutor, Planner }
+import ai.mantik.planner.repository.impl.{LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository}
+import ai.mantik.planner.repository.{FileRepository, MantikArtifactRetriever, RemoteMantikRegistry, Repository}
+import ai.mantik.planner.{CacheKey, CoreComponents, Plan, PlanExecutor, Planner}
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.Future
@@ -35,6 +35,8 @@ class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
         lastPlan = plan
         nextItemToReturnByExecutor.asInstanceOf[Future[T]]
       }
+
+      override private[mantik] def cachedFile(cacheKey: CacheKey): Option[String] = None
     }
   }
 

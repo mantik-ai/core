@@ -10,7 +10,10 @@ import ai.mantik.elements.NamedMantikId
  *
  * @tparam T the value returned by this action
  */
-sealed trait Action[T]
+sealed trait Action[T] {
+  /** Executes the action, when an implicit context is available. */
+  def run()(implicit context: Context): T = context.execute(this)
+}
 
 object Action {
 

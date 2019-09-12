@@ -65,6 +65,10 @@ private[planner] class PlanExecutorImpl(
     } yield result.asInstanceOf[T]
   }
 
+  override def cachedFile(cacheKey: CacheKey): Option[String] = {
+    fileCache.get(cacheKey)
+  }
+
   def executeOp[T](planOp: PlanOp[T])(implicit files: ExecutionOpenFiles, memory: Memory): Future[T] = {
     executeOpInner(planOp).andThen {
       case Success(value) => memory.setLast(value)

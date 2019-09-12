@@ -161,7 +161,7 @@ class Client(object):
         )
         return self._make_item(result)
 
-    def train(self, pipe, data, no_caching=True):
+    def train(self, pipe, data, no_caching=False):
         """Transform a trainable pipeline to a pipeline.
 
         Only the last element must be a TrainableAlgorithm.
