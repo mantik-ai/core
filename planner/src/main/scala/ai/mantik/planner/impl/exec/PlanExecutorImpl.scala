@@ -148,6 +148,7 @@ private[planner] class PlanExecutorImpl(
       case PlanOp.RunGraph(graph) =>
         val jobGraphConverter = new JobGraphConverter(clientConfig.remoteFileRepositoryAddress, isolationSpace, files, dockerConfig.logins)
         val job = jobGraphConverter.translateGraphIntoJob(graph)
+        logger.debug(s"Running job ${jobDebugString(job)}")
         FutureHelper.time(logger, s"Executing Job in isolationSpace ${job.isolationSpace}") {
           executeJobAndWaitForReady(job)
         }
@@ -272,5 +273,35 @@ private[planner] class PlanExecutorImpl(
           throw new RuntimeException(s"Unexpected job state $other")
       }
     }
+  }
+
+  private def jobDebugString(job: Job): String = {
+    def formatNode(node: NodeService): String = {
+      node match {
+        case c: ContainerService => s"Container: ${c.main.image}"
+        case e: ExistingService  => s"Existing:  ${e.url}"
+      }
+    }
+    try {
+      val graph = job.graph
+      val analysis = new GraphAnalysis(graph)
+      val builder = StringBuilder.newBuilder
+      builder ++= s"Job ${job.isolationSpace}\n"
+      analysis.flows.zipWithIndex.foreach { case (flow, idx) =>
+          builder ++= s"  - Flow ${idx}\n"
+          flow.nodes.foreach { nodeResourceRef =>
+            val resolved = graph.resolveReference(nodeResourceRef)
+            resolved match {
+              case Some((node, res)) => builder ++= s"    - - ${formatNode(node.service)} : ${nodeResourceRef.resource} (${res.resourceType}/${res.contentType})\n"
+            }
+          }
+      }
+      builder.result()
+    } catch {
+      case e: GraphAnalysis.AnalyzerException =>
+        s"Invalid job ${e}"
+    }
+
+
   }
 }
