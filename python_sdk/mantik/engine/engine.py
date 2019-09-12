@@ -13,9 +13,6 @@ from mantik.engine.compat import *
 
 logger = logging.getLogger(__name__)
 
-SomeData = Union[DataType, mantik.types.DataType]
-PipeStep = Union[str, NodeResponse]
-
 
 @functools.singledispatch
 def _convert(bundle: mantik.types.Bundle) -> Bundle:
@@ -72,6 +69,9 @@ class MantikItem:
             )
         return self
 
+
+SomeData = Union[DataType, mantik.types.DataType]
+PipeStep = Union[str, MantikItem, NodeResponse]
 
 class Client(object):
     def __init__(self, host, port):
@@ -151,7 +151,7 @@ class Client(object):
     def apply(self, pipe: Union[PipeStep, List[PipeStep]], data: SomeData) -> MantikItem:
         """Execute the pipeline pipe on some data."""
         dataset = self.upload_bundle(data) if isinstance(data, mantik.types.Bundle) else data
-        mantik_pipe = pipe if isinstance(pipe, NodeResponse) else self.make_pipeline(pipe, data)
+        mantik_pipe = pipe if isinstance(pipe, (MantikItem, NodeResponse)) else self.make_pipeline(pipe, data)
         result = self._graph_builder.AlgorithmApply(
             ApplyRequest(
                 session_id=self.session.session_id,
@@ -186,7 +186,7 @@ class Client(object):
         )
         trained_algorithm = self._make_item(train_response.trained_algorithm)
         stats = self._make_item(train_response.stat_dataset)
-        return [*pipe[:-1], trained_algorithm], stats.fetch()
+        return self.make_pipeline([*pipe[:-1], trained_algorithm], data), stats.fetch()
 
     def tag(self, algo: MantikItem, ref: str) -> MantikItem:
         """Tag an algorithm algo with a reference ref."""

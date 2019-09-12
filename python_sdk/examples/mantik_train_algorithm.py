@@ -42,9 +42,8 @@ my_ref = "mq/kmeans_trained_on_blobs"
 with mantik.engine.Client("localhost", 8087) as client:
     kmeans = client._add_algorithm("bridge/sklearn/simple_learn/example/kmeans")
     with client.enter_session():
-        [*_, trained_algorithm], stats = client.train([kmeans], train_bundle)
-        kmeans_trained = client.tag(trained_algorithm, my_ref).save()
-        trained_pipe = [my_ref]
+        trained_pipe, stats = client.train([kmeans], train_bundle)
+        kmeans_trained = client.tag(trained_pipe, my_ref).save()
         train_result = client.apply(trained_pipe, train_bundle).fetch()
         test_result = client.apply(trained_pipe, test_bundle).fetch()
 
