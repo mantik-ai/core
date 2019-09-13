@@ -93,10 +93,11 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
           PlanningState.pure(FilesPlan(files = files))
         case None =>
           // Node need to be re-evaluated
-          reevaluateCachedSource(cachedSource, canBeTemporary).flatMap { filesPlan =>
-            PlanningState.modify(_.withEvaluatedCache(cachedSource.cacheGroup, filesPlan.files)).map { _ =>
-              filesPlan
-            }
+          for {
+            filesPlan <- reevaluateCachedSource(cachedSource, canBeTemporary)
+            _ <- PlanningState.modify(_.withEvaluatedCache(cachedSource.cacheGroup, filesPlan.files))
+          } yield {
+            filesPlan
           }
       }
     }
@@ -124,7 +125,8 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
             PlanOp.combine(
               opFiles.preOp,
               PlanOp.MarkCached(cacheFiles)
-            )
+            ),
+            files = opFiles.files
           )
         }
     }
