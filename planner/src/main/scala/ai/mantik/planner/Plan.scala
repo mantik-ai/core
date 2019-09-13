@@ -105,12 +105,8 @@ object PlanOp {
       steps: Seq[Algorithm]
   ) extends PlanOp[DeploymentState]
 
-  /**
-   * Evaluate the alternative, if any of the given files do not exist.
-   * @param files the files to cache. It's keys form a CacheGroup
-   */
-  case class CacheOp(files: List[(CacheKey, PlanFileReference)], alternative: PlanOp[_]) extends ProceduralPlanOp {
-    /** Returns the cache group for this operation. */
+  /** Mark files as being cached. */
+  case class MarkCached(files: List[(CacheKey, PlanFileReference)]) extends ProceduralPlanOp {
     def cacheGroup: CacheKeyGroup = files.map(_._1)
   }
 
@@ -196,9 +192,6 @@ object PlanOp {
           }
         }
         parts -> lastCompressedTail
-      case c: PlanOp.CacheOp =>
-        val c2 = c.copy(alternative = compress(c.alternative))
-        Nil -> c2
       case other =>
         Nil -> other
     }

@@ -36,8 +36,6 @@ class PlanOpSpec extends TestBase {
     PlanOp.compress(PlanOp.seq(plan1, plan2)) shouldBe PlanOp.seq(plan1, plan2)
     PlanOp.compress(PlanOp.seq(plan1, PlanOp.seq(plan2, plan3))) shouldBe PlanOp.seq(plan1, plan2, plan3)
     PlanOp.compress(PlanOp.seq(PlanOp.seq(plan1, plan2), plan3)) shouldBe PlanOp.seq(plan1, plan2, plan3)
-    PlanOp.compress(PlanOp.seq(PlanOp.CacheOp(List.empty, PlanOp.seq(plan1)))) shouldBe PlanOp.CacheOp(List.empty, plan1)
-    PlanOp.compress(PlanOp.seq(PlanOp.CacheOp(List.empty, PlanOp.seq(plan1, PlanOp.seq(plan2, plan3))))) shouldBe PlanOp.CacheOp(List.empty, PlanOp.seq(plan1, plan2, plan3))
 
     PlanOp.compress(
       PlanOp.Sequential(Seq(PlanOp.Empty, plan1), plan2)

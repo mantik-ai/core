@@ -1,12 +1,8 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.elements
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineStep }
-import ai.mantik.executor.model._
-import ai.mantik.executor.model.docker.Container
+import ai.mantik.elements.{ ItemId, NamedMantikId }
 import ai.mantik.planner._
 import ai.mantik.planner.impl.exec.FileCache
 import ai.mantik.planner.repository.ContentTypes
@@ -303,7 +299,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val c = b.select("select y as z")
     val plan = planner.convert(c.fetch)
     val ops = splitOps(plan.op)
-    ops.size shouldBe 3 // cached(pushing, calculation), calculation 2 and pulling
+    ops.size shouldBe 5 // pushing, calculation, mark cached, calculation2, pulling
     val cacheKey = b.payloadSource.asInstanceOf[PayloadSource.Cached].cacheGroup.head
     plan.files.size shouldBe 3 // push, cache, calculation
     plan.files shouldBe List(
@@ -312,22 +308,23 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       PlanFile(PlanFileReference(3), read = true, write = true, temporary = true)
     )
     plan.cacheGroups shouldBe List(List(cacheKey))
-    val cachePlan = plan.op.asInstanceOf[PlanOp.Sequential[_]].plans(0).asInstanceOf[PlanOp.CacheOp]
+
+    ops(0) shouldBe an[PlanOp.StoreBundleToFile]
+    ops(1) shouldBe an[PlanOp.RunGraph]
+    ops(2) shouldBe an[PlanOp.MarkCached]
+
+    val cachePlan = ops(2).asInstanceOf[PlanOp.MarkCached]
     cachePlan.files shouldBe List(cacheKey -> PlanFileReference(2))
-    cachePlan.alternative shouldBe an[PlanOp.Sequential[_]]
-    val parts = splitOps(cachePlan.alternative)
-    parts.head shouldBe an[PlanOp.StoreBundleToFile]
-    parts(1) shouldBe an[PlanOp.RunGraph]
 
     withClue("It should use the same key for a 2nd invocation referring to the same data") {
       val c2 = b.select("select y as m")
       val plan = planner.convert(c2.fetch)
       val parts = splitOps(plan.op)
-      parts.size shouldBe 3 // calculation of cached, calculation 2 and pulling
-      parts.head shouldBe an[PlanOp.CacheOp]
-      parts.head.asInstanceOf[PlanOp.CacheOp].cacheGroup shouldBe List(cacheKey)
-      parts(1) shouldBe an[PlanOp.RunGraph]
-      parts(2) shouldBe an[PlanOp.LoadBundleFromFile]
+      parts.size shouldBe 5 // calculation of cached, calculation 2 and pulling
+      parts(2) shouldBe an[PlanOp.MarkCached]
+      parts(2).asInstanceOf[PlanOp.MarkCached].cacheGroup shouldBe List(cacheKey)
+      parts(3) shouldBe an[PlanOp.RunGraph]
+      parts(4) shouldBe an[PlanOp.LoadBundleFromFile]
     }
   }
 
@@ -342,9 +339,9 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       PlanFile(PlanFileReference(2), read = true, write = true, temporary = false, cacheKey = Some(cacheKey))
     )
     val parts = splitOps(plan.op)
-    parts.size shouldBe 2
-    parts.head shouldBe an[PlanOp.CacheOp]
-    parts(1) shouldBe an[PlanOp.AddMantikItem]
+    parts.size shouldBe 4
+    parts(2) shouldBe an[PlanOp.MarkCached]
+    parts(3) shouldBe an[PlanOp.AddMantikItem]
   }
 
   it should "automatically cache training outputs" in new Env {

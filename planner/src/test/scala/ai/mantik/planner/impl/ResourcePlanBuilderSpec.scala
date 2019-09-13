@@ -225,7 +225,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       cache, canBeTemporary = false
     ))
     state.cacheGroups shouldBe List(cache.cacheGroup)
-    splitOps(files.preOp).find(_.isInstanceOf[PlanOp.CacheOp]) shouldBe defined
+    splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
   }
 
   it should "detect already cached files" in new Env {
@@ -241,7 +241,27 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       cache, canBeTemporary = false
     ))
     state.cacheGroups shouldBe Nil
-    splitOps(files.preOp).find(_.isInstanceOf[PlanOp.CacheOp]) shouldBe empty
+    splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe empty
+  }
+
+  it should "not doube-evaluate cached items" in new Env {
+    val cache = PayloadSource.Cached(
+      PayloadSource.OperationResult(
+        Operation.Application(algorithm1, dataset1)
+      )
+    )
+    val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
+      cache, canBeTemporary = false
+    ))
+    state.cacheGroups shouldBe List(cache.cacheGroup)
+    splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
+
+    val (state2, files2) = resourcePlanBuilder.translateItemPayloadSourceAsFiles(
+      cache, canBeTemporary = false
+    ).run(state).value
+
+    state2 shouldBe state
+    files2.files shouldBe files.files
   }
 
   it should "support projections" in new Env {

@@ -13,6 +13,7 @@ import cats.data.State
  * @param filesRev requested files (reverse).
  * @param stateOverrides override of Mantik State (where the planner decided a new target state)
  * @param nextMemoryId the next available id for memoized values.
+ * @param evaluatedCached cache key groups which are already translated to files
  */
 private[impl] case class PlanningState(
     private val nextNodeId: Int = 1,
@@ -20,7 +21,8 @@ private[impl] case class PlanningState(
     private val filesRev: List[PlanFile] = Nil, // reverse requested files
     cacheGroups: List[CacheKeyGroup] = Nil,
     private val stateOverrides: Map[ItemId, ItemStateOverride] = Map.empty,
-    private val nextMemoryId: Int = 1
+    private val nextMemoryId: Int = 1,
+    private val evaluatedCached: Map[CacheKeyGroup, IndexedSeq[PlanFileWithContentType]] = Map.empty
 ) {
 
   /** Returns files in request order. */
@@ -53,6 +55,17 @@ private[impl] case class PlanningState(
     copy(
       cacheGroups = cacheKeyGroup :: cacheGroups
     )
+  }
+
+  /** Add a cache to evaluated values. */
+  def withEvaluatedCache(cacheKeyGroup: CacheKeyGroup, files: IndexedSeq[PlanFileWithContentType]): PlanningState = {
+    copy(
+      evaluatedCached = evaluatedCached + (cacheKeyGroup -> files)
+    )
+  }
+
+  def evaluatedCache(cacheKeyGroup: CacheKeyGroup): Option[IndexedSeq[PlanFileWithContentType]] = {
+    evaluatedCached.get(cacheKeyGroup)
   }
 
   /** Request writing a file. */

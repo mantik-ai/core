@@ -86,6 +86,23 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
   }
 
   private def cachedSourceFiles(cachedSource: PayloadSource.Cached, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
+    PlanningState.flat { planningState =>
+      planningState.evaluatedCache(cachedSource.cacheGroup) match {
+        case Some(files) =>
+          // Node was already evalauted
+          PlanningState.pure(FilesPlan(files = files))
+        case None =>
+          // Node need to be re-evaluated
+          reevaluateCachedSource(cachedSource, canBeTemporary).flatMap { filesPlan =>
+            PlanningState.modify(_.withEvaluatedCache(cachedSource.cacheGroup, filesPlan.files)).map { _ =>
+              filesPlan
+            }
+          }
+      }
+    }
+  }
+
+  private def reevaluateCachedSource(cachedSource: PayloadSource.Cached, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
     cachedFiles.cached(cachedSource.cacheGroup) match {
       case Some(files) =>
         for {
@@ -104,9 +121,10 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
         } yield {
           val cacheFiles = cachedSource.cacheGroup.zip(opFiles.fileRefs)
           FilesPlan(
-            PlanOp.CacheOp(
-              cacheFiles, opFiles.preOp
-            ), opFiles.files
+            PlanOp.combine(
+              opFiles.preOp,
+              PlanOp.MarkCached(cacheFiles)
+            )
           )
         }
     }

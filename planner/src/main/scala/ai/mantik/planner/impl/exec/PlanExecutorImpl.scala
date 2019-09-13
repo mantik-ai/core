@@ -153,21 +153,14 @@ private[planner] class PlanExecutorImpl(
         FutureHelper.time(logger, s"Executing Job in isolationSpace ${job.isolationSpace}") {
           executeJobAndWaitForReady(job)
         }
-      case cacheOp: PlanOp.CacheOp =>
-        if (files.cacheHits.contains(cacheOp.cacheGroup)) {
-          logger.debug("Skipping op, because of cache hit")
-          Future.successful(())
-        } else {
-          logger.debug("Executing op, cache miss")
-          executeOp(cacheOp.alternative).map { _ =>
-            cacheOp.files.foreach {
-              case (cacheKey, fileRef) =>
-                val resolved = files.resolveFileId(fileRef)
-                fileCache.add(cacheKey, resolved)
-                ()
-            }
-          }
+      case cacheOp: PlanOp.MarkCached =>
+        cacheOp.files.foreach {
+          case (cacheKey, fileRef) =>
+            val resolved = files.resolveFileId(fileRef)
+            fileCache.add(cacheKey, resolved)
+            ()
         }
+        Future.successful(())
       case da: PlanOp.DeployAlgorithm =>
         FutureHelper.time(logger, s"Deploying Algorithm ${da.item.mantikId} -> ${da.serviceId}/${da.serviceNameHint}") {
           val jobGraphConverter = new JobGraphConverter(clientConfig.remoteFileRepositoryAddress, isolationSpace, files, dockerConfig.logins)
