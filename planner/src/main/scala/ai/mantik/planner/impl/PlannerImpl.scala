@@ -25,7 +25,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges, cachedFiles: Cach
   override def convert[T](action: Action[T]): Plan[T] = {
     val (planningState, planOp) = convertSingleAction(action).run(PlanningState()).value
     val compressed = PlanOp.compress(planOp)
-    Plan(compressed, planningState.files, planningState.cacheGroups)
+    Plan(compressed, planningState.files, planningState.cacheGroups.toList)
   }
 
   def convertSingleAction[T](action: Action[T]): State[PlanningState, PlanOp[T]] = {

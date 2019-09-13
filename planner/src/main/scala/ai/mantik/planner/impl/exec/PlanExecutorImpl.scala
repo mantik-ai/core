@@ -59,7 +59,7 @@ private[planner] class PlanExecutorImpl(
   def execute[T](plan: Plan[T]): Future[T] = {
     for {
       openFiles <- FutureHelper.time(logger, "Open Files") {
-        openFilesBuilder.openFiles(plan.cacheGroups, plan.files)
+        openFilesBuilder.openFiles(plan.files)
       }
       memory = new Memory()
       result <- executeOp(plan.op)(openFiles, memory)

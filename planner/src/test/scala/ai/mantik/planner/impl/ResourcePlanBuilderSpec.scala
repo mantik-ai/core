@@ -224,7 +224,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe List(cache.cacheGroup)
+    state.cacheGroups shouldBe Set(cache.cacheGroup)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
   }
 
@@ -240,7 +240,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe Nil
+    state.cacheGroups shouldBe Set(cache.cacheGroup)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe empty
   }
 
@@ -253,7 +253,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = true
     ))
-    state.cacheGroups shouldBe List(cache.cacheGroup)
+    state.cacheGroups shouldBe Set(cache.cacheGroup)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
 
     val (state2, files2) = resourcePlanBuilder.translateItemPayloadSourceAsFiles(
@@ -271,7 +271,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val (state, filesPlan) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       projection, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe Nil
+    state.cacheGroups shouldBe empty
     splitOps(filesPlan.preOp) shouldBe empty
     filesPlan.files.size shouldBe 1
   }

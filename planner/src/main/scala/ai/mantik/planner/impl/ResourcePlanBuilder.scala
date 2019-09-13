@@ -177,7 +177,6 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
     PlanningState { state =>
       val updatedState = state
         .markCached(toCached)
-        .withCacheGroup(cacheKeys)
       updatedState -> (())
     }
   }

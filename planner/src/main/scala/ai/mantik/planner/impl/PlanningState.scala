@@ -2,8 +2,7 @@ package ai.mantik.planner.impl
 
 import ai.mantik.elements.{ ItemId, NamedMantikId }
 import ai.mantik.planner.impl.PlanningState.ItemStateOverride
-import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo }
-import ai.mantik.planner.{ CacheKey, CacheKeyGroup, DataSet, DeploymentState, MantikItem, MantikItemState, MemoryId, PayloadSource, PlanFile, PlanFileReference }
+import ai.mantik.planner._
 import cats.data.State
 
 /**
@@ -11,6 +10,7 @@ import cats.data.State
  * @param nextNodeId the next available node id.
  * @param nextFileReferenceId the next available file reference id
  * @param filesRev requested files (reverse).
+ *
  * @param stateOverrides override of Mantik State (where the planner decided a new target state)
  * @param nextMemoryId the next available id for memoized values.
  * @param evaluatedCached cache key groups which are already translated to files
@@ -19,11 +19,13 @@ private[impl] case class PlanningState(
     private val nextNodeId: Int = 1,
     private val nextFileReferenceId: Int = 1,
     private val filesRev: List[PlanFile] = Nil, // reverse requested files
-    cacheGroups: List[CacheKeyGroup] = Nil,
     private val stateOverrides: Map[ItemId, ItemStateOverride] = Map.empty,
     private val nextMemoryId: Int = 1,
     private val evaluatedCached: Map[CacheKeyGroup, IndexedSeq[PlanFileWithContentType]] = Map.empty
 ) {
+
+  /** Cache groups which were evaluated in this Plan */
+  def cacheGroups: Set[CacheKeyGroup] = evaluatedCached.keySet
 
   /** Returns files in request order. */
   def files: List[PlanFile] = filesRev.reverse
@@ -50,13 +52,6 @@ private[impl] case class PlanningState(
     )
   }
 
-  /** Add a new cache group. */
-  def withCacheGroup(cacheKeyGroup: CacheKeyGroup): PlanningState = {
-    copy(
-      cacheGroups = cacheKeyGroup :: cacheGroups
-    )
-  }
-
   /** Add a cache to evaluated values. */
   def withEvaluatedCache(cacheKeyGroup: CacheKeyGroup, files: IndexedSeq[PlanFileWithContentType]): PlanningState = {
     copy(
@@ -64,6 +59,7 @@ private[impl] case class PlanningState(
     )
   }
 
+  /** Lookup if some cacheKeyGroup is evaluated. */
   def evaluatedCache(cacheKeyGroup: CacheKeyGroup): Option[IndexedSeq[PlanFileWithContentType]] = {
     evaluatedCached.get(cacheKeyGroup)
   }
