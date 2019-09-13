@@ -335,13 +335,19 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val action = b.tag("foo1").save()
     val plan = planner.convert(action)
     plan.files shouldBe List(
+      // literal
       PlanFile(PlanFileReference(1), read = true, write = true, temporary = true),
-      PlanFile(PlanFileReference(2), read = true, write = true, temporary = false, cacheKey = Some(cacheKey))
+      // cache
+      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true, cacheKey = Some(cacheKey)),
+      // copied cache for saving
+      PlanFile(PlanFileReference(3), read = false, write = true)
     )
     val parts = splitOps(plan.op)
-    parts.size shouldBe 4
+    parts.size shouldBe 5
     parts(2) shouldBe an[PlanOp.MarkCached]
-    parts(3) shouldBe an[PlanOp.AddMantikItem]
+    parts(3) shouldBe an[PlanOp.CopyFile] // copy file to non-cached
+    parts(4) shouldBe an[PlanOp.AddMantikItem]
+    parts(4).asInstanceOf[PlanOp.AddMantikItem].file shouldBe Some(PlanFileReference(3))
   }
 
   it should "automatically cache training outputs" in new Env {

@@ -244,20 +244,20 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe empty
   }
 
-  it should "not doube-evaluate cached items" in new Env {
+  it should "not double-evaluate cached items" in new Env {
     val cache = PayloadSource.Cached(
       PayloadSource.OperationResult(
         Operation.Application(algorithm1, dataset1)
       )
     )
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
-      cache, canBeTemporary = false
+      cache, canBeTemporary = true
     ))
     state.cacheGroups shouldBe List(cache.cacheGroup)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
 
     val (state2, files2) = resourcePlanBuilder.translateItemPayloadSourceAsFiles(
-      cache, canBeTemporary = false
+      cache, canBeTemporary = true
     ).run(state).value
 
     state2 shouldBe state

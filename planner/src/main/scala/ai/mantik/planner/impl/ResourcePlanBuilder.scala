@@ -90,19 +90,25 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
     if (canBeTemporary) {
       cachedTemporarySource(cachedSource)
     } else {
-      cachedTemporarySource(cachedSource).flatMap { filesPlan =>
-        filesPlan.files.indices.map { _ =>
+      // Generate a cached view and then copy that to real files
+      for {
+        filesPlan <- cachedTemporarySource(cachedSource)
+        nonTemporaries <- filesPlan.files.indices.map { _ =>
           PlanningState(_.writeFile(temporary = false))
-        }.toList.sequence.map { planFiles =>
-          // Copy files to non temporary locations
-          val copyOperations = filesPlan.files.zip(planFiles).map {
-            case (temporaryFile, nontemporaryFile) =>
-              PlanOp.CopyFile(from = temporaryFile.ref, to = nontemporaryFile.ref)
-          }
-          filesPlan.copy(
-            preOp = PlanOp.combine(filesPlan.preOp, PlanOp.Sequential(copyOperations, PlanOp.Empty))
-          )
+        }.toList.sequence
+        copyOperations = filesPlan.files.zip(nonTemporaries).map {
+          case (temporaryFile, nontemporaryFile) =>
+            PlanOp.CopyFile(from = temporaryFile.ref, to = nontemporaryFile.ref)
         }
+        newFiles = filesPlan.files.zip(nonTemporaries).map {
+          case (temporaryFile, nonTemporaryFile) =>
+            PlanFileWithContentType(nonTemporaryFile.ref, temporaryFile.contentType)
+        }
+      } yield {
+        FilesPlan(
+          preOp = PlanOp.combine(filesPlan.preOp, PlanOp.Sequential(copyOperations, PlanOp.Empty)),
+          files = newFiles
+        )
       }
     }
   }
