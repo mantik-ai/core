@@ -72,6 +72,12 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
         }
       case c: PayloadSource.Cached =>
         cachedSourceFiles(c, canBeTemporary)
+      case p: PayloadSource.Projection =>
+        translateItemPayloadSourceAsFiles(p.source, canBeTemporary).map { filesPlan =>
+          filesPlan.copy(
+            files = IndexedSeq(filesPlan.files(p.projection))
+          )
+        }
       case other =>
         translateItemPayloadSource(other).flatMap { operationResult =>
           resourcePlanToFiles(operationResult, canBeTemporary)

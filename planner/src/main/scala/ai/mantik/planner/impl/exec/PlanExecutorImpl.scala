@@ -295,7 +295,7 @@ private[planner] class PlanExecutorImpl(
             val resolved = graph.resolveReference(nodeResourceRef)
             resolved match {
               case Some((node, res)) => builder ++= s"    - - ${formatNode(node.service)} : ${nodeResourceRef.resource} (${res.resourceType}/${res.contentType})\n"
-              case _ =>                 builder ++= s"    -- Unresolved ${nodeResourceRef}" // should not happen
+              case _                 => builder ++= s"    -- Unresolved ${nodeResourceRef}" // should not happen
             }
           }
       }

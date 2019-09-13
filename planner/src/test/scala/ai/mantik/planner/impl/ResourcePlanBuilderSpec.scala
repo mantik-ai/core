@@ -244,6 +244,18 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.CacheOp]) shouldBe empty
   }
 
+  it should "support projections" in new Env {
+    val projection = PayloadSource.Projection(
+      PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)
+    )
+    val (state, filesPlan) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
+      projection, canBeTemporary = false
+    ))
+    state.cacheGroups shouldBe Nil
+    splitOps(filesPlan.preOp) shouldBe empty
+    filesPlan.files.size shouldBe 1
+  }
+
   "manifestDataSet" should "convert a simple literal source" in new Env {
     val sourcePlan = runWithEmptyState(resourcePlanBuilder.manifestDataSet(
       DataSet.literal(lit)
