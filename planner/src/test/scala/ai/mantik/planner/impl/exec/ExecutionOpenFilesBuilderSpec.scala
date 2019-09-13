@@ -45,7 +45,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
           crashingReads -= 1
           return Future.failed(new RuntimeException("Read failed"))
         }
-        val result = FileRepository.FileGetResult(id.toString, "path", None)
+        val result = FileRepository.FileGetResult(id.toString, false, "path", None)
         wasOptimisticRead = optimistic
         getResults += result
         Future.successful(

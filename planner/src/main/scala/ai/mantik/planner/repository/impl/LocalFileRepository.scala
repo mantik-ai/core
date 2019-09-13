@@ -104,7 +104,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
         throw new Errors.NotFoundException(s"File ${id} is not yet written")
       }
       FileGetResult(
-        id, FileRepository.makePath(id), fileMeta.contentType
+        id, fileMeta.temporary, FileRepository.makePath(id), fileMeta.contentType
       )
     }
   }

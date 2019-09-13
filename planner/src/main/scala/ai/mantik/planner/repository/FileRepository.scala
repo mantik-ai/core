@@ -40,6 +40,8 @@ object FileRepository {
   /** Result of get file request. */
   case class FileGetResult(
       fileId: String,
+      // file has been marked as being temporary
+      isTemporary: Boolean,
       // Relative Path under which the file is available from the server
       path: String,
       contentType: Option[String]

@@ -36,6 +36,7 @@ class FileRepositoryClientImpl @Inject() (service: FileRepositoryService)(implic
       service.requestFileGet(RequestFileGetRequest(id, optimistic)).map { response =>
         FileRepository.FileGetResult(
           response.fileId,
+          response.isTemporary,
           response.path,
           RpcConversions.decodeOptionalString(response.contentType)
         )

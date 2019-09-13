@@ -1,6 +1,6 @@
 package ai.mantik.planner.integration
 
-import ai.mantik.planner.{Context, MantikItem, PayloadSource}
+import ai.mantik.planner.{Context, FileId, MantikItem, PayloadSource}
 
 /** Helper for analyzing MantikItems
   * TODO: Perhaps this could go into the MantikItem's API
@@ -21,6 +21,16 @@ case class MantikItemAnalyzer (
           context.planExecutor.cachedFile(cacheKey).isDefined
         }
       case None => false
+    }
+  }
+
+  def cacheFile: Option[FileId] = {
+    item.core.source.payload.cachedGroup match {
+      case None => None
+      case Some(List(one)) => context.planExecutor.cachedFile(one)
+      case Some(multiple) =>
+        // can't be cached, should also not happen
+        None
     }
   }
 }

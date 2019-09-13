@@ -122,7 +122,8 @@ private[planner] class PlanExecutorImpl(
                 state.copy(
                   itemStored = true,
                   nameStored = namedId.isDefined,
-                  namedMantikItem = namedId
+                  namedMantikItem = namedId,
+                  payloadFile = fileId
                 )
               }
           }
@@ -287,7 +288,7 @@ private[planner] class PlanExecutorImpl(
           flow.nodes.foreach { nodeResourceRef =>
             val resolved = graph.resolveReference(nodeResourceRef)
             resolved match {
-              case Some((node, res)) => builder ++= s"    - - ${formatNode(node.service)} : ${nodeResourceRef.resource} (${res.resourceType}/${res.contentType})\n"
+              case Some((node, res)) => builder ++= s"    - - ${formatNode(node.service)} : ${nodeResourceRef.resource} (${res.resourceType}/${res.contentType.getOrElse("n.A.")})\n"
               case _                 => builder ++= s"    -- Unresolved ${nodeResourceRef}" // should not happen
             }
           }

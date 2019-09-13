@@ -45,6 +45,8 @@ message RequestFileGetResponse {
     string path = 2;
     // content type of the file (if yet clear)
     string content_type = 3;
+    // file is temporary
+    bool is_temporary = 4;
 }
 
 message StoreFileRequest {

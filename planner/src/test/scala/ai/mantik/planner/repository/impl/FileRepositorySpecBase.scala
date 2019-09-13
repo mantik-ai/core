@@ -24,6 +24,16 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
     bytes
   }
 
+  it should "save and load a file" in new Env {
+    val info = await(repo.requestFileStorage(false))
+    repo.storeFileSync(info.fileId, ContentTypes.MantikBundleContentType, testBytes)
+    val get = repo.getFileSync(info.fileId, false)
+    get.isTemporary shouldBe false
+    val (contentType, bytesAgain) = repo.getFileContentSync(info.fileId)
+    contentType shouldBe ContentTypes.MantikBundleContentType
+    bytesAgain shouldBe testBytes
+  }
+
   it should "know optimistic storage" in new Env {
     val info = await(repo.requestFileStorage(true))
 
@@ -33,6 +43,7 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
     val getFileResponse = withClue("No exception expected here") {
       repo.getFileSync(info.fileId, optimistic = true)
     }
+    getFileResponse.isTemporary shouldBe true
     // now store some content
     repo.storeFileSync(info.fileId, ContentTypes.MantikBundleContentType, testBytes)
 

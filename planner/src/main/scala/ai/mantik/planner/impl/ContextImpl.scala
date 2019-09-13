@@ -75,18 +75,11 @@ private[planner] class ContextImpl @Inject() (
 
 private[mantik] object ContextImpl {
 
-  /** Construct a Client only context (for integration tests.). */
-  def constructTempClient()(implicit akkaRuntime: AkkaRuntime): Context = {
-    val repository = new TempRepository()
-    val fileRepo = new TempFileRepository()
-    val fileRepoServer = new FileRepositoryServer(fileRepo)
-    val executor = constructExecutorClient()
-    val registry = RemoteMantikRegistry.empty
-    constructWithComponents(repository, fileRepo, fileRepoServer, executor, registry)
-  }
-
-  /** Construct a context with a running local stateful services (e.g. the Engine). */
-  private def constructWithComponents(
+  /**
+   * Construct a context with components
+   * (for testing)
+   */
+  def constructWithComponents(
     repository: Repository,
     fileRepository: FileRepository,
     fileRepositoryServer: FileRepositoryServer,
@@ -113,11 +106,4 @@ private[mantik] object ContextImpl {
     )
     new ContextImpl(localRegistry, planner, planExecutor, registry, retriever)
   }
-
-  private def constructExecutorClient()(implicit akkaRuntime: AkkaRuntime): Executor = {
-    val executorUrl = akkaRuntime.config.getString("mantik.executor.client.executorUrl")
-    val executor: Executor = new ExecutorClient(executorUrl)
-    executor
-  }
-
 }

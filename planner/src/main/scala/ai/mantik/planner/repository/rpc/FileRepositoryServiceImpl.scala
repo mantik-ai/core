@@ -34,6 +34,7 @@ class FileRepositoryServiceImpl @Inject() (backend: FileRepository)(implicit akk
       backend.requestFileGet(request.fileId, optimistic = request.optimistic).map { response =>
         RequestFileGetResponse(
           fileId = response.fileId,
+          isTemporary = response.isTemporary,
           path = response.path,
           contentType = RpcConversions.encodeOptionalString(response.contentType)
         )
