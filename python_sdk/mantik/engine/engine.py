@@ -18,14 +18,17 @@ logger = logging.getLogger(__name__)
 def _convert(bundle: mantik.types.Bundle) -> Bundle:
     """Convert mantik.types.Bundle to its protobuf equivalent."""
     return Bundle(
-        data_type=DataType(json=bundle.type.to_json()), encoding=ENCODING_JSON, encoded=bundle.encode_json()
+        data_type=DataType(json=bundle.type.to_json()),
+        encoding=ENCODING_JSON,
+        encoded=bundle.encode_json(),
     )
 
 
 @_convert.register
 def _(bundle: Bundle) -> mantik.types.Bundle:
     return mantik.types.Bundle.decode_json(
-        bundle.encoded, assumed_type=mantik.types.DataType.from_json(bundle.data_type.json)
+        bundle.encoded,
+        assumed_type=mantik.types.DataType.from_json(bundle.data_type.json),
     )
 
 
@@ -46,7 +49,9 @@ class MantikItem:
         if not hasattr(self, "_f_response"):
             self._f_response: FetchItemResponse = self._graph_executor.FetchDataSet(
                 FetchItemRequest(
-                    session_id=self._session.session_id, dataset_id=self.item_id, encoding=ENCODING_JSON
+                    session_id=self._session.session_id,
+                    dataset_id=self.item_id,
+                    encoding=ENCODING_JSON,
                 )
             )
             self.bundle = _convert(self._f_response.bundle)
@@ -57,14 +62,18 @@ class MantikItem:
             save_args = dict(session_id=self._session.session_id, item_id=self.item_id)
             if name is not None:
                 save_args["name"] = name
-            self._s_reponse: SaveItemResponse = self._graph_executor.SaveItem(SaveItemRequest(**save_args))
+            self._s_reponse: SaveItemResponse = self._graph_executor.SaveItem(
+                SaveItemRequest(**save_args)
+            )
         return self
 
     def deploy(self, ingress_name=str) -> MantikItem:
         if not hasattr(self, "_d_response"):
             self._d_response: DeployItemResponse = self._graph_executor.DeployItem(
                 DeployItemRequest(
-                    session_id=self._session.session_id, item_id=self.item_id, ingress_name=ingress_name
+                    session_id=self._session.session_id,
+                    item_id=self.item_id,
+                    ingress_name=ingress_name,
                 )
             )
         return self
@@ -72,6 +81,7 @@ class MantikItem:
 
 SomeData = Union[DataType, mantik.types.DataType]
 PipeStep = Union[str, MantikItem, NodeResponse]
+
 
 class Client(object):
     def __init__(self, host, port):
@@ -107,13 +117,17 @@ class Client(object):
         # TODO (mq): cache this
         item = self._make_item(
             self._graph_builder.Literal(
-                LiteralRequest(session_id=self.session.session_id, bundle=_convert(bundle))
+                LiteralRequest(
+                    session_id=self.session.session_id, bundle=_convert(bundle)
+                )
             )
         )
         logger.debug("Created Literal Node %s", item.item_id)
         return item
 
-    def make_pipeline(self, steps: List[PipeStep], data: Optional[SomeData] = None) -> MantikItem:
+    def make_pipeline(
+        self, steps: List[PipeStep], data: Optional[SomeData] = None
+    ) -> MantikItem:
         """Translate a list of references to a mantik Pipeline.
 
         A reference is either the name of an algorithm or a select literal.
@@ -131,7 +145,9 @@ class Client(object):
             if isinstance(s, str):
                 if s.startswith("select "):  # is a select literal
                     return BuildPipelineStep(select=s)
-                algorithm = self._graph_builder.Get(GetRequest(session_id=self.session.session_id, name=s))
+                algorithm = self._graph_builder.Get(
+                    GetRequest(session_id=self.session.session_id, name=s)
+                )
             else:
                 algorithm = s
             return BuildPipelineStep(algorithm_id=algorithm.item_id)
@@ -141,17 +157,27 @@ class Client(object):
 
         # if pipe starts with a select, need to supply input datatype
         first = steps[0]
-        if (isinstance(first, str) and first.startswith("select ")) or isinstance(first, SelectRequest):
+        if (isinstance(first, str) and first.startswith("select ")) or isinstance(
+            first, SelectRequest
+        ):
             request_args["input_type"] = guess_input_type(data)
 
         # TODO (mq): catch and convert exceptions to be pythonic
         pipe = self._graph_builder.BuildPipeline(BuildPipelineRequest(**request_args))
         return self._make_item(pipe)
 
-    def apply(self, pipe: Union[PipeStep, List[PipeStep]], data: SomeData) -> MantikItem:
+    def apply(
+        self, pipe: Union[PipeStep, List[PipeStep]], data: SomeData
+    ) -> MantikItem:
         """Execute the pipeline pipe on some data."""
-        dataset = self.upload_bundle(data) if isinstance(data, mantik.types.Bundle) else data
-        mantik_pipe = pipe if isinstance(pipe, (MantikItem, NodeResponse)) else self.make_pipeline(pipe, data)
+        dataset = (
+            self.upload_bundle(data) if isinstance(data, mantik.types.Bundle) else data
+        )
+        mantik_pipe = (
+            pipe
+            if isinstance(pipe, (MantikItem, NodeResponse))
+            else self.make_pipeline(pipe, data)
+        )
         result = self._graph_builder.AlgorithmApply(
             ApplyRequest(
                 session_id=self.session.session_id,
@@ -161,7 +187,7 @@ class Client(object):
         )
         return self._make_item(result)
 
-    def train(self, pipe, data, no_caching=False):
+    def train(self, pipe, data, caching=True):
         """Transform a trainable pipeline to a pipeline.
 
         Only the last element must be a TrainableAlgorithm.
@@ -171,17 +197,21 @@ class Client(object):
             - The trained algorithm
             - Statistics about the training
         """
-        dataset = self.upload_bundle(data) if isinstance(data, mantik.types.Bundle) else data
+        dataset = (
+            self.upload_bundle(data) if isinstance(data, mantik.types.Bundle) else data
+        )
         features = self.apply(pipe[:-1], dataset) if len(pipe) > 1 else dataset
         last = pipe[-1]
         name = last if isinstance(last, str) else last.item.name
-        trainable = self._graph_builder.Get(GetRequest(session_id=self.session.session_id, name=name))
+        trainable = self._graph_builder.Get(
+            GetRequest(session_id=self.session.session_id, name=name)
+        )
         train_response = self._graph_builder.Train(
             TrainRequest(
                 session_id=self.session.session_id,
                 trainable_id=trainable.item_id,
                 training_dataset_id=features.item_id,
-                no_caching=no_caching,
+                no_caching=not caching,
             )
         )
         trained_algorithm = self._make_item(train_response.trained_algorithm)
@@ -192,7 +222,11 @@ class Client(object):
         """Tag an algorithm algo with a reference ref."""
         return self._make_item(
             self._graph_builder.Tag(
-                TagRequest(session_id=self.session.session_id, item_id=algo.item_id, named_mantik_id=ref)
+                TagRequest(
+                    session_id=self.session.session_id,
+                    item_id=algo.item_id,
+                    named_mantik_id=ref,
+                )
             )
         ).save(name=ref)
 
@@ -203,7 +237,9 @@ class Client(object):
         self._session = self._session_service.CreateSession(CreateSessionRequest())
         logger.debug("Created session %s", self.session.session_id)
         yield self
-        self._session_service.CloseSession(CloseSessionRequest(session_id=self.session.session_id))
+        self._session_service.CloseSession(
+            CloseSessionRequest(session_id=self.session.session_id)
+        )
         logger.debug("Closed session %s", self.session.session_id)
 
         self._session = None
