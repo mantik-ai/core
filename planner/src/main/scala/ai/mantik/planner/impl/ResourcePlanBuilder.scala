@@ -85,7 +85,30 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
     }
   }
 
+  /** Assembles a cached plan (temporary or persistent). */
   private def cachedSourceFiles(cachedSource: PayloadSource.Cached, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
+    if (canBeTemporary) {
+      cachedTemporarySource(cachedSource)
+    } else {
+      cachedTemporarySource(cachedSource).flatMap { filesPlan =>
+        filesPlan.files.indices.map { _ =>
+          PlanningState(_.writeFile(temporary = false))
+        }.toList.sequence.map { planFiles =>
+          // Copy files to non temporary locations
+          val copyOperations = filesPlan.files.zip(planFiles).map {
+            case (temporaryFile, nontemporaryFile) =>
+              PlanOp.CopyFile(from = temporaryFile.ref, to = nontemporaryFile.ref)
+          }
+          filesPlan.copy(
+            preOp = PlanOp.combine(filesPlan.preOp, PlanOp.Sequential(copyOperations, PlanOp.Empty))
+          )
+        }
+      }
+    }
+  }
+
+  /** Assembles a plan for having a cached item present (temporary). */
+  private def cachedTemporarySource(cachedSource: PayloadSource.Cached): State[PlanningState, FilesPlan] = {
     PlanningState.flat { planningState =>
       planningState.evaluatedCache(cachedSource.cacheGroup) match {
         case Some(files) =>
@@ -94,7 +117,7 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
         case None =>
           // Node need to be re-evaluated
           for {
-            filesPlan <- reevaluateCachedSource(cachedSource, canBeTemporary)
+            filesPlan <- reevaluateCachedSource(cachedSource)
             _ <- PlanningState.modify(_.withEvaluatedCache(cachedSource.cacheGroup, filesPlan.files))
           } yield {
             filesPlan
@@ -103,7 +126,8 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
     }
   }
 
-  private def reevaluateCachedSource(cachedSource: PayloadSource.Cached, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
+  /** Forces reassembly of a cached item. */
+  private def reevaluateCachedSource(cachedSource: PayloadSource.Cached): State[PlanningState, FilesPlan] = {
     cachedFiles.cached(cachedSource.cacheGroup) match {
       case Some(files) =>
         for {
@@ -117,7 +141,7 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
         }
       case None =>
         for {
-          opFiles <- translateItemPayloadSourceAsFiles(cachedSource.source, canBeTemporary)
+          opFiles <- translateItemPayloadSourceAsFiles(cachedSource.source, canBeTemporary = true)
           _ <- markFileAsCachedFile(opFiles.fileRefs, cachedSource.cacheGroup)
         } yield {
           val cacheFiles = cachedSource.cacheGroup.zip(opFiles.fileRefs)

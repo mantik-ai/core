@@ -123,6 +123,9 @@ object PlanOp {
   /** Plan Op which just returns a fixed value. */
   case class Const[T](value: T) extends PlanOp[T]
 
+  /** Copy a file. */
+  case class CopyFile(from: PlanFileReference, to: PlanFileReference) extends ProceduralPlanOp
+
   /**
    * Plan op which stores the result of the last operation into the memory.
    * Also returns the value again to make it transparent

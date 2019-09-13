@@ -32,6 +32,15 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
     val (contentType, bytesAgain) = repo.getFileContentSync(info.fileId)
     contentType shouldBe ContentTypes.MantikBundleContentType
     bytesAgain shouldBe testBytes
+
+    withClue("copy should work") {
+      val store2 = await(repo.requestFileStorage(false))
+      await(repo.copy(info.fileId, store2.fileId))
+
+      val (contentType, bytesAgain) = repo.getFileContentSync(store2.fileId)
+      contentType shouldBe ContentTypes.MantikBundleContentType
+      bytesAgain shouldBe testBytes
+    }
   }
 
   it should "know optimistic storage" in new Env {

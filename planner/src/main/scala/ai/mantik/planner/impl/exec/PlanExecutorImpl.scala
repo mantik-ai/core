@@ -212,6 +212,12 @@ private[planner] class PlanExecutorImpl(
         }
       case c: PlanOp.Const[T] =>
         Future.successful(c.value)
+      case c: PlanOp.CopyFile =>
+        val fromId = files.resolveFileId(c.from)
+        val toId = files.resolveFileId(c.to)
+        FutureHelper.time(logger, "Copy file") {
+          fileRepository.copy(fromId, toId)
+        }
       case c: PlanOp.MemoryReader[T] =>
         Future.successful(memory.get(c.memoryId).asInstanceOf[T])
       case c: PlanOp.MemoryWriter[T] =>

@@ -18,6 +18,8 @@ service FileRepositoryService {
 
     // Load a file content
     rpc LoadFile(LoadFileRequest) returns (stream LoadFileResponse){}
+
+    rpc CopyFile(CopyFileRequest) returns (CopyFileResponse){}
 }
 
 message RequestFileStorageRequest {
@@ -79,4 +81,13 @@ message LoadFileResponse {
     bytes chunk = 1;
     // Content Type (only need to be present in first call)
     string content_type = 2;
+}
+
+message CopyFileRequest {
+    string from_id = 1;
+    string to_id = 2;
+}
+
+message CopyFileResponse {
+    // empty yet
 }

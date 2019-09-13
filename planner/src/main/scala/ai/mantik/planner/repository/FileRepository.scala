@@ -26,6 +26,9 @@ private[mantik] trait FileRepository extends Component {
 
   /** Request retrieval of a file. */
   def loadFile(id: String): Future[(String, Source[ByteString, _])]
+
+  /** Request copying a file. */
+  def copy(from: String, to: String): Future[Unit]
 }
 
 object FileRepository {

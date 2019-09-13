@@ -25,8 +25,7 @@ class LearnCachingSpec extends IntegrationTestBase with Samples {
     await(fileRepository.requestFileGet(cacheFile)).isTemporary shouldBe true
 
     stats.save().run()
-    stats.state.get.payloadFile shouldBe Some(cacheFile)
-
-    await(fileRepository.requestFileGet(cacheFile)).isTemporary shouldBe false
+    stats.state.get.payloadFile.get shouldNot be(cacheFile)
+    await(fileRepository.requestFileGet(stats.state.get.payloadFile.get)).isTemporary shouldBe false
   }
 }

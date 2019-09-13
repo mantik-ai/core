@@ -56,6 +56,8 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
       override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Unit]]] = ???
       override def loadFile(id: String): Future[(String, Source[ByteString, _])] = ???
       override def deleteFile(id: String): Future[Boolean] = ???
+
+      override def copy(from: String, to: String): Future[Unit] = ???
     }
 
     val builder = new ExecutionOpenFilesBuilder(repo, fileCache)
