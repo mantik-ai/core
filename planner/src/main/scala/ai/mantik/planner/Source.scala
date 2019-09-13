@@ -81,10 +81,7 @@ case object Operation {
 }
 
 /** Represents the way [[MantikItem]](s) gets their Payload Data from. */
-sealed abstract class PayloadSource(val resultCount: Int) {
-  /** Returns the cache key for this payload if applicable. */
-  def cachedGroup: Option[CacheKeyGroup] = None
-}
+sealed abstract class PayloadSource(val resultCount: Int)
 
 object PayloadSource {
 
@@ -109,12 +106,6 @@ object PayloadSource {
   /** Projects one of multiple results of the source. */
   case class Projection(source: PayloadSource, projection: Int = 0) extends PayloadSource(1) {
     require(projection >= 0 && projection < source.resultCount)
-
-    /** Returns the cache key for this payload if applicable. */
-    override def cachedGroup: Option[CacheKeyGroup] = source.cachedGroup.flatMap {
-      case group if group.isDefinedAt(projection) => Some(List(group(projection)))
-      case _                                      => None
-    }
   }
 
   /** A Cached source value. */
@@ -128,7 +119,5 @@ object PayloadSource {
         UUID.randomUUID()
       }).toList
     }
-
-    override def cachedGroup: Option[CacheKeyGroup] = Some(cacheGroup)
   }
 }
