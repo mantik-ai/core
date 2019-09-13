@@ -113,7 +113,7 @@ object PayloadSource {
     /** Returns the cache key for this payload if applicable. */
     override def cachedGroup: Option[CacheKeyGroup] = source.cachedGroup.flatMap {
       case group if group.isDefinedAt(projection) => Some(List(group(projection)))
-      case _ => None
+      case _                                      => None
     }
   }
 

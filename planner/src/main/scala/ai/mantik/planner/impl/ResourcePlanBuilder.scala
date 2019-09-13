@@ -11,7 +11,7 @@ import cats.implicits._
  * Responsible for building [[ResourcePlan]] and [[FilesPlan]] for evaluating Mantik Items in Graphs.
  * Part of [[PlannerImpl]]
  */
-private[impl] class ResourcePlanBuilder(elements: PlannerElements) {
+private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: CachedFiles) {
 
   /**
    * Generate the node, which provides a the data payload of a mantik item.
@@ -80,16 +80,39 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements) {
   }
 
   private def cachedSourceFiles(cachedSource: PayloadSource.Cached, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
-    for {
-      opFiles <- translateItemPayloadSourceAsFiles(cachedSource.source, canBeTemporary)
-      _ <- markFileAsCachedFile(opFiles.fileRefs, cachedSource.cacheGroup)
-    } yield {
-      val cacheFiles = cachedSource.cacheGroup.zip(opFiles.fileRefs)
-      FilesPlan(
-        PlanOp.CacheOp(
-          cacheFiles, opFiles.preOp
-        ), opFiles.files
-      )
+    cachedFiles.cached(cachedSource.cacheGroup) match {
+      case Some(files) =>
+        for {
+          contentTypes <- fileContentTypes(cachedSource.source)
+          fileReads <- files.zip(contentTypes).map {
+            case (fileId, contentType) =>
+              PlanningState(_.readFileRefWithContentType(fileId, contentType))
+          }.sequence
+        } yield {
+          FilesPlan(files = fileReads.toIndexedSeq)
+        }
+      case None =>
+        for {
+          opFiles <- translateItemPayloadSourceAsFiles(cachedSource.source, canBeTemporary)
+          _ <- markFileAsCachedFile(opFiles.fileRefs, cachedSource.cacheGroup)
+        } yield {
+          val cacheFiles = cachedSource.cacheGroup.zip(opFiles.fileRefs)
+          FilesPlan(
+            PlanOp.CacheOp(
+              cacheFiles, opFiles.preOp
+            ), opFiles.files
+          )
+        }
+    }
+  }
+
+  private def fileContentTypes(payloadSource: PayloadSource): State[PlanningState, IndexedSeq[String]] = {
+    // Note: this is a bit hacky as we do a optimistic payload conversions and throw away the result
+    // and all state changes
+    translateItemPayloadSourceAsFiles(payloadSource, canBeTemporary = true).flatMap { filesPlan =>
+      val contentTypes = filesPlan.files.map(_.contentType)
+      // this throws away state and just returns the content types.
+      PlanningState.pure(contentTypes)
     }
   }
 

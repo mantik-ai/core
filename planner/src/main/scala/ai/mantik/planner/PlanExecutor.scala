@@ -12,7 +12,7 @@ trait PlanExecutor {
   def execute[T](plan: Plan[T]): Future[T]
 
   /** Check if a cache key is mapped to a file, returns the fileId if it is. */
-  private [mantik] def cachedFile(cacheKey: CacheKey): Option[String]
+  private[mantik] def cachedFile(cacheKey: CacheKey): Option[String]
 }
 
 object PlanExecutor {

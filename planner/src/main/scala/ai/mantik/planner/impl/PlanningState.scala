@@ -94,6 +94,12 @@ private[impl] case class PlanningState(
     ) -> file
   }
 
+  def readFileRefWithContentType(fileId: String, contentType: String): (PlanningState, PlanFileWithContentType) = {
+    val (nextState, planFile) = readFile(fileId)
+    val fileRef = PlanFileWithContentType(planFile.ref, contentType)
+    nextState -> fileRef
+  }
+
   /** Returns overriding state for an item. */
   def overrideState(item: MantikItem): ItemStateOverride = {
     stateOverrides.getOrElse(item.itemId, initialOverrideState(item))

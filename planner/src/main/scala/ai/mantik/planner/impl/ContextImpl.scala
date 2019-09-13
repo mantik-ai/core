@@ -9,7 +9,7 @@ import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
-import ai.mantik.planner.impl.exec.{ FileRepositoryServerRemotePresence, PlanExecutorImpl }
+import ai.mantik.planner.impl.exec.{ FileCache, FileRepositoryServerRemotePresence, PlanExecutorImpl }
 import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
 import ai.mantik.planner.repository.{ Errors, FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
 import javax.inject.Inject
@@ -94,7 +94,8 @@ private[mantik] object ContextImpl {
     registry: RemoteMantikRegistry
   )(implicit akkaRuntime: AkkaRuntime): Context = {
     val bridges: Bridges = Bridges.loadFromConfig(akkaRuntime.config)
-    val planner = new PlannerImpl(bridges)
+    val fileCache = new FileCache()
+    val planner = new PlannerImpl(bridges, fileCache)
     val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
     val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
     val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
@@ -107,6 +108,7 @@ private[mantik] object ContextImpl {
       repository,
       executor,
       retriever,
+      fileCache,
       clientConfig
     )
     new ContextImpl(localRegistry, planner, planExecutor, registry, retriever)

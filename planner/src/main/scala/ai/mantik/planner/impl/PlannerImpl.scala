@@ -17,10 +17,10 @@ import javax.inject.Inject
  *
  * This way it's pure functional and easier to test.
  */
-private[mantik] class PlannerImpl @Inject() (bridges: Bridges) extends Planner {
+private[mantik] class PlannerImpl @Inject() (bridges: Bridges, cachedFiles: CachedFiles) extends Planner {
 
   val elements = new PlannerElements(bridges)
-  val resourcePlanBuilder = new ResourcePlanBuilder(elements)
+  val resourcePlanBuilder = new ResourcePlanBuilder(elements, cachedFiles)
 
   override def convert[T](action: Action[T]): Plan[T] = {
     val (planningState, planOp) = convertSingleAction(action).run(PlanningState()).value

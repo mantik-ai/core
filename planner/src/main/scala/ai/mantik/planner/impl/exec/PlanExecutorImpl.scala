@@ -30,12 +30,13 @@ private[planner] class PlanExecutorImpl(
     isolationSpace: String,
     dockerConfig: DockerConfig,
     artifactRetriever: MantikArtifactRetriever,
+    fileCache: FileCache,
     clientConfig: ClientConfig
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
 
   @Singleton
   @Inject
-  def this(fileRepository: FileRepository, repository: Repository, executor: Executor, retriever: MantikArtifactRetriever, clientConfig: ClientConfig)(implicit akkaRuntime: AkkaRuntime) {
+  def this(fileRepository: FileRepository, repository: Repository, executor: Executor, retriever: MantikArtifactRetriever, fileCache: FileCache, clientConfig: ClientConfig)(implicit akkaRuntime: AkkaRuntime) {
     this(
       fileRepository,
       repository,
@@ -45,13 +46,13 @@ private[planner] class PlanExecutorImpl(
         akkaRuntime.config.getConfig("mantik.bridge.docker")
       ),
       retriever,
+      fileCache,
       clientConfig
     )
   }
 
   private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
   private val jobPollInterval = Duration.fromNanos(config.getDuration("mantik.planner.jobPollInterval").toNanos)
-  private val fileCache = new FileCache()
 
   private val openFilesBuilder = new ExecutionOpenFilesBuilder(fileRepository, fileCache)
 
@@ -287,7 +288,8 @@ private[planner] class PlanExecutorImpl(
       val analysis = new GraphAnalysis(graph)
       val builder = StringBuilder.newBuilder
       builder ++= s"Job ${job.isolationSpace}\n"
-      analysis.flows.zipWithIndex.foreach { case (flow, idx) =>
+      analysis.flows.zipWithIndex.foreach {
+        case (flow, idx) =>
           builder ++= s"  - Flow ${idx}\n"
           flow.nodes.foreach { nodeResourceRef =>
             val resolved = graph.resolveReference(nodeResourceRef)
@@ -301,7 +303,6 @@ private[planner] class PlanExecutorImpl(
       case e: GraphAnalysis.AnalyzerException =>
         s"Invalid job ${e}"
     }
-
 
   }
 }

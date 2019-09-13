@@ -1,11 +1,11 @@
 package ai.mantik.engine.testutil
 
-import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.planner.bridge.BridgesProvider
-import ai.mantik.planner.impl.PlannerImpl
-import ai.mantik.planner.repository.impl.{LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository}
-import ai.mantik.planner.repository.{FileRepository, MantikArtifactRetriever, RemoteMantikRegistry, Repository}
-import ai.mantik.planner.{CacheKey, CoreComponents, Plan, PlanExecutor, Planner}
+import ai.mantik.planner.impl.{ CachedFiles, PlannerImpl }
+import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
+import ai.mantik.planner.repository.{ FileRepository, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
+import ai.mantik.planner.{ CacheKey, CoreComponents, Plan, PlanExecutor, Planner }
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.Future
@@ -22,7 +22,7 @@ class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
   )
 
   private val bridges = new BridgesProvider(config).get()
-  override lazy val planner: Planner = new PlannerImpl(bridges)
+  override lazy val planner: Planner = new PlannerImpl(bridges, CachedFiles.empty)
 
   var nextItemToReturnByExecutor: Future[_] = Future.failed(
     new RuntimeException("Plan executor not implemented")

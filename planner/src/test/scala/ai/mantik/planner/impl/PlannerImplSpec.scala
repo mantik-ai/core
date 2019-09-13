@@ -4,18 +4,20 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, NamedMantikId, Mantikfile, PipelineStep }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineStep }
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner._
+import ai.mantik.planner.impl.exec.FileCache
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.testutils.TestBase
 import cats.data.State
 
-class PlannerImplSpec extends TestBase {
+class PlannerImplSpec extends TestBase with PlanTestUtils {
 
   private trait Env {
-    val planner = new PlannerImpl(TestItems.testBridges)
+    val fileCache = new FileCache()
+    val planner = new PlannerImpl(TestItems.testBridges, fileCache)
 
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
       f.run(PlanningState()).value
@@ -34,14 +36,6 @@ class PlannerImplSpec extends TestBase {
         DefinitionSource.Loaded(Some(mantikId), ItemId.generate()),
         PayloadSource.Loaded(file, contentType)
       )
-    }
-
-    def splitOps(op: PlanOp[_]): Seq[PlanOp[_]] = {
-      PlanOp.compress(op) match {
-        case PlanOp.Sequential(parts, last) => parts :+ last
-        case PlanOp.Empty                   => Nil
-        case other                          => Seq(other)
-      }
     }
   }
 

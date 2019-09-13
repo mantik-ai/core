@@ -3,19 +3,21 @@ package ai.mantik.planner.impl
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, NamedMantikId, Mantikfile }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId }
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{ ExecutorModelDefaults, Graph, Link, Node, NodeResource, NodeResourceRef, ResourceType }
+import ai.mantik.planner.impl.exec.FileCache
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{ Algorithm, DataSet, DefinitionSource, Operation, PayloadSource, Pipeline, PlanFile, PlanFileReference, PlanNodeService, PlanOp, Planner, Source, TrainableAlgorithm }
 import ai.mantik.testutils.TestBase
 import cats.data.State
 
-class ResourcePlanBuilderSpec extends TestBase {
+class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   private trait Env {
+    val fileCache = new FileCache()
     val elements = new PlannerElements(TestItems.testBridges)
-    val resourcePlanBuilder = new ResourcePlanBuilder(elements)
+    val resourcePlanBuilder = new ResourcePlanBuilder(elements, fileCache)
 
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
       f.run(PlanningState()).value
@@ -211,6 +213,35 @@ class ResourcePlanBuilderSpec extends TestBase {
     state shouldBe PlanningState()
     files.preOp shouldBe PlanOp.Empty
     files.files shouldBe empty
+  }
+
+  it should "support caching" in new Env {
+    val cache = PayloadSource.Cached(
+      PayloadSource.OperationResult(
+        Operation.Application(algorithm1, dataset1)
+      )
+    )
+    val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
+      cache, canBeTemporary = false
+    ))
+    state.cacheGroups shouldBe List(cache.cacheGroup)
+    splitOps(files.preOp).find(_.isInstanceOf[PlanOp.CacheOp]) shouldBe defined
+  }
+
+  it should "detect already cached files" in new Env {
+    val cache = PayloadSource.Cached(
+      PayloadSource.OperationResult(
+        Operation.Application(algorithm1, dataset1)
+      )
+    )
+    fileCache.add(
+      cache.cacheGroup.ensuring(_.size == 1).head, "file1"
+    )
+    val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
+      cache, canBeTemporary = false
+    ))
+    state.cacheGroups shouldBe Nil
+    splitOps(files.preOp).find(_.isInstanceOf[PlanOp.CacheOp]) shouldBe empty
   }
 
   "manifestDataSet" should "convert a simple literal source" in new Env {

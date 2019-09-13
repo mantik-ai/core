@@ -15,7 +15,6 @@ class LearnCachingSpec extends IntegrationTestBase with Samples {
     MantikItemAnalyzer(trained).isCached shouldBe true
     MantikItemAnalyzer(trained).isCacheEvaluated shouldBe true
 
-
     val applied = trained.apply(learningData).fetch.run()
   }
 }
