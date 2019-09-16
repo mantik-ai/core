@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
-set +e
+
+set -e
 MYDIR=`dirname $0`
 cd $MYDIR/../..
 
 echo $0
 
 ./scripts/dev/start_engine_minikube.sh &
+ENGINE_PID=$!
 kill_engine(){
-  ps -ax | grep engineApp/run | grep sbt |  cut -f1 -d " " | xargs kill
+  kill ${ENGINE_PID} || true
 }
 trap kill_engine EXIT
 
-sleep 15
-# ./scripts/dev/create_docker_images_all_minikube.sh
+sleep 30
 
 cd ./python_sdk/
 pipenv install --dev
