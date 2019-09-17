@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import functools
+import json
 import logging
 from typing import List, Optional, Union, Any
 
@@ -167,7 +168,7 @@ class Client(object):
         return self._make_item(pipe)
 
     def apply(
-        self, pipe: Union[PipeStep, List[PipeStep]], data: SomeData
+        self, pipe: Union[PipeStep, List[PipeStep]], data: SomeData,
     ) -> MantikItem:
         """Execute the pipeline pipe on some data."""
         dataset = (
@@ -187,7 +188,27 @@ class Client(object):
         )
         return self._make_item(result)
 
-    def train(self, pipe, data, caching=True):
+    def _set_meta(self, meta=None):
+        """Set meta-variables and return a mapping from old algorithm ids to new algorithm ids."""
+        meta = {} if meta is None else meta
+
+        def _set(item_id, variables):
+            return self._graph_builder.SetMetaVariables(
+                SetMetaVariableRequest(
+                    session_id=self.session.session_id,
+                    item_id=item_id,
+                    values=[
+                        MetaVariableValue(
+                            name=name,
+                            json=json.dumps(value)
+                        )
+                        for name, value in variables.items()
+                    ]
+                )
+            ).item_id
+        return {item_id: _set(item_id, variables) for item_id, variables in meta.items()}
+
+    def train(self, pipe, data, meta=None, caching=True):
         """Transform a trainable pipeline to a pipeline.
 
         Only the last element must be a TrainableAlgorithm.
@@ -206,10 +227,13 @@ class Client(object):
         trainable = self._graph_builder.Get(
             GetRequest(session_id=self.session.session_id, name=name)
         )
+        meta = {trainable.item_id: meta} if meta is not None else meta
+        new_ids = self._set_meta(meta)
+        old_id = trainable.item_id
         train_response = self._graph_builder.Train(
             TrainRequest(
                 session_id=self.session.session_id,
-                trainable_id=trainable.item_id,
+                trainable_id=new_ids.get(old_id, old_id),
                 training_dataset_id=features.item_id,
                 no_caching=not caching,
             )

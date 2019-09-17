@@ -11,7 +11,7 @@ from sklearn.metrics import accuracy_score
 import mantik.engine
 import mantik.types
 
-centers = np.sort(np.array([[1, 1], [-1, -1]]), axis=0)
+centers = np.sort(np.array([[1, 1], [0, 0], [-1, -1]]), axis=0)
 data, _ = make_blobs(n_samples=100, n_features=2, centers=centers, cluster_std=0.95)
 label = pairwise_distances_argmin(data, centers)
 
@@ -37,12 +37,15 @@ data_type = mantik.types.DataType.from_json(ds)
 train_bundle = mantik.types.Bundle(data_type, train_data.reshape(-1, 1, 2).tolist())
 test_bundle = mantik.types.Bundle(data_type, test_data.reshape(-1, 1, 2).tolist())
 
+n_clusters = len(centers)
+meta = dict(n_clusters=n_clusters)
+
 my_ref = "mq/kmeans_trained_on_blobs"
 
 with mantik.engine.Client("localhost", 8087) as client:
     kmeans = client._add_algorithm("bridge/sklearn/simple_learn/example/kmeans")
     with client.enter_session():
-        trained_pipe, stats = client.train([kmeans], train_bundle)
+        trained_pipe, stats = client.train([kmeans], train_bundle, meta=meta)
         kmeans_trained = client.tag(trained_pipe, my_ref).save()
         train_result = client.apply(trained_pipe, train_bundle).fetch()
         test_result = client.apply(trained_pipe, test_bundle).fetch()
@@ -50,7 +53,7 @@ with mantik.engine.Client("localhost", 8087) as client:
 end_time = time.time()
 
 # TODO (mq): bundle to pandas.DataFrame
-centers_trained = np.sort(np.array(stats.bundle.value[0][0]).reshape(2, -1), axis=0)
+centers_trained = np.sort(np.array(stats.bundle.value[0][0]).reshape(n_clusters, -1), axis=0)
 train_prediction = pairwise_distances_argmin(train_data, centers_trained)
 test_prediction = pairwise_distances_argmin(test_data, centers_trained)
 
@@ -66,12 +69,10 @@ print("\n\n\n")
 print("Using sklearn directly...\n")
 start_time = time.time()
 # ===============================================================
-# line 19 - 49 replace this code below
 from sklearn.cluster import KMeans
 
-model = KMeans(n_clusters=len(centers)).fit(train_data)
+model = KMeans(n_clusters=n_clusters).fit(train_data)
 centers_trained = np.sort(model.cluster_centers_, axis=0)
-# line 19 - 49 replace this code above
 # ===============================================================
 end_time = time.time()
 
