@@ -22,7 +22,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ai.mantik.engine.protos',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n!mantik/engine/graph_builder.proto\x12\x17\x61i.mantik.engine.protos\x1a\x16mantik/engine/ds.proto\x1a\x19mantik/engine/items.proto\".\n\nGetRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"R\n\x0cNodeResponse\x12\x0f\n\x07item_id\x18\x01 \x01(\t\x12\x31\n\x04item\x18\x02 \x01(\x0b\x32#.ai.mantik.engine.protos.MantikItem\"L\n\x0c\x41pplyRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x12\n\ndataset_id\x18\x02 \x01(\t\x12\x14\n\x0c\x61lgorithm_id\x18\x03 \x01(\t\"U\n\x0eLiteralRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12/\n\x06\x62undle\x18\x02 \x01(\x0b\x32\x1f.ai.mantik.engine.protos.Bundle\"3\n\x0c\x43\x61\x63heRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07item_id\x18\x02 \x01(\t\"i\n\x0cTrainRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x14\n\x0ctrainable_id\x18\x02 \x01(\t\x12\x1b\n\x13training_dataset_id\x18\x03 \x01(\t\x12\x12\n\nno_caching\x18\x04 \x01(\x08\"\x8e\x01\n\rTrainResponse\x12@\n\x11trained_algorithm\x18\x01 \x01(\x0b\x32%.ai.mantik.engine.protos.NodeResponse\x12;\n\x0cstat_dataset\x18\x02 \x01(\x0b\x32%.ai.mantik.engine.protos.NodeResponse\"M\n\rSelectRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x12\n\ndataset_id\x18\x02 \x01(\t\x12\x14\n\x0cselect_query\x18\x03 \x01(\t\"\x9c\x01\n\x14\x42uildPipelineRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x39\n\x05steps\x18\x02 \x03(\x0b\x32*.ai.mantik.engine.protos.BuildPipelineStep\x12\x35\n\ninput_type\x18\x03 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\"E\n\x11\x42uildPipelineStep\x12\x10\n\x06select\x18\x01 \x01(\tH\x00\x12\x16\n\x0c\x61lgorithm_id\x18\x02 \x01(\tH\x00\x42\x06\n\x04step\"J\n\nTagRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07item_id\x18\x02 \x01(\t\x12\x17\n\x0fnamed_mantik_id\x18\x03 \x01(\t2\xf6\x05\n\x13GraphBuilderService\x12S\n\x03Get\x12#.ai.mantik.engine.protos.GetRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12`\n\x0e\x41lgorithmApply\x12%.ai.mantik.engine.protos.ApplyRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12X\n\x05Train\x12%.ai.mantik.engine.protos.TrainRequest\x1a&.ai.mantik.engine.protos.TrainResponse\"\x00\x12[\n\x07Literal\x12\'.ai.mantik.engine.protos.LiteralRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12X\n\x06\x43\x61\x63hed\x12%.ai.mantik.engine.protos.CacheRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12Y\n\x06Select\x12&.ai.mantik.engine.protos.SelectRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12g\n\rBuildPipeline\x12-.ai.mantik.engine.protos.BuildPipelineRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12S\n\x03Tag\x12#.ai.mantik.engine.protos.TagRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n!mantik/engine/graph_builder.proto\x12\x17\x61i.mantik.engine.protos\x1a\x16mantik/engine/ds.proto\x1a\x19mantik/engine/items.proto\".\n\nGetRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"R\n\x0cNodeResponse\x12\x0f\n\x07item_id\x18\x01 \x01(\t\x12\x31\n\x04item\x18\x02 \x01(\x0b\x32#.ai.mantik.engine.protos.MantikItem\"L\n\x0c\x41pplyRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x12\n\ndataset_id\x18\x02 \x01(\t\x12\x14\n\x0c\x61lgorithm_id\x18\x03 \x01(\t\"U\n\x0eLiteralRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12/\n\x06\x62undle\x18\x02 \x01(\x0b\x32\x1f.ai.mantik.engine.protos.Bundle\"3\n\x0c\x43\x61\x63heRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07item_id\x18\x02 \x01(\t\"i\n\x0cTrainRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x14\n\x0ctrainable_id\x18\x02 \x01(\t\x12\x1b\n\x13training_dataset_id\x18\x03 \x01(\t\x12\x12\n\nno_caching\x18\x04 \x01(\x08\"\x8e\x01\n\rTrainResponse\x12@\n\x11trained_algorithm\x18\x01 \x01(\x0b\x32%.ai.mantik.engine.protos.NodeResponse\x12;\n\x0cstat_dataset\x18\x02 \x01(\x0b\x32%.ai.mantik.engine.protos.NodeResponse\"M\n\rSelectRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x12\n\ndataset_id\x18\x02 \x01(\t\x12\x14\n\x0cselect_query\x18\x03 \x01(\t\"\x9c\x01\n\x14\x42uildPipelineRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x39\n\x05steps\x18\x02 \x03(\x0b\x32*.ai.mantik.engine.protos.BuildPipelineStep\x12\x35\n\ninput_type\x18\x03 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\"E\n\x11\x42uildPipelineStep\x12\x10\n\x06select\x18\x01 \x01(\tH\x00\x12\x16\n\x0c\x61lgorithm_id\x18\x02 \x01(\tH\x00\x42\x06\n\x04step\"J\n\nTagRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07item_id\x18\x02 \x01(\t\x12\x17\n\x0fnamed_mantik_id\x18\x03 \x01(\t\"y\n\x16SetMetaVariableRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07item_id\x18\x02 \x01(\t\x12:\n\x06values\x18\x03 \x03(\x0b\x32*.ai.mantik.engine.protos.MetaVariableValue\"m\n\x11MetaVariableValue\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x04json\x18\x02 \x01(\tH\x00\x12\x31\n\x06\x62undle\x18\x03 \x01(\x0b\x32\x1f.ai.mantik.engine.protos.BundleH\x00\x42\x07\n\x05value2\xe4\x06\n\x13GraphBuilderService\x12S\n\x03Get\x12#.ai.mantik.engine.protos.GetRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12`\n\x0e\x41lgorithmApply\x12%.ai.mantik.engine.protos.ApplyRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12X\n\x05Train\x12%.ai.mantik.engine.protos.TrainRequest\x1a&.ai.mantik.engine.protos.TrainResponse\"\x00\x12[\n\x07Literal\x12\'.ai.mantik.engine.protos.LiteralRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12X\n\x06\x43\x61\x63hed\x12%.ai.mantik.engine.protos.CacheRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12Y\n\x06Select\x12&.ai.mantik.engine.protos.SelectRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12g\n\rBuildPipeline\x12-.ai.mantik.engine.protos.BuildPipelineRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12S\n\x03Tag\x12#.ai.mantik.engine.protos.TagRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x12l\n\x10SetMetaVariables\x12/.ai.mantik.engine.protos.SetMetaVariableRequest\x1a%.ai.mantik.engine.protos.NodeResponse\"\x00\x62\x06proto3')
   ,
   dependencies=[mantik_dot_engine_dot_ds__pb2.DESCRIPTOR,mantik_dot_engine_dot_items__pb2.DESCRIPTOR,])
 
@@ -491,6 +491,99 @@ _TAGREQUEST = _descriptor.Descriptor(
   serialized_end=1098,
 )
 
+
+_SETMETAVARIABLEREQUEST = _descriptor.Descriptor(
+  name='SetMetaVariableRequest',
+  full_name='ai.mantik.engine.protos.SetMetaVariableRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='session_id', full_name='ai.mantik.engine.protos.SetMetaVariableRequest.session_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='item_id', full_name='ai.mantik.engine.protos.SetMetaVariableRequest.item_id', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='values', full_name='ai.mantik.engine.protos.SetMetaVariableRequest.values', index=2,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1100,
+  serialized_end=1221,
+)
+
+
+_METAVARIABLEVALUE = _descriptor.Descriptor(
+  name='MetaVariableValue',
+  full_name='ai.mantik.engine.protos.MetaVariableValue',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='ai.mantik.engine.protos.MetaVariableValue.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='json', full_name='ai.mantik.engine.protos.MetaVariableValue.json', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='bundle', full_name='ai.mantik.engine.protos.MetaVariableValue.bundle', index=2,
+      number=3, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+    _descriptor.OneofDescriptor(
+      name='value', full_name='ai.mantik.engine.protos.MetaVariableValue.value',
+      index=0, containing_type=None, fields=[]),
+  ],
+  serialized_start=1223,
+  serialized_end=1332,
+)
+
 _NODERESPONSE.fields_by_name['item'].message_type = mantik_dot_engine_dot_items__pb2._MANTIKITEM
 _LITERALREQUEST.fields_by_name['bundle'].message_type = mantik_dot_engine_dot_ds__pb2._BUNDLE
 _TRAINRESPONSE.fields_by_name['trained_algorithm'].message_type = _NODERESPONSE
@@ -503,6 +596,14 @@ _BUILDPIPELINESTEP.fields_by_name['select'].containing_oneof = _BUILDPIPELINESTE
 _BUILDPIPELINESTEP.oneofs_by_name['step'].fields.append(
   _BUILDPIPELINESTEP.fields_by_name['algorithm_id'])
 _BUILDPIPELINESTEP.fields_by_name['algorithm_id'].containing_oneof = _BUILDPIPELINESTEP.oneofs_by_name['step']
+_SETMETAVARIABLEREQUEST.fields_by_name['values'].message_type = _METAVARIABLEVALUE
+_METAVARIABLEVALUE.fields_by_name['bundle'].message_type = mantik_dot_engine_dot_ds__pb2._BUNDLE
+_METAVARIABLEVALUE.oneofs_by_name['value'].fields.append(
+  _METAVARIABLEVALUE.fields_by_name['json'])
+_METAVARIABLEVALUE.fields_by_name['json'].containing_oneof = _METAVARIABLEVALUE.oneofs_by_name['value']
+_METAVARIABLEVALUE.oneofs_by_name['value'].fields.append(
+  _METAVARIABLEVALUE.fields_by_name['bundle'])
+_METAVARIABLEVALUE.fields_by_name['bundle'].containing_oneof = _METAVARIABLEVALUE.oneofs_by_name['value']
 DESCRIPTOR.message_types_by_name['GetRequest'] = _GETREQUEST
 DESCRIPTOR.message_types_by_name['NodeResponse'] = _NODERESPONSE
 DESCRIPTOR.message_types_by_name['ApplyRequest'] = _APPLYREQUEST
@@ -514,84 +615,100 @@ DESCRIPTOR.message_types_by_name['SelectRequest'] = _SELECTREQUEST
 DESCRIPTOR.message_types_by_name['BuildPipelineRequest'] = _BUILDPIPELINEREQUEST
 DESCRIPTOR.message_types_by_name['BuildPipelineStep'] = _BUILDPIPELINESTEP
 DESCRIPTOR.message_types_by_name['TagRequest'] = _TAGREQUEST
+DESCRIPTOR.message_types_by_name['SetMetaVariableRequest'] = _SETMETAVARIABLEREQUEST
+DESCRIPTOR.message_types_by_name['MetaVariableValue'] = _METAVARIABLEVALUE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-GetRequest = _reflection.GeneratedProtocolMessageType('GetRequest', (_message.Message,), dict(
-  DESCRIPTOR = _GETREQUEST,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+GetRequest = _reflection.GeneratedProtocolMessageType('GetRequest', (_message.Message,), {
+  'DESCRIPTOR' : _GETREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.GetRequest)
-  ))
+  })
 _sym_db.RegisterMessage(GetRequest)
 
-NodeResponse = _reflection.GeneratedProtocolMessageType('NodeResponse', (_message.Message,), dict(
-  DESCRIPTOR = _NODERESPONSE,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+NodeResponse = _reflection.GeneratedProtocolMessageType('NodeResponse', (_message.Message,), {
+  'DESCRIPTOR' : _NODERESPONSE,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.NodeResponse)
-  ))
+  })
 _sym_db.RegisterMessage(NodeResponse)
 
-ApplyRequest = _reflection.GeneratedProtocolMessageType('ApplyRequest', (_message.Message,), dict(
-  DESCRIPTOR = _APPLYREQUEST,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+ApplyRequest = _reflection.GeneratedProtocolMessageType('ApplyRequest', (_message.Message,), {
+  'DESCRIPTOR' : _APPLYREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.ApplyRequest)
-  ))
+  })
 _sym_db.RegisterMessage(ApplyRequest)
 
-LiteralRequest = _reflection.GeneratedProtocolMessageType('LiteralRequest', (_message.Message,), dict(
-  DESCRIPTOR = _LITERALREQUEST,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+LiteralRequest = _reflection.GeneratedProtocolMessageType('LiteralRequest', (_message.Message,), {
+  'DESCRIPTOR' : _LITERALREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.LiteralRequest)
-  ))
+  })
 _sym_db.RegisterMessage(LiteralRequest)
 
-CacheRequest = _reflection.GeneratedProtocolMessageType('CacheRequest', (_message.Message,), dict(
-  DESCRIPTOR = _CACHEREQUEST,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+CacheRequest = _reflection.GeneratedProtocolMessageType('CacheRequest', (_message.Message,), {
+  'DESCRIPTOR' : _CACHEREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.CacheRequest)
-  ))
+  })
 _sym_db.RegisterMessage(CacheRequest)
 
-TrainRequest = _reflection.GeneratedProtocolMessageType('TrainRequest', (_message.Message,), dict(
-  DESCRIPTOR = _TRAINREQUEST,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+TrainRequest = _reflection.GeneratedProtocolMessageType('TrainRequest', (_message.Message,), {
+  'DESCRIPTOR' : _TRAINREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.TrainRequest)
-  ))
+  })
 _sym_db.RegisterMessage(TrainRequest)
 
-TrainResponse = _reflection.GeneratedProtocolMessageType('TrainResponse', (_message.Message,), dict(
-  DESCRIPTOR = _TRAINRESPONSE,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+TrainResponse = _reflection.GeneratedProtocolMessageType('TrainResponse', (_message.Message,), {
+  'DESCRIPTOR' : _TRAINRESPONSE,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.TrainResponse)
-  ))
+  })
 _sym_db.RegisterMessage(TrainResponse)
 
-SelectRequest = _reflection.GeneratedProtocolMessageType('SelectRequest', (_message.Message,), dict(
-  DESCRIPTOR = _SELECTREQUEST,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+SelectRequest = _reflection.GeneratedProtocolMessageType('SelectRequest', (_message.Message,), {
+  'DESCRIPTOR' : _SELECTREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.SelectRequest)
-  ))
+  })
 _sym_db.RegisterMessage(SelectRequest)
 
-BuildPipelineRequest = _reflection.GeneratedProtocolMessageType('BuildPipelineRequest', (_message.Message,), dict(
-  DESCRIPTOR = _BUILDPIPELINEREQUEST,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+BuildPipelineRequest = _reflection.GeneratedProtocolMessageType('BuildPipelineRequest', (_message.Message,), {
+  'DESCRIPTOR' : _BUILDPIPELINEREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.BuildPipelineRequest)
-  ))
+  })
 _sym_db.RegisterMessage(BuildPipelineRequest)
 
-BuildPipelineStep = _reflection.GeneratedProtocolMessageType('BuildPipelineStep', (_message.Message,), dict(
-  DESCRIPTOR = _BUILDPIPELINESTEP,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+BuildPipelineStep = _reflection.GeneratedProtocolMessageType('BuildPipelineStep', (_message.Message,), {
+  'DESCRIPTOR' : _BUILDPIPELINESTEP,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.BuildPipelineStep)
-  ))
+  })
 _sym_db.RegisterMessage(BuildPipelineStep)
 
-TagRequest = _reflection.GeneratedProtocolMessageType('TagRequest', (_message.Message,), dict(
-  DESCRIPTOR = _TAGREQUEST,
-  __module__ = 'mantik.engine.graph_builder_pb2'
+TagRequest = _reflection.GeneratedProtocolMessageType('TagRequest', (_message.Message,), {
+  'DESCRIPTOR' : _TAGREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.TagRequest)
-  ))
+  })
 _sym_db.RegisterMessage(TagRequest)
+
+SetMetaVariableRequest = _reflection.GeneratedProtocolMessageType('SetMetaVariableRequest', (_message.Message,), {
+  'DESCRIPTOR' : _SETMETAVARIABLEREQUEST,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
+  # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.SetMetaVariableRequest)
+  })
+_sym_db.RegisterMessage(SetMetaVariableRequest)
+
+MetaVariableValue = _reflection.GeneratedProtocolMessageType('MetaVariableValue', (_message.Message,), {
+  'DESCRIPTOR' : _METAVARIABLEVALUE,
+  '__module__' : 'mantik.engine.graph_builder_pb2'
+  # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.MetaVariableValue)
+  })
+_sym_db.RegisterMessage(MetaVariableValue)
 
 
 
@@ -601,8 +718,8 @@ _GRAPHBUILDERSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1101,
-  serialized_end=1859,
+  serialized_start=1335,
+  serialized_end=2203,
   methods=[
   _descriptor.MethodDescriptor(
     name='Get',
@@ -673,6 +790,15 @@ _GRAPHBUILDERSERVICE = _descriptor.ServiceDescriptor(
     index=7,
     containing_service=None,
     input_type=_TAGREQUEST,
+    output_type=_NODERESPONSE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='SetMetaVariables',
+    full_name='ai.mantik.engine.protos.GraphBuilderService.SetMetaVariables',
+    index=8,
+    containing_service=None,
+    input_type=_SETMETAVARIABLEREQUEST,
     output_type=_NODERESPONSE,
     serialized_options=None,
   ),

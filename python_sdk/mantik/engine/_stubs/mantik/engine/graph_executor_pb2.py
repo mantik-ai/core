@@ -293,46 +293,46 @@ DESCRIPTOR.message_types_by_name['DeployItemRequest'] = _DEPLOYITEMREQUEST
 DESCRIPTOR.message_types_by_name['DeployItemResponse'] = _DEPLOYITEMRESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-FetchItemRequest = _reflection.GeneratedProtocolMessageType('FetchItemRequest', (_message.Message,), dict(
-  DESCRIPTOR = _FETCHITEMREQUEST,
-  __module__ = 'mantik.engine.graph_executor_pb2'
+FetchItemRequest = _reflection.GeneratedProtocolMessageType('FetchItemRequest', (_message.Message,), {
+  'DESCRIPTOR' : _FETCHITEMREQUEST,
+  '__module__' : 'mantik.engine.graph_executor_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.FetchItemRequest)
-  ))
+  })
 _sym_db.RegisterMessage(FetchItemRequest)
 
-FetchItemResponse = _reflection.GeneratedProtocolMessageType('FetchItemResponse', (_message.Message,), dict(
-  DESCRIPTOR = _FETCHITEMRESPONSE,
-  __module__ = 'mantik.engine.graph_executor_pb2'
+FetchItemResponse = _reflection.GeneratedProtocolMessageType('FetchItemResponse', (_message.Message,), {
+  'DESCRIPTOR' : _FETCHITEMRESPONSE,
+  '__module__' : 'mantik.engine.graph_executor_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.FetchItemResponse)
-  ))
+  })
 _sym_db.RegisterMessage(FetchItemResponse)
 
-SaveItemRequest = _reflection.GeneratedProtocolMessageType('SaveItemRequest', (_message.Message,), dict(
-  DESCRIPTOR = _SAVEITEMREQUEST,
-  __module__ = 'mantik.engine.graph_executor_pb2'
+SaveItemRequest = _reflection.GeneratedProtocolMessageType('SaveItemRequest', (_message.Message,), {
+  'DESCRIPTOR' : _SAVEITEMREQUEST,
+  '__module__' : 'mantik.engine.graph_executor_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.SaveItemRequest)
-  ))
+  })
 _sym_db.RegisterMessage(SaveItemRequest)
 
-SaveItemResponse = _reflection.GeneratedProtocolMessageType('SaveItemResponse', (_message.Message,), dict(
-  DESCRIPTOR = _SAVEITEMRESPONSE,
-  __module__ = 'mantik.engine.graph_executor_pb2'
+SaveItemResponse = _reflection.GeneratedProtocolMessageType('SaveItemResponse', (_message.Message,), {
+  'DESCRIPTOR' : _SAVEITEMRESPONSE,
+  '__module__' : 'mantik.engine.graph_executor_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.SaveItemResponse)
-  ))
+  })
 _sym_db.RegisterMessage(SaveItemResponse)
 
-DeployItemRequest = _reflection.GeneratedProtocolMessageType('DeployItemRequest', (_message.Message,), dict(
-  DESCRIPTOR = _DEPLOYITEMREQUEST,
-  __module__ = 'mantik.engine.graph_executor_pb2'
+DeployItemRequest = _reflection.GeneratedProtocolMessageType('DeployItemRequest', (_message.Message,), {
+  'DESCRIPTOR' : _DEPLOYITEMREQUEST,
+  '__module__' : 'mantik.engine.graph_executor_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.DeployItemRequest)
-  ))
+  })
 _sym_db.RegisterMessage(DeployItemRequest)
 
-DeployItemResponse = _reflection.GeneratedProtocolMessageType('DeployItemResponse', (_message.Message,), dict(
-  DESCRIPTOR = _DEPLOYITEMRESPONSE,
-  __module__ = 'mantik.engine.graph_executor_pb2'
+DeployItemResponse = _reflection.GeneratedProtocolMessageType('DeployItemResponse', (_message.Message,), {
+  'DESCRIPTOR' : _DEPLOYITEMRESPONSE,
+  '__module__' : 'mantik.engine.graph_executor_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.DeployItemResponse)
-  ))
+  })
 _sym_db.RegisterMessage(DeployItemResponse)
 
 

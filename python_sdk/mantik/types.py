@@ -38,6 +38,10 @@ class DataType:
     """Initializes from the parsed JSON representation."""
 
     @classmethod
+    def from_kw(cls, **kwargs):
+        return cls(dict(columns=kwargs))
+
+    @classmethod
     def from_json(cls, json_string) -> DataType:
         """Construct DataType from its json representation.
 
@@ -124,9 +128,7 @@ class FunctionType(object):
 
     def to_json(self):
         """Serializes to json."""
-        return json.dumps(
-            {"input": self.input.representation, "output": self.output.representation}
-        )
+        return json.dumps({"input": self.input.representation, "output": self.output.representation})
 
 
 @dataclasses.dataclass
@@ -289,9 +291,7 @@ class MetaVariables(dict):
     def from_parsed(cls, parsed_json, key="metaVariables", default=None):
         """Construct a MetaVariable List from parsed json."""
         default = default or ""
-        variables = [
-            MetaVariable.from_json(var) for var in parsed_json.get(key, default)
-        ]
+        variables = [MetaVariable.from_json(var) for var in parsed_json.get(key, default)]
         return MetaVariables({var.name: var for var in variables})
 
     def get(self, key: str, default=None):
@@ -299,9 +299,7 @@ class MetaVariables(dict):
             return self[key].bundle.value
         except KeyError:
             if default is None:
-                raise ValueError(
-                    f"No meta variable called {key} found and no default given"
-                )
+                raise ValueError(f"No meta variable called {key} found and no default given")
             return default
 
 
@@ -394,7 +392,7 @@ class Bundle:
         return self.encode_json()
 
     def encode_json(self):
-        return json.dumps(self.value)
+        return json.dumps(self.value, ensure_ascii=False).encode("utf8")
 
     def encode_json_bundle(self):
         if self.type is None:

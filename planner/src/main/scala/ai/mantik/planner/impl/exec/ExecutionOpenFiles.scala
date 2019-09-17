@@ -11,12 +11,10 @@ import ai.mantik.planner.{ CacheKeyGroup, PlanFileReference }
  *
  * @param readFiles files for reading
  * @param writeFiles files for writing
- * @param cacheHits files which can be resolved from cache.
  */
 private[impl] case class ExecutionOpenFiles(
     private[exec] val readFiles: Map[PlanFileReference, FileGetResult] = Map.empty,
-    private[exec] val writeFiles: Map[PlanFileReference, FileStorageResult] = Map.empty,
-    cacheHits: Set[CacheKeyGroup] = Set.empty
+    private[exec] val writeFiles: Map[PlanFileReference, FileStorageResult] = Map.empty
 ) {
 
   lazy val fileIds: Map[PlanFileReference, String] = {

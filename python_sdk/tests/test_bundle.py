@@ -41,10 +41,7 @@ def test_json_bundle_serialisation():
 
     parsed_again2 = Bundle.decode("application/x-mantik-bundle-json", StringIO(json))
     assert parsed_again2 == parsed
-    assert (
-        Bundle.decode_json_bundle(parsed.encode("application/x-mantik-bundle-json"))
-        == parsed
-    )
+    assert Bundle.decode_json_bundle(parsed.encode("application/x-mantik-bundle-json")) == parsed
 
 
 def test_json_bundle_serialisation_single():
@@ -84,18 +81,11 @@ def test_msgpack_serialisation():
 
 
 def test_msgpack_bundle_serialisation():
-    bundle = Bundle(
-        DataType({"columns": {"x": "int32", "y": "string"}}),
-        [[1, "Hello"], [2, "World"]],
-    )
+    bundle = Bundle(DataType({"columns": {"x": "int32", "y": "string"}}), [[1, "Hello"], [2, "World"]])
     packed = bundle.encode_msgpack_bundle()
 
     elements = list(msgpack.Unpacker(BytesIO(packed), raw=False))
-    expected = [
-        {"format": {"columns": {"x": "int32", "y": "string"}}},
-        [1, "Hello"],
-        [2, "World"],
-    ]
+    expected = [{"format": {"columns": {"x": "int32", "y": "string"}}}, [1, "Hello"], [2, "World"]]
     assert elements == expected
 
     unpacked = bundle.decode_msgpack_bundle(BytesIO(packed))
@@ -104,9 +94,7 @@ def test_msgpack_bundle_serialisation():
     unpacked2 = bundle.decode("application/x-mantik-bundle", BytesIO(packed))
     assert unpacked2 == bundle
 
-    unpacked3 = bundle.decode_msgpack_bundle(
-        BytesIO(bundle.encode("application/x-mantik-bundle"))
-    )
+    unpacked3 = bundle.decode_msgpack_bundle(BytesIO(bundle.encode("application/x-mantik-bundle")))
     assert unpacked3 == bundle
 
 

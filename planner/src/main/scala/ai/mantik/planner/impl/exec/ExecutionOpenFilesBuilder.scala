@@ -1,10 +1,9 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.componently.utils.FutureHelper
-import ai.mantik.planner.{ CacheKey, CacheKeyGroup, PlanFile, PlanFileReference }
+import ai.mantik.planner.PlanFile
 import ai.mantik.planner.repository.FileRepository
 import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
-import akka.http.scaladsl.model.Uri
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -21,86 +20,20 @@ private[impl] class ExecutionOpenFilesBuilder(
    * Open multiple files.
    * Note: files are opened sequential, as they may refer to each other.
    *
-   * @param cacheGroups cache groups, files are tried to be read at first
    * @param files the files to open.
    */
-  def openFiles(cacheGroups: List[CacheKeyGroup], files: List[PlanFile]): Future[ExecutionOpenFiles] = {
+  def openFiles(files: List[PlanFile]): Future[ExecutionOpenFiles] = {
+
     val initialState = ExecutionOpenFiles()
 
     for {
-      stateAfterCache <- openCacheFiles(initialState, cacheGroups, files)
-      finalState <- FutureHelper.afterEachOtherStateful(files, stateAfterCache) {
+      finalState <- FutureHelper.afterEachOtherStateful(files, initialState) {
         case (state, file) =>
           openFile(state, file)
       }
     } yield {
       finalState
     }
-  }
-
-  /** Try to open all cache groups. If something within one group fails, it's skipped. */
-  private def openCacheFiles(state: ExecutionOpenFiles, cacheGroups: List[CacheKeyGroup], files: List[PlanFile]): Future[ExecutionOpenFiles] = {
-    val fileByCacheId: Map[CacheKey, PlanFileReference] = files.collect {
-      case f if f.cacheKey.isDefined => f.cacheKey.get -> f.ref
-    }.toMap
-
-    FutureHelper.afterEachOtherStateful(cacheGroups, state) {
-      case (state, cacheGroup) =>
-        openCacheGroup(state, cacheGroup, fileByCacheId)
-    }
-  }
-
-  /** Try to open a single cache group. If something fails, it's skipped. */
-  private def openCacheGroup(state: ExecutionOpenFiles, cacheGroup: CacheKeyGroup, cacheFiles: Map[CacheKey, PlanFileReference]): Future[ExecutionOpenFiles] = {
-
-    // The problem is, that a CacheGroup must either be opened completely or not at all
-    // If we use it half, it's possible to access values which do not work together.
-    // This happens e.g. on stateful non deterministic applications, like many trainings.
-
-    Future.sequence(
-      cacheGroup.view.toList.map { cacheKey =>
-        openCacheFile(cacheKey, cacheFiles)
-      }
-    ).map { results: List[Either[String, (PlanFileReference, FileRepository.FileGetResult)]] =>
-        val unflattened = unflattenEither(results)
-        unflattened match {
-          case Left(error) =>
-            logger.debug(s"Could not apply cache group ${cacheGroup} because of $error")
-            state
-          case Right(resolved) =>
-            logger.debug(s"Could apply cache group ${cacheGroup}")
-            state.copy(
-              readFiles = state.readFiles ++ resolved,
-              cacheHits = state.cacheHits + cacheGroup
-            )
-        }
-      }
-  }
-
-  /** Open a Cache File. Returns lefty values if something fails. */
-  private def openCacheFile(cacheKey: CacheKey, cacheFiles: Map[CacheKey, PlanFileReference]): Future[Either[String, (PlanFileReference, FileRepository.FileGetResult)]] = {
-    // There must be a file ref for it.
-    val fileRef = cacheFiles.get(cacheKey) match {
-      case None          => return Future.successful(Left("Cache key has no file associated"))
-      case Some(fileRef) => fileRef
-    }
-
-    val fileId = fileCache.get(cacheKey) match {
-      case None     => return Future.successful(Left("Cache miss"))
-      case Some(id) => id
-    }
-
-    val fileGet = fileRepository.requestFileGet(fileId)
-    fileGet.map { fileGetResult =>
-      Right(fileRef -> fileGetResult)
-    }.recover {
-      case e => Left(e.getMessage)
-    }
-  }
-
-  private def unflattenEither[L, R](in: List[Either[L, R]]): Either[L, List[R]] = {
-    import cats.implicits._
-    in.sequence
   }
 
   private def openFile(state: ExecutionOpenFiles, file: PlanFile): Future[ExecutionOpenFiles] = {

@@ -2,9 +2,34 @@ name: kmeans
 stack: sklearn.simple_learn
 directory: code
 kind: trainable
-# TODO: Without support for meta variables not yet really useful
-# Example would be here: https://gl.ambrosys.de/mantik/core/issues/6#note_27995
-
+metaVariables:
+  - name: n_clusters
+    type: int32
+    value: 2
+  - name: init
+    type: string
+    value: "k-means++"
+  - name: n_init
+    type: int32
+    value: 10
+  - name: max_iter
+    type: int32
+    value: 300
+  - name: tol
+    type: float64
+    value: 0.0001
+  - name: precompute_distances
+    type: string
+    value: "auto"
+  - name: random_state
+    type: string
+    value: "null"
+  - name: n_jobs
+    type: int32
+    value: 1
+  - name: algorithm
+    type: string
+    value: "auto"
 # The type of training data
 trainingType:
   columns:
@@ -13,7 +38,14 @@ trainingType:
       shape: [2]
       componentType: float64
 # The type for statistic after training
-statType: void
+statType:
+  columns:
+    centers:
+      type: tensor
+      shape: [2]
+      componentType: float64
+    inertia: float64
+    n_iter: int32
 # The type when trained
 type:
   input:

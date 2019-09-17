@@ -4,7 +4,7 @@ import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
 import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.FileRepository
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryService
-import ai.mantik.planner.repository.protos.file_repository.{ DeleteFileRequest, DeleteFileResponse, LoadFileRequest, LoadFileResponse, RequestFileGetRequest, RequestFileGetResponse, RequestFileStorageRequest, RequestFileStorageResponse, StoreFileRequest, StoreFileResponse }
+import ai.mantik.planner.repository.protos.file_repository.{ CopyFileRequest, CopyFileResponse, DeleteFileRequest, DeleteFileResponse, LoadFileRequest, LoadFileResponse, RequestFileGetRequest, RequestFileGetResponse, RequestFileStorageRequest, RequestFileStorageResponse, StoreFileRequest, StoreFileResponse }
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
@@ -34,6 +34,7 @@ class FileRepositoryServiceImpl @Inject() (backend: FileRepository)(implicit akk
       backend.requestFileGet(request.fileId, optimistic = request.optimistic).map { response =>
         RequestFileGetResponse(
           fileId = response.fileId,
+          isTemporary = response.isTemporary,
           path = response.path,
           contentType = RpcConversions.encodeOptionalString(response.contentType)
         )
@@ -88,6 +89,14 @@ class FileRepositoryServiceImpl @Inject() (backend: FileRepository)(implicit akk
         StreamConversions.pumpSourceIntoStreamObserver(combined, responseObserver)
       case Failure(failure) =>
         responseObserver.onError(Conversions.encodeErrorIfPossible(failure))
+    }
+  }
+
+  override def copyFile(request: CopyFileRequest): Future[CopyFileResponse] = {
+    Conversions.encodeErrorsIn {
+      backend.copy(from = request.fromId, to = request.toId).map { _ =>
+        CopyFileResponse()
+      }
     }
   }
 }

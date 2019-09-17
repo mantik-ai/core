@@ -104,7 +104,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
         throw new Errors.NotFoundException(s"File ${id} is not yet written")
       }
       FileGetResult(
-        id, FileRepository.makePath(id), fileMeta.contentType
+        id, fileMeta.temporary, FileRepository.makePath(id), fileMeta.contentType
       )
     }
   }
@@ -140,6 +140,24 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
         throw new Errors.NotFoundException(s"FIle ${id} has no content type")
       }
       contentType -> FileIO.fromPath(name)
+    }
+  }
+
+  override def copy(from: String, to: String): Future[Unit] = {
+    Future {
+      val fromName = fileName(from)
+      val toName = fileName(to)
+      val fromMeta = loadMeta(from)
+      val toMeta = loadMeta(to)
+      val exists = Files.isRegularFile(fromName)
+      if (!exists) {
+        throw new Errors.NotFoundException(s"File ${from} doesn't exist")
+      }
+      Files.copy(fromName, toName)
+      val newMeta = toMeta.copy(
+        contentType = fromMeta.contentType
+      )
+      saveMeta(to, newMeta)
     }
   }
 

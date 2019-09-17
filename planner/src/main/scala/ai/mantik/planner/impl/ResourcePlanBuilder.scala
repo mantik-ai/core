@@ -11,7 +11,7 @@ import cats.implicits._
  * Responsible for building [[ResourcePlan]] and [[FilesPlan]] for evaluating Mantik Items in Graphs.
  * Part of [[PlannerImpl]]
  */
-private[impl] class ResourcePlanBuilder(elements: PlannerElements) {
+private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: CachedFiles) {
 
   /**
    * Generate the node, which provides a the data payload of a mantik item.
@@ -72,6 +72,12 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements) {
         }
       case c: PayloadSource.Cached =>
         cachedSourceFiles(c, canBeTemporary)
+      case p: PayloadSource.Projection =>
+        translateItemPayloadSourceAsFiles(p.source, canBeTemporary).map { filesPlan =>
+          filesPlan.copy(
+            files = IndexedSeq(filesPlan.files(p.projection))
+          )
+        }
       case other =>
         translateItemPayloadSource(other).flatMap { operationResult =>
           resourcePlanToFiles(operationResult, canBeTemporary)
@@ -79,17 +85,90 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements) {
     }
   }
 
+  /** Assembles a cached plan (temporary or persistent). */
   private def cachedSourceFiles(cachedSource: PayloadSource.Cached, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
-    for {
-      opFiles <- translateItemPayloadSourceAsFiles(cachedSource.source, canBeTemporary)
-      _ <- markFileAsCachedFile(opFiles.fileRefs, cachedSource.cacheGroup)
-    } yield {
-      val cacheFiles = cachedSource.cacheGroup.zip(opFiles.fileRefs)
-      FilesPlan(
-        PlanOp.CacheOp(
-          cacheFiles, opFiles.preOp
-        ), opFiles.files
-      )
+    if (canBeTemporary) {
+      cachedTemporarySource(cachedSource)
+    } else {
+      // Generate a cached view and then copy that to real files
+      for {
+        filesPlan <- cachedTemporarySource(cachedSource)
+        nonTemporaries <- filesPlan.files.indices.map { _ =>
+          PlanningState(_.writeFile(temporary = false))
+        }.toList.sequence
+        copyOperations = filesPlan.files.zip(nonTemporaries).map {
+          case (temporaryFile, nontemporaryFile) =>
+            PlanOp.CopyFile(from = temporaryFile.ref, to = nontemporaryFile.ref)
+        }
+        newFiles = filesPlan.files.zip(nonTemporaries).map {
+          case (temporaryFile, nonTemporaryFile) =>
+            PlanFileWithContentType(nonTemporaryFile.ref, temporaryFile.contentType)
+        }
+      } yield {
+        FilesPlan(
+          preOp = PlanOp.combine(filesPlan.preOp, PlanOp.Sequential(copyOperations, PlanOp.Empty)),
+          files = newFiles
+        )
+      }
+    }
+  }
+
+  /** Assembles a plan for having a cached item present (temporary). */
+  private def cachedTemporarySource(cachedSource: PayloadSource.Cached): State[PlanningState, FilesPlan] = {
+    PlanningState.flat { planningState =>
+      planningState.evaluatedCache(cachedSource.cacheGroup) match {
+        case Some(files) =>
+          // Node was already evalauted
+          PlanningState.pure(FilesPlan(files = files))
+        case None =>
+          // Node need to be re-evaluated
+          for {
+            filesPlan <- reevaluateCachedSource(cachedSource)
+            _ <- PlanningState.modify(_.withEvaluatedCache(cachedSource.cacheGroup, filesPlan.files))
+          } yield {
+            filesPlan
+          }
+      }
+    }
+  }
+
+  /** Forces reassembly of a cached item. */
+  private def reevaluateCachedSource(cachedSource: PayloadSource.Cached): State[PlanningState, FilesPlan] = {
+    cachedFiles.cached(cachedSource.cacheGroup) match {
+      case Some(files) =>
+        for {
+          contentTypes <- fileContentTypes(cachedSource.source)
+          fileReads <- files.zip(contentTypes).map {
+            case (fileId, contentType) =>
+              PlanningState(_.readFileRefWithContentType(fileId, contentType))
+          }.sequence
+        } yield {
+          FilesPlan(files = fileReads.toIndexedSeq)
+        }
+      case None =>
+        for {
+          opFiles <- translateItemPayloadSourceAsFiles(cachedSource.source, canBeTemporary = true)
+          _ <- markFileAsCachedFile(opFiles.fileRefs, cachedSource.cacheGroup)
+        } yield {
+          val cacheFiles = cachedSource.cacheGroup.zip(opFiles.fileRefs)
+          FilesPlan(
+            PlanOp.combine(
+              opFiles.preOp,
+              PlanOp.MarkCached(cacheFiles)
+            ),
+            files = opFiles.files
+          )
+        }
+    }
+  }
+
+  private def fileContentTypes(payloadSource: PayloadSource): State[PlanningState, IndexedSeq[String]] = {
+    // Note: this is a bit hacky as we do a optimistic payload conversions and throw away the result
+    // and all state changes
+    translateItemPayloadSourceAsFiles(payloadSource, canBeTemporary = true).flatMap { filesPlan =>
+      val contentTypes = filesPlan.files.map(_.contentType)
+      // this throws away state and just returns the content types.
+      PlanningState.pure(contentTypes)
     }
   }
 
@@ -98,7 +177,6 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements) {
     PlanningState { state =>
       val updatedState = state
         .markCached(toCached)
-        .withCacheGroup(cacheKeys)
       updatedState -> (())
     }
   }

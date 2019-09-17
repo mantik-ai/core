@@ -30,12 +30,13 @@ private[planner] class PlanExecutorImpl(
     isolationSpace: String,
     dockerConfig: DockerConfig,
     artifactRetriever: MantikArtifactRetriever,
+    fileCache: FileCache,
     clientConfig: ClientConfig
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
 
   @Singleton
   @Inject
-  def this(fileRepository: FileRepository, repository: Repository, executor: Executor, retriever: MantikArtifactRetriever, clientConfig: ClientConfig)(implicit akkaRuntime: AkkaRuntime) {
+  def this(fileRepository: FileRepository, repository: Repository, executor: Executor, retriever: MantikArtifactRetriever, fileCache: FileCache, clientConfig: ClientConfig)(implicit akkaRuntime: AkkaRuntime) {
     this(
       fileRepository,
       repository,
@@ -45,24 +46,28 @@ private[planner] class PlanExecutorImpl(
         akkaRuntime.config.getConfig("mantik.bridge.docker")
       ),
       retriever,
+      fileCache,
       clientConfig
     )
   }
 
   private val jobTimeout = Duration.fromNanos(config.getDuration("mantik.planner.jobTimeout").toNanos)
   private val jobPollInterval = Duration.fromNanos(config.getDuration("mantik.planner.jobPollInterval").toNanos)
-  private val fileCache = new FileCache()
 
   private val openFilesBuilder = new ExecutionOpenFilesBuilder(fileRepository, fileCache)
 
   def execute[T](plan: Plan[T]): Future[T] = {
     for {
       openFiles <- FutureHelper.time(logger, "Open Files") {
-        openFilesBuilder.openFiles(plan.cacheGroups, plan.files)
+        openFilesBuilder.openFiles(plan.files)
       }
       memory = new Memory()
       result <- executeOp(plan.op)(openFiles, memory)
     } yield result.asInstanceOf[T]
+  }
+
+  override def cachedFile(cacheKey: CacheKey): Option[String] = {
+    fileCache.get(cacheKey)
   }
 
   def executeOp[T](planOp: PlanOp[T])(implicit files: ExecutionOpenFiles, memory: Memory): Future[T] = {
@@ -117,7 +122,8 @@ private[planner] class PlanExecutorImpl(
                 state.copy(
                   itemStored = true,
                   nameStored = namedId.isDefined,
-                  namedMantikItem = namedId
+                  namedMantikItem = namedId,
+                  payloadFile = fileId
                 )
               }
           }
@@ -144,24 +150,18 @@ private[planner] class PlanExecutorImpl(
       case PlanOp.RunGraph(graph) =>
         val jobGraphConverter = new JobGraphConverter(clientConfig.remoteFileRepositoryAddress, isolationSpace, files, dockerConfig.logins)
         val job = jobGraphConverter.translateGraphIntoJob(graph)
+        logger.debug(s"Running job ${jobDebugString(job)}")
         FutureHelper.time(logger, s"Executing Job in isolationSpace ${job.isolationSpace}") {
           executeJobAndWaitForReady(job)
         }
-      case cacheOp: PlanOp.CacheOp =>
-        if (files.cacheHits.contains(cacheOp.cacheGroup)) {
-          logger.debug("Skipping op, because of cache hit")
-          Future.successful(())
-        } else {
-          logger.debug("Executing op, cache miss")
-          executeOp(cacheOp.alternative).map { _ =>
-            cacheOp.files.foreach {
-              case (cacheKey, fileRef) =>
-                val resolved = files.resolveFileId(fileRef)
-                fileCache.add(cacheKey, resolved)
-                ()
-            }
-          }
+      case cacheOp: PlanOp.MarkCached =>
+        cacheOp.files.foreach {
+          case (cacheKey, fileRef) =>
+            val resolved = files.resolveFileId(fileRef)
+            fileCache.add(cacheKey, resolved)
+            ()
         }
+        Future.successful(())
       case da: PlanOp.DeployAlgorithm =>
         FutureHelper.time(logger, s"Deploying Algorithm ${da.item.mantikId} -> ${da.serviceId}/${da.serviceNameHint}") {
           val jobGraphConverter = new JobGraphConverter(clientConfig.remoteFileRepositoryAddress, isolationSpace, files, dockerConfig.logins)
@@ -212,6 +212,12 @@ private[planner] class PlanExecutorImpl(
         }
       case c: PlanOp.Const[T] =>
         Future.successful(c.value)
+      case c: PlanOp.CopyFile =>
+        val fromId = files.resolveFileId(c.from)
+        val toId = files.resolveFileId(c.to)
+        FutureHelper.time(logger, "Copy file") {
+          fileRepository.copy(fromId, toId)
+        }
       case c: PlanOp.MemoryReader[T] =>
         Future.successful(memory.get(c.memoryId).asInstanceOf[T])
       case c: PlanOp.MemoryWriter[T] =>
@@ -268,5 +274,36 @@ private[planner] class PlanExecutorImpl(
           throw new RuntimeException(s"Unexpected job state $other")
       }
     }
+  }
+
+  private def jobDebugString(job: Job): String = {
+    def formatNode(node: NodeService): String = {
+      node match {
+        case c: ContainerService => s"Container: ${c.main.image}"
+        case e: ExistingService  => s"Existing:  ${e.url}"
+      }
+    }
+    try {
+      val graph = job.graph
+      val analysis = new GraphAnalysis(graph)
+      val builder = StringBuilder.newBuilder
+      builder ++= s"Job ${job.isolationSpace}\n"
+      analysis.flows.zipWithIndex.foreach {
+        case (flow, idx) =>
+          builder ++= s"  - Flow ${idx}\n"
+          flow.nodes.foreach { nodeResourceRef =>
+            val resolved = graph.resolveReference(nodeResourceRef)
+            resolved match {
+              case Some((node, res)) => builder ++= s"    - - ${formatNode(node.service)} : ${nodeResourceRef.resource} (${res.resourceType}/${res.contentType.getOrElse("n.A.")})\n"
+              case _                 => builder ++= s"    -- Unresolved ${nodeResourceRef}" // should not happen
+            }
+          }
+      }
+      builder.result()
+    } catch {
+      case e: GraphAnalysis.AnalyzerException =>
+        s"Invalid job ${e}"
+    }
+
   }
 }

@@ -1,11 +1,15 @@
 package ai.mantik.planner.impl.exec
 
-import ai.mantik.planner.CacheKey
+import ai.mantik.planner.{ CacheKey, CacheKeyGroup, FileId }
+import ai.mantik.planner.impl.CachedFiles
 
 import scala.collection.mutable
+import cats.implicits._
+import javax.inject.Singleton
 
 /** Associates [[CacheKey]] to Cached Files. */
-class FileCache {
+@Singleton
+class FileCache extends CachedFiles {
 
   private object lock
   private val entries = mutable.Map.empty[CacheKey, String]
@@ -27,6 +31,12 @@ class FileCache {
   def remove(key: CacheKey): Unit = {
     lock.synchronized {
       entries.remove(key)
+    }
+  }
+
+  override def cached(cacheKeyGroup: CacheKeyGroup): Option[List[FileId]] = {
+    lock.synchronized {
+      cacheKeyGroup.map(entries.get).sequence
     }
   }
 }

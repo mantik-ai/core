@@ -5,9 +5,12 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
+scikit-learn = "*"
+numpy = "*"
+requests = "*"
 
 [packages]
-mantik = {editable = true, path = "."}
+mantik = {editable = true,path = "."}
 grpcio-tools = "*"
 
 [requires]
