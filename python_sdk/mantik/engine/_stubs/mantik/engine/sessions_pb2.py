@@ -141,32 +141,32 @@ DESCRIPTOR.message_types_by_name['CloseSessionRequest'] = _CLOSESESSIONREQUEST
 DESCRIPTOR.message_types_by_name['CloseSessionResponse'] = _CLOSESESSIONRESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-CreateSessionRequest = _reflection.GeneratedProtocolMessageType('CreateSessionRequest', (_message.Message,), dict(
-  DESCRIPTOR = _CREATESESSIONREQUEST,
-  __module__ = 'mantik.engine.sessions_pb2'
+CreateSessionRequest = _reflection.GeneratedProtocolMessageType('CreateSessionRequest', (_message.Message,), {
+  'DESCRIPTOR' : _CREATESESSIONREQUEST,
+  '__module__' : 'mantik.engine.sessions_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.CreateSessionRequest)
-  ))
+  })
 _sym_db.RegisterMessage(CreateSessionRequest)
 
-CreateSessionResponse = _reflection.GeneratedProtocolMessageType('CreateSessionResponse', (_message.Message,), dict(
-  DESCRIPTOR = _CREATESESSIONRESPONSE,
-  __module__ = 'mantik.engine.sessions_pb2'
+CreateSessionResponse = _reflection.GeneratedProtocolMessageType('CreateSessionResponse', (_message.Message,), {
+  'DESCRIPTOR' : _CREATESESSIONRESPONSE,
+  '__module__' : 'mantik.engine.sessions_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.CreateSessionResponse)
-  ))
+  })
 _sym_db.RegisterMessage(CreateSessionResponse)
 
-CloseSessionRequest = _reflection.GeneratedProtocolMessageType('CloseSessionRequest', (_message.Message,), dict(
-  DESCRIPTOR = _CLOSESESSIONREQUEST,
-  __module__ = 'mantik.engine.sessions_pb2'
+CloseSessionRequest = _reflection.GeneratedProtocolMessageType('CloseSessionRequest', (_message.Message,), {
+  'DESCRIPTOR' : _CLOSESESSIONREQUEST,
+  '__module__' : 'mantik.engine.sessions_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.CloseSessionRequest)
-  ))
+  })
 _sym_db.RegisterMessage(CloseSessionRequest)
 
-CloseSessionResponse = _reflection.GeneratedProtocolMessageType('CloseSessionResponse', (_message.Message,), dict(
-  DESCRIPTOR = _CLOSESESSIONRESPONSE,
-  __module__ = 'mantik.engine.sessions_pb2'
+CloseSessionResponse = _reflection.GeneratedProtocolMessageType('CloseSessionResponse', (_message.Message,), {
+  'DESCRIPTOR' : _CLOSESESSIONRESPONSE,
+  '__module__' : 'mantik.engine.sessions_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.CloseSessionResponse)
-  ))
+  })
 _sym_db.RegisterMessage(CloseSessionResponse)
 
 

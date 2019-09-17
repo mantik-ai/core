@@ -93,18 +93,18 @@ DESCRIPTOR.message_types_by_name['VersionResponse'] = _VERSIONRESPONSE
 DESCRIPTOR.message_types_by_name['ClientConfigResponse'] = _CLIENTCONFIGRESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-VersionResponse = _reflection.GeneratedProtocolMessageType('VersionResponse', (_message.Message,), dict(
-  DESCRIPTOR = _VERSIONRESPONSE,
-  __module__ = 'mantik.engine.engine_pb2'
+VersionResponse = _reflection.GeneratedProtocolMessageType('VersionResponse', (_message.Message,), {
+  'DESCRIPTOR' : _VERSIONRESPONSE,
+  '__module__' : 'mantik.engine.engine_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.VersionResponse)
-  ))
+  })
 _sym_db.RegisterMessage(VersionResponse)
 
-ClientConfigResponse = _reflection.GeneratedProtocolMessageType('ClientConfigResponse', (_message.Message,), dict(
-  DESCRIPTOR = _CLIENTCONFIGRESPONSE,
-  __module__ = 'mantik.engine.engine_pb2'
+ClientConfigResponse = _reflection.GeneratedProtocolMessageType('ClientConfigResponse', (_message.Message,), {
+  'DESCRIPTOR' : _CLIENTCONFIGRESPONSE,
+  '__module__' : 'mantik.engine.engine_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.ClientConfigResponse)
-  ))
+  })
 _sym_db.RegisterMessage(ClientConfigResponse)
 
 

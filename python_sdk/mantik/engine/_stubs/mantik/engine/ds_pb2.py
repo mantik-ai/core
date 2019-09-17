@@ -139,18 +139,18 @@ DESCRIPTOR.message_types_by_name['Bundle'] = _BUNDLE
 DESCRIPTOR.enum_types_by_name['BundleEncoding'] = _BUNDLEENCODING
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-DataType = _reflection.GeneratedProtocolMessageType('DataType', (_message.Message,), dict(
-  DESCRIPTOR = _DATATYPE,
-  __module__ = 'mantik.engine.ds_pb2'
+DataType = _reflection.GeneratedProtocolMessageType('DataType', (_message.Message,), {
+  'DESCRIPTOR' : _DATATYPE,
+  '__module__' : 'mantik.engine.ds_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.DataType)
-  ))
+  })
 _sym_db.RegisterMessage(DataType)
 
-Bundle = _reflection.GeneratedProtocolMessageType('Bundle', (_message.Message,), dict(
-  DESCRIPTOR = _BUNDLE,
-  __module__ = 'mantik.engine.ds_pb2'
+Bundle = _reflection.GeneratedProtocolMessageType('Bundle', (_message.Message,), {
+  'DESCRIPTOR' : _BUNDLE,
+  '__module__' : 'mantik.engine.ds_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.Bundle)
-  ))
+  })
 _sym_db.RegisterMessage(Bundle)
 
 

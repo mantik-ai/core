@@ -98,18 +98,18 @@ DESCRIPTOR.message_types_by_name['AddLocalMantikDirectoryRequest'] = _ADDLOCALMA
 DESCRIPTOR.message_types_by_name['AddLocalMantikDirectoryResponse'] = _ADDLOCALMANTIKDIRECTORYRESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-AddLocalMantikDirectoryRequest = _reflection.GeneratedProtocolMessageType('AddLocalMantikDirectoryRequest', (_message.Message,), dict(
-  DESCRIPTOR = _ADDLOCALMANTIKDIRECTORYREQUEST,
-  __module__ = 'mantik.engine.debug_pb2'
+AddLocalMantikDirectoryRequest = _reflection.GeneratedProtocolMessageType('AddLocalMantikDirectoryRequest', (_message.Message,), {
+  'DESCRIPTOR' : _ADDLOCALMANTIKDIRECTORYREQUEST,
+  '__module__' : 'mantik.engine.debug_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.AddLocalMantikDirectoryRequest)
-  ))
+  })
 _sym_db.RegisterMessage(AddLocalMantikDirectoryRequest)
 
-AddLocalMantikDirectoryResponse = _reflection.GeneratedProtocolMessageType('AddLocalMantikDirectoryResponse', (_message.Message,), dict(
-  DESCRIPTOR = _ADDLOCALMANTIKDIRECTORYRESPONSE,
-  __module__ = 'mantik.engine.debug_pb2'
+AddLocalMantikDirectoryResponse = _reflection.GeneratedProtocolMessageType('AddLocalMantikDirectoryResponse', (_message.Message,), {
+  'DESCRIPTOR' : _ADDLOCALMANTIKDIRECTORYRESPONSE,
+  '__module__' : 'mantik.engine.debug_pb2'
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.AddLocalMantikDirectoryResponse)
-  ))
+  })
 _sym_db.RegisterMessage(AddLocalMantikDirectoryResponse)
 
 

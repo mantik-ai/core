@@ -54,6 +54,11 @@ class GraphBuilderServiceStub(object):
         request_serializer=mantik_dot_engine_dot_graph__builder__pb2.TagRequest.SerializeToString,
         response_deserializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.FromString,
         )
+    self.SetMetaVariables = channel.unary_unary(
+        '/ai.mantik.engine.protos.GraphBuilderService/SetMetaVariables',
+        request_serializer=mantik_dot_engine_dot_graph__builder__pb2.SetMetaVariableRequest.SerializeToString,
+        response_deserializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.FromString,
+        )
 
 
 class GraphBuilderServiceServicer(object):
@@ -116,6 +121,13 @@ class GraphBuilderServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def SetMetaVariables(self, request, context):
+    """Set Meta Variables of an Item. 
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_GraphBuilderServiceServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -157,6 +169,11 @@ def add_GraphBuilderServiceServicer_to_server(servicer, server):
       'Tag': grpc.unary_unary_rpc_method_handler(
           servicer.Tag,
           request_deserializer=mantik_dot_engine_dot_graph__builder__pb2.TagRequest.FromString,
+          response_serializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.SerializeToString,
+      ),
+      'SetMetaVariables': grpc.unary_unary_rpc_method_handler(
+          servicer.SetMetaVariables,
+          request_deserializer=mantik_dot_engine_dot_graph__builder__pb2.SetMetaVariableRequest.FromString,
           response_serializer=mantik_dot_engine_dot_graph__builder__pb2.NodeResponse.SerializeToString,
       ),
   }
