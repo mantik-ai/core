@@ -10,12 +10,14 @@ import mantik.types
 MODEL_FILE = "model.pickle"
 
 
-def train(bundle: mantik.types.Bundle) -> mantik.types.Bundle:
+def train(bundle: mantik.types.Bundle, meta: mantik.types.MetaVariables) -> mantik.types.Bundle:
     coordinates = bundle.flat_column("coordinates")
     learn_data = np.array(coordinates)
-    cluster_count = 2  # TODO Should be meta variable.
-    model = KMeans(n_clusters=cluster_count).fit(learn_data)
-    with (open(MODEL_FILE, "wb")) as f:
+    random_state = meta.get("random_state")
+    meta = {k: meta.get(k) for k in meta.keys()}
+    meta["random_state"] = int(random_state) if random_state != "null" else None
+    model = KMeans(**meta).fit(learn_data)
+    with open(MODEL_FILE, "wb") as f:
         pickle.dump(model, f)
     value = [[model.cluster_centers_.reshape(-1).tolist(), model.inertia_, model.n_iter_]]
     return mantik.types.Bundle(value=value)

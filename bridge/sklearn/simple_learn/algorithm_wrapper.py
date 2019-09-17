@@ -32,7 +32,7 @@ class AlgorithmWrapper(Algorithm):
         old_pwd = os.getcwd()
         os.chdir(self.mantikfile.payload_dir)
         try:
-            stats = self.train_func(bundle)
+            stats = self.train_func(bundle, self.mantikfile.meta_variables)
             # This should now work and not catch
             self.model = self.try_init_func()
             print("Reinitialized after successful learn")
