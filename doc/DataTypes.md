@@ -261,5 +261,4 @@ The Scala implementation resides in `ds`. A Golang implementation resides in the
 ## Problems:
 
 - No Random Access Patterns as each element can have a different size.
-- The format is very rigid and has no support for placeholders yet, this is tracked in ticket #45.
 
