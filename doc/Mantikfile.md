@@ -54,10 +54,6 @@ It must also contain a `type` field which represents the type a trained algorith
 It must contain a field `stack` which maps to a trainable algorithm plugin.
 
 
-## Open Points
-
-There is no support for Meta variables yet, which could costomize input/output types, but this is planned.
-
 ## Examples
 
 Example for a Data Set definition
