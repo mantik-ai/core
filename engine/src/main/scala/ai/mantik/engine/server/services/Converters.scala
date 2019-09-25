@@ -6,6 +6,8 @@ import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.formats.json.JsonFormat
+import ai.mantik.ds.helper.circe.CirceJson
+import ai.mantik.elements.{ ItemId, Mantikfile, NamedMantikId }
 import ai.mantik.engine.protos.items.MantikItem.Item
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.planner.{ Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
@@ -15,11 +17,14 @@ import ai.mantik.engine.protos.items.{ DataSet => ProtoDataSet }
 import ai.mantik.engine.protos.items.{ Pipeline => ProtoPipeline }
 import ai.mantik.engine.protos.items.{ TrainableAlgorithm => ProtoTrainableAlgorithm }
 import ai.mantik.engine.protos.ds.{ BundleEncoding, Bundle => ProtoBundle, DataType => ProtoDataType }
+import ai.mantik.engine.protos.registry.{ DeploymentInfo => ProtoDeploymentInfo, MantikArtifact => ProtoMantikArtifact }
+import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact }
 import com.google.protobuf.{ ByteString => ProtoByteString }
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 import akka.util.ccompat.IterableOnce
+import com.google.protobuf.timestamp.Timestamp
 import io.circe.syntax._
 import io.circe.parser
 
@@ -151,5 +156,51 @@ private[engine] object Converters {
       case Left(error) => throw new IllegalArgumentException(s"Could not parse data type ${error}")
       case Right(ok)   => ok
     }
+  }
+
+  def encodeMantikArtifact(artifact: MantikArtifact): ProtoMantikArtifact = {
+    ProtoMantikArtifact(
+      mantikfileJson = artifact.mantikfile.toJson,
+      artifactKind = artifact.mantikfile.definition.kind,
+      fileId = RpcConversions.encodeOptionalString(artifact.fileId),
+      namedId = RpcConversions.encodeOptionalString(artifact.namedId.map(_.toString)),
+      itemId = artifact.itemId.toString,
+      deploymentInfo = artifact.deploymentInfo.map(encodeDeploymentInfo)
+    )
+  }
+
+  def decodeMantikArtifact(artifact: ProtoMantikArtifact): MantikArtifact = {
+    val mantikfileJson = CirceJson.forceParseJson(artifact.mantikfileJson)
+    MantikArtifact(
+      mantikfile = Mantikfile.parseSingleDefinition(mantikfileJson).fold(i => throw i, identity),
+      fileId = RpcConversions.decodeOptionalString(artifact.fileId),
+      namedId = RpcConversions.decodeOptionalString(artifact.namedId).map(NamedMantikId.fromString),
+      itemId = ItemId(artifact.itemId),
+      deploymentInfo = artifact.deploymentInfo.map(decodeDeploymentInfo)
+    )
+  }
+
+  def encodeDeploymentInfo(deploymentInfo: DeploymentInfo): ProtoDeploymentInfo = {
+    ProtoDeploymentInfo(
+      name = deploymentInfo.name,
+      internalUrl = deploymentInfo.internalUrl,
+      externalUrl = RpcConversions.encodeOptionalString(deploymentInfo.externalUrl),
+      timestamp = Some(
+        Timestamp.fromJavaProto( // RpcConversions doesn't know ScalaPB
+          RpcConversions.encodeInstant(deploymentInfo.timestamp)
+        )
+      )
+    )
+  }
+
+  def decodeDeploymentInfo(deploymentInfo: ProtoDeploymentInfo): DeploymentInfo = {
+    DeploymentInfo(
+      name = deploymentInfo.name,
+      internalUrl = deploymentInfo.internalUrl,
+      externalUrl = RpcConversions.decodeOptionalString(deploymentInfo.externalUrl),
+      timestamp = RpcConversions.decodeInstant(Timestamp.toJavaProto(deploymentInfo.timestamp.getOrElse(
+        throw new IllegalArgumentException("Expected timestamp")
+      )))
+    )
   }
 }

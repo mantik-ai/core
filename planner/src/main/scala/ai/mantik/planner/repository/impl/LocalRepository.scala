@@ -294,7 +294,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
     DbMantikItem(
       mantikfile = a.mantikfile.toJson,
       fileId = a.fileId,
-      itemId = a.itemId.toString
+      itemId = a.itemId.toString,
+      kind = a.mantikfile.definition.kind
     )
   }
 
@@ -303,10 +304,44 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
     Future(f).andThen {
       case Success(_) =>
         logger.debug(s"Executed ${name}")
-      case Failure(e: Errors.RegistryException) => // ok, handled
+      case Failure(e: Errors.RepositoryError) => // ok, handled
       case Failure(e) =>
         logger.error(s"Unhandled database error in $name", e)
     }
+  }
+
+  override def list(alsoAnonymous: Boolean, deployedOnly: Boolean, kindFilter: Option[String]): Future[IndexedSeq[MantikArtifact]] = {
+    dbOperation(s"list alsoAnonymous=${alsoAnonymous} deployedOnly=${deployedOnly} kindFilter=${kindFilter}") {
+      // The filtering can't be easily moved to a later stage so it's directly inside the join expression
+      // see https://github.com/getquill/quill/issues/1012
+
+      val items = kindFilter match {
+        case Some(kind) => quote { db.items.filter(_.kind == lift(kind)) }
+        case None       => quote { db.items }
+      }
+
+      val namedItems = if (alsoAnonymous) {
+        quote { items.leftJoin(db.names).on(_.itemId == _.currentItemId) }
+      } else {
+        quote { items.join(db.names).on(_.itemId == _.currentItemId).map { case (i, n) => (i, Some(n)) } }
+      }
+
+      val artifacts = run {
+        for {
+          (item, name) <- namedItems
+          depl <- db.deployments.leftJoin(_.itemId == item.itemId)
+          // if !deployedOnly || depl.isDefined
+        } yield (item, name, depl)
+      }.collect {
+        // TODO: This filtering should be done on database side
+        // but getquill makes it really complicated to push that down without writing multiple database calls
+        case (item, name, depl) if !deployedOnly || depl.isDefined =>
+          decodeDbArtifact(DbArtifact(name, item, depl))
+      }
+
+      artifacts.toIndexedSeq
+    }
+
   }
 }
 

@@ -1,7 +1,10 @@
 package ai.mantik.engine.server.services
 
 import ai.mantik.componently.ComponentBase
+import ai.mantik.componently.rpc.RpcConversions
+import ai.mantik.planner.repository.Errors
 import com.typesafe.scalalogging.Logger
+import io.grpc.Status.Code
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -36,5 +39,8 @@ private[services] trait RpcServiceBase {
   }
 
   /** The place to add more error handlers. */
-  protected val translateError: PartialFunction[Throwable, Throwable] = PartialFunction.empty
+  protected val translateError: PartialFunction[Throwable, Throwable] = {
+    case e: Errors.NotFoundException =>
+      RpcConversions.encodeError(e, Code.NOT_FOUND)
+  }
 }

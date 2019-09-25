@@ -81,15 +81,9 @@ private[rpc] object Conversions {
 
   val encodeErrors: PartialFunction[Throwable, Throwable] = {
     case e: Errors.NotFoundException =>
-      wrapError(e, Code.NOT_FOUND)
+      RpcConversions.encodeError(e, Code.NOT_FOUND)
     case e: Errors.ConflictException =>
-      wrapError(e, Code.FAILED_PRECONDITION)
-  }
-
-  private def wrapError(e: Throwable, code: Code): StatusRuntimeException = {
-    val description = e.getMessage // null is allowed according to source of Status.
-    val status = code.toStatus.withDescription(description).withCause(e)
-    new StatusRuntimeException(status)
+      RpcConversions.encodeError(e, Code.FAILED_PRECONDITION)
   }
 
   def encodeErrorIfPossible(e: Throwable): Throwable = {

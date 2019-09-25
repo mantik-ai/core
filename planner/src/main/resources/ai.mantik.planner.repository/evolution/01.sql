@@ -1,7 +1,3 @@
--- Database Schema for LocalRepository
-
--- Database is sqlite
--- Note: MUST be compatible to evoltions in evolution folder
 
 -- Holds the content of mantik items
 CREATE TABLE IF NOT EXISTS mantik_item (
@@ -10,9 +6,7 @@ CREATE TABLE IF NOT EXISTS mantik_item (
     -- JSON Content of Mantik file
     mantikfile VARCHAR NOT NULL,
     -- File ID
-    file_id VARCHAR,
-    -- Kind of item
-    kind VARCHAR NOT NULL DEFAULT '' -- Has default value to be compatible to migration.
+    file_id VARCHAR
 );
 
 -- Holds the deployment info for a item id
@@ -45,4 +39,3 @@ CREATE TABLE IF NOT EXISTS mantik_name (
 
 
 CREATE UNIQUE INDEX IF NOT EXISTS mantik_artifact_name_version ON mantik_name (account, name, version);
-CREATE INDEX IF NOT EXISTS  mantik_item_kind ON mantik_item (kind);

@@ -1,8 +1,12 @@
 package ai.mantik.componently.rpc
 
+import java.time.Instant
+
 import akka.util.ByteString
 import akka.util.ccompat.IterableOnce
-import com.google.protobuf.{ ByteString => ProtoByteString }
+import com.google.protobuf.{ Timestamp, ByteString => ProtoByteString }
+import io.grpc.Status.Code
+import io.grpc.StatusRuntimeException
 
 /** Helper for converting gRpc Primitives into Scala Objects and back. */
 object RpcConversions {
@@ -42,5 +46,27 @@ object RpcConversions {
     } else {
       Some(str)
     }
+  }
+
+  /** Encode a Java Instant into protobuf Timestamp */
+  def encodeInstant(instant: Instant): Timestamp = {
+    Timestamp.newBuilder().setSeconds(
+      instant.getEpochSecond
+    ).setNanos(instant.getNano).build()
+  }
+
+  /** Decode protobuf timestamp into Java Instant */
+  def decodeInstant(timestamp: Timestamp): Instant = {
+    Instant.ofEpochSecond(
+      timestamp.getSeconds,
+      timestamp.getNanos
+    )
+  }
+
+  /** Encode an error into a [[StatusRuntimeException]]. */
+  def encodeError(e: Throwable, code: Code): StatusRuntimeException = {
+    val description = e.getMessage // null is allowed according to source of Status.
+    val status = code.toStatus.withDescription(description).withCause(e)
+    new StatusRuntimeException(status)
   }
 }

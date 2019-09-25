@@ -1,0 +1,38 @@
+syntax = "proto3";
+package ai.mantik.engine.protos;
+import "google/protobuf/timestamp.proto";
+import "mantik/engine/registry.proto";
+
+// The local Mantik Registry, contains all Mantik Artifacts managed by Mantik
+service LocalRegistryService {
+
+    // Returns a single artifact.
+    rpc GetArtifact(GetArtifactRequest) returns (GetArtifactResponse) {};
+
+    // List artifacts
+    rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactResponse) {}
+}
+
+message GetArtifactRequest {
+    // The Mantik Id (can be a ItemId (starting with '@' or Named Mantik Id)
+    string mantik_id = 1;
+}
+
+message GetArtifactResponse {
+    // The artifact
+    MantikArtifact artifact = 1;
+}
+
+message ListArtifactsRequest {
+    // if true, only list deployed
+    bool deployed = 1;
+    // if true, also list items which do not have a name
+    bool anonymous = 2;
+    // if set, only list items of a given kind
+    string kind = 3;
+}
+
+message ListArtifactResponse {
+    // The mantik artifacts matching the list requests
+    repeated MantikArtifact artifacts = 1;
+}

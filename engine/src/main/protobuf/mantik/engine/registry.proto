@@ -1,0 +1,28 @@
+syntax = "proto3";
+package ai.mantik.engine.protos;
+import "google/protobuf/timestamp.proto";
+
+// Contains information about a MantikArtifact
+message MantikArtifact {
+    // JSON Serialized mantik file
+    string mantikfile_json = 1;
+    // Kind of the Artifact (e.g. algorithm)
+    string artifact_kind = 2;
+    // File Id (optional) for Item payload
+    string file_id = 3;
+    // Optional named id of the item.
+    // This is generally empty, if the item is requested by ItemId (because multiple names could point to the same itemId)
+    string named_id = 4;
+    // Required Item Id.
+    string item_id = 5;
+    // Optional information about a deployment of the item
+    DeploymentInfo deployment_info = 6;
+}
+
+// Contains information if some artifact is deployed
+message DeploymentInfo {
+    string name = 1;
+    string internal_url = 2;
+    string external_url = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}

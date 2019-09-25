@@ -1,8 +1,9 @@
 package ai.mantik.planner.repository.rpc
 
+import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.planner.repository.{ Errors, Repository }
-import ai.mantik.planner.repository.protos.repository.{ EnsureMantikIdRequest, EnsureMantikIdResponse, GetItemRequest, GetItemResponse, RemoveRequest, RemoveResponse, SetDeploymentInfoRequest, SetDeploymentInfoResponse, StoreRequest, StoreResponse }
+import ai.mantik.planner.repository.protos.repository.{ EnsureMantikIdRequest, EnsureMantikIdResponse, GetItemRequest, GetItemResponse, ListRequest, ListResponse, RemoveRequest, RemoveResponse, SetDeploymentInfoRequest, SetDeploymentInfoResponse, StoreRequest, StoreResponse }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
 import javax.inject.Inject
 
@@ -57,6 +58,20 @@ class RepositoryServiceImpl @Inject() (repository: Repository)(implicit akkaRunt
       repository.remove(mantikid).map { found =>
         RemoveResponse(found)
       }
+    }
+  }
+
+  override def list(request: ListRequest): Future[ListResponse] = {
+    errorHandling {
+      repository.list(
+        alsoAnonymous = request.alsoAnonymous,
+        deployedOnly = request.deployedOnly,
+        kindFilter = RpcConversions.decodeOptionalString(request.kindFilter)
+      ).map { response =>
+          ListResponse(
+            response.map(Conversions.encodeMantikArtifact)
+          )
+        }
     }
   }
 

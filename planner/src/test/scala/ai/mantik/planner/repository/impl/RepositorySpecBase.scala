@@ -3,9 +3,10 @@ package ai.mantik.planner.repository.impl
 import java.time.temporal.ChronoUnit
 
 import ai.mantik.ds.FundamentalType
+import ai.mantik.ds.FundamentalType.StringType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, NamedMantikId, Mantikfile }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId }
 import ai.mantik.planner.repository
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
@@ -278,6 +279,53 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       back3 shouldBe artifact1
 
       await(repo.get(artifact2.namedId.get)) shouldBe artifact2
+    }
+  }
+
+  it should "list items" in {
+    withRepo { repo =>
+      await(repo.list()) shouldBe empty
+
+      await(repo.store(artifact1))
+      val artifact2 = artifact1.copy(
+        itemId = ItemId.generate(),
+        namedId = None
+      )
+      await(repo.store(artifact2))
+
+      val artifact3 = artifact1.copy(
+        itemId = ItemId.generate(),
+        namedId = Some("other_name"),
+        deploymentInfo = Some(
+          deploymentInfo1
+        )
+      )
+      await(repo.store(artifact3))
+
+      val artifact4 = artifact1.copy(
+        mantikfile = Mantikfile.pure(
+          DataSetDefinition(format = "natural", `type` = StringType)
+        ),
+        itemId = ItemId.generate(),
+        namedId = Some("dataset1")
+      )
+      await(repo.store(artifact4))
+
+      await(repo.list()) should contain theSameElementsAs Seq(
+        artifact1, artifact3, artifact4
+      )
+      await(repo.list(alsoAnonymous = true)) should contain theSameElementsAs Seq(
+        artifact1, artifact2, artifact3, artifact4
+      )
+      await(repo.list(deployedOnly = true)) should contain theSameElementsAs Seq(
+        artifact3
+      )
+      await(repo.list(kindFilter = Some(MantikDefinition.AlgorithmKind))) should contain theSameElementsAs Seq(
+        artifact1, artifact3
+      )
+      await(repo.list(kindFilter = Some(MantikDefinition.DataSetKind))) should contain theSameElementsAs Seq(
+        artifact4
+      )
     }
   }
 }

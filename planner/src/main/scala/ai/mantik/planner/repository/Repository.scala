@@ -5,7 +5,7 @@ import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 
 import scala.concurrent.Future
 
-/** Gives access to Mantik objects. */
+/** Gives access to (local) Mantik objects. */
 private[mantik] trait Repository extends Component {
   /** Retrieves a Mantik artefact. */
   def get(id: MantikId): Future[MantikArtifact]
@@ -30,4 +30,16 @@ private[mantik] trait Repository extends Component {
 
   /** Remove an artifact. Returns true if it was found. */
   def remove(id: MantikId): Future[Boolean]
+
+  /**
+   * List Mantik Artifacts.
+   * @param alsoAnonymous if true, also return anonymous artifacts who are not named
+   * @param deployedOnly if true, only return deployed artifacts
+   * @param kindFilter if set, filter for a specific kind.
+   */
+  def list(
+    alsoAnonymous: Boolean = false,
+    deployedOnly: Boolean = false,
+    kindFilter: Option[String] = None
+  ): Future[IndexedSeq[MantikArtifact]]
 }

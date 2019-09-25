@@ -1,11 +1,9 @@
 package ai.mantik.planner.repository.impl
 
-import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.sql.Timestamp
 import java.util.UUID
 
-import org.apache.commons.io.IOUtils
+import ai.mantik.planner.utils.sqlite.QuillSqlite
 
 /**
  * Contains the Database Adapter for the local Repository.
@@ -15,11 +13,8 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
 
   val quill = new QuillSqlite(dbFile)
 
-  /** SQL File for creating DB Schema. */
-  private val dbSchema = IOUtils.resourceToString("/ai.mantik.planner.repository/local_repo_schema.sql", StandardCharsets.UTF_8)
-
-  /** Directly apply schema. The schema may not change the layout if already present. */
-  quill.runSqlInTransaction(dbSchema)
+  // Ensuring Database schema
+  new MantikDbEvolutions(quill).ensureCurrentVersion()
 
   import quill.context._
 
@@ -51,7 +46,8 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
       "mantik_item",
       _.itemId -> "item_id",
       _.mantikfile -> "mantikfile",
-      _.fileId -> "file_id"
+      _.fileId -> "file_id",
+      _.kind -> "kind"
     )
   }
 
@@ -75,7 +71,8 @@ private[impl] object LocalRepositoryDb {
   case class DbMantikItem(
       itemId: String,
       mantikfile: String,
-      fileId: Option[String]
+      fileId: Option[String],
+      kind: String
   )
 
   case class DbDeploymentInfo(
