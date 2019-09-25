@@ -19,4 +19,20 @@ abstract class TestBase extends FlatSpec with Matchers with BeforeAndAfterEach w
   def await[T](f: => Future[T]): T = {
     Await.result(f, timeout)
   }
+
+  protected def ensureSameElements[T](left: Seq[T], right: Seq[T]): Unit = {
+    val missingRight = left.diff(right)
+    val missingLeft = right.diff(left)
+    if (missingLeft.nonEmpty || missingRight.nonEmpty) {
+      fail(s"""
+        |Two sets do not contain the same elements.
+        |
+        |** Missing Left **:
+        |${missingLeft.mkString("\n")}
+        |
+        |** Missing Right **:
+        |${missingRight.mkString("\n")}
+        |""".stripMargin)
+    }
+  }
 }

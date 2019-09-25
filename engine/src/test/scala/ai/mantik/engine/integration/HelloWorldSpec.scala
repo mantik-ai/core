@@ -6,6 +6,7 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.engine.protos.ds.{ BundleEncoding, DataType }
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, GetRequest, LiteralRequest }
 import ai.mantik.engine.protos.graph_executor.FetchItemRequest
+import ai.mantik.engine.protos.local_registry.ListArtifactsRequest
 import ai.mantik.engine.protos.sessions.CreateSessionRequest
 import ai.mantik.engine.server.services.Converters
 import ai.mantik.planner.repository.Errors
@@ -63,5 +64,9 @@ class HelloWorldSpec extends IntegrationTestBase {
     intercept[Errors.NotFoundException] {
       await(context.localRegistry.get("Not-existing"))
     }
+  }
+
+  it should "provide access to local registry" in {
+    await(engineClient.localRegistryService.listArtifacts(ListArtifactsRequest())).artifacts shouldNot be(empty)
   }
 }

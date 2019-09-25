@@ -1,8 +1,9 @@
 package ai.mantik.planner.repository.rpc
 
+import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
-import ai.mantik.planner.repository.protos.repository.{ EnsureMantikIdRequest, GetItemRequest, RemoveRequest, SetDeploymentInfoRequest, StoreRequest }
+import ai.mantik.planner.repository.protos.repository.{ EnsureMantikIdRequest, GetItemRequest, ListRequest, RemoveRequest, SetDeploymentInfoRequest, StoreRequest }
 import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
 import io.grpc.Status.Code
@@ -66,5 +67,21 @@ class RepositoryClientImpl @Inject() (service: RepositoryService)(implicit akkaR
 
   private def decodeErrors[T](f: => Future[T]): Future[T] = {
     Conversions.decodeErrorsIn(f)
+  }
+
+  override def list(alsoAnonymous: Boolean, deployedOnly: Boolean, kindFilter: Option[String]): Future[IndexedSeq[MantikArtifact]] = {
+    decodeErrors {
+      service.list(
+        ListRequest(
+          alsoAnonymous = alsoAnonymous,
+          deployedOnly = deployedOnly,
+          kindFilter = RpcConversions.encodeOptionalString(kindFilter)
+        )
+      ).map { response =>
+          response.artifacts.map {
+            Conversions.decodeMantikArtifact
+          }.toIndexedSeq
+        }
+    }
   }
 }

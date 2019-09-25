@@ -1,15 +1,11 @@
-package ai.mantik.planner.repository.impl
+package ai.mantik.planner.utils.sqlite
 
 import java.nio.file.{ Files, Path }
 import java.util.Properties
 
 import ai.mantik.planner.repository.Errors
-import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.{ HikariConfig, HikariDataSource }
-import io.getquill.{ JdbcContextConfig, SnakeCase, SqliteJdbcContext }
-import org.sqlite.SQLiteConfig
-
-import scala.collection.JavaConverters._
+import io.getquill.{ SnakeCase, SqliteJdbcContext }
 
 /**
  * Prepares Sqlite Access via Quill.
@@ -59,11 +55,15 @@ class QuillSqlite(dbFile: Path) {
    * The file is splitted, see limitations of [[splitSql]].
    */
   def runSqlInTransaction(sql: String): Unit = {
-    val lines = splitSql(sql)
     context.transaction {
-      lines.foreach { line =>
-        context.executeAction(line)
-      }
+      runSql(sql)
+    }
+  }
+
+  def runSql(sql: String): Unit = {
+    val lines = splitSql(sql)
+    lines.foreach { line =>
+      context.executeAction(line)
     }
   }
 

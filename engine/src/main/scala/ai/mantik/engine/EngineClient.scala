@@ -7,6 +7,7 @@ import ai.mantik.componently.{ AkkaRuntime, Component }
 import ai.mantik.engine.protos.engine.AboutServiceGrpc.AboutServiceBlockingStub
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderServiceBlockingStub
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorServiceBlockingStub
+import ai.mantik.engine.protos.local_registry.LocalRegistryServiceGrpc.LocalRegistryServiceStub
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionServiceBlockingStub
 import ai.mantik.planner.{ ClientConfig, Context }
 import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.{ FileRepositoryService, FileRepositoryServiceStub }
@@ -54,6 +55,7 @@ class EngineClient(address: String)(implicit val akkaRuntime: AkkaRuntime) exten
   val graphExecutor = new GraphExecutorServiceBlockingStub(channel)
   val repositoryServiceStub = new RepositoryServiceStub(channel)
   val fileRepositoryServiceStub = new FileRepositoryServiceStub(channel)
+  val localRegistryService = new LocalRegistryServiceStub(channel)
 
   /** Create a new context for Scala Applications. */
   def createContext(): Context = {

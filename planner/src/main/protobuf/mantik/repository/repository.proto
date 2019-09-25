@@ -18,6 +18,9 @@ service RepositoryService {
 
     // Remove an item
     rpc Remove(RemoveRequest) returns (RemoveResponse) {}
+
+    // List items
+    rpc List(ListRequest) returns (ListResponse) {}
 }
 
 message GetItemRequest {
@@ -65,4 +68,17 @@ message RemoveRequest {
 message RemoveResponse {
     // True, if the item was found
     bool found = 1;
+}
+
+message ListRequest {
+    // if true, also anonymous items are returned
+    bool also_anonymous = 1;
+    // if true, only deployed items are returned
+    bool deployed_only = 2;
+    // if true, items are filtered by kind.
+    string kind_filter = 3;
+}
+
+message ListResponse {
+    repeated MantikArtifact artifacts = 1;
 }

@@ -41,7 +41,7 @@ class LocalMantikRegistryImpl @Inject() (
     for {
       storage <- fileStorage
       updated = mantikArtifact.copy(fileId = storage.map(_._1))
-      saved <- repository.store(updated)
+      _ <- repository.store(updated)
       _ <- storage.map(_._2).getOrElse(Future.successful(())) // wait for file upload
     } yield {
       updated
@@ -50,5 +50,13 @@ class LocalMantikRegistryImpl @Inject() (
 
   override def ensureMantikId(itemId: ItemId, mantikId: NamedMantikId): Future[Boolean] = {
     repository.ensureMantikId(itemId, mantikId)
+  }
+
+  override def list(alsoAnonymous: Boolean, deployedOnly: Boolean, kindFilter: Option[String]): Future[IndexedSeq[MantikArtifact]] = {
+    repository.list(
+      alsoAnonymous = alsoAnonymous,
+      deployedOnly = deployedOnly,
+      kindFilter = kindFilter
+    )
   }
 }
