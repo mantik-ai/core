@@ -42,6 +42,11 @@ pushd executor/coordinator
 ./build.sh
 popd
 
+echo "Building cli"
+pushd cli
+./build.sh
+popd
+
 echo "Building docs"
 pushd doc
 ./build.sh
