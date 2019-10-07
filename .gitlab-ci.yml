@@ -230,3 +230,16 @@ pages:
     refs:
       - master
       - mq/render-docs
+
+test_cli:
+  image: mantikai/golang_build:1.13.1-1
+  stage: test
+  variables:
+    GOPATH: "$CI_PROJECT_DIR/.go_path"
+  script:
+    - ./cli/build.sh
+
+  cache:
+    key: go_cache113
+    paths:
+      - .go_path
