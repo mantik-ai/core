@@ -10,9 +10,10 @@ import (
 
 /** Wraps RPC Commands to Engine. */
 type EngineClient struct {
-	context      context.Context
-	con          *grpc.ClientConn
-	aboutService engine.AboutServiceClient
+	context       context.Context
+	con           *grpc.ClientConn
+	aboutService  engine.AboutServiceClient
+	LocalRegistry engine.LocalRegistryServiceClient
 }
 
 func MakeEngineClientInsecure(host string, port int) (*EngineClient, error) {
@@ -29,6 +30,7 @@ func MakeEngineClient(con *grpc.ClientConn) (*EngineClient, error) {
 		context.Background(),
 		con,
 		engine.NewAboutServiceClient(con),
+		engine.NewLocalRegistryServiceClient(con),
 	}, nil
 }
 
