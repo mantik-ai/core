@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cli/actions"
 	"cli/client"
 	"cli/cmd"
 	"flag"
@@ -31,7 +32,16 @@ func main() {
 	if args.Version != nil {
 		runVersion(engineClient, args.Version)
 	}
+	if args.Items != nil {
+		err = actions.ListItems(engineClient, args.Items)
+	}
+	if args.Item != nil {
+		err = actions.ShowItem(engineClient, args.Item)
+	}
 
+	if err != nil {
+		println("Error", err.Error())
+	}
 	engineClient.Close()
 }
 
