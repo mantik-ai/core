@@ -6,6 +6,7 @@ Content
 .. toctree::
   :maxdepth: 1
 
+  Building <Building>
   Datatypes and serialization <DataTypes>
   Bridge documentation <Bridges>
   Mantikfile documentation <Mantikfile>
