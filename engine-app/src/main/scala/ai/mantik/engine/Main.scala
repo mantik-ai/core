@@ -6,9 +6,14 @@ import ai.mantik.engine.buildinfo.BuildInfo
 import ai.mantik.engine.server.{ EngineServer, ServiceModule }
 import com.google.inject.Guice
 import org.slf4j.LoggerFactory
+import org.slf4j.bridge.SLF4JBridgeHandler
 
 object Main {
   private val logger = LoggerFactory.getLogger(getClass)
+
+  // forwarding j.u.l.Logging to SLF4J
+  SLF4JBridgeHandler.removeHandlersForRootLogger()
+  SLF4JBridgeHandler.install()
 
   def main(args: Array[String]): Unit = {
     logger.info(s"Initializing Mantik Engine ${BuildInfo}")

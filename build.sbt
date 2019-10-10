@@ -343,6 +343,7 @@ lazy val engineApp = makeProject("engine-app", "engineApp")
     libraryDependencies ++= Seq(
       // Logging
       "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "org.slf4j" % "jul-to-slf4j" % slf4jVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
     )
   )
