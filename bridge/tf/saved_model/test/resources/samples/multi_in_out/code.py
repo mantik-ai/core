@@ -16,5 +16,5 @@ tf.global_variables_initializer().run()
 
 # Exporting Trained Model
 tf.saved_model.simple_save(
-    sess, "./trained_model", inputs={"a": a, "b": b}, outputs={"x": x, "y": y}
+    sess, "./payload", inputs={"a": a, "b": b}, outputs={"x": x, "y": y}
 )

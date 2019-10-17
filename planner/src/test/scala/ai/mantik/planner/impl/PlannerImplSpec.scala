@@ -340,7 +340,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       // cache
       PlanFile(PlanFileReference(2), read = true, write = true, temporary = true, cacheKey = Some(cacheKey)),
       // copied cache for saving
-      PlanFile(PlanFileReference(3), read = false, write = true)
+      PlanFile(PlanFileReference(3), read = true, write = true) // also readable, because it can be used in later invocations
     )
     val parts = splitOps(plan.op)
     parts.size shouldBe 5

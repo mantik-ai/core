@@ -16,7 +16,6 @@ class MantikfileSpec extends TestBase {
       |name: super_duper_algorithm
       |version: "0.1"
       |stack: tensorflow1.6
-      |directory: my_dir
       |type:
       |  input: uint8
       |  output: string
@@ -25,7 +24,6 @@ class MantikfileSpec extends TestBase {
   val minimalFile =
     """name: yup
       |stack: foobar
-      |directory: mydir
       |type:
       |   input: bool
       |   output: bool
@@ -36,7 +34,6 @@ class MantikfileSpec extends TestBase {
 
     mf.definition shouldBe elements.AlgorithmDefinition(
       stack = "tensorflow1.6",
-      directory = Some("my_dir"),
       `type` = FunctionType(FundamentalType.Uint8, FundamentalType.StringType)
     )
 
@@ -66,7 +63,6 @@ class MantikfileSpec extends TestBase {
     val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](minimalFile).forceRight
     mf.definition shouldBe elements.AlgorithmDefinition(
       stack = "foobar",
-      directory = Some("mydir"),
       `type` = FunctionType(FundamentalType.BoolType, FundamentalType.BoolType)
     )
     mf.header shouldBe MantikHeader(
@@ -95,7 +91,6 @@ class MantikfileSpec extends TestBase {
         """name: Foo
           |version: 0.1
           |stack: bla
-          |directory: dir
           |type
           |  input: int8
           |  output: int8
@@ -103,7 +98,6 @@ class MantikfileSpec extends TestBase {
       val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](code).forceRight
       mf.definition shouldBe elements.AlgorithmDefinition(
         stack = "bla",
-        directory = Some("dir"),
         `type` = FunctionType(FundamentalType.Uint8, FundamentalType.Uint8)
       )
       mf.header shouldBe MantikHeader(
@@ -121,7 +115,6 @@ class MantikfileSpec extends TestBase {
         |version: '0.1'
         |author: Superman
         |authorEmail: me@example.com
-        |directory: my_dir
         |format: binary
         |type:
         |  columns:
@@ -130,7 +123,6 @@ class MantikfileSpec extends TestBase {
       """.stripMargin
     val mantikfile = Mantikfile.fromYamlWithType[DataSetDefinition](definition).forceRight
     mantikfile.definition shouldBe elements.DataSetDefinition(
-      directory = Some("my_dir"),
       format = "binary",
       `type` = TabularData(
         "x" -> FundamentalType.Int32,
@@ -158,7 +150,6 @@ class MantikfileSpec extends TestBase {
         |   int64
         |trainingType: int32
         |statType: string
-        |directory: foo
       """.stripMargin
     val mantikfile = Mantikfile.fromYamlWithType[TrainableAlgorithmDefinition](definition).forceRight
     mantikfile.definition shouldBe elements.TrainableAlgorithmDefinition(
@@ -168,8 +159,7 @@ class MantikfileSpec extends TestBase {
         FundamentalType.Int64
       ),
       trainingType = FundamentalType.Int32,
-      statType = FundamentalType.StringType,
-      directory = Some("foo")
+      statType = FundamentalType.StringType
     )
     mantikfile.header shouldBe MantikHeader(
       name = Some("train1")
@@ -235,7 +225,6 @@ class MantikfileSpec extends TestBase {
         |version: '0.1'
         |author: Superman
         |authorEmail: me@example.com
-        |directory: my_dir
         |format: binary
         |unknown: must still be stored.
         |type: int32
@@ -258,7 +247,6 @@ class MantikfileSpec extends TestBase {
         |   int64
         |trainingType: int32
         |statType: string
-        |directory: foo
       """.stripMargin
     val mantikfile = Mantikfile.fromYaml(definition).right.get.cast[TrainableAlgorithmDefinition].right.get
 
@@ -268,8 +256,7 @@ class MantikfileSpec extends TestBase {
       `type` = FunctionType(
         FundamentalType.Int32,
         FundamentalType.Int64
-      ),
-      directory = Some("foo")
+      )
     )
   }
 
@@ -288,7 +275,6 @@ class MantikfileSpec extends TestBase {
         |   int64
         |trainingType: int32
         |statType: string
-        |directory: foo
       """.stripMargin
     val mantikfile = Mantikfile.fromYaml(definition).right.get.cast[TrainableAlgorithmDefinition].right.get
 
@@ -298,8 +284,7 @@ class MantikfileSpec extends TestBase {
       `type` = FunctionType(
         FundamentalType.Int32,
         FundamentalType.Int64
-      ),
-      directory = Some("foo")
+      )
     )
   }
 
@@ -324,7 +309,6 @@ class MantikfileSpec extends TestBase {
         |    componentType: float32
         |trainingType: int32
         |statType: string
-        |directory: foo
       """.stripMargin
     val parsedDefinition = Mantikfile.fromYaml(definition)
     val mantikfile = parsedDefinition.right.getOrElse(fail).cast[TrainableAlgorithmDefinition].right.get
@@ -352,7 +336,6 @@ class MantikfileSpec extends TestBase {
         |    componentType: float32
         |trainingType: int32
         |statType: string
-        |directory: foo
       """.stripMargin
     val parsedExpected = Mantikfile.fromYaml(expected).getOrElse(fail)
     casted.toJsonValue shouldBe parsedExpected.toJsonValue

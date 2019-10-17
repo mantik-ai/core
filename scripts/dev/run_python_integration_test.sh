@@ -7,11 +7,7 @@ cd $MYDIR/../..
 echo $0
 
 ./scripts/dev/start_engine_minikube.sh &
-ENGINE_PID=$!
-kill_engine(){
-  kill ${ENGINE_PID} || true
-}
-trap kill_engine EXIT
+trap "kill 0" EXIT # Kills children processes at the end
 
 sleep 30
 

@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/serving"
-	"io/ioutil"
 	"path"
 	"select/services/selectbridge/runner"
 )
@@ -12,18 +11,21 @@ import (
 type SelectBackend struct {
 }
 
-func (s *SelectBackend) LoadModel(directory string, mantikfile serving.Mantikfile) (serving.Executable, error) {
-	// Mantikfile is reparsed
-	return LoadModel(directory)
+func (s *SelectBackend) LoadModel(payloadDirectory *string, mantikfile serving.Mantikfile) (serving.Executable, error) {
+	return LoadModelFromMantikfile(mantikfile)
 }
 
 func LoadModel(directory string) (*SelectRunner, error) {
 	mfPath := path.Join(directory, "Mantikfile")
-	mfContent, err := ioutil.ReadFile(mfPath)
+	mf, err := serving.LoadMantikfile(mfPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not read Mantikfile")
 	}
-	sm, err := ParseSelectMantikfile(mfContent)
+	return LoadModelFromMantikfile(mf)
+}
+
+func LoadModelFromMantikfile(mantikfile serving.Mantikfile) (*SelectRunner, error) {
+	sm, err := ParseSelectMantikfile(mantikfile.Json())
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not decode Mantikfile")
 	}

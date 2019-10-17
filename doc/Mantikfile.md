@@ -19,10 +19,9 @@ They are YAML or JSON Files and contain the following Keys:
 These fields are used by the Mantik CLI Tool for easy uploading, but are otherwise ignored. It is possible for mantik to
 name an artefact under a different name, than what is expressed in Mantikfile (e.g. on copying).
 
-## Directory
+## Payload
 
-Mantikfiles may contain an optional `directory` field which referes to a directory unter the Mantikfile. Upon uploading this
-directory is serialized as ZIP-File and before application, this directory will be decompressed.
+Mantik Items may contain payload content. Upon execution this payload is unpacked into a directory `payload`.
 
 ## Other fields
 
@@ -72,7 +71,6 @@ type:
         black:
           componentType: uint8
     label: uint8
-directory: data
 files:
   - file: t10k-labels-idx1-ubyte.gz
     compression: gzip
@@ -91,7 +89,6 @@ files:
 Example for a Algorithm Definition:
 
 ```
-directory: trained_model
 name: double_multiply
 stack: tf.saved_model
 type:
@@ -108,7 +105,6 @@ Example for a Trainable Algorithm Definition
 ```
 name: kmeans
 stack: sklearn.simple_learn
-directory: code
 kind: trainable
 
 trainingType:

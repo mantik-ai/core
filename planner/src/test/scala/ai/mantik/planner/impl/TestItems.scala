@@ -15,8 +15,7 @@ object TestItems {
       `type` = FunctionType(
         input = FundamentalType.Int32,
         output = FundamentalType.StringType
-      ),
-      directory = Some("dir1")
+      )
     )
   )
 
@@ -26,8 +25,7 @@ object TestItems {
       `type` = FunctionType(
         input = FundamentalType.StringType,
         output = FundamentalType.Float32
-      ),
-      directory = Some("dir2")
+      )
     )
   )
 

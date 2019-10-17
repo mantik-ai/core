@@ -29,13 +29,11 @@ case class ContainerService(
  * Describes how to initialize a container
  * @param url Zip file URL which is unpacked to /data
  * @param mantikfile Mantikfile content which is put to /data/Mantikfile
- * @param directory if set, the content of the zip file is put to /data/directory-name.
  */
 @JsonCodec
 case class DataProvider(
     url: Option[String] = None,
-    mantikfile: Option[String] = None,
-    directory: Option[String] = None
+    mantikfile: Option[String] = None
 )
 
 /**

@@ -4,7 +4,6 @@ import json
 
 def test_parse():
     sample = """
-directory: my_dir
 metaVariables:
   - name: width
     type: int32
@@ -20,8 +19,7 @@ type:
     """
 
     mf = Mantikfile.parse(sample, ".")
-    assert mf.directory == "my_dir"
-    assert mf.payload_dir == "./my_dir"
+    assert mf.payload_dir == "./payload"
     assert mf.type.input.representation == json.loads(
         '{"columns": {"x":{"type":"tensor","componentType":"float32","shape":[100]}}}'
     )

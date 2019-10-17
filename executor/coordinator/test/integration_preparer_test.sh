@@ -10,9 +10,9 @@ cd $MYDIR/..
 MANTIKFILE="IyBUaGlzIGlzIGEgZHVtbXkgZmlsZSBmb3IgdGVzdGluZyB0aGUgcHJlcGFyZXItQ29udGFpbmVyCm5hbWU6IEhlbGxvIFdvcmxkCnZlcnNpb246IDAuMQo="
 
 # Base64 made at command line with base64 utility.
-./target/payload_preparer -url file://test/hello1.zip -dir test/unpack_test -pdir sub -mantikfile $MANTIKFILE
+./target/payload_preparer -url file://test/hello1.zip -dir test/unpack_test -mantikfile $MANTIKFILE
 
-if [ ! -f test/unpack_test/sub/hello1/HelloWorld.txt ]; then
+if [ ! -f test/unpack_test/payload/hello1/HelloWorld.txt ]; then
     echo "Unpacked bundle does'nt exist"
     exit 1
 fi

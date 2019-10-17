@@ -11,6 +11,7 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/serving/server"
 	"io/ioutil"
 	"net/http"
+	"path"
 	"testing"
 )
 
@@ -25,7 +26,8 @@ func loadMantikExecutableAlgorithm(backend serving.Backend, directory string) (s
 		return nil, errors.Wrapf(err, "Could not parse Mantikfile")
 	}
 
-	algorithm, err := backend.LoadModel(directory, parsedMantikFile)
+	payloadDir := path.Join(directory, "payload")
+	algorithm, err := backend.LoadModel(&payloadDir, parsedMantikFile)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not load model")

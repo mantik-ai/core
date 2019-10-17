@@ -14,9 +14,7 @@ In general they communicate via HTTP Requests, transporting data usually in [Man
 
 Bridges should look for their Mantikfile in the volume `/data/Mantikfile`.
 
-Bridges may have a payload (the zipped `directory`-Element referenced in `Mantikfile`) which will be unpacked
-
-to `/data/[directoryname]` before startup.
+Mantik Items may have a payload (usually zipped) which will be unpacked into a directory `/data/payload` before startup.
 
 Bridges do not receive any arguments, so a proper `ENTRYPOINT`-Configuration is a must.
 

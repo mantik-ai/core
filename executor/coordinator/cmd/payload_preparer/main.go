@@ -9,12 +9,14 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 const RcInvalidArgs = 1
@@ -31,7 +33,6 @@ func main() {
 	options := flag.NewFlagSet("preparer", flag.ExitOnError)
 	url := options.String("url", "", "Optional Url to download")
 	dir := options.String("dir", "/data", "Destination Directory")
-	payloadSubDir := options.String("pdir", "", "Optional Payload Sub directory")
 	mantikfile := options.String("mantikfile", "", "Mantikfile to add (Base64 encoded)")
 
 	err := options.Parse(os.Args[1:])
@@ -85,24 +86,22 @@ func main() {
 		os.Exit(0)
 	}
 
-	payload, err := retrieveUrl(*url)
+	payload, err := retrieveUrlWithTimeout(*url)
 	if err != nil {
 		println("Could not read URL", err.Error())
 		os.Exit(RcCouldNotReadUrl)
 	}
 
-	var payloadDir string = *dir
-	if len(*payloadSubDir) > 0 {
-		payloadDir = path.Join(*dir, *payloadSubDir)
-		// It is import that the created directory is writeable for the same group, as bridges are allowed to write there
-		// default umask is 0002, which will make it non-group-writeable.
-		oldUmask := syscall.Umask(02)
-		err := os.MkdirAll(payloadDir, os.ModePerm) // note: the bridge container may also write into it and is of same group
-		syscall.Umask(oldUmask)
-		if err != nil {
-			println("Could not create payload sub directory")
-			os.Exit(RcCouldNotCreateDirectory)
-		}
+	payloadDir := path.Join(*dir, "payload")
+
+	// It is import that the created directory is writeable for the same group, as bridges are allowed to write there
+	// default umask is 0002, which will make it non-group-writeable.
+	oldUmask := syscall.Umask(02)
+	err = os.MkdirAll(payloadDir, os.ModePerm) // note: the bridge container may also write into it and is of same group
+	syscall.Umask(oldUmask)
+	if err != nil {
+		println("Could not create payload sub directory")
+		os.Exit(RcCouldNotCreateDirectory)
 	}
 
 	err = unzipDirectory(payload, payloadDir, true)
@@ -114,14 +113,53 @@ func main() {
 	println("Done")
 }
 
+/** Retrieves an URL and download the content somewhere. */
+func retrieveUrlWithTimeout(url string) (string, error) {
+	timeout := time.Duration(120 * time.Second)
+	getTimeout := time.Duration(60 * time.Second)
+	start := time.Now()
+	end := start.Add(timeout)
+	waitStep := time.Duration(100 * time.Millisecond)
+
+	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: 5 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+		Timeout: getTimeout,
+	}
+
+	var trials = 0
+	for {
+		trials += 1
+		result, err := retrieveUrl(httpClient, url)
+		if err == nil {
+			fmt.Fprintf(os.Stderr, "Downloaded %s in %d trials (%s)\n", url, trials, time.Now().Sub(start).String())
+			return result, nil
+		}
+		ct := time.Now()
+		if ct.After(end) {
+			return "", errors.Wrapf(err, "Timeout by connecting, last error, tried %d within %s", trials, timeout.String())
+		}
+		time.Sleep(waitStep)
+	}
+}
+
 /** Retrieves an URL. Unfortunately we must completely download it, as unzipping needs random access. */
-func retrieveUrl(url string) (string, error) {
+func retrieveUrl(
+	httpClient *http.Client, url string,
+) (string, error) {
 
 	if strings.HasPrefix(url, FilePrefix) {
 		without := strings.TrimPrefix(url, FilePrefix)
 		return without, nil
 	} else {
-		response, err := http.Get(url)
+		response, err := httpClient.Get(url)
 		if err != nil {
 			return "", err
 		}

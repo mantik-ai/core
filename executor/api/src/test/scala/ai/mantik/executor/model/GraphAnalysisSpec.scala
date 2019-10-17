@@ -59,8 +59,7 @@ class GraphAnalysisSpec extends TestBase {
               ),
               dataProvider = Some(DataProvider(
                 url = Some("http://example.com/foo.zip"),
-                mantikfile = Some("mantikfile..."),
-                directory = Some("bar")
+                mantikfile = Some("mantikfile...")
               ))
             )
           ),

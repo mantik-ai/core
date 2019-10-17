@@ -107,7 +107,6 @@ def start_with_args(args, algorithm_provider):
     mantik_file_path = os.path.join(args.dir, "Mantikfile")
     mantikfile = mantik.types.Mantikfile.load(mantik_file_path)
 
-    print(f"Directory\t{mantikfile.directory}")
     print(f"Payload dir\t{mantikfile.payload_dir}")
     print(f"Name\t{mantikfile.name}")
     print(f"Debug\t{args.d}")

@@ -93,14 +93,17 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     val mantikId = id.orElse(mantikfile.header.id)
     val itemId = ItemId.generate()
 
-    val payloadSource: Option[(String, Source[ByteString, _])] = mantikfile.definition.directory.map { dataDir =>
-      val resolved = dir.resolve(dataDir)
-      require(resolved.startsWith(dir), "Data directory may not escape root directory")
+    val payloadDir = dir.resolve("payload")
+    val payloadSource: Option[(String, Source[ByteString, _])] = if (Files.isDirectory(payloadDir)) {
       val tempFile = Files.createTempFile("mantik_context", ".zip")
-      ZipUtils.zipDirectory(resolved, tempFile)
+      ZipUtils.zipDirectory(payloadDir, tempFile)
       val source = FileIO.fromPath(tempFile)
-      ContentTypes.ZipFileContentType -> source
+      Some(ContentTypes.ZipFileContentType -> source)
+    } else {
+      logger.info("No payload directory found, assuming no payload")
+      None
     }
+
 
     val artifact =  MantikArtifact(mantikfile, None, mantikId, itemId)
     val timeout = if (payloadSource.isDefined){

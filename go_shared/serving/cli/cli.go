@@ -8,6 +8,7 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/serving/server"
 	"io/ioutil"
 	"os"
+	"path"
 )
 
 // Implements the command line interface for serving
@@ -96,7 +97,14 @@ func Start(args []string, backend serving.Backend) {
 }
 
 func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Mantikfile) serving.Executable {
-	executable, err := backend.LoadModel(dirName, mantikFile)
+	payloadDir := path.Join(dirName, "payload")
+	var payloadArg *string
+	if fileExists(payloadDir) {
+		payloadArg = &payloadDir
+	} else {
+		payloadArg = nil
+	}
+	executable, err := backend.LoadModel(payloadArg, mantikFile)
 
 	if err != nil {
 		printErrorAndQuit(RC_COULD_NOT_LOAD_ALGORITHM, "Could not load executable %s", err.Error())
@@ -111,6 +119,11 @@ func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Ma
 		return nil
 	}
 	return adapted
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }
 
 // Returns directory of mantik file and parsed mantik file

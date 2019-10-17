@@ -1,6 +1,5 @@
 name: kmeans
 stack: sklearn.simple_learn
-directory: code
 kind: trainable
 metaVariables:
   - name: n_clusters

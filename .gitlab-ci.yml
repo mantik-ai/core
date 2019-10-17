@@ -6,7 +6,10 @@ stages:
   - publish
 
 test_go_shared:
+  image: mantikai/golang_build:1.13.1-1
   stage: test
+  variables:
+    GOPATH: "$CI_PROJECT_DIR/.go_path"
   script:
     - export GOPATH=`pwd`/vendor/go_path # Trick so that dependencies are not tested.
     - echo "Gopath=$GOPATH"
@@ -14,11 +17,10 @@ test_go_shared:
     - mkdir -p vendor/go_path
     - ./go_shared/build.sh
     - ./go_shared/test.sh
-
   cache:
-    key: go_path_shared
+    key: go_cache113
     paths:
-      - vendor/go_path/
+      - .go_path
 
 test_python_sdk:
   stage: test
@@ -37,16 +39,16 @@ test_python_sdk:
 
 test_executor_go:
   stage: test
-  image: golang:1.11-stretch
+  image: mantikai/golang_build:1.13.1-1
+  variables:
+    GOPATH: "$CI_PROJECT_DIR/.go_path"
   script:
-    - export GOPATH=`pwd`/go_path
-    - export GODEBUG=netdns=cgo # Disable GO Resolver
     - ./executor/coordinator/build.sh
     - ./executor/coordinator/test.sh
   cache:
-    key: go_path
+    key: go_cache113
     paths:
-      - go_path/
+      - .go_path
   artifacts:
     paths:
       - executor/coordinator/target
@@ -144,13 +146,16 @@ bridges_test:
   dependencies:
     - bridges_dependencies
   stage: test
+  image: mantikai/golang_build:1.13.1-1
+  variables:
+    GOPATH: "$CI_PROJECT_DIR/.go_path"
   script:
     - ./bridge/build.sh
     - ./bridge/test.sh
   cache:
-    key: go_path
+    key: go_cache113
     paths:
-      - go_path/
+      - .go_path
 
   artifacts:
     paths:

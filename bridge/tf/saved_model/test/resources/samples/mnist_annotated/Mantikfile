@@ -1,4 +1,3 @@
-directory: trained_model
 stack: tf.saved_model
 type:
   input:

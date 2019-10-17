@@ -248,7 +248,7 @@ class BinaryFormatReaderSpec extends TestBase with GlobalAkkaSupport with TempDi
     // DS Doesn't know about Mantikfiles, but the definition is equal
     val mantikfile = FileUtils.readFileToString(directory.resolve("Mantikfile").toFile, StandardCharsets.UTF_8)
     val description = YamlParser.parse(mantikfile).forceRight.as[BinaryDataSetDescription].forceRight
-    val dataDir = directory.resolve("data")
+    val dataDir = directory.resolve("payload")
     val reader = new BinaryFormatReader(description, dataDir)
     val source = reader.read()
     val elements = collectSource(source)

@@ -8,7 +8,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/docker/go-connections/nat"
-	"gl.ambrosys.de/mantik/go_shared/serving"
 	"gl.ambrosys.de/mantik/go_shared/util/dirzip"
 	"io"
 	"io/ioutil"
@@ -124,15 +123,7 @@ func prepareTempDirectory(mantikfilePath string, dataZipFile string) string {
 	_, err = fileutils.CopyFile(mantikfilePath, path.Join(tempDir, "Mantikfile"))
 	ExitOnError(err, "Copy Mantikfile")
 
-	mf, err := serving.LoadMantikfile(mantikfilePath)
-	ExitOnError(err, "Loading Mantikfile")
-
-	var dataDestinationDir string
-	if mf.Directory() != nil {
-		dataDestinationDir = path.Join(tempDir, *mf.Directory())
-	} else {
-		dataDestinationDir = tempDir
-	}
+	dataDestinationDir := path.Join(tempDir, "payload")
 
 	if len(dataZipFile) > 0 {
 		println("Preparing Data directory")

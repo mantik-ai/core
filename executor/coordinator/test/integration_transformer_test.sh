@@ -34,18 +34,7 @@ export COORDINATOR_IP="127.0.0.1"
 ./target/coordinator coordinator -port 50505 -plan @test/transformer_plan.json &
 COORDINATOR=$!
 
-cleanup() {
-    echo "Killing pending processes..."
-    kill $SOURCE || true
-    kill $SINK || true
-    kill $TRANSFORMER || true
-    kill $SOURCE_SIDECAR || true
-    kill $SINK_SIDECAR || true
-    kill $TRANSFORMER_SIDECAR || true
-    kill $COORDINATOR || true
-}
-
-trap cleanup EXIT
+trap "pkill -P $$ || true" EXIT # Kills children processes at the end
 
 
 wait $COORDINATOR
