@@ -1,10 +1,11 @@
 package binaryadapter
 
 import (
+	"encoding/json"
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"io/ioutil"
+	"gl.ambrosys.de/mantik/go_shared/serving"
 	"path"
 )
 
@@ -13,19 +14,26 @@ type BinaryExecutor struct {
 	dataDirectory string
 }
 
-func CreateBinaryExecutor(dir string) (*BinaryExecutor, error) {
-	mfPath := path.Join(dir, "Mantikfile")
-	mfContent, err := ioutil.ReadFile(mfPath)
+func CreateBinaryExecutorFromDir(rootDir string) (*BinaryExecutor, error) {
+	payloadDir := path.Join(rootDir, "payload")
+	mantikfile, err := serving.LoadMantikfile(path.Join(rootDir, "Mantikfile"))
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not read Mantikfile")
+		return nil, err
 	}
-	mf, err := ParseBinaryMantikFile(mfContent)
+	return CreateBinaryExecutor(&payloadDir, mantikfile)
+}
+
+func CreateBinaryExecutor(payloadDir *string, mantikfile serving.Mantikfile) (*BinaryExecutor, error) {
+	if payloadDir == nil {
+		return nil, errors.New("Expected payload")
+	}
+	var mf BinaryMantikfile
+	err := json.Unmarshal(mantikfile.Json(), &mf)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not parse Mantikfile")
 	}
-	dataDirectory := path.Join(dir, mf.Directory)
 	// Creating multi reader for validating correctness
-	multiReader, err := CreateMultiFileAdapter(dataDirectory, mf)
+	multiReader, err := CreateMultiFileAdapter(*payloadDir, &mf)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create reader")
 	}
@@ -33,7 +41,7 @@ func CreateBinaryExecutor(dir string) (*BinaryExecutor, error) {
 	// We can't store the multi reader, as it is possible to
 	// to read the data set multiple times.
 	return &BinaryExecutor{
-		mf, dataDirectory,
+		&mf, *payloadDir,
 	}, nil
 }
 

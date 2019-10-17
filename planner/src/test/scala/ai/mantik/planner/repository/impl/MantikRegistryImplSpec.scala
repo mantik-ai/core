@@ -62,7 +62,6 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
       ))
     val mantikfile = Mantikfile.pure(
       DataSetDefinition(
-        directory = Some("some"),
         format = "natural",
         `type` = FundamentalType.Int32
       )

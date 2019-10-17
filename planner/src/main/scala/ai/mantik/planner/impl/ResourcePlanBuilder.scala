@@ -94,7 +94,7 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
       for {
         filesPlan <- cachedTemporarySource(cachedSource)
         nonTemporaries <- filesPlan.files.indices.map { _ =>
-          PlanningState(_.writeFile(temporary = false))
+          PlanningState(_.pipeFile(temporary = false))
         }.toList.sequence
         copyOperations = filesPlan.files.zip(nonTemporaries).map {
           case (temporaryFile, nontemporaryFile) =>

@@ -28,8 +28,7 @@ class DockerConverterSpec extends TestBase {
     dataProvider = Some(
       DataProvider(
         url = Some("my_url"),
-        mantikfile = Some("mantikfile..."),
-        directory = Some("foo")
+        mantikfile = Some("mantikfile...")
       )
     )
   )

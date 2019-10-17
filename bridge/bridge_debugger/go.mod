@@ -22,3 +22,5 @@ require (
 replace gl.ambrosys.de/mantik/go_shared => ../../go_shared
 
 replace github.com/docker/docker v1.13.1 => github.com/docker/engine v0.0.0-20180816081446-320063a2ad06
+
+go 1.13

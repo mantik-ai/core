@@ -10,7 +10,7 @@ import (
 )
 
 func TestMultiplyExecute(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/double_multiply/trained_model")
+	model, err := LoadModel("../../test/resources/samples/double_multiply/payload")
 	defer model.Cleanup()
 
 	assert.NoError(t, err)
@@ -27,7 +27,7 @@ func TestMultiplyExecute(t *testing.T) {
 }
 
 func TestEmptyInput(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/mnist_annotated/trained_model")
+	model, err := LoadModel("../../test/resources/samples/mnist_annotated/payload")
 	assert.NoError(t, err)
 	defer model.Cleanup()
 
@@ -42,7 +42,7 @@ func TestEmptyInput(t *testing.T) {
 }
 
 func TestSimpleRow(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/mnist_annotated/trained_model")
+	model, err := LoadModel("../../test/resources/samples/mnist_annotated/payload")
 	assert.NoError(t, err)
 	defer model.Cleanup()
 
@@ -58,7 +58,7 @@ func TestSimpleRow(t *testing.T) {
 }
 
 func TestAdaptedMnist(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/mnist_annotated/trained_model")
+	model, err := LoadModel("../../test/resources/samples/mnist_annotated/payload")
 	assert.NoError(t, err)
 	defer model.Cleanup()
 
@@ -106,7 +106,7 @@ func TestAdaptedMnist(t *testing.T) {
 }
 
 func TestMultipleRows(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/mnist_annotated/trained_model")
+	model, err := LoadModel("../../test/resources/samples/mnist_annotated/payload")
 	assert.NoError(t, err)
 	defer model.Cleanup()
 
@@ -124,7 +124,7 @@ func TestMultipleRows(t *testing.T) {
 }
 
 func TestMultiInOut(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/multi_in_out/trained_model")
+	model, err := LoadModel("../../test/resources/samples/multi_in_out/payload")
 	assert.NoError(t, err)
 	defer model.Cleanup()
 	inputData := builder.Rows(
@@ -147,7 +147,7 @@ func TestMultiInOut(t *testing.T) {
 
 // Test adaption of an algorithm which just expects one row, into one which can accept multiple ones.
 func TestAdaptedSingle(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/double_multiply/trained_model")
+	model, err := LoadModel("../../test/resources/samples/double_multiply/payload")
 	defer model.Cleanup()
 
 	assert.NoError(t, err)

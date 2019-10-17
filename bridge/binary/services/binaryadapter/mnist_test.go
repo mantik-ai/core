@@ -13,7 +13,7 @@ import (
 )
 
 func TestParseMnistDataset(t *testing.T) {
-	executor, err := CreateBinaryExecutor("../../test/mnist")
+	executor, err := CreateBinaryExecutorFromDir("../../test/mnist")
 	assert.NoError(t, err)
 	reader := executor.Get()
 	all, err := element.ReadAllFromStreamReader(reader)
@@ -26,14 +26,14 @@ func TestParseMnistDataset(t *testing.T) {
 }
 
 func TestParseMnistCorrectly(t *testing.T) {
-	executor, err := CreateBinaryExecutor("../../test/mnist_train")
+	executor, err := CreateBinaryExecutorFromDir("../../test/mnist_train")
 	assert.NoError(t, err)
 	reader := executor.Get()
 	all, err := element.ReadAllFromStreamReader(reader)
 	assert.NoError(t, err)
 	assert.Equal(t, 60000, len(all))
 
-	imagesGz, err := os.Open("../../test/mnist_train/data/train-images-idx3-ubyte.gz")
+	imagesGz, err := os.Open("../../test/mnist_train/payload/train-images-idx3-ubyte.gz")
 	defer imagesGz.Close()
 	assert.NoError(t, err)
 	images, err := gzip.NewReader(imagesGz)
@@ -52,7 +52,7 @@ func TestParseMnistCorrectly(t *testing.T) {
 		}
 	}
 
-	labelsGz, err := os.Open("../../test/mnist_train/data/train-labels-idx1-ubyte.gz")
+	labelsGz, err := os.Open("../../test/mnist_train/payload/train-labels-idx1-ubyte.gz")
 	defer labelsGz.Close()
 	labels, err := gzip.NewReader(labelsGz)
 	assert.NoError(t, err)
@@ -79,7 +79,7 @@ func TestParseMnistCorrectly(t *testing.T) {
 }
 
 func TestMnistAsTensorConversion(t *testing.T) {
-	executor, err := CreateBinaryExecutor("../../test/mnist")
+	executor, err := CreateBinaryExecutorFromDir("../../test/mnist")
 	assert.NoError(t, err)
 	reader := executor.Get()
 	all, err := element.ReadAllFromStreamReader(reader)

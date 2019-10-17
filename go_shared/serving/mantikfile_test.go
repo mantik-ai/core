@@ -3,6 +3,7 @@ package serving
 import (
 	"github.com/stretchr/testify/assert"
 	"gl.ambrosys.de/mantik/go_shared/ds"
+	"gl.ambrosys.de/mantik/go_shared/util/yaml"
 	"testing"
 )
 
@@ -19,7 +20,6 @@ type:
         type: tensor
         shape: [2,3]
         componentType: float32
-directory: my_directory
 `
 	parsed, err := ParseMantikFile([]byte(file))
 	assert.NoError(t, err)
@@ -27,14 +27,18 @@ directory: my_directory
 	expectedIn := ds.FromJsonStringOrPanic(`{"columns":{"a": "int32", "b": "int32"}}`)
 	expectedOut := ds.FromJsonStringOrPanic(`{"columns":{"z": {"type": "tensor", "shape": [2,3], "componentType": "float32"}}}`)
 
-	dir := "my_directory"
+	json, err := yaml.YamlToJson([]byte(file))
+	assert.NoError(t, err)
+
+	assert.Equal(t, json, parsed.Json())
+
 	expected := &AlgorithmMantikfile{
 		ParsedName: nil,
 		Type: &AlgorithmType{
 			ds.Ref(expectedIn),
 			ds.Ref(expectedOut),
 		},
-		ParsedDirectory: &dir,
+		json: json,
 	}
 
 	assert.Equal(t,
@@ -46,7 +50,6 @@ func TestTrainableMantikFile(t *testing.T) {
 		`
 name: kmeans
 stack: sklearn.simple_learn
-directory: code
 kind: trainable
 trainingType:
   columns:
@@ -67,6 +70,12 @@ type:
       label: int32	
 `
 	parsed, err := ParseMantikFile([]byte(file))
+
+	json, err := yaml.YamlToJson([]byte(file))
+	assert.NoError(t, err)
+
+	assert.Equal(t, json, parsed.Json())
+
 	assert.NoError(t, err)
 	assert.Equal(t, "trainable", parsed.Kind())
 	casted := parsed.(*TrainableMantikfile)
@@ -110,6 +119,12 @@ type:
       componentType: float32
 `
 	parsed, err := ParseMantikFile([]byte(file))
+
+	json, err := DecodeMetaYaml([]byte(file))
+	assert.NoError(t, err)
+
+	assert.Equal(t, json, parsed.Json())
+
 	assert.NoError(t, err)
 	assert.Equal(t, "dataset", parsed.Kind())
 	casted := parsed.(*DataSetMantikfile)

@@ -3,18 +3,16 @@ package tfadapter
 import (
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/serving"
-	"path"
 )
 
 type TensorflowBackend struct {
 }
 
-func (t *TensorflowBackend) LoadModel(directory string, mantikfile serving.Mantikfile) (serving.Executable, error) {
-	if mantikfile.Directory() == nil {
-		return nil, errors.New("Directory required")
+func (t *TensorflowBackend) LoadModel(payloadDir *string, mantikfile serving.Mantikfile) (serving.Executable, error) {
+	if payloadDir == nil {
+		return nil, errors.New("Payload required")
 	}
-	fullDir := path.Join(directory, *mantikfile.Directory())
-	model, err := LoadModel(fullDir)
+	model, err := LoadModel(*payloadDir)
 	if err != nil {
 		return nil, err
 	}

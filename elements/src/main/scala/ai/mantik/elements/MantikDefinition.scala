@@ -9,8 +9,6 @@ import scala.util.matching.Regex
 
 /** A Basic Mantik Definition (algorithms, datasets, etc...) */
 sealed trait MantikDefinition {
-  def directory: Option[String]
-
   def kind: String
 
   def stack: String
@@ -36,8 +34,6 @@ object MantikDefinition extends DiscriminatorDependentCodec[MantikDefinition] {
 
 /** An Algorithm Definition inside a Mantikfile. */
 case class AlgorithmDefinition(
-    // common
-    directory: Option[String] = None,
     // specific
     stack: String,
     `type`: FunctionType
@@ -47,8 +43,6 @@ case class AlgorithmDefinition(
 
 /** A DataSet definition inside a Mantikfile */
 case class DataSetDefinition(
-    // common
-    directory: Option[String] = None,
     // specific
     format: String,
     `type`: DataType
@@ -59,8 +53,6 @@ case class DataSetDefinition(
 }
 
 case class TrainableAlgorithmDefinition(
-    // common
-    directory: Option[String] = None,
     // specific
     stack: String,
     trainedStack: Option[String] = None, // if not give, stack will be used
@@ -80,9 +72,6 @@ case class PipelineDefinition(
     `type`: Option[OptionalFunctionType] = None,
     steps: List[PipelineStep]
 ) extends MantikDefinition {
-
-  // Pipelines do not carry a directory as they do not have a Bridge.
-  override def directory: Option[String] = None
 
   override def kind: String = MantikDefinition.PipelineKind
 

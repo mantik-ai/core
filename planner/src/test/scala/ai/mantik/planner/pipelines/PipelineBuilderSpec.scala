@@ -20,8 +20,7 @@ class PipelineBuilderSpec extends TestBase {
         `type` = FunctionType(
           input = TabularData("x" -> FundamentalType.Int32),
           output = TabularData("y" -> FundamentalType.StringType)
-        ),
-        directory = Some("dir1")
+        )
       )
     )
   )
@@ -34,8 +33,7 @@ class PipelineBuilderSpec extends TestBase {
         `type` = FunctionType(
           input = TabularData("y" -> FundamentalType.StringType),
           output = TabularData("z" -> FundamentalType.Float64)
-        ),
-        directory = Some("dir1")
+        )
       )
     )
   )

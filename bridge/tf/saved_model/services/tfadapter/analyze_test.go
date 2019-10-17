@@ -8,7 +8,7 @@ import (
 )
 
 func TestAnalyzeSimpleMultiply(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/double_multiply/trained_model")
+	model, err := LoadModel("../../test/resources/samples/double_multiply/payload")
 
 	// check compatibility to executable model
 	var executable serving.ExecutableAlgorithm = model
@@ -56,7 +56,7 @@ func TestAnalyzeSimpleMultiply(t *testing.T) {
 }
 
 func TestAnalyzeMnist(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/mnist_annotated/trained_model")
+	model, err := LoadModel("../../test/resources/samples/mnist_annotated/payload")
 	defer model.Cleanup()
 	assert.NoError(t, err)
 	assert.Equal(t, true, model.AnalyzeResult.InputTabular)
@@ -98,7 +98,7 @@ func TestAnalyzeMnist(t *testing.T) {
 }
 
 func TestAnalyzeMixedMultiInOut(t *testing.T) {
-	model, err := LoadModel("../../test/resources/samples/multi_in_out/trained_model")
+	model, err := LoadModel("../../test/resources/samples/multi_in_out/payload")
 	defer model.Cleanup()
 
 	assert.NoError(t, err)

@@ -7,3 +7,5 @@ require (
 )
 
 replace gl.ambrosys.de/mantik/go_shared => ../../go_shared
+
+go 1.13

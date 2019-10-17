@@ -70,8 +70,7 @@ class KubernetesConverterSpec extends TestBase {
         ),
         dataProvider = Some(DataProvider(
           url = Some("url1"),
-          mantikfile = Some("mf1"),
-          directory = Some("dir1")
+          mantikfile = Some("mf1")
         ))
       )
 
@@ -82,7 +81,7 @@ class KubernetesConverterSpec extends TestBase {
     spec.containers.find(_.name == "main").get.volumeMounts.map(_.name) shouldBe List("data")
     spec.initContainers.size shouldBe 1
     spec.initContainers.head.image shouldBe "payload_preparer"
-    spec.initContainers.head.args shouldBe List("-mantikfile", "bWYx", "-url", "url1", "-pdir", "dir1")
+    spec.initContainers.head.args shouldBe List("-mantikfile", "bWYx", "-url", "url1")
     spec.initContainers.head.volumeMounts.map(_.name) shouldBe List("data")
     spec.volumes.map(_.name) shouldBe List("data")
     spec.containers.foreach(_.imagePullPolicy shouldBe skuber.Container.PullPolicy.Always)

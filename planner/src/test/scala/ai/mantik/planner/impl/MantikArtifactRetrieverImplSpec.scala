@@ -30,6 +30,7 @@ class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempD
     val id = NamedMantikId("mnist_test")
     val got = await(retriever.addLocalDirectoryToRepository(sampleDir))
     got.namedId shouldBe Some(id)
+    got.fileId shouldBe defined
     await(localRegistry.get(id)) shouldBe got
     val (contentType, payloadSource) = await(localRegistry.getPayload(got.fileId.get))
     contentType shouldBe ContentTypes.ZipFileContentType

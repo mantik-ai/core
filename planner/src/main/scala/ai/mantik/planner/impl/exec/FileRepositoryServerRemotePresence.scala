@@ -7,7 +7,7 @@ import ai.mantik.executor.model.PublishServiceRequest
 import ai.mantik.planner.repository.FileRepositoryServer
 import io.circe.syntax._
 import akka.http.scaladsl.model.Uri
-import javax.inject.Inject
+import javax.inject.{ Inject, Singleton }
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -18,6 +18,7 @@ import scala.concurrent.duration._
  * It is necessary, so that Jobs/Services inside the Executor can talk
  * to Mantik Files.
  */
+@Singleton
 private[planner] class FileRepositoryServerRemotePresence @Inject() (
     fileRepositoryServer: FileRepositoryServer,
     executor: Executor

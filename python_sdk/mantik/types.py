@@ -136,7 +136,6 @@ class Mantikfile(object):
     """Represents the Mantikfile which controls the way a algorithm/dataset works."""
 
     yaml_code: dict
-    directory: Optional[str]
     basedir: str
     name: str
     type: FunctionType
@@ -153,7 +152,6 @@ class Mantikfile(object):
         st = parsed_yaml.get("statType", None)
         return cls(
             parsed_yaml,
-            parsed_yaml.get("directory", None),
             basedir,
             parsed_yaml.get("name", "unnamed"),
             FunctionType.from_dict(parsed_yaml.get("type")),
@@ -181,7 +179,7 @@ class Mantikfile(object):
     @property
     def payload_dir(self):
         """Returns the payload directory."""
-        return os.path.join(self.basedir, self.directory)
+        return os.path.join(self.basedir, "payload")
 
 
 def parse_and_decode_meta_json(meta_json):

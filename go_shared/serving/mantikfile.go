@@ -1,9 +1,9 @@
 package serving
 
 import (
+	"encoding/json"
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/util/yaml"
 	"io/ioutil"
 	"os"
 )
@@ -11,8 +11,9 @@ import (
 type Mantikfile interface {
 	Kind() string
 	Name() *string
-	Directory() *string
 	MetaVariables() MetaVariables
+	// Returns the decoded JSON (after applying meta variables)
+	Json() []byte
 }
 
 type mantikFileHeader struct {
@@ -22,8 +23,8 @@ type mantikFileHeader struct {
 type DataSetMantikfile struct {
 	ParsedName          *string          `json:"name"`
 	Type                ds.TypeReference `json:"type"`
-	ParsedDirectory     *string          `json:"directory"`
 	ParsedMetaVariables MetaVariables    `json:"metaVariables"`
+	json                []byte
 }
 
 func (d *DataSetMantikfile) Kind() string {
@@ -34,12 +35,12 @@ func (d *DataSetMantikfile) Name() *string {
 	return d.ParsedName
 }
 
-func (d *DataSetMantikfile) Directory() *string {
-	return d.ParsedDirectory
-}
-
 func (d *DataSetMantikfile) MetaVariables() MetaVariables {
 	return d.ParsedMetaVariables
+}
+
+func (d *DataSetMantikfile) Json() []byte {
+	return d.json
 }
 
 /* The mantik file needed for serving algorithms. */
@@ -47,10 +48,9 @@ type AlgorithmMantikfile struct {
 	/* Name of the algorithm */
 	ParsedName *string `json:"name"`
 	/* Type, For Algorithms and Trainables. */
-	Type *AlgorithmType `json:"type"`
-	/* The directory where the algorithm besides. */
-	ParsedDirectory     *string        `json:"directory"`
+	Type                *AlgorithmType `json:"type"`
 	ParsedMetaVariables []MetaVariable `json:"metaVariables"`
+	json                []byte
 }
 
 func (a *AlgorithmMantikfile) Kind() string {
@@ -61,12 +61,12 @@ func (a *AlgorithmMantikfile) Name() *string {
 	return a.ParsedName
 }
 
-func (a *AlgorithmMantikfile) Directory() *string {
-	return a.ParsedDirectory
-}
-
 func (d *AlgorithmMantikfile) MetaVariables() MetaVariables {
 	return d.ParsedMetaVariables
+}
+
+func (d *AlgorithmMantikfile) Json() []byte {
+	return d.json
 }
 
 type TrainableMantikfile struct {
@@ -78,10 +78,9 @@ type TrainableMantikfile struct {
 	/* Training Type (for trainable). */
 	TrainingType *ds.TypeReference `json:"trainingType"`
 	/* Statistic Type (for trainable). */
-	StatType *ds.TypeReference `json:"statType"`
-	/* The directory where the algorithm besides. */
-	ParsedDirectory     *string        `json:"directory"`
-	ParsedMetaVariables []MetaVariable `json:"metaVariables"`
+	StatType            *ds.TypeReference `json:"statType"`
+	ParsedMetaVariables []MetaVariable    `json:"metaVariables"`
+	json                []byte
 }
 
 func (t *TrainableMantikfile) Kind() string {
@@ -92,18 +91,22 @@ func (t *TrainableMantikfile) Name() *string {
 	return t.ParsedName
 }
 
-func (t *TrainableMantikfile) Directory() *string {
-	return t.ParsedDirectory
-}
-
 func (d *TrainableMantikfile) MetaVariables() MetaVariables {
 	return d.ParsedMetaVariables
 }
 
+func (d *TrainableMantikfile) Json() []byte {
+	return d.json
+}
+
 func ParseMantikFile(bytes []byte) (Mantikfile, error) {
 	var file mantikFileHeader
+	plainJson, err := DecodeMetaYaml(bytes)
+	if err != nil {
+		return nil, err
+	}
 	// no meta, kind should not utilize meta variables...
-	err := yaml.Unmarshal(bytes, &file)
+	err = json.Unmarshal(plainJson, &file)
 	if err != nil {
 		return nil, err
 	}
@@ -118,15 +121,18 @@ func ParseMantikFile(bytes []byte) (Mantikfile, error) {
 	switch kind {
 	case "dataset":
 		var df DataSetMantikfile
-		err := UnmarshallMetaYaml(bytes, &df)
+		err := json.Unmarshal(plainJson, &df)
+		df.json = plainJson
 		return &df, err
 	case "algorithm":
 		var af AlgorithmMantikfile
-		err := UnmarshallMetaYaml(bytes, &af)
+		err := json.Unmarshal(plainJson, &af)
+		af.json = plainJson
 		return &af, err
 	case "trainable":
 		var tf TrainableMantikfile
-		err := UnmarshallMetaYaml(bytes, &tf)
+		err := json.Unmarshal(plainJson, &tf)
+		tf.json = plainJson
 		return &tf, err
 	}
 	return nil, errors.Errorf("Unsupported kind %s", kind)

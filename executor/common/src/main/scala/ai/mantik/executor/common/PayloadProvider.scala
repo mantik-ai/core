@@ -25,10 +25,6 @@ object PayloadProvider {
       List("-url", url)
     }.getOrElse(Nil)
 
-    val payloadDirArgument = dataProvider.directory.map { dir =>
-      List("-pdir", dir)
-    }.getOrElse(Nil)
-    mantikfileArgument ++ urlArgument ++ payloadDirArgument
+    mantikfileArgument ++ urlArgument
   }
-
 }

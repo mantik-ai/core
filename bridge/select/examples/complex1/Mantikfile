@@ -41,7 +41,6 @@
   "authorEmail" : null,
   "name" : null,
   "version" : null,
-  "directory" : null,
   "stack" : "select",
   "type" : {
     "kind" : "simple",

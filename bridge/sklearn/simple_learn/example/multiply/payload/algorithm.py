@@ -2,7 +2,7 @@ import mantik.types
 import numpy as np
 
 
-def train(_: mantik.types.Bundle, _: mantik.types.MetaVariables) -> mantik.types.Bundle:
+def train(bundle: mantik.types.Bundle, meta: mantik.types.MetaVariables) -> mantik.types.Bundle:
     return mantik.types.Bundle()
 
 
