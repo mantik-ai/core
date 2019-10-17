@@ -5,7 +5,6 @@ import (
 	"cli/client"
 	"cli/cmd"
 	"flag"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"os"
 )
@@ -14,7 +13,7 @@ import (
 var AppVersion string
 
 func main() {
-	args, err := cmd.ParseArguments(os.Args)
+	args, err := cmd.ParseArguments(os.Args, AppVersion)
 	if err != nil {
 		if err == cmd.MissingCommand || err == flag.ErrHelp {
 			os.Exit(0)
@@ -23,14 +22,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	engineClient, err := client.MakeEngineClientInsecure(args.Common.Host, args.Common.Port)
+	engineClient, err := client.MakeEngineClientInsecure(&args.ClientArgs)
 	if err != nil {
 		logrus.Fatal("Could not create client", err.Error())
 	}
 	logrus.Debugf("Initialized connection to %s", engineClient.Address())
 
 	if args.Version != nil {
-		runVersion(engineClient, args.Version)
+		actions.PrintVersion(engineClient, args.Version, AppVersion)
 	}
 	if args.Items != nil {
 		err = actions.ListItems(engineClient, args.Items)
@@ -38,18 +37,12 @@ func main() {
 	if args.Item != nil {
 		err = actions.ShowItem(engineClient, args.Item)
 	}
+	if args.Deploy != nil {
+		err = actions.Deploy(engineClient, args.Deploy)
+	}
 
 	if err != nil {
 		println("Error", err.Error())
 	}
 	engineClient.Close()
-}
-
-func runVersion(engineClient *client.EngineClient, arguments *cmd.VersionArguments) {
-	version, err := engineClient.Version()
-	if err != nil {
-		logrus.Fatal("Could not connect", err.Error())
-	}
-	fmt.Println("Engine Version ", version.Version)
-	fmt.Println("Client Version ", AppVersion)
 }

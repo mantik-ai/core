@@ -2,7 +2,6 @@ package actions
 
 import (
 	"cli/client"
-	"cli/cmd"
 	"cli/protos/mantik/engine"
 	"context"
 	"fmt"
@@ -10,7 +9,20 @@ import (
 	"os"
 )
 
-func ListItems(client *client.EngineClient, args *cmd.ItemsArguments) error {
+// Show items arguments
+type ItemsArguments struct {
+	Deployed  bool
+	Anonymous bool
+	Kind      string
+	NoTable   bool
+}
+
+// Show single item arguments
+type ItemArguments struct {
+	MantikId string
+}
+
+func ListItems(client *client.EngineClient, args *ItemsArguments) error {
 	req := engine.ListArtifactsRequest{
 		Deployed:  args.Deployed,
 		Anonymous: args.Anonymous,
@@ -63,7 +75,7 @@ func formatDeployment(a *engine.MantikArtifact) string {
 	return fmt.Sprintf("internal %s", a.DeploymentInfo.InternalUrl)
 }
 
-func ShowItem(client *client.EngineClient, arg *cmd.ItemArguments) error {
+func ShowItem(client *client.EngineClient, arg *ItemArguments) error {
 	req := engine.GetArtifactRequest{
 		MantikId: arg.MantikId,
 	}

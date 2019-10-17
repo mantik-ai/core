@@ -17,4 +17,4 @@ update_grpc
 
 APP_VERSION=`git describe --always --dirty`
 source ./../scripts/ci/golang_help.sh
-golang_build mantik
+golang_build_and_test mantik
