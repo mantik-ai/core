@@ -5,7 +5,8 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/sirupsen/logrus v1.3.0
-	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/stretchr/testify v1.3.0
+	github.com/urfave/cli v1.22.1
 	google.golang.org/grpc v1.23.1
 )
 
