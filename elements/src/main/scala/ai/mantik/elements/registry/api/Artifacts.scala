@@ -7,6 +7,7 @@ import io.circe.generic.JsonCodec
 
 @JsonCodec
 case class ApiGetArtifactResponse(
+    // TODO: This is the Mantikfile, not the MantikDefinition
     mantikDefinition: String,
     mantikDefinitionJson: String, // as string so that it doesn't confuse golang's JSON unmarshal
     namedId: Option[NamedMantikId] = None,

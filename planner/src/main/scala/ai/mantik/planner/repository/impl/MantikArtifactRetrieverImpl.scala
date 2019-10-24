@@ -33,7 +33,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   /** ReferencingItemLoader for MantikArtifacts. */
   private class ReferencingMantikArtifactLoader(loader: MantikId => Future[MantikArtifact]) extends ReferencingItemLoader[MantikId, MantikArtifact](
     loader,
-    _.mantikfile.definition.referencedItems
+    _.parsedMantikfile.definition.referencedItems
   )
 
   private val registryLoader = new ReferencingMantikArtifactLoader(
@@ -84,9 +84,9 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   override def addLocalDirectoryToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact] = {
     logger.info(s"Adding local Directory ${dir} with Mantikfile")
     val file = dir.resolve("Mantikfile")
-    val fileContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
+    val mantikfileContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
     // Parsing
-    val mantikfile = Mantikfile.fromYaml(fileContent) match {
+    val mantikfile = Mantikfile.fromYaml(mantikfileContent) match {
       case Left(error) => throw new IllegalArgumentException("Could not parse mantik file", error)
       case Right(ok)   => ok
     }
@@ -105,7 +105,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     }
 
 
-    val artifact =  MantikArtifact(mantikfile, None, mantikId, itemId)
+    val artifact =  MantikArtifact(mantikfileContent, None, mantikId, itemId)
     val timeout = if (payloadSource.isDefined){
       fileTransferTimeout
     } else {

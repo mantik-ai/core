@@ -50,7 +50,7 @@ private[planner] class ContextImpl @Inject() (
 
   private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
     val (artifact, hull) = await(retriever.get(id))
-    artifact.mantikfile.definitionAs[T#DefinitionType] match {
+    artifact.parsedMantikfile.definitionAs[T#DefinitionType] match {
       case Left(error) => throw new Errors.WrongTypeException("Wrong item type", error)
       case _           => // ok
     }

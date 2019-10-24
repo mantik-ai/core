@@ -27,7 +27,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val session2 = await(sessionManager.create())
 
     val dataset1 = MantikArtifact(
-      Mantikfile.pure(DataSetDefinition(format = DataSet.NaturalFormatName, `type` = FundamentalType.Int32)),
+      Mantikfile.pure(DataSetDefinition(format = DataSet.NaturalFormatName, `type` = FundamentalType.Int32)).toJson,
       fileId = Some("1234"),
       namedId = Some(NamedMantikId("Dataset1")),
       itemId = ItemId.generate()
@@ -35,13 +35,13 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val dataset2 = MantikArtifact(
       Mantikfile.pure(elements.DataSetDefinition(format = DataSet.NaturalFormatName, `type` = TabularData(
         "x" -> FundamentalType.Int32
-      ))),
+      ))).toJson,
       fileId = Some("1234"),
       namedId = Some(NamedMantikId("Dataset2")),
       itemId = ItemId.generate()
     )
     val algorithm1 = MantikArtifact(
-      Mantikfile.pure(AlgorithmDefinition(stack = "stack1", `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))),
+      Mantikfile.pure(AlgorithmDefinition(stack = "stack1", `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
@@ -58,7 +58,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
             output = FundamentalType.StringType
           )
         )
-      ),
+      ).toJson,
       fileId = Some("5000"),
       namedId = Some(NamedMantikId("Trainable1")),
       itemId = ItemId.generate()
@@ -70,7 +70,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
             PipelineStep.AlgorithmStep("Algorithm1")
           )
         )
-      ),
+      ).toJson,
       fileId = None,
       namedId = Some(NamedMantikId("Pipeline1")),
       itemId = ItemId.generate()
@@ -93,7 +93,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     response.itemId shouldBe "1"
     response.item.get.kind shouldBe ObjectKind.KIND_DATASET
     response.item.get.getDataset.`type`.get.json shouldBe "\"int32\""
-    CirceJson.forceParseJson(response.item.get.mantikfileJson) shouldBe dataset1.mantikfile.toJsonValue
+    CirceJson.forceParseJson(response.item.get.mantikfileJson) shouldBe dataset1.parsedMantikfile.toJsonValue
     session1.getItem("1").get shouldBe an[DataSet]
     session2 shouldBe empty
   }
@@ -104,7 +104,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     algoGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_ALGORITHM
 
     val algoItem = algoGet.item.getOrElse(fail).getAlgorithm
-    val ad = algorithm1.mantikfile.definition.asInstanceOf[AlgorithmDefinition]
+    val ad = algorithm1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition]
     algoItem.inputType.get.json shouldBe ad.`type`.input.toJsonString
     algoItem.outputType.get.json shouldBe ad.`type`.output.toJsonString
   }
@@ -116,7 +116,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
     val trainableItem = trainableGet.item.getOrElse(fail).getTrainableAlgorithm
 
-    val td = trainable1.mantikfile.definition.asInstanceOf[TrainableAlgorithmDefinition]
+    val td = trainable1.parsedMantikfile.definition.asInstanceOf[TrainableAlgorithmDefinition]
     trainableItem.trainingType.get.json shouldBe td.trainingType.toJsonString
     trainableItem.statType.get.json shouldBe td.statType.toJsonString
     trainableItem.inputType.get.json shouldBe td.`type`.input.toJsonString
@@ -129,7 +129,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     pipelineGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_PIPELINE
 
     val pipelineItem = pipelineGet.item.getOrElse(fail).getPipeline
-    val ad = algorithm1.mantikfile.definition.asInstanceOf[AlgorithmDefinition]
+    val ad = algorithm1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition]
     // Type is deducted from algorithm
     pipelineItem.inputType.get.json shouldBe ad.`type`.input.toJsonString
     pipelineItem.outputType.get.json shouldBe ad.`type`.output.toJsonString
@@ -259,7 +259,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
             "y" -> FundamentalType.Float64
           )
         )
-      )),
+      )).toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
@@ -323,8 +323,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
   "setMetaVariables" should "work" in new PlainEnv {
     val algorithm1 = MantikArtifact(
-      Mantikfile.fromYamlWithType[AlgorithmDefinition](
-        """kind: algorithm
+      """kind: algorithm
           |stack: foo1
           |type:
           |  input: int32
@@ -336,7 +335,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
           |  - name: b
           |    type: int32
           |    value: 42
-          |""".stripMargin).forceRight,
+          |""".stripMargin,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()

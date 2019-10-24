@@ -64,7 +64,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   private def getByName(id: NamedMantikId): Option[DbArtifact] = {
     run {
       for {
-        name <- db.names.filter { n => n.name == lift(id.name) && n.version == lift(id.version) }
+        name <- db.names.filter { n => n.account == lift(id.account) && n.name == lift(id.name) && n.version == lift(id.version) }
         item <- db.items.join(_.itemId == name.currentItemId)
         depl <- db.deployments.leftJoin(_.itemId == item.itemId)
       } yield (name, item, depl)
@@ -253,19 +253,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
    * @throws Errors.RepositoryError on illegal mantikfiles.
    */
   private def decodeDbArtifact(dbArtifact: DbArtifact): MantikArtifact = {
-    val mantikfile = (for {
-      json <- parser.parse(dbArtifact.item.mantikfile)
-      mf <- Mantikfile.parseSingleDefinition(json)
-    } yield {
-      mf
-    }) match {
-      case Left(error) =>
-        logger.error(s"Could not parse stored mantikfile of ${dbArtifact.item.itemId}, code: ${dbArtifact.item.mantikfile}", error)
-        throw new Errors.RepositoryError("Could not parse Mantikfile", error)
-      case Right(ok) => ok
-    }
     MantikArtifact(
-      mantikfile = mantikfile,
+      mantikfile = dbArtifact.item.mantikfile,
       namedId = dbArtifact.name.map { name =>
         NamedMantikId(
           account = name.account,
@@ -292,10 +281,10 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
    */
   private def encodeDbArtifact(a: MantikArtifact): DbMantikItem = {
     DbMantikItem(
-      mantikfile = a.mantikfile.toJson,
+      mantikfile = a.mantikfile,
       fileId = a.fileId,
       itemId = a.itemId.toString,
-      kind = a.mantikfile.definition.kind
+      kind = a.parsedMantikfile.definition.kind
     )
   }
 

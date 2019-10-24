@@ -2,37 +2,40 @@ package ai.mantik.engine.server.services
 
 import java.time.Instant
 
-import ai.mantik.componently.rpc.RpcConversions
-import ai.mantik.ds.FundamentalType.{ Int32, StringType }
+import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
+import ai.mantik.ds.FundamentalType.{Int32, StringType}
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId }
-import ai.mantik.engine.protos.local_registry.{ GetArtifactRequest, ListArtifactsRequest }
+import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId}
+import ai.mantik.engine.protos.local_registry.{AddArtifactRequest, AddArtifactResponse, GetArtifactRequest, GetArtifactWithPayloadResponse, ListArtifactsRequest}
 import ai.mantik.engine.testutil.TestBaseWithSessions
-import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact }
+import ai.mantik.planner.repository.{ContentTypes, DeploymentInfo, MantikArtifact}
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.google.protobuf.timestamp.Timestamp
 import io.grpc.Status.Code
 import io.grpc.StatusRuntimeException
 
+import scala.util.Random
+
 class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
 
-  trait Env {
+  trait EnvBase {
     val localRegistryServiceImpl = new LocalRegistryServiceImpl(components.localRegistry)
     val localRepo = components.repository
 
-    val item = new MantikArtifact(
+    val item = MantikArtifact(
       Mantikfile.pure(
         AlgorithmDefinition(stack = "some_stack", `type` = FunctionType(Int32, Int32))
-      ),
+      ).toJson,
       fileId = Some("1234"),
       namedId = Some("item1"),
-      itemId = ItemId.generate(),
-      deploymentInfo = None
+      itemId = ItemId.generate()
     )
 
     val item2 = item.copy(
       mantikfile = Mantikfile.pure(
         DataSetDefinition(format = "format", `type` = StringType)
-      ),
+      ).toJson,
       itemId = ItemId.generate(),
       namedId = None
     )
@@ -49,11 +52,12 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
       itemId = ItemId.generate(),
       namedId = Some("item3")
     )
+  }
 
+  trait Env extends EnvBase {
     await(localRepo.store(item))
     await(localRepo.store(item2))
     await(localRepo.store(item3))
-
   }
 
   "get" should "should fail for not existing" in new Env {
@@ -110,5 +114,141 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     )).artifacts.map(Converters.decodeMantikArtifact) should contain theSameElementsAs Seq(
       item2
     )
+  }
+
+  "add" should "add elements without payload" in new EnvBase {
+    val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[AddArtifactResponse]()
+    val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
+    requestObserver.onNext(
+      AddArtifactRequest(
+        mantikfile = item.mantikfile,
+      )
+    )
+    requestObserver.onCompleted()
+    val result = await(resultFuture)
+
+    val original = await(localRepo.get(ItemId(result.artifact.get.itemId)))
+    Converters.decodeMantikArtifact(result.artifact.get) shouldBe original
+  }
+
+  it should "keep YAML code in mantikfiles" in new EnvBase {
+    val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[AddArtifactResponse]()
+    val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
+    val mantikfile =
+      """kind: algorithm
+        |stack: foobar
+        |# This is a comment which should survive
+        |type:
+        |  input: int32
+        |  output: int32
+        |""".stripMargin
+    requestObserver.onNext(
+      AddArtifactRequest(
+        mantikfile = mantikfile,
+      )
+    )
+    requestObserver.onCompleted()
+    val result = await(resultFuture)
+
+    val stored = await(localRepo.get(ItemId(result.artifact.get.itemId)))
+    Converters.decodeMantikArtifact(result.artifact.get) shouldBe stored
+    stored.mantikfile shouldBe mantikfile
+    result.artifact.get.mantikfile shouldBe mantikfile
+    result.artifact.get.mantikfileJson shouldBe stored.parsedMantikfile.toJson
+
+    val getResult = await(localRegistryServiceImpl.getArtifact(GetArtifactRequest(result.artifact.get.itemId)))
+    getResult.artifact.get.mantikfile shouldBe mantikfile
+    getResult.artifact.get.mantikfileJson shouldBe stored.parsedMantikfile.toJson
+  }
+
+  it should "support naming the artifact" in new EnvBase {
+    val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[AddArtifactResponse]()
+    val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
+    requestObserver.onNext(
+      AddArtifactRequest(
+        mantikfile = item.mantikfile,
+        namedMantikId = "name1"
+      )
+    )
+    requestObserver.onCompleted()
+    val result = await(resultFuture)
+
+    val original = await(localRepo.get(NamedMantikId(result.artifact.get.namedId)))
+    Converters.decodeMantikArtifact(result.artifact.get) shouldBe original
+    original.namedId shouldBe Some(NamedMantikId("name1"))
+  }
+
+  it should "add elements with payload" in new EnvBase {
+    val bytes = Seq(
+      ByteString("blob1"),
+      ByteString("blob2"),
+      ByteString("blob3")
+    )
+    val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[AddArtifactResponse]()
+    val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
+    requestObserver.onNext(
+      AddArtifactRequest(
+        mantikfile = item.mantikfile,
+        contentType = ContentTypes.ZipFileContentType,
+        payload = RpcConversions.encodeByteString(bytes.head)
+      )
+    )
+    bytes.tail.foreach { b =>
+      requestObserver.onNext(AddArtifactRequest(payload = RpcConversions.encodeByteString(b)))
+    }
+    requestObserver.onCompleted()
+    val result = await(resultFuture)
+
+    val original = await(localRepo.get(ItemId(result.artifact.get.itemId)))
+    Converters.decodeMantikArtifact(result.artifact.get) shouldBe original
+
+    original.fileId shouldBe defined
+    val (contentType, fileSource) = await(components.fileRepository.loadFile(original.fileId.get))
+    contentType shouldBe ContentTypes.ZipFileContentType
+    val fileContent = collectByteSource(fileSource)
+    fileContent shouldBe (bytes.reduce(_ ++ _))
+  }
+
+  "getArtifactWithPayload" should "deliver artifacts without payload" in new EnvBase  {
+    val itemWithoutFile = item.copy(fileId = None)
+    await(localRepo.store(itemWithoutFile))
+
+    val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[GetArtifactWithPayloadResponse]()
+    localRegistryServiceImpl.getArtifactWithPayload(
+      GetArtifactRequest(itemWithoutFile.namedId.get.toString), resultObserver
+    )
+    val result = await(resultFuture)
+    val back = Converters.decodeMantikArtifact(result.artifact.get)
+    back shouldBe itemWithoutFile
+    result.contentType shouldBe ""
+    result.payload.isEmpty shouldBe true
+  }
+
+  it should "deliver artifacts with payload" in new EnvBase {
+    val bytes = {
+      val b =new Array[Byte](100000)
+      Random.nextBytes(b)
+      ByteString(b)
+    }
+
+
+
+    val itemToUse = await(components.localRegistry.addMantikArtifact(
+      item,
+      Some(
+        ContentTypes.ZipFileContentType -> Source.single(bytes)
+      )
+    ))
+
+    val (streamObserver, future) = StreamConversions.streamObserverCollector[GetArtifactWithPayloadResponse]()
+    localRegistryServiceImpl.getArtifactWithPayload(
+      GetArtifactRequest(itemToUse.namedId.get.toString), streamObserver
+    )
+    val parts = await(future)
+    parts.size shouldBe >= (2)
+    Converters.decodeMantikArtifact(parts.head.artifact.get) shouldBe itemToUse
+    parts.head.contentType shouldBe ContentTypes.ZipFileContentType
+    val collectedBytes = parts.map(p => RpcConversions.decodeByteString(p.payload)).reduce(_ ++ _)
+    collectedBytes shouldBe bytes
   }
 }

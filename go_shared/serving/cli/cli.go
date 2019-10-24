@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gl.ambrosys.de/mantik/go_shared/serving"
 	"gl.ambrosys.de/mantik/go_shared/serving/server"
+	"gl.ambrosys.de/mantik/go_shared/util/osext"
 	"io/ioutil"
 	"os"
 	"path"
@@ -99,7 +100,7 @@ func Start(args []string, backend serving.Backend) {
 func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Mantikfile) serving.Executable {
 	payloadDir := path.Join(dirName, "payload")
 	var payloadArg *string
-	if fileExists(payloadDir) {
+	if osext.FileExists(payloadDir) {
 		payloadArg = &payloadDir
 	} else {
 		payloadArg = nil
@@ -119,11 +120,6 @@ func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Ma
 		return nil
 	}
 	return adapted
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
 }
 
 // Returns directory of mantik file and parsed mantik file

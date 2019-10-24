@@ -58,10 +58,10 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
 
   private def decodeMantikArtifact(mantikId: MantikId, apiGetArtifactResponse: ApiGetArtifactResponse): Try[MantikArtifact] = {
     for {
-      mantikfile <- Mantikfile.fromYaml(apiGetArtifactResponse.mantikDefinition).toTry
+      _ <- Mantikfile.fromYaml(apiGetArtifactResponse.mantikDefinition).toTry
     } yield {
       MantikArtifact(
-        mantikfile,
+        apiGetArtifactResponse.mantikDefinition,
         fileId = apiGetArtifactResponse.fileId,
         namedId = apiGetArtifactResponse.namedId,
         itemId = apiGetArtifactResponse.itemId
@@ -99,7 +99,7 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
           ApiPrepareUploadRequest(
             namedId = mantikArtifact.namedId,
             itemId = mantikArtifact.itemId,
-            mantikfile = mantikArtifact.mantikfile.toJson,
+            mantikfile = mantikArtifact.mantikfile,
             hasFile = payload.nonEmpty
           )
         )

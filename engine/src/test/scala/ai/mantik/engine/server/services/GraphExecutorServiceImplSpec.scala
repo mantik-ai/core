@@ -56,7 +56,7 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
 
   "deploy" should "deploy elements" in new Env {
     val algorithm1Artifact = MantikArtifact(
-      Mantikfile.pure(AlgorithmDefinition(stack = "tf.saved_model", `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))),
+      Mantikfile.pure(AlgorithmDefinition(stack = "tf.saved_model", `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()

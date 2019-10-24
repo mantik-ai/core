@@ -177,11 +177,11 @@ object MantikItem {
     )
 
     def forceExtract[T <: MantikDefinition: ClassTag]: MantikItemCore[T] = {
-      val mantikfile = artifact.mantikfile.cast[T].right.get
+      val mantikfile = artifact.parsedMantikfile.cast[T].right.get
       MantikItemCore(source, mantikfile)
     }
 
-    val item = artifact.mantikfile.definition match {
+    val item = artifact.parsedMantikfile.definition match {
       case a: AlgorithmDefinition          => Algorithm(forceExtract)
       case d: DataSetDefinition            => DataSet(forceExtract)
       case t: TrainableAlgorithmDefinition => TrainableAlgorithm(forceExtract)

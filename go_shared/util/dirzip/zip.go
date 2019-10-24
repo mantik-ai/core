@@ -117,10 +117,10 @@ func addFile(writer *zip.Writer, fileBaseName, filePath string, zipDirectory str
 
 func UnzipDiectory(zipFile string, directory string, debug bool) error {
 	reader, err := zip.OpenReader(zipFile)
-	defer reader.Close()
 	if err != nil {
 		return errors.Wrap(err, "Could not open ZIP File")
 	}
+	defer reader.Close()
 	return unzipDiectoryFromReader(&reader.Reader, directory, debug)
 }
 
