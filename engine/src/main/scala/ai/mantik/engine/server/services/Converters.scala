@@ -160,24 +160,31 @@ private[engine] object Converters {
 
   def encodeMantikArtifact(artifact: MantikArtifact): ProtoMantikArtifact = {
     ProtoMantikArtifact(
-      mantikfileJson = artifact.mantikfile.toJson,
-      artifactKind = artifact.mantikfile.definition.kind,
+      mantikfileJson = artifact.parsedMantikfile.toJson,
+      artifactKind = artifact.parsedMantikfile.definition.kind,
       fileId = RpcConversions.encodeOptionalString(artifact.fileId),
       namedId = RpcConversions.encodeOptionalString(artifact.namedId.map(_.toString)),
       itemId = artifact.itemId.toString,
-      deploymentInfo = artifact.deploymentInfo.map(encodeDeploymentInfo)
+      deploymentInfo = artifact.deploymentInfo.map(encodeDeploymentInfo),
+      mantikfile = artifact.mantikfile
     )
   }
 
   def decodeMantikArtifact(artifact: ProtoMantikArtifact): MantikArtifact = {
-    val mantikfileJson = CirceJson.forceParseJson(artifact.mantikfileJson)
-    MantikArtifact(
-      mantikfile = Mantikfile.parseSingleDefinition(mantikfileJson).fold(i => throw i, identity),
+    val originalMantikfile = RpcConversions.decodeOptionalString(artifact.mantikfile).orElse(
+      RpcConversions.decodeOptionalString(artifact.mantikfileJson)
+    ).getOrElse(
+        throw new IllegalArgumentException("Missing Mantikfile")
+      )
+    val result = MantikArtifact(
+      mantikfile = originalMantikfile,
       fileId = RpcConversions.decodeOptionalString(artifact.fileId),
       namedId = RpcConversions.decodeOptionalString(artifact.namedId).map(NamedMantikId.fromString),
       itemId = ItemId(artifact.itemId),
       deploymentInfo = artifact.deploymentInfo.map(decodeDeploymentInfo)
     )
+    result.parsedMantikfile // force parsing
+    result
   }
 
   def encodeDeploymentInfo(deploymentInfo: DeploymentInfo): ProtoDeploymentInfo = {

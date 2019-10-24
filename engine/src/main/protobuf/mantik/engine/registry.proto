@@ -17,6 +17,8 @@ message MantikArtifact {
     string item_id = 5;
     // Optional information about a deployment of the item
     DeploymentInfo deployment_info = 6;
+    // Original Mantikfile code (can be YAML)
+    string mantikfile = 7;
 }
 
 // Contains information if some artifact is deployed

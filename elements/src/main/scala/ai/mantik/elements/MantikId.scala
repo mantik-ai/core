@@ -3,6 +3,7 @@ package ai.mantik.elements
 import java.security.SecureRandom
 import java.util.Base64
 
+import ai.mantik.elements.errors.InvalidMantikIdException
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import io.circe.syntax._
@@ -31,7 +32,7 @@ object MantikId {
       c.value.asString match {
         case None => Left(DecodingFailure("Expected strng", c.history))
         case Some(s) =>
-          decodeString(s)
+          decodeString(s).left.map(_.wrapInDecodingFailure)
       }
     }
   }
@@ -40,7 +41,7 @@ object MantikId {
   implicit def fromString(s: String): MantikId = decodeString(s).fold(e => throw e, identity)
 
   /** Decode a String into a MantikId. */
-  def decodeString(s: String): Result[MantikId] = {
+  def decodeString(s: String): Either[InvalidMantikIdException, MantikId] = {
     if (s.startsWith(ItemId.ItemIdPrefix)) {
       Right(ItemId.fromString(s))
     } else {
@@ -159,13 +160,15 @@ object NamedMantikId {
   val DefaultAccount = "library"
 
   /** Automatic conversion from strings. */
+  @throws[InvalidMantikIdException]("On invalid Mantik Ids")
   implicit def fromString(s: String): NamedMantikId = {
     decodeString(s) match {
-      case Left(e)  => throw new IllegalArgumentException(e.getMessage())
+      case Left(e)  => throw e
       case Right(v) => v
     }
   }
 
+  @throws[InvalidMantikIdException]("On invalid Mantik Ids")
   def apply(s: String): NamedMantikId = fromString(s)
 
   /** JSON Encoding to String. */
@@ -179,13 +182,13 @@ object NamedMantikId {
       c.value.asString match {
         case None => Left(DecodingFailure("Expected string", c.history))
         case Some(s) =>
-          decodeString(s)
+          decodeString(s).left.map(_.wrapInDecodingFailure)
       }
     }
   }
 
   /** Decodes NamedMantikId with error handling. */
-  def decodeString(s: String): Result[NamedMantikId] = {
+  def decodeStringResult(s: String): Result[NamedMantikId] = {
     s.split(":").toList match {
       case List(accountName, version) =>
         decodeAccountName(accountName).map {
@@ -206,6 +209,11 @@ object NamedMantikId {
     }
   }
 
+  /** Like decodeStringResult but encodes errors in InvalidMantikIdException. */
+  def decodeString(s: String): Either[InvalidMantikIdException, NamedMantikId] = {
+    decodeStringResult(s).left.map(InvalidMantikIdException.fromDecodingFailure)
+  }
+
   private def decodeAccountName(s: String): Result[(String, String)] = {
     s.split("/").toList match {
       case List(account, name) => Right((account, name))
@@ -224,7 +232,7 @@ object NamedMantikId {
     override def apply(c: HCursor): Result[NamedMantikId] = {
       for {
         s <- c.as[String]
-        r <- decodeString(s)
+        r <- decodeStringResult(s)
       } yield r
     }
   }

@@ -68,7 +68,7 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
     )
     val response = await(client.addMantikArtifact(
       MantikArtifact(
-        mantikfile,
+        mantikfile.toJson,
         fileId = None,
         namedId = Some(NamedMantikId("hello_world")),
         itemId = ItemId.generate(),

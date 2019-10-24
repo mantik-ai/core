@@ -10,6 +10,7 @@ import io.grpc.stub.StreamObserver
 import org.reactivestreams.{ Subscriber, Subscription }
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
 
 /** Helper for converting gRpc Stream Fundamentals into Akka Counterparts. */
@@ -174,6 +175,27 @@ object StreamConversions {
   }
 
   /**
+   * Generates a stream observer which collects many elements into a vector.
+   * Do not use in production.
+   */
+  def streamObserverCollector[T](): (StreamObserver[T], Future[Vector[T]]) = {
+    val collector = Vector.newBuilder[T]
+    val promise = Promise[Vector[T]]
+    val streamObserver = new StreamObserver[T] {
+      override def onNext(value: T): Unit = {
+        collector += value
+      }
+
+      override def onError(t: Throwable): Unit = promise.tryFailure(t)
+
+      override def onCompleted(): Unit = {
+        promise.trySuccess(collector.result())
+      }
+    }
+    streamObserver -> promise.future
+  }
+
+  /**
    * Generate a StreamObserver with a special handling for the first element
    * and a generic handling for all elements (including first).
    * This can be used, when requesting streamy data, where the first element contains some extra information.
@@ -212,6 +234,60 @@ object StreamConversions {
       case Success(ok)                               => Success(ok)
       case Failure(e) if errorDecoder.isDefinedAt(e) => Failure(errorDecoder(e))
       case Failure(e)                                => Failure(e)
+    }
+  }
+
+  /**
+   * Helper to implement streamy input functions with special treating for the first (header) element.
+   *
+   * The function f is called with the first element and the source of ALL elements (including the first)
+   *
+   * f is allowed to block, but not too long.
+   *
+   * This is like the inverse of [[headerStreamSource]]
+   *
+   * @param errorHandler an error handling function.
+   * @param f handler function
+   * @return a A Stream Observer which handles the input type.
+   */
+  def streamingRequest[Input, Output](
+    errorHandler: PartialFunction[Throwable, Throwable],
+    responseObserver: StreamObserver[Output]
+  )(
+    f: (Input, Source[Input, _]) => Future[Output]
+  )(implicit materializer: Materializer, ec: ExecutionContext): StreamObserver[Input] = {
+
+    def encodeError(e: Throwable): Throwable = {
+      if (errorHandler.isDefinedAt(e)) {
+        errorHandler(e)
+      } else {
+        e
+      }
+    }
+
+    StreamConversions.splitFirst[Input] {
+      case Failure(e) =>
+        responseObserver.onError(encodeError(e))
+        StreamConversions.empty
+      case Success(header) =>
+        val restSourceBase = StreamConversions.streamObserverSource[Input]()
+        try {
+          val (observer, restSource) = restSourceBase.preMaterialize()
+          val fullInput = restSource.prepend(Source.single(header))
+          val resultFuture = f(header, fullInput)
+          resultFuture.onComplete {
+            case Failure(e) =>
+              responseObserver.onError(encodeError(e))
+            case Success(ok) =>
+              responseObserver.onNext(ok)
+              responseObserver.onCompleted()
+          }
+          observer
+        } catch {
+          case NonFatal(e) =>
+            responseObserver.onError(encodeError(e))
+            StreamConversions.empty
+        }
     }
   }
 }

@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS mantik_item (
     -- Item ID.
     item_id VARCHAR PRIMARY KEY,
-    -- JSON Content of Mantik file
+    -- JSON/YAML original Content of Mantik file
     mantikfile VARCHAR NOT NULL,
     -- File ID
     file_id VARCHAR,

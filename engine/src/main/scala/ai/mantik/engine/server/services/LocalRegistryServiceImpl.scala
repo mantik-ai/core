@@ -1,14 +1,18 @@
 package ai.mantik.engine.server.services
 
-import ai.mantik.componently.rpc.RpcConversions
+import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.MantikId
-import ai.mantik.engine.protos.local_registry.{ GetArtifactRequest, GetArtifactResponse, ListArtifactResponse, ListArtifactsRequest }
+import ai.mantik.elements.errors.InvalidMantikfileException
+import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
 import ai.mantik.engine.protos.local_registry.LocalRegistryServiceGrpc.LocalRegistryService
-import ai.mantik.planner.repository.LocalMantikRegistry
+import ai.mantik.engine.protos.local_registry._
+import ai.mantik.planner.repository.MantikRegistry.PayloadSource
+import ai.mantik.planner.repository.{ LocalMantikRegistry, MantikArtifact }
+import io.grpc.stub.StreamObserver
 import javax.inject.Inject
 
 import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegistry)(implicit akkaRuntime: AkkaRuntime)
   extends ComponentBase with LocalRegistryService with RpcServiceBase {
@@ -35,6 +39,77 @@ class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegist
             items.map(Converters.encodeMantikArtifact)
           )
         }
+    }
+  }
+
+  override def addArtifact(responseObserver: StreamObserver[AddArtifactResponse]): StreamObserver[AddArtifactRequest] = {
+    StreamConversions.streamingRequest[AddArtifactRequest, AddArtifactResponse](translateError, responseObserver) {
+      case (header, source) =>
+        val namedId = RpcConversions.decodeOptionalString(header.namedMantikId).map(
+          NamedMantikId.apply
+        )
+        val itemId = ItemId.generate()
+        val maybeContentType = RpcConversions.decodeOptionalString(header.contentType)
+        val mantikArtifact = MantikArtifact(
+          mantikfile = header.mantikfile,
+          fileId = None, // will be set by response
+          namedId = namedId,
+          itemId = itemId
+        )
+        mantikArtifact.parsedMantikfile // force parsing
+        val maybePayloadSource: Option[PayloadSource] = maybeContentType.map { contentType =>
+          val decodedSource = source.map(r => RpcConversions.decodeByteString(r.payload))
+          contentType -> decodedSource
+        }
+        logger.info(s"Adding artifact ${mantikArtifact.mantikId} (payload=${maybeContentType})...")
+        localMantikRegistry.addMantikArtifact(
+          mantikArtifact,
+          maybePayloadSource
+        ).map { response =>
+          AddArtifactResponse(
+            Some(Converters.encodeMantikArtifact(response))
+          )
+        }
+    }
+  }
+
+  override def getArtifactWithPayload(request: GetArtifactRequest, responseObserver: StreamObserver[GetArtifactWithPayloadResponse]): Unit = {
+    val mantikId = MantikId.decodeString(request.mantikId) match {
+      case Left(failure) =>
+        responseObserver.onError(encodeErrorIfPossible(failure))
+        return
+      case Right(mantikId) =>
+        mantikId
+    }
+    localMantikRegistry.get(mantikId).onComplete {
+      case Success(artifact) =>
+        val converted = Converters.encodeMantikArtifact(artifact)
+        artifact.fileId match {
+          case None =>
+            // there is no payload
+            responseObserver.onNext(
+              GetArtifactWithPayloadResponse(artifact = Some(converted))
+            )
+            responseObserver.onCompleted()
+          case Some(fileId) =>
+            // there is payload
+            localMantikRegistry.getPayload(fileId).onComplete {
+              case Failure(error) =>
+                responseObserver.onError(encodeErrorIfPossible(error))
+              case Success((contentType, source)) =>
+                val header = GetArtifactWithPayloadResponse(
+                  artifact = Some(converted),
+                  contentType = contentType
+                )
+                responseObserver.onNext(header)
+                val adaptedSource = source.map { bytes =>
+                  GetArtifactWithPayloadResponse(payload = RpcConversions.encodeByteString(bytes))
+                }
+                StreamConversions.pumpSourceIntoStreamObserver(adaptedSource, responseObserver)
+            }
+        }
+      case Failure(error) =>
+        responseObserver.onError(encodeErrorIfPossible(error))
     }
   }
 }

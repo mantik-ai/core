@@ -11,6 +11,12 @@ service LocalRegistryService {
 
     // List artifacts
     rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactResponse) {}
+
+    // Add an artifact
+    rpc AddArtifact(stream AddArtifactRequest) returns (AddArtifactResponse) {}
+
+    // Get an Artifact including payload
+    rpc GetArtifactWithPayload(GetArtifactRequest) returns (stream GetArtifactWithPayloadResponse) {}
 }
 
 message GetArtifactRequest {
@@ -35,4 +41,31 @@ message ListArtifactsRequest {
 message ListArtifactResponse {
     // The mantik artifacts matching the list requests
     repeated MantikArtifact artifacts = 1;
+}
+
+message AddArtifactRequest {
+    // Header part
+    // Optional Named Mantik Id
+    string named_mantik_id = 1;
+    // Mantik file
+    string mantikfile = 2;
+    // Payload content type
+    // Must be set if there is content
+    string content_type = 3;
+    // Payload (can be set on header and all following)
+    bytes payload = 4;
+}
+
+message AddArtifactResponse {
+    // Artifact
+    MantikArtifact artifact = 1;
+}
+
+message GetArtifactWithPayloadResponse {
+    // Header
+    MantikArtifact artifact = 1;
+    // May be empty if there is no payload
+    string content_type = 2;
+    // Streamed content
+    bytes payload = 3;
 }

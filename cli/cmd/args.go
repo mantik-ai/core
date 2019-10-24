@@ -15,6 +15,11 @@ type Arguments struct {
 	Items   *actions.ItemsArguments
 	Item    *actions.ItemArguments
 	Deploy  *actions.DeployArguments
+	Add     *actions.AddArguments
+	Extract *actions.ExtractArguments
+
+	// If true, give more debug information
+	Debug bool
 }
 
 var MissingCommand = errors.New("missing command")
@@ -29,11 +34,12 @@ func ParseArguments(argv []string, appVersion string) (*Arguments, error) {
 	app.Description = "Mantik CLI Client"
 	app.Version = appVersion
 	app.Usage = "Mantik CLI Client"
-	app.UseShortOptionHandling = true
+	// app.UseShortOptionHandling = true // disabled as https://github.com/urfave/cli/pull/911 is not yet in the release we use
 
 	app.Flags = []cli.Flag{
 		cli.IntFlag{Name: "port", Value: client.DefaultPort},
 		cli.StringFlag{Name: "host", Value: client.DefaultHost},
+		cli.BoolFlag{Name: "debug"},
 	}
 
 	app.Commands = []cli.Command{
@@ -95,10 +101,49 @@ func ParseArguments(argv []string, appVersion string) (*Arguments, error) {
 				return nil
 			},
 		},
+		{
+			Name:  "add",
+			Usage: "Add a mantik item from a directory",
+			Flags: []cli.Flag{
+				cli.StringFlag{Name: "name,n", Usage: "Named Mantik Id"},
+			},
+			ArgsUsage: "<directory>",
+			Action: func(c *cli.Context) error {
+				if c.NArg() < 1 {
+					return MissingArgument
+				}
+				args.Add = &actions.AddArguments{}
+				args.Add.NamedMantikId = c.String("name")
+				args.Add.Directory = c.Args().First()
+				return nil
+			},
+		},
+		{
+			Name:  "extract",
+			Usage: "Extract a Mantik Item into a directory",
+			Flags: []cli.Flag{
+				cli.StringFlag{Name: "o", Usage: "Output Directory", Required: true},
+			},
+			ArgsUsage: "<mantikId",
+			Action: func(c *cli.Context) error {
+				if c.NArg() < 1 {
+					return MissingArgument
+				}
+				args.Extract = &actions.ExtractArguments{}
+				if !c.IsSet("o") {
+					// somehow this is not checked
+					return errors.New("Missing -o parameter")
+				}
+				args.Extract.Directory = c.String("o")
+				args.Extract.MantikId = c.Args().First()
+				return nil
+			},
+		},
 	}
 	app.Before = func(c *cli.Context) error {
 		args.ClientArgs.Port = c.GlobalInt("port")
 		args.ClientArgs.Host = c.GlobalString("host")
+		args.Debug = c.GlobalBool("debug")
 		return nil
 	}
 	err := app.Run(argv)

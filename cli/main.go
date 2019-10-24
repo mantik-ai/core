@@ -40,6 +40,12 @@ func main() {
 	if args.Deploy != nil {
 		err = actions.Deploy(engineClient, args.Deploy)
 	}
+	if args.Add != nil {
+		err = actions.AddItem(engineClient, args.Debug, args.Add)
+	}
+	if args.Extract != nil {
+		err = actions.ExtractItem(engineClient, args.Debug, args.Extract)
+	}
 
 	if err != nil {
 		println("Error", err.Error())

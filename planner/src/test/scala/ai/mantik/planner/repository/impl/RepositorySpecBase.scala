@@ -31,7 +31,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
         input = FundamentalType.Int32,
         output = FundamentalType.Int64
       )
-    )),
+    )).toJson,
     fileId = Some("1234"),
     namedId = Some(NamedMantikId(
       name = "func1",
@@ -74,7 +74,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
         input = FundamentalType.Int32,
         output = FundamentalType.Int64
       )
-    )),
+    )).toJson,
     fileId = None,
     namedId = Some(NamedMantikId(
       name = "func2",
@@ -141,6 +141,25 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
     }
   }
 
+  it should "distinguish between accounts, names and versions" in {
+    withRepo { repo =>
+      val a = artifact1.copy(namedId = Some(NamedMantikId("library/foo:latest")), itemId = ItemId.generate())
+      val b = artifact1.copy(namedId = Some(NamedMantikId("other/foo:latest")), itemId = ItemId.generate())
+      val c = artifact1.copy(namedId = Some(NamedMantikId("library/foo:otherversion")), itemId = ItemId.generate())
+      val d = artifact1.copy(namedId = Some(NamedMantikId("library/bar:latest")), itemId = ItemId.generate())
+      for {
+        x <- Seq(a, b, c, d)
+      } await(repo.store(x))
+
+      for {
+        x <- Seq(a, b, c, d)
+      } {
+        await(repo.get(x.namedId.get)) shouldBe x
+        await(repo.get(x.itemId)) shouldBe x.copy(namedId = None)
+      }
+    }
+  }
+
   it should "allow tagging different elements" in {
     withRepo { repo =>
       await(repo.store(artifact1))
@@ -154,7 +173,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
         namedId = Some(otherName)
       )
       await(repo.get(thirdName)) shouldBe artifact2.copy(
-        namedId = Some(otherName)
+        namedId = Some(thirdName)
       )
     }
   }
@@ -164,10 +183,10 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.store(artifact1))
       val updated = artifact1.copy(
         mantikfile = Mantikfile.pure(
-          artifact1.mantikfile.definition.asInstanceOf[AlgorithmDefinition].copy(
+          artifact1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition].copy(
             stack = "other_stack"
           )
-        ),
+        ).toJson,
         itemId = ItemId.generate()
       )
       await(repo.store(updated))
@@ -180,10 +199,10 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.store(artifact1))
       val updated = artifact1.copy(
         mantikfile = Mantikfile.pure(
-          artifact1.mantikfile.definition.asInstanceOf[AlgorithmDefinition].copy(
+          artifact1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition].copy(
             stack = "other_stack"
           )
-        )
+        ).toJson,
       )
       intercept[Errors.ConflictException] {
         await(repo.store(updated))
@@ -305,7 +324,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       val artifact4 = artifact1.copy(
         mantikfile = Mantikfile.pure(
           DataSetDefinition(format = "natural", `type` = StringType)
-        ),
+        ).toJson,
         itemId = ItemId.generate(),
         namedId = Some("dataset1")
       )

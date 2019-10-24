@@ -84,19 +84,27 @@ func ShowItem(client *client.EngineClient, arg *ItemArguments) error {
 		return err
 	}
 	a := response.Artifact
+	PrintItem(a, true, true)
+	return nil
+}
+
+func PrintItem(a *engine.MantikArtifact, withDeployment bool, withMantikfile bool) {
 	fmt.Printf("NamedId:    %s\n", formatOptionalString(a.NamedId))
 	fmt.Printf("ItemId:     %s\n", a.ItemId)
 	fmt.Printf("Kind:       %s\n", a.ArtifactKind)
 	fmt.Printf("File:       %s\n", formatOptionalString(a.FileId))
-	fmt.Printf("Deployment: %s\n", formatDeployment(a))
-	if a.DeploymentInfo != nil {
-		fmt.Printf("  Name:         %s\n", formatOptionalString(a.DeploymentInfo.Name))
-		fmt.Printf("  Internal Url: %s\n", formatOptionalString(a.DeploymentInfo.InternalUrl))
-		fmt.Printf("  External Url: %s\n", formatOptionalString(a.DeploymentInfo.ExternalUrl))
-		fmt.Printf("  Timestamp: %s\n", a.DeploymentInfo.Timestamp.String())
+	if withDeployment {
+		fmt.Printf("Deployment: %s\n", formatDeployment(a))
+		if a.DeploymentInfo != nil {
+			fmt.Printf("  Name:         %s\n", formatOptionalString(a.DeploymentInfo.Name))
+			fmt.Printf("  Internal Url: %s\n", formatOptionalString(a.DeploymentInfo.InternalUrl))
+			fmt.Printf("  External Url: %s\n", formatOptionalString(a.DeploymentInfo.ExternalUrl))
+			fmt.Printf("  Timestamp: %s\n", a.DeploymentInfo.Timestamp.String())
+		}
 	}
-	fmt.Printf("Mantikfile:\n%s\n", a.MantikfileJson)
-	return nil
+	if withMantikfile {
+		fmt.Printf("Mantikfile:\n%s\n", a.MantikfileJson)
+	}
 }
 
 func formatOptionalString(s string) string {

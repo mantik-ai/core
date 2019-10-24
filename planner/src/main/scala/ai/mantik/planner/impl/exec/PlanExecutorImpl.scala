@@ -114,7 +114,7 @@ private[planner] class PlanExecutorImpl(
         val mantikfile = item.mantikfile
         val id = item.itemId
         val namedId = item.name
-        val artifact = MantikArtifact(mantikfile, fileId, namedId, item.itemId)
+        val artifact = MantikArtifact(mantikfile.toJson, fileId, namedId, item.itemId)
         FutureHelper.time(logger, s"Adding Mantik Item $id") {
           repository.store(artifact).andThen {
             case Success(_) =>

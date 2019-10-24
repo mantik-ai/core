@@ -42,7 +42,7 @@ private[rpc] object Conversions {
 
   def encodeMantikArtifact(item: MantikArtifact): ProtoMantikArtifact = {
     ProtoMantikArtifact(
-      mantikfile = item.mantikfile.toJson,
+      mantikfile = item.mantikfile,
       fileId = RpcConversions.encodeOptionalString(item.fileId),
       mantikId = RpcConversions.encodeOptionalString(item.namedId.map(encodeMantikId)),
       itemId = encodeItemId(item.itemId),
@@ -51,9 +51,8 @@ private[rpc] object Conversions {
   }
 
   def decodeMantikArtifact(item: ProtoMantikArtifact): MantikArtifact = {
-    val mantikfileJson = CirceJson.forceParseJson(item.mantikfile)
     MantikArtifact(
-      mantikfile = Mantikfile.parseSingleDefinition(mantikfileJson).force,
+      mantikfile = item.mantikfile,
       fileId = RpcConversions.decodeOptionalString(item.fileId),
       namedId = RpcConversions.decodeOptionalString(item.mantikId).map(Conversions.decodeNamedMantikId),
       itemId = decodeItemId(item.itemId),

@@ -2,6 +2,7 @@ package ai.mantik.engine.server.services
 
 import ai.mantik.componently.ComponentBase
 import ai.mantik.componently.rpc.RpcConversions
+import ai.mantik.elements.errors.InvalidMantikfileException
 import ai.mantik.planner.repository.Errors
 import com.typesafe.scalalogging.Logger
 import io.grpc.Status.Code
@@ -42,5 +43,16 @@ private[services] trait RpcServiceBase {
   protected val translateError: PartialFunction[Throwable, Throwable] = {
     case e: Errors.NotFoundException =>
       RpcConversions.encodeError(e, Code.NOT_FOUND)
+    case e: InvalidMantikfileException =>
+      RpcConversions.encodeError(e, Code.INVALID_ARGUMENT)
+  }
+
+  /** Encode the error if there is a translation. */
+  protected def encodeErrorIfPossible(e: Throwable): Throwable = {
+    if (translateError.isDefinedAt(e)) {
+      translateError(e)
+    } else {
+      e
+    }
   }
 }

@@ -32,13 +32,20 @@ type:
 
 	assert.Equal(t, json, parsed.Json())
 
+	algoKind := AlgorithmKind
 	expected := &AlgorithmMantikfile{
-		ParsedName: nil,
 		Type: &AlgorithmType{
 			ds.Ref(expectedIn),
 			ds.Ref(expectedOut),
 		},
 		json: json,
+		header: &MantikFileHeader{
+			Kind:                &algoKind,
+			Name:                nil,
+			Version:             nil,
+			Account:             nil,
+			ParsedMetaVariables: nil,
+		},
 	}
 
 	assert.Equal(t,
@@ -79,7 +86,7 @@ type:
 	assert.NoError(t, err)
 	assert.Equal(t, "trainable", parsed.Kind())
 	casted := parsed.(*TrainableMantikfile)
-	assert.Equal(t, *casted.ParsedName, "kmeans")
+	assert.Equal(t, *casted.Name(), "kmeans")
 	assert.Equal(t, *casted.TrainingType,
 		ds.Ref(ds.FromJsonStringOrPanic(`{"columns":{"coordinates":{"type":"tensor","shape":[2],"componentType":"float64"}}}`)))
 	assert.Equal(t, *casted.StatType,
@@ -88,6 +95,7 @@ type:
 		ds.Ref(ds.FromJsonStringOrPanic(`{"columns":{"coordinates":{"type":"tensor","shape":[2],"componentType":"float64"}}}`)))
 	assert.Equal(t, casted.Type.Output,
 		ds.Ref(ds.FromJsonStringOrPanic(`{"columns":{"label":"int32"}}`)))
+	assert.Equal(t, "kmeans", *casted.header.NamedMantikId())
 }
 
 func TestDataSetMantikfile(t *testing.T) {
