@@ -1,6 +1,7 @@
 package ai.mantik.engine.server.services
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 
 import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.ds.DataType
@@ -193,9 +194,7 @@ private[engine] object Converters {
       internalUrl = deploymentInfo.internalUrl,
       externalUrl = RpcConversions.encodeOptionalString(deploymentInfo.externalUrl),
       timestamp = Some(
-        Timestamp.fromJavaProto( // RpcConversions doesn't know ScalaPB
-          RpcConversions.encodeInstant(deploymentInfo.timestamp)
-        )
+        encodeInstantToScalaProto(deploymentInfo.timestamp)
       )
     )
   }
@@ -205,9 +204,19 @@ private[engine] object Converters {
       name = deploymentInfo.name,
       internalUrl = deploymentInfo.internalUrl,
       externalUrl = RpcConversions.decodeOptionalString(deploymentInfo.externalUrl),
-      timestamp = RpcConversions.decodeInstant(Timestamp.toJavaProto(deploymentInfo.timestamp.getOrElse(
+      timestamp = decodeInstantFromScalaProto(deploymentInfo.timestamp.getOrElse(
         throw new IllegalArgumentException("Expected timestamp")
-      )))
+      ))
     )
+  }
+
+  def encodeInstantToScalaProto(i: Instant): Timestamp = {
+    Timestamp.fromJavaProto(
+      RpcConversions.encodeInstant(i)
+    )
+  }
+
+  def decodeInstantFromScalaProto(t: Timestamp): Instant = {
+    RpcConversions.decodeInstant(Timestamp.toJavaProto(t))
   }
 }

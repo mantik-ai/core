@@ -1,0 +1,75 @@
+syntax = "proto3";
+package ai.mantik.engine.protos;
+import "google/protobuf/timestamp.proto";
+import "mantik/engine/registry.proto";
+
+// Service for talking to a remote mantik service
+service RemoteRegistryService {
+
+    // Pulls an artifact from Remote registry
+    rpc PullArtifact(PullArtifactRequest) returns (PullArtifactResponse) {}
+
+    // Pushes an artifact to the remote registry
+    rpc PushArtifact(PushArtifactRequest) returns (PushArtifactResponse) {}
+
+    // Execute a login request
+    rpc Login(LoginRequest) returns (LoginResponse) {}
+}
+
+message PullArtifactRequest {
+    // Mantik Id to pull
+    string mantik_id = 1;
+    // The login token to. If not set, the default backend is used
+    LoginToken token = 2;
+}
+
+message PullArtifactResponse {
+    // The (main) artifact
+    MantikArtifact artifact = 1;
+    // The artifact hull
+    repeated MantikArtifact hull = 2;
+}
+
+message PushArtifactRequest {
+    // Mantik Id to push
+    string mantik_id = 1;
+    // The login token to. If not set, the default backend is used
+    LoginToken token = 2;
+}
+
+message PushArtifactResponse {
+    // The (main) artifact
+    MantikArtifact artifact = 1;
+    // The artifact hull
+    repeated MantikArtifact hull = 2;
+}
+
+message LoginRequest {
+    // Credentials to validate
+    // If empty, the default is validated
+    LoginCredentials credentials = 1;
+}
+
+message LoginResponse {
+    // the login token
+    LoginToken token = 1;
+    // until when the token is valid (optional)
+    google.protobuf.Timestamp valid_until = 2;
+}
+
+message LoginCredentials {
+    // URL of the server, if empty use the default of the engine
+    string url = 1;
+    // Username of the server
+    string username = 2;
+    // Password of the server
+    string password = 3;
+}
+
+message LoginToken {
+    // URL of the server to talk to
+    string url = 1;
+    // Token of the server to talk to
+    string token = 2;
+}
+

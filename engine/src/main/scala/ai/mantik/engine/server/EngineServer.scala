@@ -14,6 +14,8 @@ import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
 import ai.mantik.engine.protos.local_registry.LocalRegistryServiceGrpc
 import ai.mantik.engine.protos.local_registry.LocalRegistryServiceGrpc.LocalRegistryService
+import ai.mantik.engine.protos.remote_registry.RemoteRegistryServiceGrpc
+import ai.mantik.engine.protos.remote_registry.RemoteRegistryServiceGrpc.RemoteRegistryService
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionService
 import ai.mantik.executor.Executor
@@ -35,6 +37,7 @@ class EngineServer @Inject() (
     graphExecutorService: GraphExecutorService,
     debugService: DebugService,
     localRegistryService: LocalRegistryService,
+    remoteRegistryService: RemoteRegistryService,
     repositoryService: RepositoryService,
     fileRepositoryService: FileRepositoryService,
     executor: Executor
@@ -113,6 +116,7 @@ class EngineServer @Inject() (
       .addService(RepositoryServiceGrpc.bindService(repositoryService, executionContext))
       .addService(FileRepositoryServiceGrpc.bindService(fileRepositoryService, executionContext))
       .addService(LocalRegistryServiceGrpc.bindService(localRegistryService, executionContext))
+      .addService(RemoteRegistryServiceGrpc.bindService(remoteRegistryService, executionContext))
       .build()
   }
 

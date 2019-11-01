@@ -23,7 +23,7 @@ import scala.concurrent.duration.FiniteDuration
 @Singleton
 private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     localMantikRegistry: LocalMantikRegistry,
-    remoteMantikRegistry: RemoteMantikRegistry,
+    defaultRemoteRegistry: RemoteMantikRegistry,
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with MantikArtifactRetriever {
 
   private val dbLookupTimeout = config.getFiniteDuration("mantik.planner.dbLookupTimeout")
@@ -36,26 +36,35 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     _.parsedMantikfile.definition.referencedItems
   )
 
-  private val registryLoader = new ReferencingMantikArtifactLoader(
-    registryGet
-  )
-
   private val repositoryLoader = new ReferencingMantikArtifactLoader(localRepoGet)
 
   private def localRepoGet(mantikId: MantikId): Future[MantikArtifact] =
     FutureHelper.addTimeout(localMantikRegistry.get(mantikId), "Loading Mantikfile from local repository", dbLookupTimeout)
 
-  private def registryGet(mantikId: MantikId): Future[MantikArtifact] =
-    FutureHelper.addTimeout(remoteMantikRegistry.get(mantikId), "Loading Mantikfile from remote Registry", registryTimeout)
-
-  override def pull(id: MantikId): Future[MantikArtifactWithHull] = {
+  override def pull(id: MantikId, customLoginToken: Option[CustomLoginToken] = None): Future[MantikArtifactWithHull] = {
     logger.info(s"Pulling ${id}")
+    val remoteRegistry = wrapRemoteRegistry(customLoginToken)
+    val loader = new ReferencingMantikArtifactLoader(wrapRemoteGet(remoteRegistry))
+
     for {
-      items <- registryLoader.loadWithHull(id)
-      local <- pullRemoteItemsToLocal(items)
+      items <- loader.loadWithHull(id)
+      local <- pullRemoteItemsToLocal(remoteRegistry, items)
     } yield (
       (local.head -> local.tail)
     )
+  }
+
+  private def wrapRemoteGet(registry: MantikRegistry): MantikId => Future[MantikArtifact] = {
+    mantikId =>
+      FutureHelper.addTimeout(registry.get(mantikId), "Loading Mantikfile from remote Registry", registryTimeout)
+  }
+
+  private def wrapRemoteRegistry(customLoginToken: Option[CustomLoginToken]): MantikRegistry = {
+    customLoginToken.map { token =>
+      defaultRemoteRegistry.withCustomToken(token)
+    }.getOrElse {
+      defaultRemoteRegistry
+    }
   }
 
   override def get(id: MantikId): Future[MantikArtifactWithHull] = {
@@ -72,10 +81,11 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     }
   }
 
-  override def push(id: MantikId): Future[MantikArtifactWithHull] = {
+  override def push(id: MantikId, customLoginToken: Option[CustomLoginToken] = None): Future[MantikArtifactWithHull] = {
+    val remoteRegistry = wrapRemoteRegistry(customLoginToken)
     for {
       items <- repositoryLoader.loadWithHull(id)
-      remote <- pushLocalItemsToRemote(items)
+      remote <- pushLocalItemsToRemote(remoteRegistry, items)
     } yield {
       remote.head -> remote.tail
     }
@@ -119,15 +129,15 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     }
   }
 
-  private def pullRemoteItemsToLocal(remote: Seq[MantikArtifact]): Future[Seq[MantikArtifact]] = {
-    Future.sequence(remote.map(pullRemoteItemToLocal))
+  private def pullRemoteItemsToLocal(remoteRepo: MantikRegistry, remote: Seq[MantikArtifact]): Future[Seq[MantikArtifact]] = {
+    Future.sequence(remote.map(pullRemoteItemToLocal(remoteRepo, _)))
   }
 
-  private def pullRemoteItemToLocal(remote: MantikArtifact): Future[MantikArtifact] = {
+  private def pullRemoteItemToLocal(remoteRegistry: MantikRegistry, remote: MantikArtifact): Future[MantikArtifact] = {
     copyItem(
       "Pulling",
       remote,
-      remoteMantikRegistry,
+      remoteRegistry,
       localMantikRegistry,
       fileTransferTimeout,
       dbLookupTimeout
@@ -180,19 +190,19 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
    * Push multiple local items to remote.
    * Local must be ordered (dependencies last)
    */
-  private def pushLocalItemsToRemote(local: Seq[MantikArtifact]): Future[Seq[MantikArtifact]] = {
+  private def pushLocalItemsToRemote(remoteRegistry: MantikRegistry, local: Seq[MantikArtifact]): Future[Seq[MantikArtifact]] = {
     // Remote may check for dependencies
     val reversed = local.reverse
-    FutureHelper.afterEachOther(reversed)(pushLocalItemToRemote).map(_.reverse)
+    FutureHelper.afterEachOther(reversed)(pushLocalItemToRemote(remoteRegistry, _)).map(_.reverse)
   }
 
   /** Push a single local item to remote registry. */
-  private def pushLocalItemToRemote(local: MantikArtifact): Future[MantikArtifact] = {
+  private def pushLocalItemToRemote(remoteRegistry: MantikRegistry, local: MantikArtifact): Future[MantikArtifact] = {
     copyItem(
       "pushing",
       local,
       localMantikRegistry,
-      remoteMantikRegistry,
+      remoteRegistry,
       fileTransferTimeout,
       registryTimeout
     )

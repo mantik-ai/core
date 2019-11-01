@@ -306,8 +306,10 @@ lazy val planner = makeProject("planner")
       "org.xerial" % "sqlite-jdbc" % "3.18.0",
       "io.getquill" %% "quill-jdbc" % "3.2.0"
     ),
-    enableProtocolBuffer
+    enableProtocolBuffer,
+    configureBuildInfo("ai.mantik.planner.buildinfo")
   )
+  .enablePlugins(BuildInfoPlugin)
 
 
 lazy val examples = makeProject("examples")

@@ -22,6 +22,12 @@ type ItemArguments struct {
 	MantikId string
 }
 
+// Tag a single item
+type TagArguments struct {
+	MantikId    string
+	NewMantikId string
+}
+
 func ListItems(client *client.EngineClient, args *ItemsArguments) error {
 	req := engine.ListArtifactsRequest{
 		Deployed:  args.Deployed,
@@ -113,4 +119,18 @@ func formatOptionalString(s string) string {
 	} else {
 		return s
 	}
+}
+
+func TagItem(engineClient *client.EngineClient, debug bool, args *TagArguments) error {
+	response, err := engineClient.LocalRegistry.TagArtifact(context.Background(), &engine.TagArtifactRequest{
+		MantikId:         args.MantikId,
+		NewNamedMantikId: args.NewMantikId,
+	})
+	if err != nil {
+		return err
+	}
+	if debug {
+		fmt.Printf("Tagged %s to %s, resulting in change: %t", args.MantikId, args.NewMantikId, response.Changed)
+	}
+	return nil
 }

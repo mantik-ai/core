@@ -9,6 +9,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/urfave/cli v1.22.1
 	gl.ambrosys.de/mantik/go_shared v0.0.0
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	google.golang.org/grpc v1.23.1
 )
 

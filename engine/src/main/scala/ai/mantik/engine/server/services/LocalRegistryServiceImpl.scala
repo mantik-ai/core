@@ -28,6 +28,19 @@ class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegist
     }
   }
 
+  override def tagArtifact(request: TagArtifactRequest): Future[TagArtifactResponse] = {
+    handleErrors {
+      val mantikId = MantikId.fromString(request.mantikId)
+      val newNamedMantikId = NamedMantikId.fromString(request.newNamedMantikId)
+      for {
+        item <- localMantikRegistry.get(mantikId)
+        updated <- localMantikRegistry.ensureMantikId(item.itemId, newNamedMantikId)
+      } yield TagArtifactResponse(
+        changed = updated
+      )
+    }
+  }
+
   override def listArtifacts(request: ListArtifactsRequest): Future[ListArtifactResponse] = {
     handleErrors {
       localMantikRegistry.list(

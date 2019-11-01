@@ -48,6 +48,17 @@ func TestParseArguments_Item(t *testing.T) {
 	assert.Equal(t, MissingArgument, err)
 }
 
+func TestParseArguments_Tag(t *testing.T) {
+	args, err := ParseArguments([]string{"app", "tag", "old", "new"}, "")
+	assert.NoError(t, err)
+	assert.NotNil(t, args.Tag)
+	assert.Equal(t, "old", args.Tag.MantikId)
+	assert.Equal(t, "new", args.Tag.NewMantikId)
+
+	_, err = ParseArguments([]string{"app", "tag", "onlyOne"}, "")
+	assert.Equal(t, MissingArgument, err)
+}
+
 func TestParseArguments_Deploy(t *testing.T) {
 
 	args, err := ParseArguments([]string{"app", "deploy", "foobar", "--ingress", "ingress1", "--nameHint", "name1"}, "")
@@ -84,5 +95,42 @@ func TestParseArguments_Extract(t *testing.T) {
 
 	// Missing directory
 	_, err = ParseArguments([]string{"app", "extract", "mantikId"}, "")
+	assert.Error(t, err)
+}
+
+func TestParseLogin(t *testing.T) {
+	args, err := ParseArguments([]string{"app", "login", "--url", "http://foo", "-u", "user1", "-p", "password1"}, "")
+	assert.NoError(t, err)
+	assert.NotNil(t, args.Login)
+	assert.Equal(t, "http://foo", args.Login.Url)
+	assert.Equal(t, "user1", args.Login.Username)
+	assert.Equal(t, "password1", args.Login.Password)
+}
+
+func TestParseLogout(t *testing.T) {
+	args, err := ParseArguments([]string{"app", "logout"}, "")
+	assert.NoError(t, err)
+	assert.NotNil(t, args.Logout)
+}
+
+func TestParsePull(t *testing.T) {
+	args, err := ParseArguments([]string{"app", "pull", "item1"}, "")
+	assert.NoError(t, err)
+	assert.NotNil(t, args.Pull)
+	assert.Equal(t, "item1", args.Pull.MantikId)
+
+	// Missing id
+	_, err = ParseArguments([]string{"app", "pull"}, "")
+	assert.Error(t, err)
+}
+
+func TestParsePush(t *testing.T) {
+	args, err := ParseArguments([]string{"app", "push", "item1"}, "")
+	assert.NoError(t, err)
+	assert.NotNil(t, args.Push)
+	assert.Equal(t, "item1", args.Push.MantikId)
+
+	// Missing id
+	_, err = ParseArguments([]string{"app", "push"}, "")
 	assert.Error(t, err)
 }
