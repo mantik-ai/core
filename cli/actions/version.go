@@ -17,4 +17,13 @@ func PrintVersion(engineClient *client.EngineClient, args *VersionArguments, app
 	}
 	fmt.Println("Engine Version ", version.Version)
 	fmt.Println("Client Version ", appVersion)
+	state, err := readLoginState()
+	if err == nil {
+		fmt.Println("Logged in Remote Registry")
+		fmt.Printf("  URL  : %s\n", state.Url)
+		fmt.Printf("  Token: %s\n", state.Token)
+		if state.ValidUntil != nil {
+			fmt.Printf("  Till : %s\n", state.ValidUntil.String())
+		}
+	}
 }

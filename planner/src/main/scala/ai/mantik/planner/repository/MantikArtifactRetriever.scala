@@ -14,7 +14,7 @@ import scala.concurrent.Future
 trait MantikArtifactRetriever extends Component {
 
   /** Pull an Item from external Registry and put it into the local repository. */
-  def pull(id: MantikId): Future[MantikArtifactWithHull]
+  def pull(id: MantikId, customLoginToken: Option[CustomLoginToken] = None): Future[MantikArtifactWithHull]
 
   /** Tries to load an item from local repository, and if not available from a remote repository. */
   def get(id: MantikId): Future[MantikArtifactWithHull]
@@ -23,7 +23,7 @@ trait MantikArtifactRetriever extends Component {
   def getLocal(id: MantikId): Future[MantikArtifactWithHull]
 
   /** Pushes an Item from the local repository to the remote registry. */
-  def push(id: MantikId): Future[MantikArtifactWithHull]
+  def push(id: MantikId, customLoginToken: Option[CustomLoginToken] = None): Future[MantikArtifactWithHull]
 
   /** Add a local directory to the local repository. */
   def addLocalDirectoryToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact]

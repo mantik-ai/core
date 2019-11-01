@@ -6,7 +6,7 @@ import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
 import ai.mantik.ds.FundamentalType.{Int32, StringType}
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId}
-import ai.mantik.engine.protos.local_registry.{AddArtifactRequest, AddArtifactResponse, GetArtifactRequest, GetArtifactWithPayloadResponse, ListArtifactsRequest}
+import ai.mantik.engine.protos.local_registry.{AddArtifactRequest, AddArtifactResponse, GetArtifactRequest, GetArtifactWithPayloadResponse, ListArtifactsRequest, TagArtifactRequest}
 import ai.mantik.engine.testutil.TestBaseWithSessions
 import ai.mantik.planner.repository.{ContentTypes, DeploymentInfo, MantikArtifact}
 import akka.stream.scaladsl.Source
@@ -114,6 +114,25 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     )).artifacts.map(Converters.decodeMantikArtifact) should contain theSameElementsAs Seq(
       item2
     )
+  }
+
+  "tagArtifact" should "tag artifacts" in new Env {
+    val response = await(localRegistryServiceImpl.tagArtifact(
+      TagArtifactRequest(
+        item.itemId.toString,
+        "foobar"
+      )
+    ))
+    response.changed shouldBe true
+    await(localRepo.get(NamedMantikId("foobar"))).itemId shouldBe item.itemId
+
+    val response2 = await(localRegistryServiceImpl.tagArtifact(
+      TagArtifactRequest(
+        item.itemId.toString,
+        "foobar"
+      )
+    ))
+    response2.changed shouldBe false
   }
 
   "add" should "add elements without payload" in new EnvBase {

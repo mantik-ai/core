@@ -19,11 +19,12 @@ type ClientArguments struct {
 
 /** Wraps RPC Commands to Engine. */
 type EngineClient struct {
-	context       context.Context
-	con           *grpc.ClientConn
-	aboutService  engine.AboutServiceClient
-	LocalRegistry engine.LocalRegistryServiceClient
-	Items         *ItemManager
+	context        context.Context
+	con            *grpc.ClientConn
+	aboutService   engine.AboutServiceClient
+	LocalRegistry  engine.LocalRegistryServiceClient
+	RemoteRegistry engine.RemoteRegistryServiceClient
+	Items          *ItemManager
 }
 
 func MakeEngineClientInsecure(args *ClientArguments) (*EngineClient, error) {
@@ -41,6 +42,7 @@ func NewEngineClient(con *grpc.ClientConn) (*EngineClient, error) {
 		con,
 		engine.NewAboutServiceClient(con),
 		engine.NewLocalRegistryServiceClient(con),
+		engine.NewRemoteRegistryServiceClient(con),
 		newItemManager(con),
 	}, nil
 }

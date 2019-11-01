@@ -1,10 +1,16 @@
 package cmd
 
 import (
+	"bufio"
 	"cli/actions"
 	"cli/client"
 	"errors"
+	"fmt"
 	"github.com/urfave/cli"
+	"golang.org/x/crypto/ssh/terminal"
+	"os"
+	"strings"
+	"syscall"
 )
 
 type Arguments struct {
@@ -14,9 +20,14 @@ type Arguments struct {
 	Version *actions.VersionArguments
 	Items   *actions.ItemsArguments
 	Item    *actions.ItemArguments
+	Tag     *actions.TagArguments
 	Deploy  *actions.DeployArguments
 	Add     *actions.AddArguments
 	Extract *actions.ExtractArguments
+	Login   *actions.LoginArguments
+	Logout  *actions.LogoutArguments
+	Pull    *actions.PullArguments
+	Push    *actions.PushArguments
 
 	// If true, give more debug information
 	Debug bool
@@ -83,6 +94,20 @@ func ParseArguments(argv []string, appVersion string) (*Arguments, error) {
 			},
 		},
 		{
+			Name:      "tag",
+			Usage:     "Tag an item with a new name",
+			ArgsUsage: "<MantikId> <NewMantikId>",
+			Action: func(c *cli.Context) error {
+				if c.NArg() < 2 {
+					return MissingArgument
+				}
+				args.Tag = &actions.TagArguments{}
+				args.Tag.MantikId = c.Args().Get(0)
+				args.Tag.NewMantikId = c.Args().Get(1)
+				return nil
+			},
+		},
+		{
 			Name:  "deploy",
 			Usage: "Deploy Mantik Item",
 			Flags: []cli.Flag{
@@ -136,6 +161,76 @@ func ParseArguments(argv []string, appVersion string) (*Arguments, error) {
 				}
 				args.Extract.Directory = c.String("o")
 				args.Extract.MantikId = c.Args().First()
+				return nil
+			},
+		},
+		{
+			Name:  "login",
+			Usage: "Login into a remote registry",
+			Flags: []cli.Flag{
+				cli.StringFlag{Name: "url", Usage: "URL of the Service"},
+				cli.StringFlag{Name: "user,u", Usage: "Username"},
+				cli.StringFlag{Name: "password,p", Usage: "Password"},
+			},
+			Action: func(c *cli.Context) error {
+				args.Login = &actions.LoginArguments{}
+				reader := bufio.NewReader(os.Stdin)
+				if !c.IsSet("user") {
+					fmt.Printf("Username: ")
+					user, err := reader.ReadString('\n')
+					if err != nil {
+						return err
+					}
+					args.Login.Username = strings.TrimSpace(user)
+				} else {
+					args.Login.Username = c.String("user")
+				}
+				if !c.IsSet("password") {
+					fmt.Printf("Password: ")
+					password, err := terminal.ReadPassword(int(syscall.Stdin))
+					if err != nil {
+						return err
+					}
+					fmt.Printf("\n")
+					args.Login.Password = string(password)
+				} else {
+					args.Login.Password = c.String("password")
+				}
+				args.Login.Url = c.String("url")
+				return nil
+			},
+		},
+		{
+			Name:  "logout",
+			Usage: "Logout of current logged in account",
+			Action: func(c *cli.Context) error {
+				args.Logout = &actions.LogoutArguments{}
+				return nil
+			},
+		},
+		{
+			Name:      "pull",
+			Usage:     "Pull a Mantik Item from a remote registry",
+			ArgsUsage: "<mantikId",
+			Action: func(c *cli.Context) error {
+				if c.NArg() < 1 {
+					return MissingArgument
+				}
+				args.Pull = &actions.PullArguments{}
+				args.Pull.MantikId = c.Args().First()
+				return nil
+			},
+		},
+		{
+			Name:      "push",
+			Usage:     "Push a Mantik Item to a remote registry",
+			ArgsUsage: "<mantikId",
+			Action: func(c *cli.Context) error {
+				if c.NArg() < 1 {
+					return MissingArgument
+				}
+				args.Push = &actions.PushArguments{}
+				args.Push.MantikId = c.Args().First()
 				return nil
 			},
 		},

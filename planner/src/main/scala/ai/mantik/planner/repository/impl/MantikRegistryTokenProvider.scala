@@ -5,6 +5,7 @@ import java.time.Instant
 import ai.mantik.componently.utils.SecretReader
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.registry.api._
+import ai.mantik.planner.buildinfo.BuildInfo
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 
 import scala.concurrent.Future
@@ -19,8 +20,6 @@ class MantikRegistryTokenProvider(
     implicit
     akkaRuntime: AkkaRuntime
 ) extends ComponentBase with FailFastCirceSupport {
-
-  private val Requester = "MantikCore" // TODO: Add BuildInfo
 
   // Used by ensureToken
   private object tokenLock
@@ -61,7 +60,7 @@ class MantikRegistryTokenProvider(
   }
 
   private def updateTokenExecute(): Future[String] = {
-    val loginRequest = ApiLoginRequest(user, password.read(), Requester)
+    val loginRequest = ApiLoginRequest(user, password.read(), MantikRegistryTokenProvider.Requester)
     val loginResponse = registryApi.login(loginRequest)
 
     loginResponse.onComplete {
@@ -82,4 +81,9 @@ class MantikRegistryTokenProvider(
 
     loginResponse.map(_.token)
   }
+}
+
+object MantikRegistryTokenProvider {
+  /** Request identification which is sent to the remote registry. */
+  val Requester = s"MantikEngine ${BuildInfo.gitVersion}"
 }

@@ -14,7 +14,4 @@ object Errors {
 
   /** Something is wrong in the configuration. */
   class ConfigException(msg: String) extends RepositoryError(msg)
-
-  /** Error talking to Registry */
-  class RegistryException(msg: String, cause: Throwable = null) extends RepositoryError(msg, cause)
 }

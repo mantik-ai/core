@@ -9,6 +9,9 @@ service LocalRegistryService {
     // Returns a single artifact.
     rpc GetArtifact(GetArtifactRequest) returns (GetArtifactResponse) {};
 
+    // Tag a single artifact
+    rpc TagArtifact(TagArtifactRequest) returns (TagArtifactResponse) {};
+
     // List artifacts
     rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactResponse) {}
 
@@ -28,6 +31,17 @@ message GetArtifactResponse {
     // The artifact
     MantikArtifact artifact = 1;
 }
+
+message TagArtifactRequest {
+    string mantik_id = 1;
+    string new_named_mantik_id = 2;
+}
+
+message TagArtifactResponse {
+    // true if there was a change
+    bool changed = 1;
+}
+
 
 message ListArtifactsRequest {
     // if true, only list deployed

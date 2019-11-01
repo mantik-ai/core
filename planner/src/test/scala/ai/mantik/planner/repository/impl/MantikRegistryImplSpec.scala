@@ -1,8 +1,8 @@
 package ai.mantik.planner.repository.impl
 
 import ai.mantik.ds.FundamentalType
-import ai.mantik.elements.{ DataSetDefinition, ItemId, NamedMantikId, Mantikfile }
-import ai.mantik.elements.registry.api.{ ApiFileUploadResponse, ApiLoginResponse, ApiPrepareUploadResponse, MantikRegistryApi, MantikRegistryApiCalls }
+import ai.mantik.elements.{ DataSetDefinition, ItemId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.registry.api.{ ApiFileUploadResponse, ApiLoginRequest, ApiLoginResponse, ApiPrepareUploadResponse, MantikRegistryApi, MantikRegistryApiCalls }
 import ai.mantik.planner.repository.{ ContentTypes, MantikArtifact }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
 import ai.mantik.testutils.TestBase
@@ -12,6 +12,7 @@ import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 import net.reactivecore.fhttp.akka.{ ApiServer, ApiServerRoute }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.PathMatcher
+import scala.language.reflectiveCalls
 
 import scala.concurrent.Future
 
@@ -25,6 +26,8 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
 
   trait Env {
     val apiRoute = new ApiServerRoute {
+      var gotLogin: ApiLoginRequest = _
+
       bind(MantikRegistryApiCalls.uploadFile).to {
         case (token, itemId, contentType, content) =>
           Future.successful(
@@ -38,6 +41,7 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
       }
 
       bind(MantikRegistryApiCalls.login).to { request =>
+        gotLogin = request
         Future.successful(Right(ApiLoginResponse("Token1234", None)))
       }
     }
@@ -76,5 +80,25 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
       ), payload = Some(ContentTypes.ZipFileContentType -> emptyData)
     ))
     response.fileId shouldBe Some("file1")
+  }
+
+  it should "do a custom login" in new Env {
+    val response = await(client.login(
+      s"http://localhost:${dummyPort}",
+      "username1",
+      "password1"
+    ))
+    apiRoute.gotLogin.name shouldBe "username1"
+    apiRoute.gotLogin.password shouldBe "password1"
+    response.token shouldBe "Token1234"
+    response.validUntil shouldBe empty
+
+    intercept[RuntimeException] {
+      await(client.login(
+        s"http://localhost:100", // unused port
+        "username1",
+        "password1"
+      ))
+    }
   }
 }

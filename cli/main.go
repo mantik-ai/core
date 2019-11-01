@@ -37,6 +37,9 @@ func main() {
 	if args.Item != nil {
 		err = actions.ShowItem(engineClient, args.Item)
 	}
+	if args.Tag != nil {
+		err = actions.TagItem(engineClient, args.Debug, args.Tag)
+	}
 	if args.Deploy != nil {
 		err = actions.Deploy(engineClient, args.Deploy)
 	}
@@ -45,6 +48,18 @@ func main() {
 	}
 	if args.Extract != nil {
 		err = actions.ExtractItem(engineClient, args.Debug, args.Extract)
+	}
+	if args.Login != nil {
+		err = actions.Login(engineClient, args.Login)
+	}
+	if args.Logout != nil {
+		err = actions.Logout(engineClient, args.Logout)
+	}
+	if args.Pull != nil {
+		err = actions.PullItem(engineClient, args.Debug, args.Pull)
+	}
+	if args.Push != nil {
+		err = actions.PushItem(engineClient, args.Debug, args.Push)
 	}
 
 	if err != nil {
