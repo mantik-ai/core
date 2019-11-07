@@ -1,7 +1,7 @@
 package ai.mantik.planner.repository
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.errors.InvalidLoginException
+import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.registry.api.ApiLoginResponse
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
@@ -37,9 +37,9 @@ object RemoteMantikRegistry {
 
   /** Returns an empty no-op registry. */
   def empty(implicit akkaRuntime: AkkaRuntime): RemoteMantikRegistry = new ComponentBase with RemoteMantikRegistry {
-    private val NotFound = Future.failed(new Errors.NotFoundException("Empty Registry"))
+    private val NotFound = Future.failed(ErrorCodes.MantikItemNotFound.toException("Empty Registry"))
 
-    private val InvalidLogin = Future.failed(new InvalidLoginException("Empty Registry"))
+    private val InvalidLogin = Future.failed(ErrorCodes.RemoteRegistryFailure.toException("Empty Registry"))
 
     override def get(mantikId: MantikId): Future[MantikArtifact] = NotFound
 

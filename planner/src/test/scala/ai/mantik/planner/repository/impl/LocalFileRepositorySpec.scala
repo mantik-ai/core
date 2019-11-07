@@ -1,6 +1,7 @@
 package ai.mantik.planner.repository.impl
 
-import ai.mantik.planner.repository.{ ContentTypes, Errors }
+import ai.mantik.elements.errors.MantikException
+import ai.mantik.planner.repository.{ ContentTypes, FileRepository }
 
 import scala.concurrent.duration._
 
@@ -43,9 +44,9 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
 
     clock.setTimeOffset(repo.cleanupTimeout.plus(1.seconds))
     repo.removeTimeoutedFiles()
-    intercept[Errors.NotFoundException] {
+    intercept[MantikException] {
       repo.getFileContentSync(storeResult.fileId)
-    }
+    }.code.isA(FileRepository.NotFoundCode) shouldBe true
   }
 
   it should "automatically clean up files without content" in new Env {
@@ -59,9 +60,9 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
     repo.removeTimeoutedFiles()
     repo.listFiles().toSet should not(contain(storeResult.fileId))
 
-    intercept[Errors.NotFoundException] {
+    intercept[MantikException] {
       await(repo.storeFile(storeResult.fileId, "somecontenttype"))
-    }
+    }.code.isA(FileRepository.NotFoundCode) shouldBe true
   }
 
   it should "not remove non-temporary files" in new Env {

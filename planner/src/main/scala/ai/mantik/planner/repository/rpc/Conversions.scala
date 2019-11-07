@@ -3,12 +3,11 @@ package ai.mantik.planner.repository.rpc
 import java.time.Instant
 
 import ai.mantik.componently.rpc.RpcConversions
-import ai.mantik.ds.helper.circe.CirceJson
+import ai.mantik.elements.errors.{ MantikException, MantikRemoteException }
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
-import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact }
+import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact }
 import ai.mantik.planner.repository.protos.types.{ MantikArtifact => ProtoMantikArtifact }
 import ai.mantik.planner.repository.protos.types.{ DeploymentInfo => ProtoDeploymentInfo }
-import ai.mantik.componently.utils.EitherExtensions._
 import io.grpc.Status.Code
 import io.grpc.{ Status, StatusRuntimeException }
 
@@ -79,10 +78,8 @@ private[rpc] object Conversions {
   }
 
   val encodeErrors: PartialFunction[Throwable, Throwable] = {
-    case e: Errors.NotFoundException =>
-      RpcConversions.encodeError(e, Code.NOT_FOUND)
-    case e: Errors.ConflictException =>
-      RpcConversions.encodeError(e, Code.FAILED_PRECONDITION)
+    case e: MantikException =>
+      e.toGrpc
   }
 
   def encodeErrorIfPossible(e: Throwable): Throwable = {
@@ -101,11 +98,8 @@ private[rpc] object Conversions {
   }
 
   val decodeErrors: PartialFunction[Throwable, Throwable] = {
-    case e: StatusRuntimeException if e.getStatus.getCode == Code.NOT_FOUND =>
-      new Errors.NotFoundException(e.getStatus.getDescription)
-    case e: StatusRuntimeException if e.getStatus.getCode == Code.FAILED_PRECONDITION =>
-      // TODO: This is hack
-      new Errors.ConflictException(e.getStatus.getDescription)
+    case e: StatusRuntimeException =>
+      MantikRemoteException.fromGrpc(e)
   }
 
   def decodeErrorsIn[T](f: => Future[T])(implicit ec: ExecutionContext): Future[T] = {

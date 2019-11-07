@@ -3,13 +3,13 @@ package ai.mantik.engine.integration
 import java.io.File
 
 import ai.mantik.ds.element.Bundle
+import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
 import ai.mantik.engine.protos.ds.{ BundleEncoding, DataType }
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, GetRequest, LiteralRequest }
 import ai.mantik.engine.protos.graph_executor.FetchItemRequest
 import ai.mantik.engine.protos.local_registry.ListArtifactsRequest
 import ai.mantik.engine.protos.sessions.CreateSessionRequest
 import ai.mantik.engine.server.services.Converters
-import ai.mantik.planner.repository.Errors
 import ai.mantik.testutils.tags.IntegrationTest
 import com.google.protobuf.empty.Empty
 
@@ -61,9 +61,9 @@ class HelloWorldSpec extends IntegrationTestBase {
 
   it should "give access to a context" in {
     val context = engineClient.createContext()
-    intercept[Errors.NotFoundException] {
+    intercept[MantikException] {
       await(context.localRegistry.get("Not-existing"))
-    }
+    }.code.isA(ErrorCodes.MantikItemNotFound)
   }
 
   it should "provide access to local registry" in {

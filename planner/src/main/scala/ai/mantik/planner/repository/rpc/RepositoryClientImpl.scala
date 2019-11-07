@@ -4,7 +4,7 @@ import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.protos.repository.{ EnsureMantikIdRequest, GetItemRequest, ListRequest, RemoveRequest, SetDeploymentInfoRequest, StoreRequest }
-import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
+import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
 import io.grpc.Status.Code
 import io.grpc.{ Status, StatusRuntimeException }

@@ -6,14 +6,15 @@ import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.FundamentalType.StringType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId }
+import ai.mantik.elements.errors.ErrorCodes
+import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId}
 import ai.mantik.planner.repository
-import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
-import ai.mantik.planner.util.TestBaseWithAkkaRuntime
+import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact, Repository}
+import ai.mantik.planner.util.{ErrorCodeTestUtils, TestBaseWithAkkaRuntime}
 import ai.mantik.testutils.FakeClock
 
 /** Common tests for repositories. */
-abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
+abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCodeTestUtils {
 
   type RepoType <: Repository
 
@@ -85,10 +86,10 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
 
   it should "store and retrieve artifacts" in {
     withRepo { repo =>
-      intercept[Errors.NotFoundException] {
+      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
         await(repo.get(artifact1.namedId.get))
       }
-      intercept[Errors.NotFoundException] {
+      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
         await(repo.get(artifact1.itemId))
       }
 
@@ -96,7 +97,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       val back = await(repo.get(artifact1.namedId.get))
       back shouldBe artifact1
 
-      intercept[Errors.NotFoundException] {
+      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
         await(repo.get(artifact2.namedId.get))
       }
 
@@ -135,7 +136,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       val back3 = await(repo.get(newName))
       back3.itemId shouldBe artifact2.itemId
 
-      intercept[Errors.NotFoundException] {
+      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
         await(repo.ensureMantikId(ItemId.generate(), "new_name"))
       }
     }
@@ -204,7 +205,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
           )
         ).toJson,
       )
-      intercept[Errors.ConflictException] {
+      interceptErrorCode(ErrorCodes.MantikItemConflict) {
         await(repo.store(updated))
       }
     }
@@ -218,7 +219,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
       await(repo.remove("someId")) shouldBe false
 
       await(repo.remove(artifact1.namedId.get)) shouldBe true
-      intercept[Errors.NotFoundException] {
+      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
         await(repo.get(artifact1.namedId.get))
       }
       withClue("Other names/versions should still exists") {
@@ -244,7 +245,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
         deploymentInfo = Some(deploymentInfo1)
       )
       await(repo.store(rawItemWithDeployment))
-      intercept[Errors.ConflictException] {
+      interceptErrorCode(ErrorCodes.MantikItemConflict) {
         await(repo.remove(rawItemWithDeployment.itemId))
       }
       await(repo.get(rawItemWithDeployment.itemId)) shouldBe rawItemWithDeployment
@@ -254,7 +255,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime {
   it should "deny removing the bare element if there is a name on it" in {
     withRepo { repo =>
       await(repo.store(artifact1))
-      intercept[Errors.ConflictException] {
+      interceptErrorCode(ErrorCodes.MantikItemConflict) {
         await(repo.remove(artifact1.itemId))
       }
       await(repo.get(artifact1.namedId.get)) shouldBe artifact1

@@ -1,5 +1,6 @@
 package ai.mantik.engine.session
 
+import ai.mantik.elements.errors.MantikException
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 
 class SessionManagerSpec extends TestBase with AkkaSupport {
@@ -23,9 +24,9 @@ class SessionManagerSpec extends TestBase with AkkaSupport {
     session.isShutdown shouldBe false
     await(manager.close(session.id))
     session.isShutdown shouldBe true
-    intercept[SessionNotFoundException] {
+    intercept[MantikException] {
       await(manager.get(session.id))
-    }
+    }.code.isA(EngineErrors.SessionNotFound) shouldBe true
 
     session3.isShutdown shouldBe false
   }

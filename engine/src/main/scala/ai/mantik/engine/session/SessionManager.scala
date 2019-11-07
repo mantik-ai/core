@@ -59,7 +59,7 @@ class SessionManagerBase[S <: SessionBase](sessionFactory: String => S)(implicit
       case Some(session) =>
         Future.successful(session)
       case None =>
-        Future.failed(new SessionNotFoundException(id))
+        Future.failed(EngineErrors.SessionNotFound.toException(id))
     }
 
   }

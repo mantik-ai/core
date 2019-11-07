@@ -2,8 +2,7 @@ package ai.mantik.engine.server.services
 
 import ai.mantik.componently.ComponentBase
 import ai.mantik.componently.rpc.RpcConversions
-import ai.mantik.elements.errors.InvalidMantikfileException
-import ai.mantik.planner.repository.Errors
+import ai.mantik.elements.errors.{ InvalidMantikfileException, MantikException }
 import com.typesafe.scalalogging.Logger
 import io.grpc.Status.Code
 
@@ -41,10 +40,8 @@ private[services] trait RpcServiceBase {
 
   /** The place to add more error handlers. */
   protected val translateError: PartialFunction[Throwable, Throwable] = {
-    case e: Errors.NotFoundException =>
-      RpcConversions.encodeError(e, Code.NOT_FOUND)
-    case e: InvalidMantikfileException =>
-      RpcConversions.encodeError(e, Code.INVALID_ARGUMENT)
+    case e: MantikException =>
+      e.toGrpc
   }
 
   /** Encode the error if there is a translation. */

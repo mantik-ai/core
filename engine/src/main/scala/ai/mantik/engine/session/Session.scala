@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 import ai.mantik.planner.{ CoreComponents, MantikItem, PlanExecutor, Planner }
+import javax.net.ssl.SSLEngineResult
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -60,9 +61,10 @@ class Session(
   /** Returns a mantik item of given type or fail. */
   def getItemAs[T <: MantikItem: ClassTag](id: String): T = {
     getItem(id) match {
-      case Some(item: T)   => item
-      case Some(otherItem) => throw new ItemWrongTypeException(id, implicitly[ClassTag[T]].runtimeClass, otherItem)
-      case None            => throw new ItemNotFoundException(id)
+      case Some(item: T) => item
+      case Some(otherItem) => EngineErrors.ItemUnexpectedType.throwIt(
+        s"Expected ${implicitly[ClassTag[T]].getClass.getSimpleName}, got ${otherItem.getClass.getSimpleName}")
+      case None => EngineErrors.ItemNotFoundInSession.throwIt("Item not found ${id}")
     }
   }
 

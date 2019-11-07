@@ -1,7 +1,7 @@
 package ai.mantik.elements.errors
 
 /** Invalid Mantikfile. */
-class InvalidMantikfileException(msg: String, cause: Throwable = null) extends MantikException(msg, cause)
+class InvalidMantikfileException(msg: String, cause: Throwable = null) extends MantikException(ErrorCodes.InvalidMantikfile, msg, cause)
 
 object InvalidMantikfileException {
   /** Wrap an exception into an InvalidMantikfileException. */

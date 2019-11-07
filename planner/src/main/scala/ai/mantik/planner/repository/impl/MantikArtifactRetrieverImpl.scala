@@ -7,6 +7,7 @@ import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.ds.helper.ZipUtils
+import ai.mantik.elements.errors.{ErrorCodes, MantikException}
 import ai.mantik.elements.{ItemId, MantikId, Mantikfile, NamedMantikId}
 import ai.mantik.planner.impl.ReferencingItemLoader
 import ai.mantik.planner.repository._
@@ -69,7 +70,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
 
   override def get(id: MantikId): Future[MantikArtifactWithHull] = {
     getLocal(id).recoverWith {
-      case n: Errors.NotFoundException =>
+      case n: MantikException if n.code.isA(ErrorCodes.MantikItemNotFound) =>
         logger.info(s"${id} not available locally, pulling...")
         pull(id)
     }

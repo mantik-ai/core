@@ -1,5 +1,6 @@
 package ai.mantik.elements.registry.api
 
+import ai.mantik.elements.errors.{ ErrorCode, MantikException, MantikRemoteException, RemoteRegistryException }
 import ai.mantik.elements.{ MantikId, NamedMantikId }
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, Uri }
 import akka.stream.Materializer
@@ -17,8 +18,9 @@ class MantikRegistryApi(rootUri: Uri, executor: ApiClient.RequestExecutor)(impli
   private def orFail[A, T](in: A => Future[Either[(Int, ApiErrorResponse), T]]): A => Future[T] = {
     arg =>
       in(arg).flatMap {
-        case Left((code, failure)) => Future.failed(MantikRegistryApi.WrappedError(failure))
-        case Right(in)             => Future.successful(in)
+        case Left((httpCode, failure)) =>
+          Future.failed(new RemoteRegistryException(httpCode, failure.code, failure.message.getOrElse("")))
+        case Right(in) => Future.successful(in)
       }
   }
 
@@ -46,10 +48,4 @@ class MantikRegistryApi(rootUri: Uri, executor: ApiClient.RequestExecutor)(impli
 
   /** Uploads the payload of an artifact. */
   val uploadFile: ((String, String, String, Source[ByteString, _])) => Future[ApiFileUploadResponse] = orFail(apiClient.prepare(MantikRegistryApiCalls.uploadFile))
-}
-
-object MantikRegistryApi {
-
-  // A Wrapped error from the API
-  case class WrappedError(apiErrorResponse: ApiErrorResponse) extends RuntimeException(apiErrorResponse.code + " " + apiErrorResponse.message.getOrElse(""))
 }

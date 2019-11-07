@@ -3,7 +3,7 @@ package ai.mantik.planner.utils.sqlite
 import java.nio.file.{ Files, Path }
 import java.util.Properties
 
-import ai.mantik.planner.repository.Errors
+import ai.mantik.elements.errors.ErrorCodes
 import com.zaxxer.hikari.{ HikariConfig, HikariDataSource }
 import io.getquill.{ SnakeCase, SqliteJdbcContext }
 
@@ -29,7 +29,7 @@ class QuillSqlite(dbFile: Path) {
       parentDirectory.foreach(Files.createDirectories(_))
     } catch {
       case e: Exception =>
-        throw new Errors.RepositoryError("Could not create directory", e)
+        ErrorCodes.InternalError.throwIt("Could not create directory", e)
     }
     val dataSource = createDataSource()
     new SqliteJdbcContext(SnakeCase, dataSource)

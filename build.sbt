@@ -170,6 +170,7 @@ lazy val elements = makeProject("elements")
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-yaml" % "0.8.0",
       "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
+      "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
     ),
     publishSettings
   )

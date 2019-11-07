@@ -5,7 +5,7 @@ import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_executor.{ DeployItemRequest, DeployItemResponse, FetchItemRequest, FetchItemResponse, SaveItemRequest, SaveItemResponse }
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
-import ai.mantik.engine.session.{ ItemNotFoundException, ItemWrongTypeException, Session, SessionManager }
+import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
 import ai.mantik.planner.{ ApplicableMantikItem, DataSet }
 import akka.stream.Materializer
 import javax.inject.Inject
@@ -33,7 +33,7 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
     for {
       session <- sessionManager.get(request.sessionId)
       item = session.getItem(request.itemId).getOrElse {
-        throw new ItemNotFoundException(request.itemId)
+        EngineErrors.ItemNotFoundInSession.throwIt(request.itemId)
       }
       mantikId = RpcConversions.decodeOptionalString(request.name).map(NamedMantikId.fromString)
       perhapsTagged = mantikId.map(item.tag).getOrElse(item)

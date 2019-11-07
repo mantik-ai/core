@@ -5,9 +5,10 @@ import java.nio.file.{ Files, Path }
 import java.sql.Timestamp
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
 import ai.mantik.planner.repository.impl.LocalRepository.DirectoryConfigKey
-import ai.mantik.planner.repository.{ DeploymentInfo, Errors, MantikArtifact, Repository }
+import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository }
 import ai.mantik.planner.repository.impl.LocalRepositoryDb._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -54,7 +55,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       }
 
       maybeItem match {
-        case None => throw new Errors.NotFoundException(s"Artifact with id ${id} not found")
+        case None => ErrorCodes.MantikItemNotFound.throwIt(s"Artifact with id ${id} not found")
         case Some(item) =>
           decodeDbArtifact(item)
       }
@@ -101,7 +102,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
           )
         } catch {
           case s: SQLiteException if s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY =>
-            throw new Errors.ConflictException("Items may not be overwritten with the same itemId")
+            ErrorCodes.MantikItemConflict.throwIt("Items may not be overwritten with the same itemId")
         }
 
         namedId.foreach { mantikId =>
@@ -131,7 +132,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
 
     // The database would also tell us, but DB Exceptions are hard to debug.
     if (!existingItem) {
-      throw new Errors.NotFoundException(s"Item ${itemId} doesn't exist")
+      ErrorCodes.MantikItemNotFound.throwIt(s"Item ${itemId} doesn't exist")
     }
 
     val exists = run {
@@ -225,13 +226,13 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
               db.names.filter(_.currentItemId == lift(i.toString))
             }
             if (existingNames.nonEmpty) {
-              throw new Errors.ConflictException("There are existing names for this item")
+              ErrorCodes.MantikItemConflict.throwIt("There are existing names for this item")
             }
             val existingDeployments = run {
               db.deployments.filter(_.itemId == lift(i.toString))
             }
             if (existingDeployments.nonEmpty) {
-              throw new Errors.ConflictException("There are existing deployments for this item")
+              ErrorCodes.MantikItemConflict.throwIt("There are existing deployments for this item")
             }
             run {
               db.items.filter { n =>
@@ -250,7 +251,6 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
 
   /**
    * Convert a DB Artifact to a artifact
-   * @throws Errors.RepositoryError on illegal mantikfiles.
    */
   private def decodeDbArtifact(dbArtifact: DbArtifact): MantikArtifact = {
     MantikArtifact(
@@ -293,7 +293,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
     Future(f).andThen {
       case Success(_) =>
         logger.debug(s"Executed ${name}")
-      case Failure(e: Errors.RepositoryError) => // ok, handled
+      case Failure(e: MantikException) => // ok, handled
       case Failure(e) =>
         logger.error(s"Unhandled database error in $name", e)
     }

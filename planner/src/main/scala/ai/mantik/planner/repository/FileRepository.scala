@@ -1,8 +1,10 @@
 package ai.mantik.planner.repository
 
 import ai.mantik.componently.Component
+import ai.mantik.elements.errors.{ ErrorCode, ErrorCodes, MantikException }
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
+import io.grpc.Status.Code
 
 import scala.concurrent.Future
 
@@ -32,6 +34,12 @@ private[mantik] trait FileRepository extends Component {
 }
 
 object FileRepository {
+
+  /** A File was not found. */
+  val NotFoundCode = ErrorCodes.RootCode.derive(
+    "NotFound",
+    grpcCode = Some(Code.NOT_FOUND)
+  )
 
   /** Result of file storage request. */
   case class FileStorageResult(
