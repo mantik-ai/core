@@ -4,7 +4,7 @@ import java.net.{ Inet4Address, InetAddress, NetworkInterface }
 
 import ai.mantik.componently.utils.HostPort
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.planner.ClientConfig
+import ai.mantik.elements.errors.MantikException
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ HttpEntity, MediaType, MediaTypes }
 import akka.http.scaladsl.server.Directives._
@@ -47,8 +47,8 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
             req.entity.dataBytes.runWith(sink)
           }
           onComplete(result) {
-            case Success(_)                           => complete(200, "")
-            case Failure(e: Errors.NotFoundException) => complete(404, "File not found")
+            case Success(_) => complete(200, "")
+            case Failure(e: MantikException) if e.code == FileRepository.NotFoundCode => complete(404, "File not found")
             case Failure(other) =>
               logger.error("Error on adding file", other)
               complete(500, "Internal server error")
@@ -62,7 +62,7 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
               complete(
                 HttpEntity(mediaType, fileSource)
               )
-            case Failure(e: Errors.NotFoundException) =>
+            case Failure(e: MantikException) if e.code == FileRepository.NotFoundCode =>
               logger.warn(s"File ${id} not found (http requested)")
               complete(404, "File not found")
             case Failure(other) =>

@@ -9,8 +9,7 @@ import java.util.UUID
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.helper.circe.CirceJson
-import ai.mantik.planner.repository.{ Errors, FileRepository }
-import ai.mantik.planner.repository.Errors.RepositoryError
+import ai.mantik.planner.repository.FileRepository
 import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.planner.repository.impl.LocalFileRepository.FileMetaData
 import akka.stream.scaladsl.{ FileIO, Sink, Source }
@@ -25,6 +24,7 @@ import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
+import ai.mantik.elements.errors.ConfigurationException
 
 /**
  * A FileRepository which is using a local file system for storing files.
@@ -58,7 +58,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       Files.createDirectories(directory)
     } catch {
       case e: Exception =>
-        throw new RepositoryError("Could not create directory for local file repository. Check configuration.", e)
+        throw new ConfigurationException("Could not create directory for local file repository. Check configuration.", e)
     }
   }
 
@@ -101,7 +101,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       val fileExits = fileName(id).toFile.isFile()
       if (!optimistic && !fileExits) {
         logger.warn(s"File ${id} is not existing and request is not optimistic")
-        throw new Errors.NotFoundException(s"File ${id} is not yet written")
+        FileRepository.NotFoundCode.throwIt(s"File ${id} is not yet written")
       }
       FileGetResult(
         id, fileMeta.temporary, FileRepository.makePath(id), fileMeta.contentType
@@ -134,10 +134,10 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       val meta = loadMeta(id)
       val exists = Files.isRegularFile(name)
       if (!exists) {
-        throw new Errors.NotFoundException(s"File ${id} doesn't exist")
+        FileRepository.NotFoundCode.throwIt(s"File ${id} doesn't exist")
       }
       val contentType = meta.contentType.getOrElse {
-        throw new Errors.NotFoundException(s"FIle ${id} has no content type")
+        FileRepository.NotFoundCode.throwIt(s"FIle ${id} has no content type")
       }
       contentType -> FileIO.fromPath(name)
     }
@@ -151,7 +151,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       val toMeta = loadMeta(to)
       val exists = Files.isRegularFile(fromName)
       if (!exists) {
-        throw new Errors.NotFoundException(s"File ${from} doesn't exist")
+        FileRepository.NotFoundCode.throwIt(s"File ${from} doesn't exist")
       }
       Files.copy(fromName, toName)
       val newMeta = toMeta.copy(
@@ -187,7 +187,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     } catch {
       case e: FileNotFoundException =>
         logger.debug(s"File ${id} not found when loading meta data")
-        throw new Errors.NotFoundException(s"File with id ${id} not found")
+        FileRepository.NotFoundCode.throwIt(s"File with id ${id} not found")
     }
     val parsed = parser.parse(metaJson).flatMap(_.as[FileMetaData]) match {
       case Left(error) => throw new RuntimeException("Could not parse Metadata", error)

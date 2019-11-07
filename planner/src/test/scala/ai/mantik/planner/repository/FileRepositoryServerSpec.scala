@@ -1,5 +1,6 @@
 package ai.mantik.planner.repository
 
+import ai.mantik.elements.errors.MantikException
 import ai.mantik.planner.repository.impl.NonAsyncFileRepository
 import ai.mantik.planner.repository.impl.LocalFileRepository
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
@@ -84,9 +85,9 @@ class FileRepositoryServerSpec extends TestBaseWithAkkaRuntime with TempDirSuppo
     val req = repo.requestAndStoreSync(true, ContentTypes.MantikBundleContentType, testBytes)
     val result = await(repo.deleteFile(req.fileId))
     result shouldBe true
-    intercept[Errors.NotFoundException] {
+    intercept[MantikException] {
       repo.getFileContentSync(req.fileId)
-    }
+    }.code.isA(FileRepository.NotFoundCode) shouldBe true
     val nonExistingResult = await(repo.deleteFile("unknown"))
     nonExistingResult shouldBe false
   }

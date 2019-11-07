@@ -1,15 +1,14 @@
 package ai.mantik.planner.repository.impl
 
-import ai.mantik.componently.utils.SecretReader
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.elements.errors.{ ErrorCodes, RemoteRegistryException }
 import ai.mantik.elements.registry.api._
 import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
-import ai.mantik.planner.repository.{ CustomLoginToken, Errors, MantikArtifact, MantikRegistry, RemoteMantikRegistry }
+import ai.mantik.planner.repository.{ CustomLoginToken, MantikArtifact, MantikRegistry, RemoteMantikRegistry }
 import akka.http.scaladsl.Http
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import javax.inject.Inject
 import net.reactivecore.fhttp.akka.ApiClient
 
@@ -17,7 +16,7 @@ import scala.concurrent.Future
 import scala.util.{ Success, Try }
 
 private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
-  extends ComponentBase with RemoteMantikRegistry with FailFastCirceSupport {
+  extends ComponentBase with RemoteMantikRegistry {
 
   private val registryCredentials = new DefaultRegistryCredentials(config)
 
@@ -41,7 +40,10 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
 
   private def getImpl(api: MantikRegistryApi, token: String, mantikId: MantikId): Future[MantikArtifact] = {
     for {
-      artifactResponse <- api.artifact(token, mantikId)
+      artifactResponse <- api.artifact(token, mantikId).recoverWith {
+        case r: RemoteRegistryException if r.remoteCode == ApiErrorResponse.NotFound =>
+          Future.failed(ErrorCodes.MantikItemNotFound.toException(r.message, r))
+      }
       artifact <- Future.fromTry(decodeMantikArtifact(mantikId, artifactResponse))
     } yield artifact
   }
@@ -140,12 +142,10 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
    * @param f called with API and Token
    */
   private def defaultCall[T](f: (MantikRegistryApi, String) => Future[T]): Future[T] = {
-    errorHandling {
-      for {
-        token <- defaultTokenProvider.getToken()
-        response <- f(defaultApi, token)
-      } yield response
-    }
+    for {
+      token <- defaultTokenProvider.getToken()
+      response <- f(defaultApi, token)
+    } yield response
   }
 
   /**
@@ -153,21 +153,7 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
    * @param f called with API and Token
    */
   private def customCall[T](customLoginToken: CustomLoginToken, f: (MantikRegistryApi, String) => Future[T]): Future[T] = {
-    errorHandling {
-      val subApi = new MantikRegistryApi(customLoginToken.url, executor)
-      f(subApi, customLoginToken.token)
-    }
-  }
-
-  private def errorHandling[T](f: => Future[T]): Future[T] = {
-    f.recoverWith {
-      case e: Errors.RepositoryError => Future.failed(e) // already mapped
-      case f @ MantikRegistryApi.WrappedError(e) =>
-        e.code match {
-          case x if x == ApiErrorResponse.NotFound => Future.failed(new Errors.NotFoundException(e.message.getOrElse("")))
-          case _                                   => Future.failed(f)
-        }
-      case e => Future.failed(new Errors.RepositoryError(e.getMessage, e))
-    }
+    val subApi = new MantikRegistryApi(customLoginToken.url, executor)
+    f(subApi, customLoginToken.token)
   }
 }

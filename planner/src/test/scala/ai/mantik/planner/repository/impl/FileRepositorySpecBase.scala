@@ -1,14 +1,13 @@
 package ai.mantik.planner.repository.impl
 
-import ai.mantik.componently.AkkaRuntime
-import ai.mantik.planner.repository.{ ContentTypes, Errors, FileRepository }
-import ai.mantik.planner.util.TestBaseWithAkkaRuntime
-import ai.mantik.testutils.{ TempDirSupport }
+import ai.mantik.planner.repository.{ ContentTypes, FileRepository }
+import ai.mantik.planner.util.{ ErrorCodeTestUtils, TestBaseWithAkkaRuntime }
+import ai.mantik.testutils.TempDirSupport
 import akka.util.ByteString
 
 import scala.util.Random
 
-abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempDirSupport {
+abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempDirSupport with ErrorCodeTestUtils {
 
   type RepoType <: FileRepository with NonAsyncFileRepository
 
@@ -46,7 +45,7 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
   it should "know optimistic storage" in new Env {
     val info = await(repo.requestFileStorage(true))
 
-    intercept[Errors.NotFoundException] {
+    interceptErrorCode(FileRepository.NotFoundCode) {
       repo.getFileSync(info.fileId, optimistic = false)
     }
     val getFileResponse = withClue("No exception expected here") {
@@ -63,7 +62,7 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
     val req = repo.requestAndStoreSync(true, ContentTypes.MantikBundleContentType, testBytes)
     val result = await(repo.deleteFile(req.fileId))
     result shouldBe true
-    intercept[Errors.NotFoundException] {
+    interceptErrorCode(FileRepository.NotFoundCode) {
       repo.getFileContentSync(req.fileId)
     }
     val nonExistingResult = await(repo.deleteFile("unknown"))

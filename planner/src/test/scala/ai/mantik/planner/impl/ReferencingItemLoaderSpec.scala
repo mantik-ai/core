@@ -1,7 +1,6 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.planner.repository.Errors
-import ai.mantik.planner.repository.Errors.NotFoundException
+import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
 import ai.mantik.testutils.{ AkkaSupport, TestBase }
 
 import scala.concurrent.Future
@@ -15,7 +14,7 @@ class ReferencingItemLoaderSpec extends TestBase with AkkaSupport {
   class SimpleLoader(map: Map[String, Seq[String]]) extends ReferencingItemLoader[String, Item](
     loader = id => map.get(id) match {
       case Some(i) => Future.successful(Item(id))
-      case None    => Future.failed(new Errors.NotFoundException(""))
+      case None    => Future.failed(ErrorCodes.MantikItemNotFound.toException(""))
     },
     dependencyExtractor = x => map.getOrElse(x.name, Nil)
   )
@@ -26,9 +25,9 @@ class ReferencingItemLoaderSpec extends TestBase with AkkaSupport {
     )
     val loader = new SimpleLoader(dependencies)
     await(loader.loadWithHull("a")) shouldBe Seq(Item("a"))
-    intercept[NotFoundException] {
+    intercept[MantikException] {
       await(loader.loadWithHull("b"))
-    }
+    }.code.isA(ErrorCodes.MantikItemNotFound) shouldBe true
   }
 
   it should "work for a simple depencency" in {

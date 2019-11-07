@@ -1,6 +1,7 @@
 package ai.mantik.planner.repository.impl
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.{ FileRepository, LocalMantikRegistry, MantikArtifact, Repository }
 import akka.stream.scaladsl.Source
@@ -22,7 +23,10 @@ class LocalMantikRegistryImpl @Inject() (
   }
 
   override def getPayload(fileId: String): Future[(String, Source[ByteString, _])] = {
-    fileRepository.loadFile(fileId)
+    fileRepository.loadFile(fileId).recover {
+      case e: MantikException if e.code.isA(FileRepository.NotFoundCode) =>
+        ErrorCodes.MantikItemPayloadNotFound.throwIt(s"Payload ${fileId} not found", e)
+    }
   }
 
   override def addMantikArtifact(mantikArtifact: MantikArtifact, payload: Option[(String, Source[ByteString, _])]): Future[MantikArtifact] = {

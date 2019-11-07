@@ -8,8 +8,7 @@ import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
-import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager }
-import ai.mantik.planner.repository.Errors
+import ai.mantik.engine.session.{ Session, SessionManager }
 import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
 import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
@@ -22,9 +21,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
   override def get(request: GetRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
-      (artifact, hull) <- session.components.retriever.get(request.name).recover {
-        case _: Errors.NotFoundException => throw new ArtefactNotFoundException(request.name)
-      }
+      (artifact, hull) <- session.components.retriever.get(request.name)
     } yield {
       val mantikItem = MantikItem.fromMantikArtifact(artifact, hull)
       placeInGraph(session, mantikItem)

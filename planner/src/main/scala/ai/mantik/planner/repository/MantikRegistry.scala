@@ -1,6 +1,7 @@
 package ai.mantik.planner.repository
 
 import ai.mantik.componently.Component
+import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
 import akka.stream.scaladsl.Source
@@ -22,7 +23,7 @@ trait MantikRegistry extends Component {
   /** Like get, but returns None if the item doesn't exist. */
   def maybeGet(mantikId: MantikId)(implicit ec: ExecutionContext): Future[Option[MantikArtifact]] = {
     get(mantikId).map(Some(_)).recover {
-      case e: Errors.NotFoundException => None
+      case e: MantikException if e.code == ErrorCodes.MantikItemNotFound => None
     }
   }
 

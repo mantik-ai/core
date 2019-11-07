@@ -4,6 +4,7 @@ import java.nio.file.Path
 
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.{ MantikId, NamedMantikId }
 import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
@@ -11,7 +12,7 @@ import ai.mantik.planner._
 import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.{ FileCache, FileRepositoryServerRemotePresence, PlanExecutorImpl }
 import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
-import ai.mantik.planner.repository.{ Errors, FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
+import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
 import javax.inject.Inject
 
 import scala.concurrent.duration._
@@ -51,7 +52,7 @@ private[planner] class ContextImpl @Inject() (
   private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
     val (artifact, hull) = await(retriever.get(id))
     artifact.parsedMantikfile.definitionAs[T#DefinitionType] match {
-      case Left(error) => throw new Errors.WrongTypeException("Wrong item type", error)
+      case Left(error) => throw ErrorCodes.MantikItemWrongType.toException("Wrong item type", error)
       case _           => // ok
     }
     val item = MantikItem.fromMantikArtifact(artifact, hull)

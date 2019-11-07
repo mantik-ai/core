@@ -2,7 +2,7 @@ package ai.mantik.planner.repository.rpc
 
 import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.componently.{ AkkaRuntime, Component, ComponentBase }
-import ai.mantik.planner.repository.{ Errors, Repository }
+import ai.mantik.planner.repository.Repository
 import ai.mantik.planner.repository.protos.repository.{ EnsureMantikIdRequest, EnsureMantikIdResponse, GetItemRequest, GetItemResponse, ListRequest, ListResponse, RemoveRequest, RemoveResponse, SetDeploymentInfoRequest, SetDeploymentInfoResponse, StoreRequest, StoreResponse }
 import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
 import javax.inject.Inject

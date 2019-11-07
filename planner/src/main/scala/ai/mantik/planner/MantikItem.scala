@@ -5,7 +5,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikId, Mantikfile, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver }
 import ai.mantik.elements.meta.MetaVariableException
-import ai.mantik.planner.repository.{ ContentTypes, Errors, MantikArtifact }
+import ai.mantik.planner.repository.{ ContentTypes, MantikArtifact }
 import ai.mantik.planner.utils.AtomicReference
 
 import scala.reflect.ClassTag

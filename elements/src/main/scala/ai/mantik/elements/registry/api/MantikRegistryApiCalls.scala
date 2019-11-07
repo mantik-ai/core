@@ -28,7 +28,7 @@ object MantikRegistryApiCalls extends ApiBuilder {
   }
 
   val MantikIdMapping = input.pureMapping[String, MantikId](
-    { x: String => MantikId.decodeString(x).left.map(_.message) },
+    { x: String => MantikId.decodeString(x).left.map(_.getMessage) },
     { y: MantikId => Right(y.toString) }
   )
 

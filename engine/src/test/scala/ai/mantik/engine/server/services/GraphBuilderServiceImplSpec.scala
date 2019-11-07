@@ -4,16 +4,18 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
+import ai.mantik.elements.errors.{ ErrorCodes, MantikException, MantikRemoteException }
 import ai.mantik.{ elements, planner }
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
 import ai.mantik.engine.protos.items.ObjectKind
-import ai.mantik.engine.session.{ ArtefactNotFoundException, Session, SessionManager, SessionNotFoundException }
+import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
 import ai.mantik.engine.testutil.{ DummyComponents, TestBaseWithSessions }
 import ai.mantik.planner.repository.MantikArtifact
 import ai.mantik.planner.{ Algorithm, DataSet, PayloadSource, Pipeline }
+import io.grpc.StatusRuntimeException
 
 class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
@@ -83,12 +85,12 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   "get" should "place elements from the repo in the graph" in new Env {
-    intercept[SessionNotFoundException] {
+    MantikRemoteException.fromGrpc(intercept[StatusRuntimeException] {
       await(graphBuilder.get(GetRequest("123", "foo")))
-    }
-    intercept[ArtefactNotFoundException] {
+    }).code.isA(EngineErrors.SessionNotFound) shouldBe true
+    MantikRemoteException.fromGrpc(intercept[StatusRuntimeException] {
       await(graphBuilder.get(GetRequest(session1.id, "foo")))
-    }
+    }).code.isA(ErrorCodes.MantikItemNotFound) shouldBe true
     val response = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
     response.itemId shouldBe "1"
     response.item.get.kind shouldBe ObjectKind.KIND_DATASET
