@@ -3,7 +3,7 @@ package ai.mantik.planner.repository.impl
 import ai.mantik.ds.FundamentalType
 import ai.mantik.elements.{ DataSetDefinition, ItemId, Mantikfile, NamedMantikId }
 import ai.mantik.elements.registry.api.{ ApiFileUploadResponse, ApiLoginRequest, ApiLoginResponse, ApiPrepareUploadResponse, MantikRegistryApi, MantikRegistryApiCalls }
-import ai.mantik.planner.repository.{ ContentTypes, MantikArtifact }
+import ai.mantik.planner.repository.{ Bridge, ContentTypes, MantikArtifact }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
 import ai.mantik.testutils.TestBase
 import akka.stream.scaladsl.Source
@@ -12,8 +12,8 @@ import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 import net.reactivecore.fhttp.akka.{ ApiServer, ApiServerRoute }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.PathMatcher
-import scala.language.reflectiveCalls
 
+import scala.language.reflectiveCalls
 import scala.concurrent.Future
 
 class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
@@ -66,7 +66,7 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
       ))
     val mantikfile = Mantikfile.pure(
       DataSetDefinition(
-        format = "natural",
+        bridge = Bridge.naturalBridge.mantikId,
         `type` = FundamentalType.Int32
       )
     )

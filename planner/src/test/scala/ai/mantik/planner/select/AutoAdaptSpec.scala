@@ -3,6 +3,7 @@ package ai.mantik.planner.select
 import ai.mantik.ds.FundamentalType.{ Float32, Float64, Uint8 }
 import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageChannel, TabularData, Tensor }
 import ai.mantik.elements.{ DataSetDefinition, ItemId, Mantikfile, NamedMantikId }
+import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{ DataSet, DefinitionSource, PayloadSource, Source }
 import ai.mantik.testutils.TestBase
@@ -21,7 +22,8 @@ class AutoAdaptSpec extends TestBase {
     // DataSet source is not important here.
     DataSet(
       Source(DefinitionSource.Loaded(Some(NamedMantikId("item1234")), ItemId.generate()), PayloadSource.Loaded("someId", ContentTypes.ZipFileContentType)),
-      Mantikfile.pure(DataSetDefinition(format = "someformat", `type` = dt))
+      Mantikfile.pure(DataSetDefinition(bridge = "someformat", `type` = dt)),
+      TestItems.formatBridge
     )
   }
 

@@ -4,6 +4,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.{ AlgorithmDefinition, MantikDefinition, MantikHeader, Mantikfile }
 import ai.mantik.elements.meta.MetaJson
+import ai.mantik.planner.BuiltInItems
 import ai.mantik.planner.select.run.SelectProgram
 import io.circe.syntax._
 
@@ -15,7 +16,7 @@ case class SelectMantikfileBuilder(
 
   def definition: AlgorithmDefinition = {
     elements.AlgorithmDefinition(
-      stack = "select",
+      bridge = BuiltInItems.SelectBridgeName,
       `type` = `type`
     )
   }

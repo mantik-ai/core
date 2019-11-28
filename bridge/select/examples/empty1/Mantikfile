@@ -1,6 +1,6 @@
 # Let everything through, SELECT *
 # Can still rename out columns
-stack: select
+bridge: builtin/select
 type:
     input:
         columns:

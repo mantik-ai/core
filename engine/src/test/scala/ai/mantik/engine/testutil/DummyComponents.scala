@@ -1,7 +1,6 @@
 package ai.mantik.engine.testutil
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.planner.bridge.BridgesProvider
 import ai.mantik.planner.impl.{ CachedFiles, PlannerImpl }
 import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
 import ai.mantik.planner.repository.{ FileRepository, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
@@ -21,8 +20,7 @@ class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
     localRegistry, registry
   )
 
-  private val bridges = new BridgesProvider(config).get()
-  override lazy val planner: Planner = new PlannerImpl(bridges, CachedFiles.empty)
+  override lazy val planner: Planner = new PlannerImpl(config, CachedFiles.empty)
 
   var nextItemToReturnByExecutor: Future[_] = Future.failed(
     new RuntimeException("Plan executor not implemented")

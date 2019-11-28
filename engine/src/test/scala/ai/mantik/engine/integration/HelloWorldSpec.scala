@@ -1,6 +1,7 @@
 package ai.mantik.engine.integration
 
 import java.io.File
+import java.nio.file.{ Path, Paths }
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
@@ -16,10 +17,12 @@ import com.google.protobuf.empty.Empty
 @IntegrationTest
 class HelloWorldSpec extends IntegrationTestBase {
 
-  val sampleFile = new File("bridge/tf/saved_model/test/resources/samples/double_multiply").toPath
+  val sampleBridge = Paths.get("bridge/tf/saved_model")
+  val sampleFile = Paths.get("bridge/tf/saved_model/test/resources/samples/double_multiply")
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
+    context.pushLocalMantikFile(sampleBridge)
     context.pushLocalMantikFile(sampleFile)
   }
 

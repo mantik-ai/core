@@ -6,7 +6,7 @@ import ai.mantik.planner.{ Context, DataSet }
 
 object ShowDataSet extends ExampleBase {
 
-  override protected def run(context: Context): Unit = {
+  override protected def run(implicit context: Context): Unit = {
     val id = "sample1"
 
     val ds = DataSet.literal(
@@ -20,13 +20,9 @@ object ShowDataSet extends ExampleBase {
         .result
     ).tag(id)
 
-    context.execute(
-      ds.save()
-    )
+    ds.save().run()
 
-    val result = context.execute(
-      context.loadDataSet(id).fetch
-    )
+    val result = context.loadDataSet(id).fetch.run()
 
     println(result)
   }

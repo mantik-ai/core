@@ -8,6 +8,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId}
+import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository
 import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact, Repository}
 import ai.mantik.planner.util.{ErrorCodeTestUtils, TestBaseWithAkkaRuntime}
@@ -27,7 +28,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
 
   val artifact1 = repository.MantikArtifact(
     mantikfile = Mantikfile.pure(AlgorithmDefinition(
-      stack = "stack1",
+      bridge = "stack1",
       `type` = FunctionType(
         input = FundamentalType.Int32,
         output = FundamentalType.Int64
@@ -70,7 +71,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
 
   val artifact2 = MantikArtifact(
     mantikfile = Mantikfile.pure(elements.AlgorithmDefinition(
-      stack = "stack2",
+      bridge = "stack2",
       `type` = FunctionType(
         input = FundamentalType.Int32,
         output = FundamentalType.Int64
@@ -185,7 +186,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
       val updated = artifact1.copy(
         mantikfile = Mantikfile.pure(
           artifact1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition].copy(
-            stack = "other_stack"
+            bridge = "other_stack"
           )
         ).toJson,
         itemId = ItemId.generate()
@@ -201,7 +202,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
       val updated = artifact1.copy(
         mantikfile = Mantikfile.pure(
           artifact1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition].copy(
-            stack = "other_stack"
+            bridge = "other_stack"
           )
         ).toJson,
       )
@@ -324,7 +325,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
 
       val artifact4 = artifact1.copy(
         mantikfile = Mantikfile.pure(
-          DataSetDefinition(format = "natural", `type` = StringType)
+          DataSetDefinition(bridge = "natural", `type` = StringType)
         ).toJson,
         itemId = ItemId.generate(),
         namedId = Some("dataset1")

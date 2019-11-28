@@ -8,6 +8,5 @@ echo "MYDIR $PWD"
 
 . ../../scripts/ci/docker_help.sh
 
-$DOCKER_CALL build -f ../../scripts/ci/Dockerfile.go_bridge_simple --build-arg input_executable=target/select_bridge_linux -t select_bridge .
-
-docker_push select_bridge
+docker_build bridge.select -f ../../scripts/ci/Dockerfile.go_bridge_simple --build-arg input_executable=target/select_bridge_linux
+docker_push bridge.select

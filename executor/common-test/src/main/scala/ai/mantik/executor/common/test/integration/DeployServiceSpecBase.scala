@@ -12,7 +12,7 @@ trait DeployServiceSpecBase {
     isolationSpace = isolationSpace,
     service = ContainerService(
       main = Container(
-        image = "executor_sample_transformer"
+        image = "mantikai/executor.sample_transformer"
       )
     )
   )
@@ -32,7 +32,7 @@ trait DeployServiceSpecBase {
           "A" -> Node.source(
             ContainerService(
               main = Container(
-                image = "executor_sample_source"
+                image = "mantikai/executor.sample_source"
               )
             )
           ),
@@ -44,7 +44,7 @@ trait DeployServiceSpecBase {
           "C" -> Node.sink(
             ContainerService(
               main = Container(
-                image = "executor_sample_sink"
+                image = "mantikai/executor.sample_sink"
               )
             )
           )
@@ -72,7 +72,7 @@ trait DeployServiceSpecBase {
       isolationSpace = isolationSpace,
       service = ContainerService(
         main = Container(
-          image = "executor_sample_transformer"
+          image = "mantikai/executor.sample_transformer"
         )
       )
     )
@@ -117,7 +117,7 @@ trait DeployServiceSpecBase {
       isolationSpace = isolationSpace,
       service = ContainerService(
         main = Container(
-          image = "executor_sample_transformer"
+          image = "mantikai/executor.sample_transformer"
         )
       )
     )

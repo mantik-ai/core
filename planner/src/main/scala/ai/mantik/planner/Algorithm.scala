@@ -5,13 +5,14 @@ import java.util.UUID
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile }
+import ai.mantik.planner.repository.Bridge
 import ai.mantik.planner.select.Select
 
 /** Some A => B Transformation Algorithm */
 case class Algorithm(
     core: MantikItemCore[AlgorithmDefinition],
     private[planner] val select: Option[Select] = None
-) extends ApplicableMantikItem {
+) extends ApplicableMantikItem with BridgedMantikItem {
 
   override type DefinitionType = AlgorithmDefinition
   override type OwnType = Algorithm
@@ -25,8 +26,8 @@ case class Algorithm(
 
 object Algorithm {
 
-  def apply(source: Source, mantikfile: Mantikfile[AlgorithmDefinition]): Algorithm = {
-    Algorithm(MantikItemCore(source, mantikfile))
+  def apply(source: Source, mantikfile: Mantikfile[AlgorithmDefinition], bridge: Bridge): Algorithm = {
+    Algorithm(MantikItemCore(source, mantikfile, bridge = Some(bridge)))
   }
 
   /** Convert a Select statement into an algorithm. */
@@ -37,6 +38,11 @@ object Algorithm {
         throw new FeatureNotSupported(s"Could not compile select ${error}")
       case Right(ok) => ok
     }
-    Algorithm(MantikItemCore(Source.constructed(), mantikFile), Some(select))
+    Algorithm(
+      MantikItemCore(
+        Source.constructed(),
+        mantikFile,
+        bridge = Some(Bridge.selectBridge)
+      ), Some(select))
   }
 }

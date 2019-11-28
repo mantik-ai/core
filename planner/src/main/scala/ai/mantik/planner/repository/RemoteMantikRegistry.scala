@@ -41,7 +41,9 @@ object RemoteMantikRegistry {
 
     private val InvalidLogin = Future.failed(ErrorCodes.RemoteRegistryFailure.toException("Empty Registry"))
 
-    override def get(mantikId: MantikId): Future[MantikArtifact] = NotFound
+    override def get(mantikId: MantikId): Future[MantikArtifact] = Future.failed(
+      ErrorCodes.MantikItemNotFound.toException(s"Empty Registry: ${mantikId} not found")
+    )
 
     override def ensureMantikId(itemId: ItemId, mantikId: NamedMantikId): Future[Boolean] = NotFound
 

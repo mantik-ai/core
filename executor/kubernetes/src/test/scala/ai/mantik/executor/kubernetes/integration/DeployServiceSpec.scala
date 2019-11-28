@@ -34,7 +34,7 @@ class DeployServiceSpec extends IntegrationTestBase with DeployServiceSpecBase {
       isolationSpace = isolationSpace,
       service = ContainerService(
         main = Container(
-          image = "executor_sample_transformer"
+          image = "mantikai/executor.sample_transformer"
         )
       )
     )
@@ -44,7 +44,7 @@ class DeployServiceSpec extends IntegrationTestBase with DeployServiceSpecBase {
       isolationSpace = isolationSpace,
       service = ContainerService(
         main = Container(
-          image = "executor_sample_transformer"
+          image = "mantikai/executor.sample_transformer"
         )
       )
     )

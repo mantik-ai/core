@@ -15,7 +15,7 @@ class MantikfileSpec extends TestBase {
       |authorEmail: john.doe@example.com
       |name: super_duper_algorithm
       |version: "0.1"
-      |stack: tensorflow1.6
+      |bridge: tensorflow1.6
       |type:
       |  input: uint8
       |  output: string
@@ -23,7 +23,7 @@ class MantikfileSpec extends TestBase {
 
   val minimalFile =
     """name: yup
-      |stack: foobar
+      |bridge: foobar
       |type:
       |   input: bool
       |   output: bool
@@ -33,7 +33,7 @@ class MantikfileSpec extends TestBase {
     val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](sample).forceRight
 
     mf.definition shouldBe elements.AlgorithmDefinition(
-      stack = "tensorflow1.6",
+      bridge = "tensorflow1.6",
       `type` = FunctionType(FundamentalType.Uint8, FundamentalType.StringType)
     )
 
@@ -50,19 +50,21 @@ class MantikfileSpec extends TestBase {
     val sample =
       """name: InvalidName
         |version: Invalid-234
-        |stack: foo
+        |bridge: foo
         |type:
         |   input: bool
         |   output: bool
       """.stripMargin
-    val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](sample).forceRight
-    mf.violations shouldBe Seq("Invalid Name", "Invalid Version")
+    val pure = Mantikfile.fromYamlWithoutCheck(sample).forceRight
+    pure.violations shouldBe Seq("Invalid Name", "Invalid Version")
+    val errorMessage = Mantikfile.fromYamlWithType[AlgorithmDefinition](sample).left.get.getMessage
+    errorMessage shouldBe "Invalid Mantikfile: Invalid Name,Invalid Version"
   }
 
   it should "parse a minimal file" in {
     val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](minimalFile).forceRight
     mf.definition shouldBe elements.AlgorithmDefinition(
-      stack = "foobar",
+      bridge = "foobar",
       `type` = FunctionType(FundamentalType.BoolType, FundamentalType.BoolType)
     )
     mf.header shouldBe MantikHeader(
@@ -97,7 +99,7 @@ class MantikfileSpec extends TestBase {
         """.stripMargin
       val mf = Mantikfile.fromYamlWithType[AlgorithmDefinition](code).forceRight
       mf.definition shouldBe elements.AlgorithmDefinition(
-        stack = "bla",
+        bridge = "bla",
         `type` = FunctionType(FundamentalType.Uint8, FundamentalType.Uint8)
       )
       mf.header shouldBe MantikHeader(
@@ -115,7 +117,7 @@ class MantikfileSpec extends TestBase {
         |version: '0.1'
         |author: Superman
         |authorEmail: me@example.com
-        |format: binary
+        |bridge: binary
         |type:
         |  columns:
         |    "x": int32
@@ -123,7 +125,7 @@ class MantikfileSpec extends TestBase {
       """.stripMargin
     val mantikfile = Mantikfile.fromYamlWithType[DataSetDefinition](definition).forceRight
     mantikfile.definition shouldBe elements.DataSetDefinition(
-      format = "binary",
+      bridge = "binary",
       `type` = TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.StringType
@@ -141,7 +143,7 @@ class MantikfileSpec extends TestBase {
     val definition =
       """
         |kind: trainable
-        |stack: foo1
+        |bridge: foo1
         |name: train1
         |type:
         | input:
@@ -153,7 +155,7 @@ class MantikfileSpec extends TestBase {
       """.stripMargin
     val mantikfile = Mantikfile.fromYamlWithType[TrainableAlgorithmDefinition](definition).forceRight
     mantikfile.definition shouldBe elements.TrainableAlgorithmDefinition(
-      stack = "foo1",
+      bridge = "foo1",
       `type` = FunctionType(
         FundamentalType.Int32,
         FundamentalType.Int64
@@ -225,7 +227,7 @@ class MantikfileSpec extends TestBase {
         |version: '0.1'
         |author: Superman
         |authorEmail: me@example.com
-        |format: binary
+        |bridge: binary
         |unknown: must still be stored.
         |type: int32
       """.stripMargin
@@ -237,7 +239,7 @@ class MantikfileSpec extends TestBase {
     val definition =
       """
         |kind: trainable
-        |stack: foo1
+        |bridge: foo1
         |name: train1
         |version: "0.1"
         |type:
@@ -252,7 +254,7 @@ class MantikfileSpec extends TestBase {
 
     val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
     casted.definition shouldBe elements.AlgorithmDefinition(
-      stack = "foo1",
+      bridge = "foo1",
       `type` = FunctionType(
         FundamentalType.Int32,
         FundamentalType.Int64
@@ -264,8 +266,8 @@ class MantikfileSpec extends TestBase {
     val definition =
       """
         |kind: trainable
-        |stack: foo1
-        |trainedStack: foo2
+        |bridge: foo1
+        |trainedBridge: foo2
         |name: train1
         |version: "0.1"
         |type:
@@ -280,7 +282,7 @@ class MantikfileSpec extends TestBase {
 
     val casted = Mantikfile.generateTrainedMantikfile(mantikfile).right.get
     casted.definition shouldBe elements.AlgorithmDefinition(
-      stack = "foo2",
+      bridge = "foo2",
       `type` = FunctionType(
         FundamentalType.Int32,
         FundamentalType.Int64
@@ -296,8 +298,8 @@ class MantikfileSpec extends TestBase {
         |  - name: abc
         |    type: int32
         |    value: 100
-        |stack: foo1
-        |trainedStack: foo2
+        |bridge: foo1
+        |trainedBridge: foo2
         |type:
         |  input:
         |    type: tensor
@@ -324,7 +326,7 @@ class MantikfileSpec extends TestBase {
         |    type: int32
         |    value: 100
         |    fix: true
-        |stack: foo2
+        |bridge: foo2
         |type:
         |  input:
         |    type: tensor
@@ -349,5 +351,47 @@ class MantikfileSpec extends TestBase {
     json shouldBe mf.toJsonValue
     val back = json.as[Mantikfile[AlgorithmDefinition]]
     back shouldBe Right(mf)
+  }
+
+  "bridges" should "have a default content type/version" in {
+    val content =
+      """kind: bridge
+        |account: mantik
+        |name: binary
+        |suitable:
+        |  - dataset
+        |dockerImage: mantikai/bridge.binary
+        |""".stripMargin
+    val bridge = Mantikfile.fromYamlWithType[BridgeDefinition](content).forceRight
+    bridge.definition.payloadContentType shouldBe Some("application/zip")
+    bridge.definition.protocol shouldBe 1
+  }
+
+  it should "have a way to disable content type" in {
+    val content =
+      """kind: bridge
+        |account: mantik
+        |name: binary
+        |suitable:
+        |  - dataset
+        |dockerImage: mantikai/bridge.binary
+        |payloadContentType: null
+        |""".stripMargin
+    val bridge = Mantikfile.fromYamlWithType[BridgeDefinition](content).forceRight
+    bridge.definition.payloadContentType shouldBe None
+  }
+
+  it should "it should be overridable" in {
+    val content =
+      """kind: bridge
+        |account: mantik
+        |name: binary
+        |suitable:
+        |  - dataset
+        |dockerImage: mantikai/bridge.binary
+        |payloadContentType: application/text
+        |""".stripMargin
+    val bridge = Mantikfile.fromYamlWithType[BridgeDefinition](content).forceRight
+    bridge.definition.payloadContentType shouldBe Some("application/text")
   }
 }

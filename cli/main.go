@@ -25,7 +25,9 @@ func main() {
 	engineClient, err := client.MakeEngineClientInsecure(&args.ClientArgs)
 	if err != nil {
 		logrus.Fatal("Could not create client", err.Error())
+		os.Exit(2)
 	}
+	defer engineClient.Close()
 	logrus.Debugf("Initialized connection to %s", engineClient.Address())
 
 	if args.Version != nil {
@@ -64,6 +66,6 @@ func main() {
 
 	if err != nil {
 		println("Error", err.Error())
+		os.Exit(3)
 	}
-	engineClient.Close()
 }

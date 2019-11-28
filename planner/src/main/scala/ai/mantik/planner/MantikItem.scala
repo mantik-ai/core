@@ -2,10 +2,11 @@ package ai.mantik.planner
 
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikId, Mantikfile, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
+import ai.mantik.elements.errors.ErrorCodes
+import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikDefinitionWithBridge, MantikDefinitionWithoutBridge, MantikId, Mantikfile, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver }
 import ai.mantik.elements.meta.MetaVariableException
-import ai.mantik.planner.repository.{ ContentTypes, MantikArtifact }
+import ai.mantik.planner.repository.{ Bridge, ContentTypes, MantikArtifact }
 import ai.mantik.planner.utils.AtomicReference
 
 import scala.reflect.ClassTag
@@ -64,9 +65,6 @@ trait MantikItem {
   /** Pushes an item to the registry. */
   def push(): Action.PushAction = Action.PushAction(this)
 
-  /** Returns the type's stack. */
-  def stack: String = mantikfile.definition.stack
-
   /**
    * Returns the [[NamedMantikId]] of the Item. This can be anonymous.
    * Note: this doesn't mean that the item is stored.
@@ -110,7 +108,8 @@ trait MantikItem {
     withCore(
       MantikItemCore(
         source = source.derive,
-        mantikfile = mantikfile
+        mantikfile = mantikfile,
+        bridge = core.bridge
       )
     )
   }
@@ -137,8 +136,31 @@ trait MantikItem {
 /** Contains the common base data for every MantikItem. */
 case class MantikItemCore[T <: MantikDefinition](
     source: Source,
-    mantikfile: Mantikfile[T]
+    mantikfile: Mantikfile[T],
+    bridge: Option[Bridge]
 )
+
+object MantikItemCore {
+  def apply[T <: MantikDefinitionWithBridge](source: Source, mantikfile: Mantikfile[T], bridge: Bridge): MantikItemCore[T] = {
+    MantikItemCore(source, mantikfile, Some(bridge))
+  }
+
+  def apply[T <: MantikDefinitionWithoutBridge](source: Source, mantikfile: Mantikfile[T]): MantikItemCore[T] = {
+    MantikItemCore(source, mantikfile, None)
+  }
+}
+
+trait BridgedMantikItem extends MantikItem {
+  override type DefinitionType <: MantikDefinitionWithBridge
+
+  /** Returns the type's bridge. */
+  def bridgeMantikId: MantikId = mantikfile.definition.bridge
+
+  /** Returns the item bridge. */
+  def bridge: Bridge = core.bridge.getOrElse {
+    ErrorCodes.InternalError.throwIt("No bridge associated to this element")
+  }
+}
 
 /** A Mantik Item which can be applied to DataSets (e.g. Algorithms). */
 trait ApplicableMantikItem extends MantikItem {
@@ -165,8 +187,13 @@ trait ApplicableMantikItem extends MantikItem {
 
 object MantikItem {
 
-  /** Convert a (loaded) [[MantikArtifact]] to a [[MantikItem]]. */
-  private[mantik] def fromMantikArtifact(artifact: MantikArtifact, hull: Seq[MantikArtifact] = Seq.empty): MantikItem = {
+  /**
+   * Convert a (loaded) [[MantikArtifact]] to a [[MantikItem]].
+   * @param defaultItemLookup if true, default items are favorized.
+   */
+  private[mantik] def fromMantikArtifact(
+    artifact: MantikArtifact, hull: Seq[MantikArtifact] = Seq.empty, defaultItemLookup: Boolean = true
+  ): MantikItem = {
     val payloadSource = artifact.fileId.map { fileId =>
       PayloadSource.Loaded(fileId, ContentTypes.ZipFileContentType)
     }.getOrElse(PayloadSource.Empty)
@@ -176,20 +203,39 @@ object MantikItem {
       payloadSource
     )
 
+    def forceBridge(name: MantikId, forKind: String): Bridge = {
+      Bridge.fromMantikArtifacts(name, hull, forKind)
+    }
+
+    val bridge = artifact.parsedMantikfile.definition match {
+      case d: MantikDefinitionWithBridge =>
+        Some(forceBridge(d.bridge, artifact.parsedMantikfile.definition.kind))
+      case _ => None
+    }
+
     def forceExtract[T <: MantikDefinition: ClassTag]: MantikItemCore[T] = {
       val mantikfile = artifact.parsedMantikfile.cast[T].right.get
-      MantikItemCore(source, mantikfile)
+      MantikItemCore(source, mantikfile, bridge)
     }
 
     val item = artifact.parsedMantikfile.definition match {
-      case a: AlgorithmDefinition          => Algorithm(forceExtract)
-      case d: DataSetDefinition            => DataSet(forceExtract)
-      case t: TrainableAlgorithmDefinition => TrainableAlgorithm(forceExtract)
-      case p: PipelineDefinition =>
+      case _: AlgorithmDefinition => Algorithm(forceExtract)
+      case _: DataSetDefinition   => DataSet(forceExtract)
+      case _: TrainableAlgorithmDefinition =>
+        val extracted = forceExtract[TrainableAlgorithmDefinition]
+        val trainedBridge = extracted.mantikfile.definition.trainedBridge.map(forceBridge(_, MantikDefinition.AlgorithmKind))
+          .orElse(bridge).getOrElse {
+            ErrorCodes.MantikItemInvalidBridge.throwIt("Missing bridge for trainable algorithm definition")
+          }
+        TrainableAlgorithm(forceExtract, trainedBridge)
+      case _: PipelineDefinition =>
         val referenced = hull.map { item =>
-          item.mantikId -> fromMantikArtifact(item)
+          val subHull = hull.filter(_.itemId != item.itemId)
+          item.mantikId -> fromMantikArtifact(item, subHull)
         }.toMap
         PipelineBuilder.buildOrFailFromMantikfile(source.definition, forceExtract[PipelineDefinition].mantikfile, referenced)
+      case _: BridgeDefinition =>
+        Bridge(forceExtract)
     }
 
     artifact.deploymentInfo.foreach { deploymentInfo =>
@@ -208,5 +254,4 @@ object MantikItem {
 
     item
   }
-
 }

@@ -13,7 +13,7 @@ import io.circe.{ Decoder, ObjectEncoder }
  * @param authorEmail email of Author
  * @param name default name of the Artifact behind the Mantikfile.
  * @param version default version of the Artifact behind the mantik file.
- * @param account default accoutn name of the Artifact behind the mantik file.
+ * @param account default account name of the Artifact behind the mantik file.
  */
 case class MantikHeader(
     author: Option[String] = None,

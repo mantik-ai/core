@@ -1,6 +1,6 @@
 name: mnist_linear
-stack: tf.train
-trainedStack: tf.saved_model
+bridge: mantik/tf.train
+trainedBridge: mantik/tf.saved_model
 
 kind: trainable
 

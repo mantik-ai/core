@@ -1,12 +1,12 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId, PipelineStep }
-import ai.mantik.planner.Planner.InconsistencyException
+import ai.mantik.planner.Planner.{ InconsistencyException, PlannerException }
 import ai.mantik.planner._
-import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.repository.ContentTypes
 import cats.data.State
 import cats.implicits._
+import com.typesafe.config.Config
 import javax.inject.Inject
 
 /**
@@ -17,9 +17,9 @@ import javax.inject.Inject
  *
  * This way it's pure functional and easier to test.
  */
-private[mantik] class PlannerImpl @Inject() (bridges: Bridges, cachedFiles: CachedFiles) extends Planner {
+private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: CachedFiles) extends Planner {
 
-  val elements = new PlannerElements(bridges)
+  val elements = new PlannerElements(config)
   val resourcePlanBuilder = new ResourcePlanBuilder(elements, cachedFiles)
 
   override def convert[T](action: Action[T]): Plan[T] = {
@@ -126,12 +126,13 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges, cachedFiles: Cach
   }
 
   private def itemPayloadContentType(item: MantikItem): String = {
-    // TODO: We need a better place for this distinguishment
-    // Also the format content type may be runtime specific.
-    item match {
-      case ds: DataSet if ds.stack == DataSet.NaturalFormatName =>
-        ContentTypes.MantikBundleContentType
-      case _ => ContentTypes.ZipFileContentType
+    item.core.bridge match {
+      case None => throw new PlannerException(s"No bridge defined for ${item}")
+      case Some(bridge) =>
+        bridge.mantikfile.definition.payloadContentType match {
+          case Some(contentType) => contentType
+          case None              => throw new PlannerException(s"Bridge ${bridge.mantikId} doesn't define a content type")
+        }
     }
   }
 
@@ -201,7 +202,7 @@ private[mantik] class PlannerImpl @Inject() (bridges: Bridges, cachedFiles: Cach
             _ <- PlanningState.modify { _.withOverrideFunc(algorithm, _.copy(deployed = Some(Right(memoryId)))) }
           } yield {
             val file = filePlan.files.headOption
-            val container = elements.algorithmContainer(algorithm.mantikfile, file.map(_.ref))
+            val container = elements.algorithmContainer(algorithm, file.map(_.ref))
             val serviceId = algorithm.itemId.toString
             val op = PlanOp.DeployAlgorithm(
               container,

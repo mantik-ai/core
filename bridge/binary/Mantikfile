@@ -1,0 +1,8 @@
+# Mantikfile for Binary Bridge
+kind: bridge
+account: mantik
+name: binary
+suitable:
+    - dataset
+dockerImage: mantikai/bridge.binary
+protocol: 1

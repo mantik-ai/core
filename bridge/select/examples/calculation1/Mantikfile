@@ -1,5 +1,5 @@
 # Does a simple calculation select (x + y) as a, (x - y) as b
-stack: select
+bridge: builtin/select
 type:
     input:
         columns:

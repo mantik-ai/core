@@ -4,7 +4,8 @@ import ai.mantik.ds.{ DataType, FundamentalType, TabularData, Tensor }
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.MetaVariableSetting
-import ai.mantik.elements.{ AlgorithmDefinition, NamedMantikId, Mantikfile, OptionalFunctionType, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile, NamedMantikId, OptionalFunctionType, PipelineDefinition, PipelineStep }
+import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
 import ai.mantik.testutils.TestBase
@@ -16,26 +17,28 @@ class PipelineResolverSpec extends TestBase {
     source = Source.constructed(PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)),
     Mantikfile.pure(
       AlgorithmDefinition(
-        stack = "stack1",
+        bridge = TestItems.algoBridge.mantikId,
         `type` = FunctionType(
           input = TabularData("x" -> FundamentalType.Int32),
           output = TabularData("y" -> FundamentalType.StringType)
         )
       )
-    )
+    ),
+    TestItems.algoBridge
   )
 
   val algorithm2 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
     Mantikfile.pure(
       elements.AlgorithmDefinition(
-        stack = "stack1",
+        bridge = TestItems.algoBridge.mantikId,
         `type` = FunctionType(
           input = TabularData("y" -> FundamentalType.StringType),
           output = TabularData("z" -> FundamentalType.Float64)
         )
       )
-    )
+    ),
+    TestItems.algoBridge
   )
 
   private def resolvePipeline2(
@@ -141,7 +144,7 @@ class PipelineResolverSpec extends TestBase {
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
     Mantikfile.fromYaml(
       """kind: algorithm
-        |stack: foo
+        |bridge: bridge1
         |metaVariables:
         |  - name: out
         |    type: int32
@@ -157,7 +160,8 @@ class PipelineResolverSpec extends TestBase {
         |        componentType: float32
         |        shape: ["${out}"]
       """.stripMargin
-    ).forceRight.cast[AlgorithmDefinition].forceRight
+    ).forceRight.cast[AlgorithmDefinition].forceRight,
+    TestItems.algoBridge
   )
 
   it should "apply meta variables to algorithms" in {

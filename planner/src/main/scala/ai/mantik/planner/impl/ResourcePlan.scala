@@ -3,6 +3,7 @@ package ai.mantik.planner.impl
 import ai.mantik.executor.model._
 import ai.mantik.planner.{ Plan, PlanNodeService, PlanOp, Planner }
 import PlannerGraphOps._
+import ai.mantik.componently.utils.Renderable
 import ai.mantik.planner
 
 /**
@@ -69,5 +70,23 @@ private[impl] case class ResourcePlan(
       inputs = inputs ++ other.inputs,
       outputs = outputs ++ other.outputs
     )
+  }
+
+  override def toString: String = {
+    Renderable.renderAsString(this)(ResourcePlan.renderable)
+  }
+}
+
+object ResourcePlan {
+  implicit val renderable = new Renderable[ResourcePlan] {
+    override def buildRenderTree(value: ResourcePlan): Renderable.RenderTree = {
+      Renderable.keyValueList(
+        "ResourcePlan",
+        "pre" -> value.pre,
+        "graph" -> value.graph,
+        "inputs" -> value.inputs,
+        "outputs" -> value.outputs
+      )
+    }
   }
 }

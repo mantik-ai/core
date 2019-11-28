@@ -1,0 +1,8 @@
+# Tensorflow Training Bridge
+kind: bridge
+account: mantik
+name: tf.train
+suitable:
+  - trainable
+protocol: 1
+dockerImage: mantikai/bridge.tf.train

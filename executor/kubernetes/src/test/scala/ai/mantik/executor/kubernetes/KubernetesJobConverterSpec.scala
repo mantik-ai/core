@@ -39,14 +39,14 @@ class KubernetesJobConverterSpec extends TestBase {
           "A" -> Node.source(
             ContainerService(
               main = Container(
-                image = "executor_sample_source"
+                image = "mantikai/executor.sample_source"
               )
             ), Some("contentType1")
           ),
           "B" -> Node.sink(
             ContainerService(
               main = Container(
-                image = "executor_sample_sink"
+                image = "mantikai/executor.sample_sink"
               )
             ), Some("contentType2")
           )
@@ -77,7 +77,7 @@ class KubernetesJobConverterSpec extends TestBase {
           "A" -> Node.source(
             ContainerService(
               main = Container(
-                image = "executor_sample_source"
+                image = "mantikai/executor.sample_source"
               )
             ), Some("contentType1")
           ),

@@ -5,7 +5,7 @@ import ai.mantik.planner.{ Context, DataSet }
 
 object CacheExample extends ExampleBase {
 
-  override protected def run(context: Context): Unit = {
+  override protected def run(implicit context: Context): Unit = {
 
     val sample = DataSet.literal(
       Bundle.build(
@@ -19,10 +19,10 @@ object CacheExample extends ExampleBase {
 
     val transformed = sample.select("select x + 1 as y").cached
 
-    println(context.execute(transformed.fetch))
-    println(context.execute(transformed.fetch))
+    println(transformed.fetch.run())
+    println(transformed.fetch.run())
 
     val extraTransformation = transformed.select("select y + 1 as z")
-    println(context.execute(extraTransformation.fetch))
+    println(extraTransformation.fetch.run())
   }
 }

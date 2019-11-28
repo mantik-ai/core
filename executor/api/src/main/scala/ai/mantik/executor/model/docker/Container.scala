@@ -1,5 +1,6 @@
 package ai.mantik.executor.model.docker
 
+import ai.mantik.componently.utils.Renderable
 import com.typesafe.config.{ Config, ConfigException }
 import io.circe.generic.JsonCodec
 
@@ -43,6 +44,14 @@ object Container {
     Container(
       image = config.getString("image"),
       parameters = parameters
+    )
+  }
+
+  implicit val renderable = Renderable.makeRenderable[Container] { c =>
+    Renderable.keyValueList(
+      "Container",
+      "image" -> c.image,
+      "parameters" -> c.parameters
     )
   }
 }

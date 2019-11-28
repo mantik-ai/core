@@ -11,14 +11,14 @@ object SampleJobs {
         "A" -> Node.source(
           ContainerService(
             main = Container(
-              image = "executor_sample_source"
+              image = "mantikai/executor.sample_source"
             )
           )
         ),
         "B" -> Node.sink(
           ContainerService(
             main = Container(
-              image = "executor_sample_sink"
+              image = "mantikai/executor.sample_sink"
             )
           )
         )

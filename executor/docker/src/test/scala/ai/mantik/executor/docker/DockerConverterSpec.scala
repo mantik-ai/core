@@ -37,7 +37,6 @@ class DockerConverterSpec extends TestBase {
     val result = converter.generateWorkerContainer("node1", node1).run(NameGenerator("root")).value._2
     result.name shouldBe "root-node1"
     result.mainPort shouldBe Some(100)
-    result.pullPolicy shouldBe PullPolicy.IfNotPresent
     checkMapContains(result.createRequest.Labels, defaultLabels)
     result.createRequest.Labels(DockerConstants.RoleLabelName) shouldBe DockerConstants.WorkerRole
     result.createRequest.Labels(DockerConstants.PortLabel) shouldBe "100"
@@ -48,7 +47,6 @@ class DockerConverterSpec extends TestBase {
     val result = converter.generatePayloadProvider("node1", node1.dataProvider.get).run(NameGenerator("root")).value._2
     result.name shouldBe "root-node1-pp"
     result.mainPort shouldBe None
-    result.pullPolicy shouldBe PullPolicy.IfNotPresent
     checkMapContains(result.createRequest.Labels, defaultLabels)
     result.createRequest.Labels(DockerConstants.RoleLabelName) shouldBe DockerConstants.PayloadProviderRole
   }

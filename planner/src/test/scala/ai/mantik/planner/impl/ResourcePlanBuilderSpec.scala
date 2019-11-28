@@ -7,8 +7,8 @@ import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mant
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{ ExecutorModelDefaults, Graph, Link, Node, NodeResource, NodeResourceRef, ResourceType }
 import ai.mantik.planner.impl.exec.FileCache
-import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.{ Algorithm, DataSet, DefinitionSource, Operation, PayloadSource, Pipeline, PlanFile, PlanFileReference, PlanNodeService, PlanOp, Planner, Source, TrainableAlgorithm }
+import ai.mantik.planner.repository.{ Bridge, ContentTypes }
+import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, DefinitionSource, Operation, PayloadSource, Pipeline, PlanFile, PlanFileReference, PlanNodeService, PlanOp, Planner, Source, TrainableAlgorithm }
 import ai.mantik.testutils.TestBase
 import cats.data.State
 
@@ -16,7 +16,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   private trait Env {
     val fileCache = new FileCache()
-    val elements = new PlannerElements(TestItems.testBridges)
+    val elements = new PlannerElements(typesafeConfig)
     val resourcePlanBuilder = new ResourcePlanBuilder(elements, fileCache)
 
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
@@ -24,10 +24,12 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     }
 
     val algorithm1 = Algorithm(
-      Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+      Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)),
+      TestItems.algorithm1, TestItems.algoBridge
     )
     val dataset1 = DataSet(
-      Source(DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1
+      Source(DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)),
+      TestItems.dataSet1, BuiltInItems.NaturalBridge
     )
 
     // Create a Source for loaded Items
@@ -127,7 +129,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
             )
           ),
           "2" -> Node(
-            PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
+            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
             resources = Map(
               ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
@@ -183,7 +185,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
               )
             ),
             "2" -> Node(
-              PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
+              PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
               resources = Map(
                 ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
               )
@@ -318,7 +320,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   it should "manifest a simple loaded item" in new Env {
     val (state, sourcePlan) = runWithEmptyState(resourcePlanBuilder.manifestDataSet(
-      DataSet(makeLoadedSource("file1"), TestItems.dataSet1)
+      DataSet(makeLoadedSource("file1"), TestItems.dataSet1, Bridge.naturalBridge)
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -340,7 +342,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
   it should "also manifest a bridged dataset" in new Env {
     val (state, sourcePlan) = runWithEmptyState(resourcePlanBuilder.manifestDataSet(
       DataSet(
-        makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2)
+        makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2, TestItems.formatBridge)
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -348,7 +350,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer(Container("format1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
+            PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
             resources = Map(
               "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
             )
@@ -361,16 +363,16 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   it should "manifest the result of an algorithm" in new Env {
     val ds1 = DataSet(makeLoadedSource("1"), Mantikfile.pure(DataSetDefinition(
-      format = DataSet.NaturalFormatName, `type` = TabularData("x" -> FundamentalType.Int32)
-    )))
+      bridge = Bridge.naturalBridge.mantikId, `type` = TabularData("x" -> FundamentalType.Int32)
+    )), Bridge.naturalBridge)
     val algo1 = Mantikfile.pure(AlgorithmDefinition(
-      stack = "algorithm_stack1",
+      bridge = TestItems.algoBridge.mantikId,
       `type` = FunctionType(
         input = TabularData("x" -> FundamentalType.Int32),
         output = TabularData("y" -> FundamentalType.Int32)
       )
     ))
-    val algorithm = Algorithm(makeLoadedSource("2", ContentTypes.ZipFileContentType), algo1)
+    val algorithm = Algorithm(makeLoadedSource("2", ContentTypes.ZipFileContentType), algo1, TestItems.algoBridge)
     val applied = algorithm.apply(ds1)
 
     val (state, sourcePlan) = runWithEmptyState(resourcePlanBuilder.manifestDataSet(
@@ -392,7 +394,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
             )
           ),
           "2" -> Node(
-            PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(2)), mantikfile = algo1), resources = Map(
+            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikfile = algo1), resources = Map(
               "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
           )
@@ -409,7 +411,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   "manifestTrainableAlgorithm" should "manifest a trainable algorithm" in new Env {
     val (state, sourcePlan) = runWithEmptyState(resourcePlanBuilder.manifestTrainableAlgorithm(
-      TrainableAlgorithm(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.learning1)
+      TrainableAlgorithm(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.learning1, TestItems.learningBridge, TestItems.learningBridge)
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -417,7 +419,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer(Container("training1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.learning1), resources = Map(
+            PlanNodeService.DockerContainer(Container("docker_training1"), data = Some(PlanFileReference(1)), mantikfile = TestItems.learning1), resources = Map(
               "train" -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType)),
               "stats" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType)),
               "result" -> NodeResource(ResourceType.Source, Some(ContentTypes.ZipFileContentType))
@@ -435,7 +437,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   "manifestAlgorithm" should "manifest an algorithm" in new Env {
     val (state, sourcePlan) = runWithEmptyState(resourcePlanBuilder.manifestAlgorithm(
-      Algorithm(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.algorithm1)
+      Algorithm(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.algorithm1, TestItems.algoBridge)
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -443,7 +445,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer(Container("algorithm1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.algorithm1), resources = Map(
+            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(1)), mantikfile = TestItems.algorithm1), resources = Map(
               "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
           )
@@ -456,7 +458,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   "manifestDataSetAsFile" should "return a literal" in new Env {
     val (state, opFiles) = runWithEmptyState(resourcePlanBuilder.manifestDataSetAsFile(
-      DataSet(makeLoadedSource("file1", ContentTypes.MantikBundleContentType), TestItems.dataSet1), canBeTemporary = true
+      DataSet(makeLoadedSource("file1", ContentTypes.MantikBundleContentType), TestItems.dataSet1, Bridge.naturalBridge), canBeTemporary = true
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
@@ -466,7 +468,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   it should "also manifest a bridged dataset" in new Env {
     val (state, opFiles) = runWithEmptyState(resourcePlanBuilder.manifestDataSetAsFile(
-      DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2), canBeTemporary = true
+      DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2, TestItems.formatBridge), canBeTemporary = true
     ))
     state.files shouldBe List(
       PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")),
@@ -476,7 +478,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer(Container("format1_image"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
+            PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
             resources = Map(
               "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
             )
@@ -502,7 +504,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       Source(
         DefinitionSource.Constructed(),
         PayloadSource.Loaded("algo2", ContentTypes.ZipFileContentType)
-      ), TestItems.algorithm2
+      ), TestItems.algorithm2, TestItems.algoBridge
     )
     val pipeline = Pipeline.build(
       algorithm1,

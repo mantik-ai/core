@@ -1,6 +1,7 @@
 package ai.mantik.planner.integration
 
 import ai.mantik.componently.AkkaRuntime
+import ai.mantik.componently.utils.GlobalLocalAkkaRuntime
 import ai.mantik.executor.Executor
 import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.executor.kubernetes.{ ExecutorForIntegrationTests, KubernetesCleaner }
@@ -9,13 +10,14 @@ import ai.mantik.planner.impl.ContextImpl
 import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, RemoteMantikRegistry }
 import ai.mantik.planner.repository.impl.{ TempFileRepository, TempRepository }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
+import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.time.{ Millis, Span }
 
 import scala.concurrent.duration._
 
 /** Base class for integration tests having a full running executor instance. */
-abstract class IntegrationTestBase extends TestBaseWithAkkaRuntime {
+abstract class IntegrationTestBase extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
 
   protected var embeddedExecutor: ExecutorForIntegrationTests = _
   override protected lazy val typesafeConfig: Config = ConfigFactory.load("systemtest.conf")

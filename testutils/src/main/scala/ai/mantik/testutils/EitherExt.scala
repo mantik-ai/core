@@ -16,7 +16,7 @@ trait EitherExt {
         case Left(value) =>
           value match {
             case t: Throwable =>
-              fail(s"Got left, wanted right on try", t)
+              fail(s"Got left, wanted right on try: ${t.getMessage}", t)
             case other =>
               fail(s"Got left, wanted right on try ${other}")
           }

@@ -1,17 +1,19 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, Mantikfile, TrainableAlgorithmDefinition}
 import ai.mantik.executor.model._
+import ai.mantik.executor.model.docker.{Container, DockerConfig}
 import ai.mantik.planner
 import ai.mantik.planner._
-import ai.mantik.planner.bridge.Bridges
-import ai.mantik.planner.repository.ContentTypes
+import ai.mantik.planner.repository.{Bridge, ContentTypes}
 import cats.data.State
+import com.typesafe.config.Config
 
 /**
  * Raw Elements in Plan Construction.
  */
-class PlannerElements(bridges: Bridges) {
+class PlannerElements(config: Config) {
+
+  private val dockerConfig = DockerConfig.parseFromConfig(config.getConfig("mantik.bridge.docker"))
 
   import ai.mantik.planner.repository.ContentTypes._
 
@@ -67,25 +69,24 @@ class PlannerElements(bridges: Bridges) {
 
   /**
    * Generates the plan for a loaded Mantik DataSet.
-   * @param mantikfile the mantik of the artefact
+   * @param dataSet the dataSet
    * @param file the file, if one is present.
    */
-  def dataSet(mantikfile: Mantikfile[DataSetDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
-    val bridge = bridges.formatBridge(mantikfile.definition.format).getOrElse {
-      throw new Planner.FormatNotSupportedException(s"Format ${mantikfile.definition.format} not supported")
-    }
-    bridge.container match {
-      case None =>
-        // directly pipe data
-        val fileToUse = file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
-        loadFileNode(PlanFileWithContentType(fileToUse, ContentTypes.MantikBundleContentType))
-      case Some(container) =>
-
-        val getResource = "get"
+  def dataSet(dataSet: DataSet, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
+    val bridge = dataSet.bridge
+    val dockerImage = bridge.mantikfile.definition.dockerImage
+    // If there is no docker image, then directly pipe through the dataset
+    // TODO this is a hack to get natural DataSets working.
+    if (dockerImage == ""){
+      val fileToUse = file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
+      loadFileNode(PlanFileWithContentType(fileToUse, ContentTypes.MantikBundleContentType))
+    } else {
+      val container = resolveBridge(bridge)
+      val getResource = "get"
 
         val node = Node (
           PlanNodeService.DockerContainer (
-            container, data = file, mantikfile
+            container, data = file, dataSet.mantikfile
           ),
           Map (
             getResource -> NodeResource(ResourceType.Source, Some(MantikBundleContentType))
@@ -108,10 +109,10 @@ class PlannerElements(bridges: Bridges) {
   }
 
   /** Generates the plan for an algorithm which runtime data may come from a file. */
-  def algorithm(mantikfile: Mantikfile[AlgorithmDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
+  def algorithm(algorithm: Algorithm, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
     val applyResource = "apply"
 
-    val container = algorithmContainer(mantikfile, file)
+    val container = algorithmContainer(algorithm, file)
     val node = Node(
       container,
       Map(
@@ -135,20 +136,16 @@ class PlannerElements(bridges: Bridges) {
   }
 
   /** Generates the algorithm container for an Algorithm. */
-  def algorithmContainer(mantikfile: Mantikfile[AlgorithmDefinition], file: Option[PlanFileReference]): PlanNodeService.DockerContainer = {
-    val bridge = bridges.algorithmBridge(mantikfile.definition.stack).getOrElse {
-      throw new Planner.AlgorithmStackNotSupportedException(s"Stack ${mantikfile.definition.stack} not supported")
-    }
+  def algorithmContainer(algorithm: Algorithm, file: Option[PlanFileReference]): PlanNodeService.DockerContainer = {
+    val container = resolveBridge(algorithm.bridge)
     PlanNodeService.DockerContainer(
-      bridge.container, data = file, mantikfile
+      container, data = file, algorithm.mantikfile
     )
   }
 
   /** Generates the plan for a trainable algorithm. */
-  def trainableAlgorithm(mantikfile: Mantikfile[TrainableAlgorithmDefinition], file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
-    val bridge = bridges.trainableAlgorithmBridge(mantikfile.definition.stack).getOrElse {
-      throw new Planner.AlgorithmStackNotSupportedException(s"Stack ${mantikfile.definition.stack} not supported")
-    }
+  def trainableAlgorithm(trainableAlgorithm: TrainableAlgorithm, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
+    val container = resolveBridge(trainableAlgorithm.bridge)
 
     val trainResource = "train"
     val statsResource = "stats"
@@ -156,7 +153,7 @@ class PlannerElements(bridges: Bridges) {
 
     val node = Node(
       PlanNodeService.DockerContainer(
-        bridge.container, data = file, mantikfile = mantikfile
+        container, data = file, mantikfile = trainableAlgorithm.mantikfile
       ),
       Map(
         trainResource -> NodeResource(ResourceType.Sink, Some(MantikBundleContentType)),
@@ -180,5 +177,15 @@ class PlannerElements(bridges: Bridges) {
         )
       )
     }
+  }
+
+
+  /** Construct a container for a Bridge. */
+  def resolveBridge(bridge: Bridge): Container = {
+    dockerConfig.resolveContainer(
+      Container(
+        image = bridge.mantikfile.definition.dockerImage
+      )
+    )
   }
 }

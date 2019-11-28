@@ -1,6 +1,6 @@
 # Casts SELECT CAST (x as int32) as a, CAST (y as int32) as b
 # Note: the cast can fail.
-stack: select
+bridge: builtin/select
 type:
     input:
         columns:
