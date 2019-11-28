@@ -1,7 +1,6 @@
 package ai.mantik.planner
 
 import ai.mantik.componently.AkkaRuntime
-import ai.mantik.planner.bridge.{ Bridges, BridgesProvider }
 import ai.mantik.planner.impl.{ ContextImpl, PlannerImpl }
 import ai.mantik.planner.impl.exec.PlanExecutorImpl
 import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, Repository, RepositoryModule }
@@ -22,7 +21,6 @@ class PlannerModule(isClient: Option[ClientConfig])(
     bind(classOf[Context]).to(classOf[ContextImpl])
     bind(classOf[PlanExecutor]).to(classOf[PlanExecutorImpl])
     bind(classOf[Planner]).to(classOf[PlannerImpl])
-    bind(classOf[Bridges]).toProvider(classOf[BridgesProvider])
     isClient match {
       case Some(clientConfig) =>
         bind(classOf[ClientConfig]).toInstance(clientConfig)

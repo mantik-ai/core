@@ -17,6 +17,5 @@ cp -r ../../../go_shared docker_build
 
 . ../../../scripts/ci/docker_help.sh
 
-$DOCKER_CALL build -t bridge.tf.saved_model .
-
+docker_build bridge.tf.saved_model
 docker_push bridge.tf.saved_model

@@ -9,7 +9,7 @@ import ai.mantik.planner.{ Context, DataSet }
 
 object TrainAlgorithm extends ExampleBase {
 
-  override protected def run(context: Context): Unit = {
+  override protected def run(implicit context: Context): Unit = {
     val sampleFile = new File("bridge/sklearn/simple_learn/example/kmeans").toPath
     context.pushLocalMantikFile(sampleFile)
 
@@ -34,9 +34,7 @@ object TrainAlgorithm extends ExampleBase {
 
     val (trained, stats) = kmeans.train(DataSet.literal(learningData))
 
-    context.execute(
-      trained.tag("kmeans_trained").save()
-    )
+    trained.tag("kmeans_trained").save().run()
 
     val trainedAgain = context.loadAlgorithm("kmeans_trained")
 
@@ -50,15 +48,14 @@ object TrainAlgorithm extends ExampleBase {
       .row(makeTensor(4, 4))
       .result
 
-    val applied = context.execute(
-      trainedAgain(DataSet.literal(sampleData)).fetch
-    )
+    val applied =
+      trainedAgain(DataSet.literal(sampleData)).fetch.run()
 
     println(applied)
 
-    val statsFetched = context.execute(
-      stats.fetch
-    )
+    val statsFetched =
+      stats.fetch.run()
+
     println("Stats\n" + statsFetched)
   }
 }

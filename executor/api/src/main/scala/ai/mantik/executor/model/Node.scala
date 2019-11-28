@@ -1,5 +1,6 @@
 package ai.mantik.executor.model
 
+import ai.mantik.componently.utils.Renderable
 import ai.mantik.executor.model.docker.Container
 import io.circe.{ Decoder, Encoder, ObjectEncoder }
 import io.circe.generic.JsonCodec
@@ -8,6 +9,13 @@ import io.circe.generic.semiauto
 /** Something which provides the Node functionality, either a container or an existing service. */
 @JsonCodec
 sealed trait NodeService
+
+object NodeService {
+  implicit val renderable = Renderable.makeRenderable[NodeService] {
+    case c: ContainerService => Renderable.buildRenderTree(c)(ContainerService.renderable)
+    case e: ExistingService  => Renderable.Leaf(s"Existing: ${e.url}")
+  }
+}
 
 /**
  * Defines a service, which is using contains for providing it.
@@ -25,6 +33,18 @@ case class ContainerService(
     ioAffine: Boolean = false
 ) extends NodeService
 
+object ContainerService {
+  implicit val renderable = Renderable.makeRenderable[ContainerService] { cs =>
+    Renderable.keyValueList(
+      "ContainerService",
+      "main" -> cs.main,
+      "dataProvider" -> cs.dataProvider,
+      "port" -> cs.port,
+      "ioAffine" -> cs.ioAffine
+    )
+  }
+}
+
 /**
  * Describes how to initialize a container
  * @param url Zip file URL which is unpacked to /data
@@ -35,6 +55,16 @@ case class DataProvider(
     url: Option[String] = None,
     mantikfile: Option[String] = None
 )
+
+object DataProvider {
+  implicit val renderable: Renderable[DataProvider] = Renderable.makeRenderable[DataProvider] { d =>
+    Renderable.keyValueList(
+      "DataProvider",
+      "url" -> d.url,
+      "mantikfile" -> d.mantikfile.map(Renderable.renderPotentialJson)
+    )
+  }
+}
 
 /**
  * Defines a reference to an existing service.
@@ -102,4 +132,27 @@ object Node {
   def transformer[T](service: T): Node[T] = Node[T](
     service, resources = Map(ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer))
   )
+
+  implicit def renderable[T](implicit renderable: Renderable[T]): Renderable[Node[T]] = new Renderable[Node[T]] {
+    override def buildRenderTree(value: Node[T]): Renderable.RenderTree = {
+      val resources = value.resources.toIndexedSeq.sortBy(_._1)
+      val resourcesTree = if (resources.isEmpty) {
+        Renderable.Leaf("No Resources")
+      } else {
+        Renderable.SubTree(
+          resources.map {
+            case (name, resource) =>
+              Renderable.Leaf(s"${name} ${resource.resourceType.toString} ${resource.contentType.getOrElse("")}")
+          }.toVector,
+          title = Some("Resources")
+        )
+      }
+      Renderable.SubTree(
+        items = Vector(
+          Renderable.buildRenderTree(value.service),
+          resourcesTree
+        )
+      )
+    }
+  }
 }

@@ -9,12 +9,10 @@ import ai.mantik.planner.{ Algorithm, DataSet, Pipeline }
 import ai.mantik.testutils.tags.IntegrationTest
 
 @IntegrationTest
-class SimplePipelineSpec extends IntegrationTestBase {
+class SimplePipelineSpec extends IntegrationTestBase with Samples {
 
-  val sampleFile = new File("bridge/tf/saved_model/test/resources/samples/double_multiply").toPath
-
-  trait Env {
-    context.pushLocalMantikFile(sampleFile)
+  trait Env extends EnvWithBridges {
+    context.pushLocalMantikFile(doubleMultiplyDirectory)
 
     val doubleMultiply = context.loadAlgorithm("double_multiply")
     val toStringConversion = Algorithm.fromSelect(

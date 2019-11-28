@@ -5,7 +5,7 @@ import ai.mantik.planner.{ Context, DataSet }
 
 object SelectSample extends ExampleBase {
 
-  override protected def run(context: Context): Unit = {
+  override protected def run(implicit context: Context): Unit = {
     val bundle = Bundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
@@ -32,13 +32,13 @@ object SelectSample extends ExampleBase {
       "select x * y"
     )
 
-    val result1 = context.execute(selected1.fetch)
+    val result1 = selected1.fetch.run()
     println("Result1\n" + result1.render())
 
-    val result2 = context.execute(selected2.fetch)
+    val result2 = selected2.fetch.run()
     println("Result2\n" + result2.render())
 
-    val result3 = context.execute(selected3.fetch)
+    val result3 = selected3.fetch.run()
     println("Result3\n" + result3.render())
   }
 }

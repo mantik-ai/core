@@ -4,7 +4,8 @@ import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{DataType, TabularData}
 import ai.mantik.ds.element.{Bundle, SingleElementBundle}
 import ai.mantik.elements
-import ai.mantik.elements.{DataSetDefinition, Mantikfile}
+import ai.mantik.elements.{DataSetDefinition, Mantikfile, NamedMantikId}
+import ai.mantik.planner.repository.Bridge
 import ai.mantik.planner.select.{AutoAdapt, Select}
 
 /** A DataSet cannot be automatically converted to an expected type. */
@@ -14,7 +15,7 @@ class ConversionNotApplicableException(msg: String) extends IllegalArgumentExcep
 /** Represents a DataSet. */
 case class DataSet(
   core: MantikItemCore[DataSetDefinition]
-) extends MantikItem {
+) extends BridgedMantikItem {
 
   override type DefinitionType = DataSetDefinition
   override type OwnType = DataSet
@@ -98,20 +99,18 @@ object DataSet {
   }
 
 
-  def apply(source: Source, mantikfile: Mantikfile[DataSetDefinition]): DataSet = {
-    DataSet(MantikItemCore(source, mantikfile))
+  def apply(source: Source, mantikfile: Mantikfile[DataSetDefinition], bridge: Bridge): DataSet = {
+    DataSet(MantikItemCore(source, mantikfile, bridge = Some(bridge)))
   }
 
   /** Creates a natural data source, with serialized data coming direct from a flow. */
   private[planner] def natural(source: Source, dataType: DataType): DataSet = {
+    val bridge = Bridge.naturalBridge
     DataSet(source, Mantikfile.pure(
       elements.DataSetDefinition(
-        format = NaturalFormatName,
+        bridge = bridge.mantikId,
         `type` = dataType
       )
-    ))
+    ), bridge)
   }
-
-  /** Name of the always-existing natural format. */
-  val NaturalFormatName = "natural"
 }

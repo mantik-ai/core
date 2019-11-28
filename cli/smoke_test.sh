@@ -2,6 +2,7 @@
 MYDIR=`dirname $0`
 cd $MYDIR
 set -e
+set -x
 
 # ** Some smoke tests against a running engine **
 ./target/mantik version

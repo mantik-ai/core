@@ -2,8 +2,7 @@ package ai.mantik.planner.impl
 
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, CacheKeyGroup, DataSet, Operation, PayloadSource, Pipeline, PlanFileReference, PlanOp, Planner, TrainableAlgorithm }
-import ai.mantik.planner.bridge.Bridges
-import ai.mantik.planner.repository.ContentTypes
+import ai.mantik.planner.repository.{ Bridge, ContentTypes }
 import cats.data.State
 import cats.implicits._
 
@@ -256,7 +255,7 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
   def manifestAlgorithm(algorithm: Algorithm): State[PlanningState, ResourcePlan] = {
     translateItemPayloadSourceAsFiles(algorithm.payloadSource, canBeTemporary = true).flatMap { files =>
       val algorithmFile = files.fileRefs.headOption
-      elements.algorithm(algorithm.mantikfile, algorithmFile)
+      elements.algorithm(algorithm, algorithmFile)
         .map(_.prependOp(files.preOp))
     }
   }
@@ -279,26 +278,26 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
   def manifestTrainableAlgorithm(trainableAlgorithm: TrainableAlgorithm): State[PlanningState, ResourcePlan] = {
     translateItemPayloadSourceAsFiles(trainableAlgorithm.payloadSource, canBeTemporary = true).flatMap { files =>
       val algorithmFile = files.fileRefs.headOption
-      elements.trainableAlgorithm(trainableAlgorithm.mantikfile, algorithmFile)
+      elements.trainableAlgorithm(trainableAlgorithm, algorithmFile)
         .map(_.prependOp(files.preOp))
     }
   }
 
   /** Manifest a data set as a graph with one output. */
   def manifestDataSet(dataSet: DataSet): State[PlanningState, ResourcePlan] = {
-    if (dataSet.mantikfile.definition.format == DataSet.NaturalFormatName) {
+    if (dataSet.bridgeMantikId == Bridge.naturalBridge.mantikId) {
       translateItemPayloadSource(dataSet.payloadSource)
     } else {
       translateItemPayloadSourceAsFiles(dataSet.payloadSource, canBeTemporary = true).flatMap { files =>
         val dataSetFile = files.fileRefs.headOption
-        elements.dataSet(dataSet.mantikfile, dataSetFile).map(_.prependOp(files.preOp))
+        elements.dataSet(dataSet, dataSetFile).map(_.prependOp(files.preOp))
       }
     }
   }
 
   /** Manifest a data set as (natural encoded) file. */
   def manifestDataSetAsFile(dataSet: DataSet, canBeTemporary: Boolean): State[PlanningState, FilesPlan] = {
-    if (dataSet.mantikfile.definition.format == DataSet.NaturalFormatName) {
+    if (dataSet.bridgeMantikId == Bridge.naturalBridge.mantikId) {
       // We can directly use it's file
       translateItemPayloadSourceAsFiles(dataSet.payloadSource, canBeTemporary)
     } else {

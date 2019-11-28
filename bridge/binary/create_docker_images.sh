@@ -8,6 +8,5 @@ echo "MYDIR $PWD"
 
 . ../../scripts/ci/docker_help.sh
 
-$DOCKER_CALL build -t binary_bridge .
-
-docker_push binary_bridge
+docker_build bridge.binary
+docker_push bridge.binary

@@ -15,21 +15,21 @@ trait TransformationSpecBase {
           "A" -> Node.source(
             ContainerService(
               main = Container(
-                image = "executor_sample_source"
+                image = "mantikai/executor.sample_source"
               )
             )
           ),
           "B" -> Node.transformer(
             ContainerService(
               main = Container(
-                image = "executor_sample_transformer"
+                image = "mantikai/executor.sample_transformer"
               )
             )
           ),
           "C" -> Node.sink(
             ContainerService(
               main = Container(
-                image = "executor_sample_sink"
+                image = "mantikai/executor.sample_sink"
               )
             )
           )

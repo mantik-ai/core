@@ -41,7 +41,7 @@
   "authorEmail" : null,
   "name" : null,
   "version" : null,
-  "stack" : "select",
+  "bridge" : "builtin/select",
   "type" : {
     "kind" : "simple",
     "input" : {

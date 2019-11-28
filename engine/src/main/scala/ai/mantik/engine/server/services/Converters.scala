@@ -8,28 +8,29 @@ import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.helper.circe.CirceJson
-import ai.mantik.elements.{ ItemId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ItemId, Mantikfile, NamedMantikId}
 import ai.mantik.engine.protos.items.MantikItem.Item
 import ai.mantik.engine.protos.items.ObjectKind
-import ai.mantik.planner.{ Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
-import ai.mantik.engine.protos.items.{ ObjectKind, MantikItem => ProtoMantikItem }
-import ai.mantik.engine.protos.items.{ Algorithm => ProtoAlgorithm }
-import ai.mantik.engine.protos.items.{ DataSet => ProtoDataSet }
-import ai.mantik.engine.protos.items.{ Pipeline => ProtoPipeline }
-import ai.mantik.engine.protos.items.{ TrainableAlgorithm => ProtoTrainableAlgorithm }
-import ai.mantik.engine.protos.ds.{ BundleEncoding, Bundle => ProtoBundle, DataType => ProtoDataType }
-import ai.mantik.engine.protos.registry.{ DeploymentInfo => ProtoDeploymentInfo, MantikArtifact => ProtoMantikArtifact }
-import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact }
-import com.google.protobuf.{ ByteString => ProtoByteString }
+import ai.mantik.planner.{Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm}
+import ai.mantik.engine.protos.items.{ObjectKind, MantikItem => ProtoMantikItem}
+import ai.mantik.engine.protos.items.{Algorithm => ProtoAlgorithm}
+import ai.mantik.engine.protos.items.{DataSet => ProtoDataSet}
+import ai.mantik.engine.protos.items.{Pipeline => ProtoPipeline}
+import ai.mantik.engine.protos.items.{Bridge => ProtoBridge}
+import ai.mantik.engine.protos.items.{TrainableAlgorithm => ProtoTrainableAlgorithm}
+import ai.mantik.engine.protos.ds.{BundleEncoding, Bundle => ProtoBundle, DataType => ProtoDataType}
+import ai.mantik.engine.protos.registry.{DeploymentInfo => ProtoDeploymentInfo, MantikArtifact => ProtoMantikArtifact}
+import ai.mantik.planner.repository.{Bridge, DeploymentInfo, MantikArtifact}
+import com.google.protobuf.{ByteString => ProtoByteString}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.util.ccompat.IterableOnce
 import com.google.protobuf.timestamp.Timestamp
 import io.circe.syntax._
 import io.circe.parser
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Converters between Protobuf and Mantik elements. */
 private[engine] object Converters {
@@ -40,7 +41,7 @@ private[engine] object Converters {
         kind = ObjectKind.KIND_ALGORITHM,
         item = Item.Algorithm(
           ProtoAlgorithm(
-            a.stack,
+            a.bridgeMantikId.toString,
             inputType = Some(encodeDataType(a.functionType.input)),
             outputType = Some(encodeDataType(a.functionType.output))
           )
@@ -49,8 +50,8 @@ private[engine] object Converters {
         kind = ObjectKind.KIND_DATASET,
         item = Item.Dataset(
           ProtoDataSet(
+            d.bridgeMantikId.toString,
             `type` = Some(ProtoDataType(d.dataType.asJson.noSpaces)),
-            stack = d.stack
           )
         )
       )
@@ -58,7 +59,7 @@ private[engine] object Converters {
         kind = ObjectKind.KIND_TRAINABLE_ALGORITHM,
         item = Item.TrainableAlgorithm(
           ProtoTrainableAlgorithm(
-            stack = t.stack,
+            bridge = t.bridgeMantikId.toString,
             trainingType = Some(encodeDataType(t.trainingDataType)),
             statType = Some(encodeDataType(t.statType)),
             inputType = Some(encodeDataType(t.functionType.input)),
@@ -72,6 +73,17 @@ private[engine] object Converters {
           ProtoPipeline(
             inputType = Some(encodeDataType(p.functionType.input)),
             outputType = Some(encodeDataType(p.functionType.output))
+          )
+        )
+      )
+      case b: Bridge => ProtoMantikItem(
+        kind = ObjectKind.KIND_BRIDGE,
+        item = Item.Bridge(
+          ProtoBridge(
+            dockerImage = b.mantikfile.definition.dockerImage,
+            suitable = b.mantikfile.definition.suitable,
+            protocol = b.mantikfile.definition.protocol,
+            payloadContentType = RpcConversions.encodeOptionalString(b.mantikfile.definition.payloadContentType)
           )
         )
       )

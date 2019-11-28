@@ -9,7 +9,7 @@ import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ Session, SessionManager }
-import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
+import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, BuiltInItems, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
 import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
 import javax.inject.Inject
@@ -21,10 +21,19 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
   override def get(request: GetRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
-      (artifact, hull) <- session.components.retriever.get(request.name)
+      mantikItem <- retrieve(session, request.name)
     } yield {
-      val mantikItem = MantikItem.fromMantikArtifact(artifact, hull)
       placeInGraph(session, mantikItem)
+    }
+  }
+
+  private def retrieve(session: Session, name: String): Future[MantikItem] = {
+    BuiltInItems.readBuiltInItem(name) match {
+      case Some(builtIn) => Future.successful(builtIn)
+      case None => session.components.retriever.get(name).map {
+        case (artifact, hull) =>
+          MantikItem.fromMantikArtifact(artifact, hull)
+      }
     }
   }
 

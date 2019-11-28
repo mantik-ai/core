@@ -43,6 +43,7 @@ meta = dict(n_clusters=n_clusters)
 my_ref = "mq/kmeans_trained_on_blobs"
 
 with mantik.engine.Client("localhost", 8087) as client:
+    client._add_algorithm("bridge/sklearn/simple_learn")
     kmeans = client._add_algorithm("bridge/sklearn/simple_learn/example/kmeans")
     with client.enter_session():
         trained_pipe, stats = client.train([kmeans], train_bundle, meta=meta)

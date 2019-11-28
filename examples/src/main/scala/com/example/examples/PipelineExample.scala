@@ -8,7 +8,7 @@ object PipelineExample extends ExampleBase {
 
   val mnistAnnotated = new File("bridge/tf/saved_model/test/resources/samples/mnist_annotated").toPath
 
-  override protected def run(context: Context): Unit = {
+  override protected def run(implicit context: Context): Unit = {
     context.pushLocalMantikFile(mnistAnnotated, id = Some("mnist_annotated"))
 
     val mnist = context.loadAlgorithm("mnist_annotated").tag("nob/mnist_annotated") //otherwise it can't be pushed
@@ -17,12 +17,13 @@ object PipelineExample extends ExampleBase {
       mnist
     )
 
-    val result = context.execute(pipeline.deploy(ingressName = Some("mnist")))
+    val result = pipeline.deploy(ingressName = Some("mnist")).run()
     println(s"Pipeline deployed at ${result.externalUrl.get}")
 
     val pushMantikId = NamedMantikId("nob/mnist1")
     val named = pipeline.tag("nob/mnist1")
-    context.execute(named.push())
+    named.push().run()
+
     println(s"Pipeline pushed to ${pushMantikId}")
 
     // This still fails, see #114

@@ -7,13 +7,21 @@ import ai.mantik.elements.Mantikfile
 import ai.mantik.planner.utils.sqlite.{ QuillSqlite, SqliteEvolutions }
 import io.getquill.Escape
 
+/** Constants for Mantik Database Evolutions */
+object MantikDbEvolutions {
+  val CompleteResource = "/ai.mantik.planner.repository/local_repo_schema.sql"
+  val EvolutionResources = "/ai.mantik.planner.repository/evolution"
+  val CurrentVersion = 3
+}
+
+/** Mantiks Database Evolution. */
 class MantikDbEvolutions(
     quillSqlite: QuillSqlite
 ) extends SqliteEvolutions(quillSqlite) {
-  override protected val completeResource: String = "/ai.mantik.planner.repository/local_repo_schema.sql"
-  override protected val evolutionResources: String = "/ai.mantik.planner.repository/evolution"
+  override protected val completeResource: String = MantikDbEvolutions.CompleteResource
+  override protected val evolutionResources: String = MantikDbEvolutions.EvolutionResources
 
-  override val currentVersion: Int = 2
+  override val currentVersion: Int = MantikDbEvolutions.CurrentVersion
 
   override protected def freshDetector(): Int = {
     // migrations are introduced after version1

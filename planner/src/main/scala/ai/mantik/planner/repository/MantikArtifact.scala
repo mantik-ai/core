@@ -27,6 +27,23 @@ case class MantikArtifact(
   lazy val parsedMantikfile: Mantikfile[_ <: MantikDefinition] = Mantikfile.fromYaml(mantikfile).fold(e => throw InvalidMantikfileException.wrap(e), identity)
 }
 
+object MantikArtifact {
+  /** Build an Artifact from a MantikDefinifion */
+  def makeFromDefinition[T <: MantikDefinition](
+    mantikDefinition: MantikDefinition,
+    name: NamedMantikId,
+    fileId: Option[String] = None
+  ): MantikArtifact = {
+    MantikArtifact(
+      mantikfile = Mantikfile.pure(mantikDefinition).toJson,
+      fileId = fileId,
+      namedId = Some(name),
+      itemId = ItemId.generate(),
+      deploymentInfo = None
+    )
+  }
+}
+
 /** Deployment Information as being stored in the [[Repository]]. */
 case class DeploymentInfo(
     name: String,

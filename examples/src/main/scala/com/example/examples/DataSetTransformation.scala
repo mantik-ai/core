@@ -1,6 +1,7 @@
 package com.example.examples
 
 import java.io.File
+import java.nio.file.Paths
 
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
@@ -8,8 +9,10 @@ import ai.mantik.planner.{ Context, DataSet }
 
 object DataSetTransformation extends ExampleBase {
 
-  override protected def run(context: Context): Unit = {
-    val sampleFile = new File("bridge/tf/saved_model/test/resources/samples/double_multiply").toPath
+  override protected def run(implicit context: Context): Unit = {
+    val bridge = Paths.get("bridge/tf/saved_model")
+    val sampleFile = Paths.get("bridge/tf/saved_model/test/resources/samples/double_multiply")
+    context.pushLocalMantikFile(bridge)
     context.pushLocalMantikFile(sampleFile)
 
     val dataset = DataSet.literal(
@@ -23,9 +26,8 @@ object DataSetTransformation extends ExampleBase {
     )
 
     val transformation = context.loadAlgorithm("double_multiply")
-    val result = context.execute(
-      transformation(dataset).fetch
-    )
+    val result = transformation(dataset).fetch.run()
+
     println(s"Result\n$result")
   }
 }

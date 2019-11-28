@@ -3,15 +3,14 @@ package ai.mantik.elements
 import ai.mantik.ds.DataType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.helper.circe.{ CirceJson, DiscriminatorDependentCodec }
-import io.circe.{ Decoder, Encoder }
+import io.circe.generic.extras.Configuration
+import io.circe.{ Decoder, Encoder, ObjectEncoder }
 
 import scala.util.matching.Regex
 
 /** A Basic Mantik Definition (algorithms, datasets, etc...) */
 sealed trait MantikDefinition {
   def kind: String
-
-  def stack: String
 
   /** Returns referenced items. */
   def referencedItems: Seq[MantikId] = Nil
@@ -21,45 +20,80 @@ object MantikDefinition extends DiscriminatorDependentCodec[MantikDefinition] {
   override val subTypes = Seq(
     // Not using constants, they are not yet initialized.
     makeSubType[AlgorithmDefinition]("algorithm", isDefault = true),
+    makeGivenSubType[BridgeDefinition]("bridge"),
     makeSubType[DataSetDefinition]("dataset"),
     makeSubType[TrainableAlgorithmDefinition]("trainable"),
     makeSubType[PipelineDefinition]("pipeline")
   )
 
+  val BridgeKind = "bridge"
   val AlgorithmKind = "algorithm"
   val DataSetKind = "dataset"
   val TrainableAlgorithmKind = "trainable"
   val PipelineKind = "pipeline"
 }
 
+/** A MantikDefinition which doesn't need a bridge. */
+sealed trait MantikDefinitionWithoutBridge extends MantikDefinition
+
+/**
+ * A Bridge definition.
+ *
+ * @param protocol 0 ... Just pipe out DataSet, 1 ... Regular Format.
+ * @param payloadContentType if set, the bridge expects a payload content type.
+ */
+case class BridgeDefinition(
+    dockerImage: String,
+    suitable: Seq[String],
+    protocol: Int = 1,
+    payloadContentType: Option[String] = Some("application/zip")
+) extends MantikDefinitionWithoutBridge {
+  override def kind: String = MantikDefinition.BridgeKind
+}
+
+object BridgeDefinition {
+  // BridgeDefinition has DefaultValues, so it gets a special treating
+  import io.circe.generic.extras.semiauto
+  private implicit val config = Configuration.default.withDefaults
+  implicit val encoder: ObjectEncoder[BridgeDefinition] = semiauto.deriveEncoder[BridgeDefinition]
+  implicit val decoder: Decoder[BridgeDefinition] = semiauto.deriveDecoder[BridgeDefinition]
+}
+
+/** A MantikDefinition which needs a Bridge. */
+sealed trait MantikDefinitionWithBridge extends MantikDefinition {
+  /** Returns the name of the bridge. */
+  def bridge: MantikId
+
+  override def referencedItems: Seq[MantikId] = Seq(bridge)
+}
+
 /** An Algorithm Definition inside a Mantikfile. */
 case class AlgorithmDefinition(
     // specific
-    stack: String,
+    bridge: MantikId,
     `type`: FunctionType
-) extends MantikDefinition {
+) extends MantikDefinitionWithBridge {
   def kind = MantikDefinition.AlgorithmKind
 }
 
 /** A DataSet definition inside a Mantikfile */
 case class DataSetDefinition(
-    // specific
-    format: String,
+    bridge: MantikId,
     `type`: DataType
-) extends MantikDefinition {
+) extends MantikDefinitionWithBridge {
   def kind = MantikDefinition.DataSetKind
-
-  override def stack: String = format
 }
 
 case class TrainableAlgorithmDefinition(
-    // specific
-    stack: String,
-    trainedStack: Option[String] = None, // if not give, stack will be used
+    bridge: MantikId,
+    trainedBridge: Option[MantikId] = None, // if not given, the bridge will be used.
     `type`: FunctionType,
     trainingType: DataType,
     statType: DataType
-) extends MantikDefinition {
+) extends MantikDefinitionWithBridge {
+
+  override def referencedItems: Seq[MantikId] = super.referencedItems ++ trainedBridge
+
   def kind = MantikDefinition.TrainableAlgorithmKind
 }
 
@@ -71,11 +105,9 @@ case class PipelineDefinition(
     // Note: the type is optional,
     `type`: Option[OptionalFunctionType] = None,
     steps: List[PipelineStep]
-) extends MantikDefinition {
+) extends MantikDefinitionWithoutBridge {
 
   override def kind: String = MantikDefinition.PipelineKind
-
-  override def stack: String = "" // no stack needed, there is no bridge
 
   def inputType: Option[DataType] = `type`.flatMap(_.input)
 

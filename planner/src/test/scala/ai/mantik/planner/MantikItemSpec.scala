@@ -3,15 +3,16 @@ package ai.mantik.planner
 import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, NamedMantikId }
 import ai.mantik.planner.repository.ContentTypes
+import ai.mantik.planner.util.FakeBridges
 import ai.mantik.testutils.TestBase
 
-class MantikItemSpec extends TestBase {
+class MantikItemSpec extends TestBase with FakeBridges {
 
   lazy val sample = Algorithm(
     Source.constructed(PayloadSource.Loaded("1", ContentTypes.ZipFileContentType)),
     Mantikfile.fromYaml(
       """
-        |stack: stack1
+        |bridge: algo1
         |metaVariables:
         |  - name: x
         |    value: 123
@@ -20,7 +21,8 @@ class MantikItemSpec extends TestBase {
         |  input: int32
         |  output: float32
       """.stripMargin
-    ).right.getOrElse(fail).cast[AlgorithmDefinition].getOrElse(fail)
+    ).right.getOrElse(fail).cast[AlgorithmDefinition].getOrElse(fail),
+    algoBridge
   )
 
   "withMetaVariable" should "update meta variables" in {
@@ -45,7 +47,8 @@ class MantikItemSpec extends TestBase {
         Some(name),
         itemId
       ), PayloadSource.Empty),
-      sample.mantikfile
+      sample.mantikfile,
+      algoBridge
     )
     algorithm.itemId shouldBe itemId
     algorithm.name shouldBe Some(name)
@@ -64,7 +67,8 @@ class MantikItemSpec extends TestBase {
         None,
         itemId
       ), PayloadSource.Loaded("file1", ContentTypes.ZipFileContentType)),
-      sample.mantikfile
+      sample.mantikfile,
+      algoBridge
     )
     algorithm.itemId shouldBe itemId
     algorithm.name shouldBe empty
@@ -87,7 +91,8 @@ class MantikItemSpec extends TestBase {
           DefinitionSource.Loaded(Some(name), itemId)
         ),
         PayloadSource.Empty),
-      sample.mantikfile
+      sample.mantikfile,
+      algoBridge
     )
     algorithm.itemId shouldBe itemId
     algorithm.name shouldBe Some(otherName)
@@ -107,7 +112,8 @@ class MantikItemSpec extends TestBase {
         Some(name),
         itemId
       ), PayloadSource.Empty).derive,
-      sample.mantikfile
+      sample.mantikfile,
+      algoBridge
     )
     algorithm.itemId shouldNot be(itemId)
     algorithm.name shouldBe empty

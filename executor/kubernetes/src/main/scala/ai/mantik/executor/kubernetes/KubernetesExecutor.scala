@@ -1,24 +1,25 @@
 package ai.mantik.executor.kubernetes
 
-import java.time.{ Clock, Instant }
+import java.time.temporal.ChronoUnit
+import java.time.{Clock, Instant}
 import java.util.UUID
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
 import ai.mantik.executor.model._
-import ai.mantik.executor.{ Errors, Executor }
-import akka.actor.{ ActorSystem, Cancellable }
+import ai.mantik.executor.{Errors, Executor}
+import akka.actor.{ActorSystem, Cancellable}
 import com.google.common.net.InetAddresses
-import javax.inject.{ Inject, Provider, Singleton }
+import javax.inject.{Inject, Provider, Singleton}
 import skuber.Container.Running
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
-import skuber.{ Endpoints, ObjectMeta, Pod, Service }
+import skuber.{Endpoints, ObjectMeta, Pod, Service}
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Kubennetes implementation of [[Executor]]. */
 class KubernetesExecutor(config: Config, ops: K8sOperations)(
@@ -75,28 +76,41 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       case None =>
         throw new NotFoundException(s"Job ${id} not found in isolationSpace ${isolationSpace}")
       case Some(job) =>
-        job.status.map { status =>
-          logger.trace(s"Decoding job state ${status}")
-          status.active match {
-            case Some(a) if a > 0 => JobStatus(JobState.Running)
+        decodeJobStatus(id, namespace, job)
+    }
+  }
+
+  private def decodeJobStatus(id: String, namespace: String, job: skuber.batch.Job): JobStatus = {
+    job.metadata.annotations.get(KubernetesConstants.KillAnnotationName) match {
+      case Some(killValue) =>
+        return JobStatus(
+          JobState.Failed,
+          error = Some(killValue)
+        )
+      case None =>
+        // ok
+    }
+    job.status.map { status =>
+      logger.trace(s"Decoding job state ${status}")
+      status.active match {
+        case Some(a) if a > 0 => JobStatus(JobState.Running)
+        case _ =>
+          status.failed match {
+            case Some(x) if x > 0 => JobStatus(JobState.Failed)
             case _ =>
-              status.failed match {
-                case Some(x) if x > 0 => JobStatus(JobState.Failed)
+              status.succeeded match {
+                case Some(x) if x > 0 => JobStatus(JobState.Finished)
                 case _ =>
-                  status.succeeded match {
-                    case Some(x) if x > 0 => JobStatus(JobState.Finished)
-                    case _ =>
-                      logger.debug(s"Could not decode ${status}, probably pending")
-                      JobStatus(JobState.Pending)
-                  }
+                  logger.debug(s"Could not decode ${status}, probably pending")
+                  JobStatus(JobState.Pending)
               }
           }
-        }.getOrElse {
-          logger.debug(s"No job state found for ${id} in ${namespace}, probably pending")
-          JobStatus(
-            state = JobState.Pending
-          )
-        }
+      }
+    }.getOrElse {
+      logger.debug(s"No job state found for ${id} in ${namespace}, probably pending")
+      JobStatus(
+        state = JobState.Pending
+      )
     }
   }
 
@@ -256,14 +270,13 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     checkBrokenImagePods(timestamp)
   }
 
-  private def checkBrokenImagePods(timestamp: Instant): Unit = {
-    val borderTime = timestamp.minusSeconds(config.kubernetes.podPullImageTimeout.toSeconds)
+  private def checkBrokenImagePods(currentTime: Instant): Unit = {
     ops.getAllManagedPendingPods().foreach { pendingPods =>
       pendingPods.foreach {
         case (namespaceName, pendingPods) =>
           for {
             pod <- pendingPods
-            imageError <- podImageError(borderTime, pod)
+            imageError <- podImageError(currentTime, pod)
           } {
             handleBrokenImagePod(pod, imageError)
           }
@@ -288,38 +301,53 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
    * Check if a pod has an image error, so that we can kill it.
    * @return the first image error found.
    */
-  private def podImageError(borderTime: Instant, pod: Pod): Option[String] = {
+  private def podImageError(currentTime: Instant, pod: Pod): Option[String] = {
     // See: https://github.com/kubernetes/kubernetes/blob/d24fe8a801748953a5c34fd34faa8005c6ad1770/pkg/kubelet/images/types.go
-    val Errors = Set(
-      "ImagePullBackOff",
+
+    // Errors which will lead to termination immediately
+    val ImmediatelyFailErros = Seq(
       "ErrImageNeverPull",
       "InvalidImageName",
       "ImageInspectError",
+    )
+
+    // Errors which will lead to termination if the timeout is reached
+    val Errors = Set(
+      "ImagePullBackOff",
       "ErrImagePull",
       "RegistryUnavailable"
     )
 
-    /** Looks for common image errors. */
-    def imageError(container: skuber.Container.Status): Option[String] = {
+    /** Look if the container image has a status which should be terminated. */
+    def imageError(startTime: skuber.Timestamp, container: skuber.Container.Status): Option[String] = {
       container.state match {
-        case Some(w: skuber.Container.Waiting) if w.reason.exists(Errors.contains) => w.reason
+        case Some(w: skuber.Container.Waiting) =>
+          w.reason match {
+            case Some(reason) if ImmediatelyFailErros.contains(reason) =>
+              Some(reason)
+            case Some(reason) if Errors.contains(reason) && reachedTimeout(startTime) =>
+              Some(reason)
+            case Some(reason) =>
+              logger.debug(s"Pod ${pod.name} reached a status ${reason} which is not yet worth to terminate")
+              None
+            case _ => None
+          }
         case _ => None
       }
     }
 
     /** Check if startTime reached the timeout. */
     def reachedTimeout(startTime: skuber.Timestamp): Boolean = {
-      startTime.toInstant.isBefore(borderTime)
+      startTime.toInstant.plus(config.kubernetes.podPullImageTimeout.toMillis, ChronoUnit.MILLIS).isBefore(currentTime)
     }
 
     val imageErrors = for {
       status <- pod.status.toList
       startTime <- status.startTime.toList
-      if reachedTimeout(startTime)
       if status.phase.contains(Pod.Phase.Pending)
       containerStatus <- status.containerStatuses
       if !containerStatus.ready
-      imageError <- imageError(containerStatus)
+      imageError <- imageError(startTime, containerStatus)
     } yield imageError
 
     imageErrors.headOption

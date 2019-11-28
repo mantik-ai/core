@@ -13,17 +13,19 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
 
   private trait Env {
     val fileCache = new FileCache()
-    val planner = new PlannerImpl(TestItems.testBridges, fileCache)
+    val planner = new PlannerImpl(typesafeConfig, fileCache)
 
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
       f.run(PlanningState()).value
     }
 
     val algorithm1 = Algorithm(
-      Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+      Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1,
+      TestItems.algoBridge
     )
     val dataset1 = DataSet(
-      Source(DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1
+      Source(DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1,
+      TestItems.formatBridge
     )
 
     // Create a Source for loaded Items
@@ -117,7 +119,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       Source(
         DefinitionSource.Constructed(),
         PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
-      ), TestItems.algorithm1
+      ), TestItems.algorithm1, TestItems.algoBridge
     )
     val pipe = Pipeline.build(unstored)
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
@@ -163,7 +165,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       Source(
         DefinitionSource.Constructed(),
         PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
-      ), TestItems.algorithm1
+      ), TestItems.algorithm1, TestItems.algoBridge
     )
     val pipeline = Pipeline.build(
       algorithm2
@@ -234,7 +236,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
   }
 
   it should "also work if it has to convert a executed dataset" in new Env {
-    val inner = DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2)
+    val inner = DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2, TestItems.formatBridge)
     val plan = planner.convert(
       Action.FetchAction(
         inner
@@ -273,7 +275,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
 
   it should "save a non-loaded algorithm first" in new Env {
     val algorithm2 = Algorithm(
-      Source(DefinitionSource.Constructed(), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1
+      Source(DefinitionSource.Constructed(), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1, TestItems.algoBridge
     )
     val deployAction = algorithm2.deploy()
     val plan = planner.convert(deployAction)
@@ -351,7 +353,14 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
   }
 
   it should "automatically cache training outputs" in new Env {
-    val trainable = TrainableAlgorithm(MantikItemCore(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.learning1))
+    val trainable = TrainableAlgorithm(
+      MantikItemCore(
+        makeLoadedSource("file1", ContentTypes.ZipFileContentType),
+        TestItems.learning1,
+        TestItems.learningBridge
+      ),
+      TestItems.learningBridge
+    )
     val trainData = DataSet.literal(Bundle.fundamental(5))
     val (trained, stats) = trainable.train(trainData)
 

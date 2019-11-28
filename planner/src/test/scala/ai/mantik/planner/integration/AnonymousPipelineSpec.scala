@@ -9,14 +9,12 @@ import ai.mantik.planner.{ DataSet, Pipeline }
 import ai.mantik.testutils.tags.IntegrationTest
 
 @IntegrationTest
-class AnonymousPipelineSpec extends IntegrationTestBase {
-
-  val sampleFile = new File("bridge/sklearn/simple_learn/example/kmeans").toPath
+class AnonymousPipelineSpec extends IntegrationTestBase with Samples {
 
   def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 
-  it should "save and load a pipeline with anonymous elements in it" in {
-    context.pushLocalMantikFile(sampleFile)
+  it should "save and load a pipeline with anonymous elements in it" in new EnvWithBridges {
+    context.pushLocalMantikFile(kmeansDirectory)
 
     val learningData = Bundle.buildColumnWise
       .withColumn(

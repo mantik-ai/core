@@ -6,15 +6,15 @@ import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
 import ai.mantik.elements.errors.{ ErrorCodes, MantikException, MantikRemoteException }
 import ai.mantik.{ elements, planner }
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
-import ai.mantik.engine.testutil.{ DummyComponents, TestBaseWithSessions }
+import ai.mantik.engine.testutil.{ DummyComponents, TestArtifacts, TestBaseWithSessions }
 import ai.mantik.planner.repository.MantikArtifact
-import ai.mantik.planner.{ Algorithm, DataSet, PayloadSource, Pipeline }
+import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, PayloadSource, Pipeline }
 import io.grpc.StatusRuntimeException
 
 class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
@@ -29,13 +29,13 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val session2 = await(sessionManager.create())
 
     val dataset1 = MantikArtifact(
-      Mantikfile.pure(DataSetDefinition(format = DataSet.NaturalFormatName, `type` = FundamentalType.Int32)).toJson,
+      Mantikfile.pure(DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = FundamentalType.Int32)).toJson,
       fileId = Some("1234"),
       namedId = Some(NamedMantikId("Dataset1")),
       itemId = ItemId.generate()
     )
     val dataset2 = MantikArtifact(
-      Mantikfile.pure(elements.DataSetDefinition(format = DataSet.NaturalFormatName, `type` = TabularData(
+      Mantikfile.pure(elements.DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = TabularData(
         "x" -> FundamentalType.Int32
       ))).toJson,
       fileId = Some("1234"),
@@ -43,7 +43,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       itemId = ItemId.generate()
     )
     val algorithm1 = MantikArtifact(
-      Mantikfile.pure(AlgorithmDefinition(stack = "stack1", `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
+      Mantikfile.pure(AlgorithmDefinition(bridge = TestArtifacts.algoBridge1.namedId.get, `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
@@ -51,8 +51,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val trainable1 = MantikArtifact(
       Mantikfile.pure(
         TrainableAlgorithmDefinition(
-          stack = "stack2",
-          trainedStack = Some("stack2_trained"),
+          bridge = TestArtifacts.trainingBridge1.namedId.get,
+          trainedBridge = Some(TestArtifacts.trainedBridge1.namedId.get),
           trainingType = FundamentalType.Int32,
           statType = FundamentalType.Float32,
           `type` = FunctionType(
@@ -77,6 +77,9 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       namedId = Some(NamedMantikId("Pipeline1")),
       itemId = ItemId.generate()
     )
+    await(components.repository.store(TestArtifacts.algoBridge1))
+    await(components.repository.store(TestArtifacts.trainingBridge1))
+    await(components.repository.store(TestArtifacts.trainedBridge1))
     await(components.repository.store(dataset1))
     await(components.repository.store(dataset2))
     await(components.repository.store(algorithm1))
@@ -137,6 +140,18 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     pipelineItem.outputType.get.json shouldBe ad.`type`.output.toJsonString
   }
 
+  it should "get bridges" in new Env {
+    val bridgeGet = await(graphBuilder.get(GetRequest(session1.id, TestArtifacts.algoBridge1.mantikId.toString)))
+    bridgeGet.itemId shouldBe "1"
+    bridgeGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_BRIDGE
+    val bridgeItem = bridgeGet.item.getOrElse(fail).getBridge
+    val pd = TestArtifacts.algoBridge1.parsedMantikfile.definition.asInstanceOf[BridgeDefinition]
+    bridgeItem.dockerImage shouldBe pd.dockerImage
+    bridgeItem.suitable shouldBe pd.suitable
+    bridgeItem.protocol shouldBe pd.protocol
+    bridgeItem.payloadContentType shouldBe pd.payloadContentType.get
+  }
+
   "algorithmApply" should "apply algorithms upon datasets" in new Env {
     val ds1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
     val algo1 = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
@@ -183,7 +198,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       element.item.get.kind shouldBe ObjectKind.KIND_DATASET
       val pds = element.item.get.getDataset
       pds.`type`.get.json shouldBe "\"string\""
-      pds.stack shouldBe DataSet.NaturalFormatName
+      pds.bridge shouldBe BuiltInItems.NaturalBridgeName.toString
 
       // TODO: Error scenarios
 
@@ -222,7 +237,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       val underlyingStat = session1.getItemAs[DataSet](result.statDataset.get.itemId)
       underlyingStat.dataType shouldBe FundamentalType.Float32
       val underlyingTrainable = session1.getItemAs[Algorithm](result.trainedAlgorithm.get.itemId)
-      underlyingTrainable.stack shouldBe "stack2_trained"
+      underlyingTrainable.bridgeMantikId shouldBe TestArtifacts.trainedBridge1.namedId.get
       if (withCaching) {
         underlyingStat.payloadSource.asInstanceOf[PayloadSource.Projection].source shouldBe an[PayloadSource.Cached]
         underlyingTrainable.payloadSource.asInstanceOf[PayloadSource.Projection].source shouldBe an[PayloadSource.Cached]
@@ -252,7 +267,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   trait EnvForPipeline extends PlainEnv {
     val algorithm1 = MantikArtifact(
       Mantikfile.pure(elements.AlgorithmDefinition(
-        stack = "stack1",
+        bridge = TestArtifacts.algoBridge1.namedId.get,
         `type` = FunctionType(
           input = TabularData(
             "x" -> FundamentalType.Int32
@@ -266,6 +281,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
+    await(components.repository.store(TestArtifacts.algoBridge1))
     await(components.repository.store(algorithm1))
     val algorithm1Item = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
   }
@@ -325,8 +341,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
   "setMetaVariables" should "work" in new PlainEnv {
     val algorithm1 = MantikArtifact(
-      """kind: algorithm
-          |stack: foo1
+      s"""kind: algorithm
+          |bridge: ${TestArtifacts.algoBridge1.namedId.get}
           |type:
           |  input: int32
           |  output: int32
@@ -342,6 +358,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
+    await(components.repository.store(TestArtifacts.algoBridge1))
     await(components.repository.store(algorithm1))
     val algorithm = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
     val nameChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(

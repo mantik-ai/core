@@ -2,6 +2,7 @@ package ai.mantik.planner.select
 
 import ai.mantik.ds.{ FundamentalType, TabularData, Tensor }
 import ai.mantik.ds.element.{ Bundle, TensorElement }
+import ai.mantik.planner.repository.Bridge
 import ai.mantik.planner.select.run.SelectProgram
 import ai.mantik.testutils.TestBase
 import ai.mantik.planner.select.run.Compiler
@@ -110,7 +111,7 @@ class SelectSpec extends TestBase {
   it should "create valid mantikfiles" in {
     val select = Select.parse(simpleBundle.model, "select x where x = 1").getOrElse(fail)
     val mantikFile = select.compileToSelectMantikfile().getOrElse(fail)
-    mantikFile.definition.stack shouldBe "select"
+    mantikFile.definition.bridge shouldBe Bridge.selectBridge.mantikId
     val program = Compiler.compile(select).right.getOrElse(fail)
     mantikFile.toJsonValue.asObject.get("selectProgram").get.as[SelectProgram] shouldBe Right(program)
   }

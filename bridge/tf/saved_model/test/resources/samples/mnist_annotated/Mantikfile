@@ -1,4 +1,4 @@
-stack: tf.saved_model
+bridge: mantik/tf.saved_model
 type:
   input:
     columns:

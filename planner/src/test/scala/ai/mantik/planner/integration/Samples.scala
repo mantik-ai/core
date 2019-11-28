@@ -1,6 +1,7 @@
 package ai.mantik.planner.integration
 
 import java.io.File
+import java.nio.file.Paths
 
 import ai.mantik.ds.FundamentalType.Float64
 import ai.mantik.ds.{ TabularData, Tensor }
@@ -11,14 +12,21 @@ import org.scalatest.BeforeAndAfterAll
 trait Samples extends BeforeAndAfterAll {
   self: IntegrationTestBase =>
 
-  private val doubleMultiplyDirectory = new File("bridge/tf/saved_model/test/resources/samples/double_multiply").toPath
-  private val kmenasDirectory = new File("bridge/sklearn/simple_learn/example/kmeans").toPath
+  protected val doubleMultiplyDirectory = Paths.get("bridge/tf/saved_model/test/resources/samples/double_multiply")
+  protected val kmeansDirectory = Paths.get("bridge/sklearn/simple_learn/example/kmeans")
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
   }
 
-  trait EnvWithAlgorithm {
+  trait EnvWithBridges {
+    context.pushLocalMantikFile(Paths.get("bridge/binary"))
+    context.pushLocalMantikFile(Paths.get("bridge/tf/saved_model"))
+    context.pushLocalMantikFile(Paths.get("bridge/tf/train"))
+    context.pushLocalMantikFile(Paths.get("bridge/sklearn/simple_learn"))
+  }
+
+  trait EnvWithAlgorithm extends EnvWithBridges {
     // Note: this will make the appear the algorithm with a new revision each time
     private lazy val doubleMultiplyPushed = context.pushLocalMantikFile(doubleMultiplyDirectory)
     lazy val doubleMultiply = {
@@ -27,8 +35,8 @@ trait Samples extends BeforeAndAfterAll {
     }
   }
 
-  trait EnvWithTrainedAlgorithm {
-    context.pushLocalMantikFile(kmenasDirectory)
+  trait EnvWithTrainedAlgorithm extends EnvWithBridges {
+    context.pushLocalMantikFile(kmeansDirectory)
 
     private def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 

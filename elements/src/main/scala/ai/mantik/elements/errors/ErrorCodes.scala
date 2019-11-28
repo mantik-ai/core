@@ -32,6 +32,8 @@ object ErrorCodes {
 
   val MantikItemConflict = add(MantikItem.derive("Conflict", Some(Code.FAILED_PRECONDITION)))
 
+  val MantikItemInvalidBridge = add(MantikItem.derive("InvalidBridge", Some(Code.FAILED_PRECONDITION)))
+
   val InvalidMantikfile = addCode("InvalidMantikfile", Code.INVALID_ARGUMENT)
 
   val InvalidMantikId = addCode("InvalidMantikId", Code.INVALID_ARGUMENT)
@@ -41,6 +43,8 @@ object ErrorCodes {
   val LocalRegistry = addCode("LocalRegistry", Code.INTERNAL)
 
   val RemoteRegistryFailure = addCode("RemoteRegistry", Code.UNKNOWN)
+
+  val RemoteRegistryCouldNotGetToken = add(RemoteRegistryFailure.derive("CouldNotGetToken"))
 
   val InternalError = addCode("Internal", Code.INTERNAL)
 

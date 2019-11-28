@@ -158,6 +158,7 @@ lazy val util = makeProject("util")
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
       "io.circe" %% "circe-java8" % circeVersion,
+      "io.circe" %% "circe-generic-extras" % circeVersion,
 
       "de.heikoseeberger" %% "akka-http-circe" % "1.25.2"
     )

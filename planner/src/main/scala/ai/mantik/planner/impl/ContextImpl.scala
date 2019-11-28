@@ -5,11 +5,9 @@ import java.nio.file.Path
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{ MantikId, NamedMantikId }
+import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.executor.Executor
-import ai.mantik.executor.client.ExecutorClient
 import ai.mantik.planner._
-import ai.mantik.planner.bridge.Bridges
 import ai.mantik.planner.impl.exec.{ FileCache, FileRepositoryServerRemotePresence, PlanExecutorImpl }
 import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
 import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
@@ -87,9 +85,8 @@ private[mantik] object ContextImpl {
     executor: Executor,
     registry: RemoteMantikRegistry
   )(implicit akkaRuntime: AkkaRuntime): Context = {
-    val bridges: Bridges = Bridges.loadFromConfig(akkaRuntime.config)
     val fileCache = new FileCache()
-    val planner = new PlannerImpl(bridges, fileCache)
+    val planner = new PlannerImpl(akkaRuntime.config, fileCache)
     val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
     val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
     val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
@@ -105,6 +102,7 @@ private[mantik] object ContextImpl {
       fileCache,
       clientConfig
     )
-    new ContextImpl(localRegistry, planner, planExecutor, registry, retriever)
+    val context = new ContextImpl(localRegistry, planner, planExecutor, registry, retriever)
+    context
   }
 }

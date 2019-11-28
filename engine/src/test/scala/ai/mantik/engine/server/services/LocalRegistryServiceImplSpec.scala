@@ -2,13 +2,13 @@ package ai.mantik.engine.server.services
 
 import java.time.Instant
 
-import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
-import ai.mantik.ds.FundamentalType.{Int32, StringType}
+import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
+import ai.mantik.ds.FundamentalType.{ Int32, StringType }
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId}
-import ai.mantik.engine.protos.local_registry.{AddArtifactRequest, AddArtifactResponse, GetArtifactRequest, GetArtifactWithPayloadResponse, ListArtifactsRequest, TagArtifactRequest}
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId }
+import ai.mantik.engine.protos.local_registry.{ AddArtifactRequest, AddArtifactResponse, GetArtifactRequest, GetArtifactWithPayloadResponse, ListArtifactsRequest, TagArtifactRequest }
 import ai.mantik.engine.testutil.TestBaseWithSessions
-import ai.mantik.planner.repository.{ContentTypes, DeploymentInfo, MantikArtifact}
+import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo, MantikArtifact }
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.protobuf.timestamp.Timestamp
@@ -25,7 +25,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
 
     val item = MantikArtifact(
       Mantikfile.pure(
-        AlgorithmDefinition(stack = "some_stack", `type` = FunctionType(Int32, Int32))
+        AlgorithmDefinition(bridge = "some_stack", `type` = FunctionType(Int32, Int32))
       ).toJson,
       fileId = Some("1234"),
       namedId = Some("item1"),
@@ -34,7 +34,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
 
     val item2 = item.copy(
       mantikfile = Mantikfile.pure(
-        DataSetDefinition(format = "format", `type` = StringType)
+        DataSetDefinition(bridge = "format", `type` = StringType)
       ).toJson,
       itemId = ItemId.generate(),
       namedId = None
@@ -140,7 +140,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
     requestObserver.onNext(
       AddArtifactRequest(
-        mantikfile = item.mantikfile,
+        mantikfile = item.mantikfile
       )
     )
     requestObserver.onCompleted()
@@ -155,7 +155,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
     val mantikfile =
       """kind: algorithm
-        |stack: foobar
+        |bridge: foobar
         |# This is a comment which should survive
         |type:
         |  input: int32
@@ -163,7 +163,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
         |""".stripMargin
     requestObserver.onNext(
       AddArtifactRequest(
-        mantikfile = mantikfile,
+        mantikfile = mantikfile
       )
     )
     requestObserver.onCompleted()
@@ -228,7 +228,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     fileContent shouldBe (bytes.reduce(_ ++ _))
   }
 
-  "getArtifactWithPayload" should "deliver artifacts without payload" in new EnvBase  {
+  "getArtifactWithPayload" should "deliver artifacts without payload" in new EnvBase {
     val itemWithoutFile = item.copy(fileId = None)
     await(localRepo.store(itemWithoutFile))
 
@@ -245,12 +245,10 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
 
   it should "deliver artifacts with payload" in new EnvBase {
     val bytes = {
-      val b =new Array[Byte](100000)
+      val b = new Array[Byte](100000)
       Random.nextBytes(b)
       ByteString(b)
     }
-
-
 
     val itemToUse = await(components.localRegistry.addMantikArtifact(
       item,
@@ -264,7 +262,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
       GetArtifactRequest(itemToUse.namedId.get.toString), streamObserver
     )
     val parts = await(future)
-    parts.size shouldBe >= (2)
+    parts.size shouldBe >=(2)
     Converters.decodeMantikArtifact(parts.head.artifact.get) shouldBe itemToUse
     parts.head.contentType shouldBe ContentTypes.ZipFileContentType
     val collectedBytes = parts.map(p => RpcConversions.decodeByteString(p.payload)).reduce(_ ++ _)

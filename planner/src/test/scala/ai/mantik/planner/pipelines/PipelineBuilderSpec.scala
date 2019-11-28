@@ -5,6 +5,7 @@ import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.{ AlgorithmStep, SelectStep }
 import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, NamedMantikId, PipelineStep }
+import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.select.Select
 import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
@@ -16,26 +17,28 @@ class PipelineBuilderSpec extends TestBase {
     source = Source(DefinitionSource.Loaded(Some("algo1"), ItemId.generate()), PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)),
     Mantikfile.pure(
       AlgorithmDefinition(
-        stack = "stack1",
+        bridge = TestItems.algoBridge.mantikId,
         `type` = FunctionType(
           input = TabularData("x" -> FundamentalType.Int32),
           output = TabularData("y" -> FundamentalType.StringType)
         )
       )
-    )
+    ),
+    TestItems.algoBridge
   )
 
   val algorithm2 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
     Mantikfile.pure(
       elements.AlgorithmDefinition(
-        stack = "stack1",
+        bridge = TestItems.algoBridge.mantikId,
         `type` = FunctionType(
           input = TabularData("y" -> FundamentalType.StringType),
           output = TabularData("z" -> FundamentalType.Float64)
         )
       )
-    )
+    ),
+    TestItems.algoBridge
   )
 
   val selectAlgorithm = Algorithm.fromSelect(

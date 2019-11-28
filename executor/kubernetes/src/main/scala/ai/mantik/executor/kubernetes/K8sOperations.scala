@@ -392,6 +392,8 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     }
 
     for {
+      job <- getJobById(Some(namespace), jobId)
+      _ <- Future.sequence(job.toSeq.map { job => sendKillPatch[Job](job.name, Some(job.namespace), reason) })
       pods <- getPodsByJobId(Some(namespace), jobId)
       workers = pods.filter(roleFiler(KubernetesConstants.WorkerRole))
       coordinator = pods.filter(roleFiler(KubernetesConstants.CoordinatorRole))
@@ -405,18 +407,27 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
 
   /** Cancels a Mantik Pod. */
   def cancelMantikPod(pod: Pod, reason: String): Future[Unit] = {
-    val patch = MetadataPatch(annotations = Some(Map(
-      KubernetesConstants.KillAnnotationName -> reason
-    )))
-
     for {
-      _ <- errorHandling(rootClient.patch[MetadataPatch, Pod](pod.name, patch, Some(pod.namespace)))
+      _ <- sendKillPatch[Pod](pod.name, Some(pod.namespace), reason)
       cancelableContainers = filterRunningSidecarOrCoordinator(pod).map(_.name).toList
       _ = logger.info(s"Pod ${pod.name} cancellable containers: ${cancelableContainers}")
       _ <- Future.sequence(cancelableContainers.map { c => sendCancelSignal(pod, c, reason) })
     } yield {
       ()
     }
+  }
+
+  /**  Add Kill-Annotations to some items. */
+  def sendKillPatch[T <: ObjectResource](name: String, namespace: Option[String], reason: String)(
+    implicit
+    fmt: Format[T], rd: ResourceDefinition[T]
+  ): Future[Unit] = {
+    val patch = MetadataPatch(annotations = Some(Map(
+      KubernetesConstants.KillAnnotationName -> reason
+    )))
+    errorHandling {
+      rootClient.patch[MetadataPatch, T](name, patch, namespace)
+    }.map { _ => () }
   }
 
   private def sendCancelSignal(pod: Pod, containerName: String, reason: String): Future[Unit] = {

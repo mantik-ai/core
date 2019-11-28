@@ -1,0 +1,8 @@
+# Mantikfile for TF Saved Model
+kind: bridge
+account: mantik
+name: tf.saved_model
+suitable:
+  - algorithm
+dockerImage: mantikai/bridge.tf.saved_model
+protocol: 1

@@ -1,5 +1,5 @@
 name: multiply
-stack: sklearn.simple_learn
+bridge: mantik/sklearn.simple
 kind: algorithm
 type:
   input:

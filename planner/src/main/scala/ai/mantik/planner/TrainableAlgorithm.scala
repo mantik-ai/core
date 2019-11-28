@@ -4,13 +4,15 @@ import ai.mantik.ds.DataType
 import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{ Mantikfile, TrainableAlgorithmDefinition }
+import ai.mantik.planner.repository.Bridge
 
 /**
  * A trainable algorithm
  */
 final case class TrainableAlgorithm(
-    core: MantikItemCore[TrainableAlgorithmDefinition]
-) extends MantikItem {
+    core: MantikItemCore[TrainableAlgorithmDefinition],
+    trainedBridge: Bridge
+) extends BridgedMantikItem {
 
   override type DefinitionType = TrainableAlgorithmDefinition
   override type OwnType = TrainableAlgorithm
@@ -41,7 +43,11 @@ final case class TrainableAlgorithm(
       PayloadSource.OperationResult(op)
     }
 
-    val algorithmResult = Algorithm(Source.constructed(PayloadSource.Projection(result)), trainedMantikfile)
+    val algorithmResult = Algorithm(
+      Source.constructed(PayloadSource.Projection(result)),
+      trainedMantikfile,
+      trainedBridge
+    )
     val statsResult = DataSet.natural(Source.constructed(PayloadSource.Projection(result, 1)), statType)
     (algorithmResult, statsResult)
   }
@@ -53,7 +59,12 @@ final case class TrainableAlgorithm(
 
 object TrainableAlgorithm {
 
-  def apply(source: Source, mantikfile: Mantikfile[TrainableAlgorithmDefinition]): TrainableAlgorithm = {
-    TrainableAlgorithm(MantikItemCore(source, mantikfile))
+  def apply(
+    source: Source,
+    mantikfile: Mantikfile[TrainableAlgorithmDefinition],
+    bridge: Bridge,
+    trainedBridge: Bridge
+  ): TrainableAlgorithm = {
+    TrainableAlgorithm(MantikItemCore(source, mantikfile, bridge), trainedBridge)
   }
 }

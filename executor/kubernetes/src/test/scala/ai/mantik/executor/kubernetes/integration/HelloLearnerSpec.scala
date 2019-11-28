@@ -15,14 +15,14 @@ class HelloLearnerSpec extends IntegrationTestBase {
           "A" -> Node.source(
             ContainerService(
               main = Container(
-                image = "executor_sample_source"
+                image = "mantikai/executor.sample_source"
               )
             )
           ),
           "B" -> Node(
             ContainerService(
               main = Container(
-                image = "executor_sample_learner"
+                image = "mantikai/executor.sample_learner"
               )
             ),
             resources = Map(
@@ -34,14 +34,14 @@ class HelloLearnerSpec extends IntegrationTestBase {
           "C" -> Node.sink(
             ContainerService(
               main = Container(
-                image = "executor_sample_sink"
+                image = "mantikai/executor.sample_sink"
               )
             )
           ),
           "D" -> Node.sink(
             ContainerService(
               main = Container(
-                image = "executor_sample_sink"
+                image = "mantikai/executor.sample_sink"
               )
             )
           )

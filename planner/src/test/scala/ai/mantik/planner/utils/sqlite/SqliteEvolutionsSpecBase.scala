@@ -2,6 +2,7 @@ package ai.mantik.planner.utils.sqlite
 
 import java.nio.file.Files
 
+import ai.mantik.planner.repository.impl.MantikDbEvolutions
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
 import ai.mantik.testutils.TempDirSupport
 
@@ -36,10 +37,10 @@ abstract class SqliteEvolutionsSpecBase extends TestBaseWithAkkaRuntime with Tem
   it should "work for a whole evolution cycle" in new Env {
     dbEvolutions.dbVersion() shouldBe 0
     dbEvolutions.applyMigrations(0)
-    dbEvolutions.dbVersion() shouldBe 2
+    dbEvolutions.dbVersion() shouldBe MantikDbEvolutions.CurrentVersion
     withClue("It should be transitive again") {
       dbEvolutions.ensureCurrentVersion()
-      dbEvolutions.dbVersion() shouldBe 2
+      dbEvolutions.dbVersion() shouldBe MantikDbEvolutions.CurrentVersion
     }
   }
 

@@ -22,7 +22,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ai.mantik.engine.protos',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x19mantik/engine/items.proto\x12\x17\x61i.mantik.engine.protos\x1a\x16mantik/engine/ds.proto\"\xd1\x02\n\nMantikItem\x12\x31\n\x04kind\x18\x01 \x01(\x0e\x32#.ai.mantik.engine.protos.ObjectKind\x12\x33\n\x07\x64\x61taset\x18\x02 \x01(\x0b\x32 .ai.mantik.engine.protos.DataSetH\x00\x12\x37\n\talgorithm\x18\x03 \x01(\x0b\x32\".ai.mantik.engine.protos.AlgorithmH\x00\x12J\n\x13trainable_algorithm\x18\x04 \x01(\x0b\x32+.ai.mantik.engine.protos.TrainableAlgorithmH\x00\x12\x35\n\x08pipeline\x18\x05 \x01(\x0b\x32!.ai.mantik.engine.protos.PipelineH\x00\x12\x17\n\x0fmantikfile_json\x18\x06 \x01(\tB\x06\n\x04item\"I\n\x07\x44\x61taSet\x12/\n\x04type\x18\x01 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\r\n\x05stack\x18\x02 \x01(\t\"\x89\x01\n\tAlgorithm\x12\r\n\x05stack\x18\x01 \x01(\t\x12\x35\n\ninput_type\x18\x02 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x36\n\x0boutput_type\x18\x03 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\"\x82\x02\n\x12TrainableAlgorithm\x12\r\n\x05stack\x18\x01 \x01(\t\x12\x38\n\rtraining_type\x18\x02 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x34\n\tstat_type\x18\x03 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x35\n\ninput_type\x18\x04 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x36\n\x0boutput_type\x18\x05 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\"w\n\x08Pipeline\x12\x34\n\tinputType\x18\x01 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x35\n\noutputType\x18\x02 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType*y\n\nObjectKind\x12\x14\n\x10KIND_UNSPECIFIED\x10\x00\x12\x10\n\x0cKIND_DATASET\x10\x01\x12\x12\n\x0eKIND_ALGORITHM\x10\x02\x12\x1c\n\x18KIND_TRAINABLE_ALGORITHM\x10\x03\x12\x11\n\rKIND_PIPELINE\x10\x04\x62\x06proto3')
+  serialized_pb=_b('\n\x19mantik/engine/items.proto\x12\x17\x61i.mantik.engine.protos\x1a\x16mantik/engine/ds.proto\"\x84\x03\n\nMantikItem\x12\x31\n\x04kind\x18\x01 \x01(\x0e\x32#.ai.mantik.engine.protos.ObjectKind\x12\x17\n\x0fmantikfile_json\x18\x02 \x01(\t\x12\x33\n\x07\x64\x61taset\x18\x03 \x01(\x0b\x32 .ai.mantik.engine.protos.DataSetH\x00\x12\x37\n\talgorithm\x18\x04 \x01(\x0b\x32\".ai.mantik.engine.protos.AlgorithmH\x00\x12J\n\x13trainable_algorithm\x18\x05 \x01(\x0b\x32+.ai.mantik.engine.protos.TrainableAlgorithmH\x00\x12\x35\n\x08pipeline\x18\x06 \x01(\x0b\x32!.ai.mantik.engine.protos.PipelineH\x00\x12\x31\n\x06\x62ridge\x18\x07 \x01(\x0b\x32\x1f.ai.mantik.engine.protos.BridgeH\x00\x42\x06\n\x04item\"J\n\x07\x44\x61taSet\x12\x0e\n\x06\x62ridge\x18\x01 \x01(\t\x12/\n\x04type\x18\x02 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\"\x8a\x01\n\tAlgorithm\x12\x0e\n\x06\x62ridge\x18\x01 \x01(\t\x12\x35\n\ninput_type\x18\x02 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x36\n\x0boutput_type\x18\x03 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\"\x83\x02\n\x12TrainableAlgorithm\x12\x0e\n\x06\x62ridge\x18\x01 \x01(\t\x12\x38\n\rtraining_type\x18\x02 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x34\n\tstat_type\x18\x03 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x35\n\ninput_type\x18\x04 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x36\n\x0boutput_type\x18\x05 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\"y\n\x08Pipeline\x12\x35\n\ninput_type\x18\x01 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\x12\x36\n\x0boutput_type\x18\x02 \x01(\x0b\x32!.ai.mantik.engine.protos.DataType\"`\n\x06\x42ridge\x12\x14\n\x0c\x64ocker_image\x18\x01 \x01(\t\x12\x10\n\x08suitable\x18\x02 \x03(\t\x12\x10\n\x08protocol\x18\x03 \x01(\x05\x12\x1c\n\x14payload_content_type\x18\x04 \x01(\t*\x8a\x01\n\nObjectKind\x12\x14\n\x10KIND_UNSPECIFIED\x10\x00\x12\x10\n\x0cKIND_DATASET\x10\x01\x12\x12\n\x0eKIND_ALGORITHM\x10\x02\x12\x1c\n\x18KIND_TRAINABLE_ALGORITHM\x10\x03\x12\x11\n\rKIND_PIPELINE\x10\x04\x12\x0f\n\x0bKIND_BRIDGE\x10\x05\x62\x06proto3')
   ,
   dependencies=[mantik_dot_engine_dot_ds__pb2.DESCRIPTOR,])
 
@@ -52,11 +52,15 @@ _OBJECTKIND = _descriptor.EnumDescriptor(
       name='KIND_PIPELINE', index=4, number=4,
       serialized_options=None,
       type=None),
+    _descriptor.EnumValueDescriptor(
+      name='KIND_BRIDGE', index=5, number=5,
+      serialized_options=None,
+      type=None),
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1015,
-  serialized_end=1136,
+  serialized_start=1170,
+  serialized_end=1308,
 )
 _sym_db.RegisterEnumDescriptor(_OBJECTKIND)
 
@@ -66,6 +70,7 @@ KIND_DATASET = 1
 KIND_ALGORITHM = 2
 KIND_TRAINABLE_ALGORITHM = 3
 KIND_PIPELINE = 4
+KIND_BRIDGE = 5
 
 
 
@@ -84,37 +89,44 @@ _MANTIKITEM = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='dataset', full_name='ai.mantik.engine.protos.MantikItem.dataset', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
+      name='mantikfile_json', full_name='ai.mantik.engine.protos.MantikItem.mantikfile_json', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='algorithm', full_name='ai.mantik.engine.protos.MantikItem.algorithm', index=2,
+      name='dataset', full_name='ai.mantik.engine.protos.MantikItem.dataset', index=2,
       number=3, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='trainable_algorithm', full_name='ai.mantik.engine.protos.MantikItem.trainable_algorithm', index=3,
+      name='algorithm', full_name='ai.mantik.engine.protos.MantikItem.algorithm', index=3,
       number=4, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='pipeline', full_name='ai.mantik.engine.protos.MantikItem.pipeline', index=4,
+      name='trainable_algorithm', full_name='ai.mantik.engine.protos.MantikItem.trainable_algorithm', index=4,
       number=5, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='mantikfile_json', full_name='ai.mantik.engine.protos.MantikItem.mantikfile_json', index=5,
-      number=6, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
+      name='pipeline', full_name='ai.mantik.engine.protos.MantikItem.pipeline', index=5,
+      number=6, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='bridge', full_name='ai.mantik.engine.protos.MantikItem.bridge', index=6,
+      number=7, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -134,7 +146,7 @@ _MANTIKITEM = _descriptor.Descriptor(
       index=0, containing_type=None, fields=[]),
   ],
   serialized_start=79,
-  serialized_end=416,
+  serialized_end=467,
 )
 
 
@@ -146,16 +158,16 @@ _DATASET = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='type', full_name='ai.mantik.engine.protos.DataSet.type', index=0,
-      number=1, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
+      name='bridge', full_name='ai.mantik.engine.protos.DataSet.bridge', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='stack', full_name='ai.mantik.engine.protos.DataSet.stack', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
+      name='type', full_name='ai.mantik.engine.protos.DataSet.type', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -171,8 +183,8 @@ _DATASET = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=418,
-  serialized_end=491,
+  serialized_start=469,
+  serialized_end=543,
 )
 
 
@@ -184,7 +196,7 @@ _ALGORITHM = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='stack', full_name='ai.mantik.engine.protos.Algorithm.stack', index=0,
+      name='bridge', full_name='ai.mantik.engine.protos.Algorithm.bridge', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -216,8 +228,8 @@ _ALGORITHM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=494,
-  serialized_end=631,
+  serialized_start=546,
+  serialized_end=684,
 )
 
 
@@ -229,7 +241,7 @@ _TRAINABLEALGORITHM = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='stack', full_name='ai.mantik.engine.protos.TrainableAlgorithm.stack', index=0,
+      name='bridge', full_name='ai.mantik.engine.protos.TrainableAlgorithm.bridge', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -275,8 +287,8 @@ _TRAINABLEALGORITHM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=634,
-  serialized_end=892,
+  serialized_start=687,
+  serialized_end=946,
 )
 
 
@@ -288,14 +300,14 @@ _PIPELINE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='inputType', full_name='ai.mantik.engine.protos.Pipeline.inputType', index=0,
+      name='input_type', full_name='ai.mantik.engine.protos.Pipeline.input_type', index=0,
       number=1, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='outputType', full_name='ai.mantik.engine.protos.Pipeline.outputType', index=1,
+      name='output_type', full_name='ai.mantik.engine.protos.Pipeline.output_type', index=1,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -313,8 +325,60 @@ _PIPELINE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=894,
-  serialized_end=1013,
+  serialized_start=948,
+  serialized_end=1069,
+)
+
+
+_BRIDGE = _descriptor.Descriptor(
+  name='Bridge',
+  full_name='ai.mantik.engine.protos.Bridge',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='docker_image', full_name='ai.mantik.engine.protos.Bridge.docker_image', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='suitable', full_name='ai.mantik.engine.protos.Bridge.suitable', index=1,
+      number=2, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='protocol', full_name='ai.mantik.engine.protos.Bridge.protocol', index=2,
+      number=3, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='payload_content_type', full_name='ai.mantik.engine.protos.Bridge.payload_content_type', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1071,
+  serialized_end=1167,
 )
 
 _MANTIKITEM.fields_by_name['kind'].enum_type = _OBJECTKIND
@@ -322,6 +386,7 @@ _MANTIKITEM.fields_by_name['dataset'].message_type = _DATASET
 _MANTIKITEM.fields_by_name['algorithm'].message_type = _ALGORITHM
 _MANTIKITEM.fields_by_name['trainable_algorithm'].message_type = _TRAINABLEALGORITHM
 _MANTIKITEM.fields_by_name['pipeline'].message_type = _PIPELINE
+_MANTIKITEM.fields_by_name['bridge'].message_type = _BRIDGE
 _MANTIKITEM.oneofs_by_name['item'].fields.append(
   _MANTIKITEM.fields_by_name['dataset'])
 _MANTIKITEM.fields_by_name['dataset'].containing_oneof = _MANTIKITEM.oneofs_by_name['item']
@@ -334,6 +399,9 @@ _MANTIKITEM.fields_by_name['trainable_algorithm'].containing_oneof = _MANTIKITEM
 _MANTIKITEM.oneofs_by_name['item'].fields.append(
   _MANTIKITEM.fields_by_name['pipeline'])
 _MANTIKITEM.fields_by_name['pipeline'].containing_oneof = _MANTIKITEM.oneofs_by_name['item']
+_MANTIKITEM.oneofs_by_name['item'].fields.append(
+  _MANTIKITEM.fields_by_name['bridge'])
+_MANTIKITEM.fields_by_name['bridge'].containing_oneof = _MANTIKITEM.oneofs_by_name['item']
 _DATASET.fields_by_name['type'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
 _ALGORITHM.fields_by_name['input_type'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
 _ALGORITHM.fields_by_name['output_type'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
@@ -341,13 +409,14 @@ _TRAINABLEALGORITHM.fields_by_name['training_type'].message_type = mantik_dot_en
 _TRAINABLEALGORITHM.fields_by_name['stat_type'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
 _TRAINABLEALGORITHM.fields_by_name['input_type'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
 _TRAINABLEALGORITHM.fields_by_name['output_type'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
-_PIPELINE.fields_by_name['inputType'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
-_PIPELINE.fields_by_name['outputType'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
+_PIPELINE.fields_by_name['input_type'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
+_PIPELINE.fields_by_name['output_type'].message_type = mantik_dot_engine_dot_ds__pb2._DATATYPE
 DESCRIPTOR.message_types_by_name['MantikItem'] = _MANTIKITEM
 DESCRIPTOR.message_types_by_name['DataSet'] = _DATASET
 DESCRIPTOR.message_types_by_name['Algorithm'] = _ALGORITHM
 DESCRIPTOR.message_types_by_name['TrainableAlgorithm'] = _TRAINABLEALGORITHM
 DESCRIPTOR.message_types_by_name['Pipeline'] = _PIPELINE
+DESCRIPTOR.message_types_by_name['Bridge'] = _BRIDGE
 DESCRIPTOR.enum_types_by_name['ObjectKind'] = _OBJECTKIND
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -385,6 +454,13 @@ Pipeline = _reflection.GeneratedProtocolMessageType('Pipeline', (_message.Messag
   # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.Pipeline)
   })
 _sym_db.RegisterMessage(Pipeline)
+
+Bridge = _reflection.GeneratedProtocolMessageType('Bridge', (_message.Message,), {
+  'DESCRIPTOR' : _BRIDGE,
+  '__module__' : 'mantik.engine.items_pb2'
+  # @@protoc_insertion_point(class_scope:ai.mantik.engine.protos.Bridge)
+  })
+_sym_db.RegisterMessage(Bridge)
 
 
 # @@protoc_insertion_point(module_scope)

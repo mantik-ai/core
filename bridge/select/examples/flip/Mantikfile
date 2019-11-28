@@ -1,5 +1,5 @@
 # Flips two columns, select y as a, x as b
-stack: select
+bridge: builtin/select
 type:
     input:
         columns:

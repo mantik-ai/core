@@ -9,7 +9,11 @@ import ai.mantik.planner.{ Algorithm, DefinitionSource, MantikItem, Pipeline, So
 private[planner] object PipelineBuilder {
 
   /** Build a pipeline from a mantikfile and algorithms. */
-  def buildOrFailFromMantikfile(source: DefinitionSource, mantikfile: Mantikfile[PipelineDefinition], referenced: Map[MantikId, MantikItem]): Pipeline = {
+  def buildOrFailFromMantikfile(
+    source: DefinitionSource,
+    mantikfile: Mantikfile[PipelineDefinition],
+    referenced: Map[MantikId, MantikItem]
+  ): Pipeline = {
     val resolved = PipelineResolver.resolvePipeline(
       mantikfile,
       referenced

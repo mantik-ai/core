@@ -112,18 +112,31 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
     // We can't know which one is available from kubernetes
     // hopefully the first non-loopback is it.
     import scala.collection.JavaConverters._
+
+    def score(address: InetAddress): Int = {
+      address match {
+        case v4: Inet4Address =>
+          if (v4.getHostAddress.startsWith("192")) {
+            +100
+          } else {
+            50
+          }
+        case x if x.isLoopbackAddress => -100
+        case other                    => 0
+      }
+    }
+
     val addresses = (for {
       networkInterface <- NetworkInterface.getNetworkInterfaces.asScala
       if !networkInterface.isLoopback
       address <- networkInterface.getInetAddresses.asScala
     } yield address).toVector
-    // We prefer ipv4
-    val address = addresses.collectFirst {
-      case ipv4: Inet4Address => ipv4
-    }.orElse(addresses.headOption).getOrElse(InetAddress.getLocalHost)
+
+    val ordered = addresses.sortBy(x => 0 - score(x))
+    val address = ordered.headOption.getOrElse(InetAddress.getLocalHost)
 
     val result = HostPort(address.getHostAddress, boundPort)
-    logger.info(s"Choosing ${result} from ${addresses}")
+    logger.info(s"Choosing ${result} from ${ordered}")
     result
   }
 }

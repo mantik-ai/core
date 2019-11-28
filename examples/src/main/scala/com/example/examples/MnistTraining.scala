@@ -1,21 +1,19 @@
 package com.example.examples
-import java.io.File
-
-import ai.mantik.ds.{ FundamentalType, Image, ImageChannel, ImageComponent, TabularData }
-import ai.mantik.planner.{ Context, Pipeline }
-import ai.mantik.planner.select.AutoAdapt
+import java.nio.file.Paths
 
 import ai.mantik.componently.utils.EitherExtensions._
-import scala.collection.immutable.ListMap
+import ai.mantik.ds.{ FundamentalType, Image, ImageChannel, TabularData }
+import ai.mantik.planner.select.AutoAdapt
+import ai.mantik.planner.{ Context, Pipeline }
 
 object MnistTraining extends ExampleBase {
 
-  val MnistTrainingPath = new File("bridge/binary/test/mnist_train").toPath
-  val MnistTestPath = new File("bridge/binary/test/mnist").toPath
+  val MnistTrainingPath = Paths.get("bridge/binary/test/mnist_train")
+  val MnistTestPath = Paths.get("bridge/binary/test/mnist")
 
-  val TrainingAlgorithmPath = new File("bridge/tf/train/example/mnist_linear").toPath
+  val TrainingAlgorithmPath = Paths.get("bridge/tf/train/example/mnist_linear")
 
-  override protected def run(context: Context): Unit = {
+  override protected def run(implicit context: Context): Unit = {
     context.pushLocalMantikFile(MnistTrainingPath)
     context.pushLocalMantikFile(TrainingAlgorithmPath)
     context.pushLocalMantikFile(MnistTestPath)

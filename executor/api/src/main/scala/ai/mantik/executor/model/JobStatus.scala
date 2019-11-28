@@ -44,7 +44,8 @@ case object JobState {
 /** Contains what we know about a job. */
 @JsonCodec
 case class JobStatus(
-    state: JobState
+    state: JobState,
+    error: Option[String] = None
 )
 
 object JobStatus

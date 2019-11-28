@@ -8,7 +8,8 @@ import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.ds.helper.ZipUtils
 import ai.mantik.elements.errors.{ErrorCodes, MantikException}
-import ai.mantik.elements.{ItemId, MantikId, Mantikfile, NamedMantikId}
+import ai.mantik.elements.{ItemId, MantikDefinition, MantikId, Mantikfile, NamedMantikId}
+import ai.mantik.planner.BuiltInItems
 import ai.mantik.planner.impl.ReferencingItemLoader
 import ai.mantik.planner.repository._
 import akka.stream.scaladsl.{FileIO, Source}
@@ -34,13 +35,31 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   /** ReferencingItemLoader for MantikArtifacts. */
   private class ReferencingMantikArtifactLoader(loader: MantikId => Future[MantikArtifact]) extends ReferencingItemLoader[MantikId, MantikArtifact](
     loader,
-    _.parsedMantikfile.definition.referencedItems
+    dependencyExtractor
   )
+
+  /** Figures out dependencies to load from Artifacts, skips Built Ins. */
+  private def dependencyExtractor(i: MantikArtifact): Seq[MantikId] = {
+    i.parsedMantikfile.definition.referencedItems.filter {
+      case n: NamedMantikId => n.account != BuiltInItems.BuiltInAccount
+      case _ => true
+    }
+  }
 
   private val repositoryLoader = new ReferencingMantikArtifactLoader(localRepoGet)
 
+  private val localOrRemoteLoader = new ReferencingMantikArtifactLoader(localOrRemoteGet)
+
   private def localRepoGet(mantikId: MantikId): Future[MantikArtifact] =
     FutureHelper.addTimeout(localMantikRegistry.get(mantikId), "Loading Mantikfile from local repository", dbLookupTimeout)
+
+  private def localOrRemoteGet(mantikId: MantikId): Future[MantikArtifact] = {
+    localRepoGet(mantikId).recoverWith {
+      case n: MantikException if n.code.isA(ErrorCodes.MantikItemNotFound) =>
+        logger.info(s"${mantikId} not available locally, pulling...")
+        pull(mantikId).map(_._1)
+    }
+  }
 
   override def pull(id: MantikId, customLoginToken: Option[CustomLoginToken] = None): Future[MantikArtifactWithHull] = {
     logger.info(s"Pulling ${id}")
@@ -69,10 +88,8 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   }
 
   override def get(id: MantikId): Future[MantikArtifactWithHull] = {
-    getLocal(id).recoverWith {
-      case n: MantikException if n.code.isA(ErrorCodes.MantikItemNotFound) =>
-        logger.info(s"${id} not available locally, pulling...")
-        pull(id)
+    localOrRemoteLoader.loadWithHull(id).map { items =>
+      items.head -> items.tail
     }
   }
 
@@ -101,33 +118,45 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
       case Left(error) => throw new IllegalArgumentException("Could not parse mantik file", error)
       case Right(ok)   => ok
     }
+
     val mantikId = id.orElse(mantikfile.header.id)
     val itemId = ItemId.generate()
 
-    val payloadDir = dir.resolve("payload")
-    val payloadSource: Option[(String, Source[ByteString, _])] = if (Files.isDirectory(payloadDir)) {
-      val tempFile = Files.createTempFile("mantik_context", ".zip")
-      ZipUtils.zipDirectory(payloadDir, tempFile)
-      val source = FileIO.fromPath(tempFile)
-      Some(ContentTypes.ZipFileContentType -> source)
-    } else {
-      logger.info("No payload directory found, assuming no payload")
-      None
-    }
+    ensureDependencies(mantikId.getOrElse(itemId), mantikfile).flatMap { _ =>
+      val payloadDir = dir.resolve("payload")
+      val payloadSource: Option[(String, Source[ByteString, _])] = if (Files.isDirectory(payloadDir)) {
+        val tempFile = Files.createTempFile("mantik_context", ".zip")
+        ZipUtils.zipDirectory(payloadDir, tempFile)
+        val source = FileIO.fromPath(tempFile)
+        Some(ContentTypes.ZipFileContentType -> source)
+      } else {
+        logger.info("No payload directory found, assuming no payload")
+        None
+      }
 
 
-    val artifact =  MantikArtifact(mantikfileContent, None, mantikId, itemId)
-    val timeout = if (payloadSource.isDefined){
-      fileTransferTimeout
-    } else {
-      dbLookupTimeout
+      val artifact =  MantikArtifact(mantikfileContent, None, mantikId, itemId)
+      val timeout = if (payloadSource.isDefined){
+        fileTransferTimeout
+      } else {
+        dbLookupTimeout
+      }
+      FutureHelper.addTimeout(
+        localMantikRegistry.addMantikArtifact(artifact, payloadSource), "Uploading Artifact", timeout
+      ).map { generatedArtifact =>
+        logger.info(s"Stored ${artifact.itemId} done, name=${artifact.namedId}, fileId=${artifact.fileId}")
+        generatedArtifact
+      }
     }
-    FutureHelper.addTimeout(
-      localMantikRegistry.addMantikArtifact(artifact, payloadSource), "Uploading Artifact", timeout
-    ).map { generatedArtifact =>
-      logger.info(s"Stored ${artifact.itemId} done, name=${artifact.namedId}, fileId=${artifact.fileId}")
-      generatedArtifact
+  }
+
+  private def ensureDependencies(id: MantikId, mantikfile: Mantikfile[_ <: MantikDefinition]): Future[Unit] = {
+    logger.debug(s"Ensuring Dependencies of ${id}")
+    val references = mantikfile.definition.referencedItems
+    val futures = references.map { referenceId =>
+      get(referenceId)
     }
+    Future.sequence(futures).map(_ => ())
   }
 
   private def pullRemoteItemsToLocal(remoteRepo: MantikRegistry, remote: Seq[MantikArtifact]): Future[Seq[MantikArtifact]] = {

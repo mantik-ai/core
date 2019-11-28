@@ -6,7 +6,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, NamedMantikId }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_executor.{ DeployItemRequest, FetchItemRequest, SaveItemRequest }
-import ai.mantik.engine.testutil.TestBaseWithSessions
+import ai.mantik.engine.testutil.{ TestArtifacts, TestBaseWithSessions }
 import ai.mantik.planner.repository.MantikArtifact
 import ai.mantik.planner.{ Algorithm, DataSet, DeploymentState, MantikItem, Pipeline, PlanOp, Source }
 
@@ -56,12 +56,12 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
 
   "deploy" should "deploy elements" in new Env {
     val algorithm1Artifact = MantikArtifact(
-      Mantikfile.pure(AlgorithmDefinition(stack = "tf.saved_model", `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
+      Mantikfile.pure(AlgorithmDefinition(bridge = TestArtifacts.algoBridge1.namedId.get, `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
-    val algorithm1 = MantikItem.fromMantikArtifact(algorithm1Artifact).asInstanceOf[Algorithm]
+    val algorithm1 = MantikItem.fromMantikArtifact(algorithm1Artifact, Seq(TestArtifacts.algoBridge1)).asInstanceOf[Algorithm]
     val pipeline1 = Pipeline.build(
       algorithm1
     )

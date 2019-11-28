@@ -4,6 +4,7 @@ import java.time.Instant
 
 import ai.mantik.componently.utils.SecretReader
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.registry.api._
 import ai.mantik.planner.buildinfo.BuildInfo
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
@@ -79,7 +80,9 @@ class MantikRegistryTokenProvider(
         }
     }
 
-    loginResponse.map(_.token)
+    loginResponse.map(_.token).recoverWith {
+      case exception => Future.failed(ErrorCodes.RemoteRegistryCouldNotGetToken.toException("Could not get token", exception))
+    }
   }
 }
 

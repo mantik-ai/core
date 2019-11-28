@@ -3,7 +3,7 @@ package ai.mantik.planner.impl.exec
 import java.net.InetSocketAddress
 
 import ai.mantik
-import ai.mantik.componently.utils.FutureHelper
+import ai.mantik.componently.utils.{ FutureHelper, Renderable }
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.NamedMantikId
@@ -277,33 +277,10 @@ private[planner] class PlanExecutorImpl(
   }
 
   private def jobDebugString(job: Job): String = {
-    def formatNode(node: NodeService): String = {
-      node match {
-        case c: ContainerService => s"Container: ${c.main.image}"
-        case e: ExistingService  => s"Existing:  ${e.url}"
-      }
-    }
-    try {
-      val graph = job.graph
-      val analysis = new GraphAnalysis(graph)
-      val builder = StringBuilder.newBuilder
-      builder ++= s"Job ${job.isolationSpace}\n"
-      analysis.flows.zipWithIndex.foreach {
-        case (flow, idx) =>
-          builder ++= s"  - Flow ${idx}\n"
-          flow.nodes.foreach { nodeResourceRef =>
-            val resolved = graph.resolveReference(nodeResourceRef)
-            resolved match {
-              case Some((node, res)) => builder ++= s"    - - ${formatNode(node.service)} : ${nodeResourceRef.resource} (${res.resourceType}/${res.contentType.getOrElse("n.A.")})\n"
-              case _                 => builder ++= s"    -- Unresolved ${nodeResourceRef}" // should not happen
-            }
-          }
-      }
-      builder.result()
-    } catch {
-      case e: GraphAnalysis.AnalyzerException =>
-        s"Invalid job ${e}"
-    }
-
+    val graph = job.graph
+    val builder = StringBuilder.newBuilder
+    builder ++= s"Job ${job.isolationSpace}\n"
+    builder ++= Renderable.renderAsString(graph)
+    builder.result()
   }
 }

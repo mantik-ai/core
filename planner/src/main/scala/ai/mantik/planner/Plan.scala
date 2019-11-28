@@ -1,5 +1,6 @@
 package ai.mantik.planner
 
+import ai.mantik.componently.utils.Renderable
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.{ ItemId, MantikDefinition, Mantikfile, NamedMantikId }
@@ -55,10 +56,30 @@ object PlanNodeService {
 
   /** Represents a docker container in the graph. */
   case class DockerContainer(container: Container, data: Option[PlanFileReference] = None, mantikfile: Mantikfile[_ <: MantikDefinition]) extends PlanNodeService
+
+  implicit val renderable = new Renderable[PlanNodeService] {
+    override def buildRenderTree(value: PlanNodeService): Renderable.RenderTree = {
+      value match {
+        case x: File =>
+          Renderable.keyValueList("File", "file" -> x.fileReference.id.toString)
+        case d: DockerContainer =>
+          Renderable.keyValueList(
+            "Docker",
+            "container" -> d.container,
+            "data" -> d.data.map(_.id.toString),
+            "mantikfile" -> d.mantikfile.toJsonValue.noSpaces
+          )
+      }
+    }
+  }
 }
 
 /** An operation inside a plan. */
-sealed trait PlanOp[T]
+sealed trait PlanOp[T] {
+  override def toString: String = {
+    Renderable.renderAsString(this)
+  }
+}
 
 object PlanOp {
   /** PlanOps which do not produce any values. */
@@ -197,6 +218,27 @@ object PlanOp {
         parts -> lastCompressedTail
       case other =>
         Nil -> other
+    }
+  }
+
+  implicit def renderable[T]: Renderable[PlanOp[T]] = new Renderable[PlanOp[T]] {
+    override def buildRenderTree(value: PlanOp[T]): Renderable.RenderTree = {
+      value match {
+        case Empty => Renderable.buildRenderTree("empty")
+        case g: RunGraph => Renderable.keyValueList(
+          "RunGraph",
+          "graph" -> g.graph
+        )
+        case Sequential(prefix, last) =>
+          Renderable.SubTree(
+            title = Some("Sequential"),
+            items = (prefix :+ last).map { op =>
+              Renderable.buildRenderTree(op)
+            }.toIndexedSeq
+          )
+        case other =>
+          Renderable.Leaf(other.toString)
+      }
     }
   }
 }
