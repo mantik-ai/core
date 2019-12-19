@@ -18,6 +18,13 @@ Requirements
       ```
   
     * [SBT](https://www.scala-sbt.org/download.html) as build system for Scala.
+    
+    * Our testcases need a lot of RAM and some default SBT installations do not have enough, to increase RAM
+      you can set the `SBT_OPTS` Environment variable:
+      
+      ```
+      export SBT_OPTS="-XX:+CMSClassUnloadingEnabled -Xmx4G"
+      ```
 
 * Go Code
 
@@ -39,7 +46,10 @@ Requirements
 * Python
      
      - pipenv
-     - Python dev (gcc etc.)      
+     - Python dev (gcc etc.)
+     
+     The python code is using generated protobuf code. After a clean checkout
+     run a full build before developing within the IDE.       
 
 * Integration tests and running
     * [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)

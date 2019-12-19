@@ -1,4 +1,4 @@
-package  serving
+package serving
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -15,6 +15,6 @@ func TestFormatNamedMantikId(t *testing.T) {
 
 // Return a pointer to a string
 // (workaround as we can't take it from constants)
-func sptr(s string) * string {
+func sptr(s string) *string {
 	return &s
 }

@@ -1,0 +1,28 @@
+MAKEFLAGS += --no-builtin-rules
+
+build: target/build.make
+
+.PHONY: clean
+clean:
+	rm -rf target
+
+.PHONY: test
+test:
+	pipenv install --dev
+	pipenv run pytest
+
+target/build.make: target/copy_py.make target/copy_shared.make
+	touch $@
+
+target/copy_py.make: $(shell find . -name "*.py" -not -path "./target/*" -not -path "./example/*")
+	mkdir -p target
+	rsync -R $? target/
+	touch $@
+
+target/copy_shared.make: $(shell find $(MANTIK_ROOT/python_sdk) -name "*.py") Pipfile Pipfile.lock
+	mkdir -p target
+	pipenv lock -r > target/requirements.txt
+	cp -r $(MANTIK_ROOT)/python_sdk target/
+
+	sed -i '/python_sdk/c\-e ./python_sdk\' target/requirements.txt
+	touch $@

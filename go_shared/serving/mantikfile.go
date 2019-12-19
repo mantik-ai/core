@@ -10,7 +10,7 @@ import (
 
 type Mantikfile interface {
 	Kind() string
-	Header() * MantikFileHeader
+	Header() *MantikFileHeader
 	Name() *string
 	MetaVariables() MetaVariables
 	// Returns the decoded JSON (after applying meta variables)
@@ -23,20 +23,20 @@ const TrainableAlgorithmKind = "trainable"
 
 // The name of the Mantikfile
 const MantikfileName = "Mantikfile"
+
 // The name of the optional payload file/dir inside a Mantik Bundle
 const PayloadPathElement = "payload"
 
-
 type MantikFileHeader struct {
-	Kind *string `json:"kind"`
-	Name *string `json:"name"`
-	Version *string `json:"version"`
-	Account *string `json:"account"`
-	ParsedMetaVariables MetaVariables    `json:"metaVariables"`
+	Kind                *string       `json:"kind"`
+	Name                *string       `json:"name"`
+	Version             *string       `json:"version"`
+	Account             *string       `json:"account"`
+	ParsedMetaVariables MetaVariables `json:"metaVariables"`
 }
 
 // Returns a MantikId if there is one encoded in the header
-func (h * MantikFileHeader) NamedMantikId() * string {
+func (h *MantikFileHeader) NamedMantikId() *string {
 	if h.Name == nil {
 		return nil
 	} else {
@@ -46,12 +46,12 @@ func (h * MantikFileHeader) NamedMantikId() * string {
 }
 
 type DataSetMantikfile struct {
-	Type                ds.TypeReference `json:"type"`
-	json                []byte
-	header * MantikFileHeader
+	Type   ds.TypeReference `json:"type"`
+	json   []byte
+	header *MantikFileHeader
 }
 
-func (d* DataSetMantikfile) Header() * MantikFileHeader {
+func (d *DataSetMantikfile) Header() *MantikFileHeader {
 	return d.header
 }
 
@@ -73,13 +73,13 @@ func (d *DataSetMantikfile) Json() []byte {
 
 /* The mantik file needed for serving algorithms. */
 type AlgorithmMantikfile struct {
-	header * MantikFileHeader
+	header *MantikFileHeader
 	/* Type, For Algorithms and Trainables. */
-	Type                *AlgorithmType `json:"type"`
-	json                []byte
+	Type *AlgorithmType `json:"type"`
+	json []byte
 }
 
-func (a* AlgorithmMantikfile) Header() * MantikFileHeader {
+func (a *AlgorithmMantikfile) Header() *MantikFileHeader {
 	return a.header
 }
 
@@ -106,12 +106,12 @@ type TrainableMantikfile struct {
 	/* Training Type (for trainable). */
 	TrainingType *ds.TypeReference `json:"trainingType"`
 	/* Statistic Type (for trainable). */
-	StatType            *ds.TypeReference `json:"statType"`
-	json                []byte
-	header * MantikFileHeader
+	StatType *ds.TypeReference `json:"statType"`
+	json     []byte
+	header   *MantikFileHeader
 }
 
-func (t* TrainableMantikfile) Header() * MantikFileHeader {
+func (t *TrainableMantikfile) Header() *MantikFileHeader {
 	return t.header
 }
 
