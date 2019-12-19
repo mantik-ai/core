@@ -1,0 +1,15 @@
+# Common code for using docker inside Makefiles
+DOCKER_REPO = mantikai
+CI_COMMIT_REF_SLUG ?= local
+REMOTE_REPO_NAME = mdocker.rcxt.de
+DOCKER ?= docker
+
+.PHONY: docker-login
+docker-login:
+	@# Trick to not show the password
+	@mkdir -p target
+	@touch target/sonatype_password
+	@chmod 600 target/sonatype_password
+	@echo $(SONATYPE_MANTIK_PASSWORD) > target/sonatype_password
+	cat target/sonatype_password | $(DOCKER) login -u mantik.ci --password-stdin mdocker.rcxt.de
+	@rm target/sonatype_password

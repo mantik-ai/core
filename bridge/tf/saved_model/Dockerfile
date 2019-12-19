@@ -1,4 +1,4 @@
-FROM golang:1.11.12-buster AS build
+FROM golang:1.13.4-buster AS build
 
 RUN groupadd -r mantik-bridge && useradd -r -g mantik-bridge mantik-bridge
 

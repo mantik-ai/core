@@ -47,6 +47,11 @@ pushd cli
 ./build.sh
 popd
 
+echo "Python SDK"
+pushd python_sdk
+./update_protobuf.sh
+popd
+
 echo "Building docs"
 pushd doc
 ./build.sh

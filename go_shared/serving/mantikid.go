@@ -5,7 +5,7 @@ import "strings"
 const DefaultAccount = "library"
 const DefaultVersion = "latest"
 
-func FormatNamedMantikId(name string, account * string, version * string) string {
+func FormatNamedMantikId(name string, account *string, version *string) string {
 	var accountToUse = DefaultAccount
 	if account != nil {
 		accountToUse = *account
