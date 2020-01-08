@@ -2,7 +2,7 @@
 MAKEFLAGS += --no-builtin-rules
 
 build: scala-build build-subprojects
-include scripts/ci/Makefile.scala
+include scripts/ci/Makefile.core
 
 SUB_PROJECTS=\
 	go_shared\
@@ -38,6 +38,8 @@ test: scala-test test-subprojects
 
 docker: docker-subprojects
 
+docker-publish: docker-publish-subprojects
+
 .PHONY: docker-minikube
 docker-minikube:
 	$(eval EXTRA_ARGS:=$(shell minikube docker-env | grep export | cut -d' ' -f2 | xargs))
@@ -54,7 +56,7 @@ publish: scala-publish
 
 .PHONY: clean
 clean:
-	rm -rf `find . -name "target" | xargs`
+	rm -rf `find -not -path "./cache/*" -name "target" | xargs`
 
 # Pattern rule which executes % on every subproject
 %-subprojects:

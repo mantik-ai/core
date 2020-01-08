@@ -1,6 +1,19 @@
 SCALA_RESOURCES = $(shell find */src/main -name "*.scala")
 SCALA_TEST_RESOURCES = $(shell find */src/test -name "*.scala")
 
+ifndef CACHE_DIR
+  # $(info CACHE_DIR not set)
+  SBT_CACHE_PARAMETER =
+else
+  $(info CACHE_DIR=$(CACHE_DIR))
+  SBT_CACHE_PARAMETER = -Dsbt.ivy.home=$(CACHE_DIR)/ivy \
+  -Divy.home=$(CACHE_DIR)/ivy \
+  -Dsbt.global.base=$(CACHE_DIR)/sbt \
+  -Dsbt.boot.directory=$(CACHE_DIR)/sbt_boot
+endif
+
+SBT = sbt $(SBT_CACHE_PARAMETER) -warn
+
 # .make files are there to tell Make if something is going to be rebuild
 
 .PHONY: scala-build
@@ -8,18 +21,18 @@ SCALA_TEST_RESOURCES = $(shell find */src/test -name "*.scala")
 scala-build: engine-app/target/build.make
 
 engine-app/target/build.make: ${SCALA_RESOURCES}
-	sbt -warn package
+	$(SBT) package
 	touch $@
 
 .PHONY: scala-test
 scala-test:
-	sbt -warn test
+	$(SBT) test
 	touch $@
 
 .PHONY: scala-install
 scala-install:
-	sbt -warn publishLocal
+	$(SBT) publishLocal
 
 .PHONY: scala-publish
 scala-publish:
-	sbt -warn publish
+	$(SBT) publish

@@ -16,6 +16,11 @@ else
 	LINUX_DEPENDENCY = $()
 endif
 
+# Caching
+ifdef CACHE_DIR
+  export GOPATH=$(CACHE_DIR)/go
+endif
+
 build: target/${NAME} $(LINUX_DEPENDENCY)
 
 .PHONY: clean
@@ -27,7 +32,7 @@ clean::
 test: target/${NAME}
 	go test -v ./...
 
-target/${NAME}: $(shell find . -name "*.go") $(EXTRA_DEPS)
+target/${NAME}: $(shell find -not -path "./target/*" -name "*.go") $(EXTRA_DEPS)
 	$(eval APP_VERSION := $(shell git describe --always --dirty))
 	gofmt -w .
 	go build -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)

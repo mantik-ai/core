@@ -1,5 +1,12 @@
 MAKEFLAGS += --no-builtin-rules
 
+# Caching
+ifdef CACHE_DIR
+  export PIP_CACHE_DIR=$(CACHE_DIR)/pip
+  export PIPENV_CACHE_DIR=$(CACHE_DIR)/pipenv
+endif
+
+
 build: target/build.make
 
 .PHONY: clean

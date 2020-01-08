@@ -9,7 +9,7 @@ else
     MYDIR=`dirname $0`
 fi
 
-CLIBDIR=$PWD/$MYDIR/vendor/tensorflow_c
+CLIBDIR=$PWD/$MYDIR/target/vendor/tensorflow_c
 export TENSORFLOW_DIR=$CLIBDIR/lib
 
 if [[ ! -d $TENSORFLOW_DIR ]]; then

@@ -25,7 +25,7 @@ ADD services services
 
 # Shared Stuff (will be linked statically)
 RUN mkdir /tmp/go_shared
-ADD docker_build/go_shared /tmp/go_shared
+ADD target/docker_build/go_shared /tmp/go_shared
 
 # Patching Build file, so that it find shared go code
 RUN sed -i 's!../../../go_shared!/tmp/go_shared!' go.mod

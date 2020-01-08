@@ -5,7 +5,7 @@ MYDIR=`dirname $0`
 cd $MYDIR
 
 # Tensorflow C-Library
-CLIBDIR=$PWD/vendor/tensorflow_c
+CLIBDIR=$PWD/target/vendor/tensorflow_c
 mkdir -p $CLIBDIR
 
 if [[ -d $CLIBDIR/lib ]]; then
