@@ -38,12 +38,18 @@ EXECUTABLE_LINUX_TARGETS = $(patsubst %, target/%_linux, $(EXECUTABLES))
 
 GO_FILES = $(shell find . -name "*.go")
 
+# Caching
+ifdef CACHE_DIR
+  export GOPATH=$(CACHE_DIR)/go
+endif
+
+
 .PHONY: clean
 clean:
 	rm -rf target
 
 .PHONY: test
-test:
+test: build
 	go test -v ./...
 
 .PHONY: integration_test

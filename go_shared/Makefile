@@ -8,3 +8,5 @@ include ../scripts/ci/Makefile.go
 .PHONY: docker
 docker:
 
+.PHONY: docker-publish
+docker-publish:

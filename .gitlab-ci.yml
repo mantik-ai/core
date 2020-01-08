@@ -3,244 +3,102 @@ include:
     ref: 4a19e3c4f1cd6031607fc55f3398e9aab78352ec
     file: "/templates/storage/ci.yml"
 
+image:
+  name: reg.ambrosys.de/mantik/mantikbuilder
+  entrypoint: [""] # Bug https://gitlab.com/gitlab-org/gitlab-runner/issues/1170
 
-image: golang:1.11-stretch
 
 stages:
-  - pull_dependencies
-  - test
   - build
+  - verify
   - publish
 
-test_go_shared:
-  image: mantikai/golang_build:1.13.1-1
-  stage: test
+build:
+  stage: build
   variables:
-    GOPATH: "$CI_PROJECT_DIR/.go_path"
+    USER_ID: "0" # Disables suid inside docker image
+    CACHE_DIR: "$PWD/cache"
   script:
-    - export GOPATH=`pwd`/vendor/go_path # Trick so that dependencies are not tested.
-    - echo "Gopath=$GOPATH"
-    - export GODEBUG=netdns=cgo # Disable GO Resolver
-    - mkdir -p vendor/go_path
-    - ./go_shared/build.sh
-    - ./go_shared/test.sh
+    - mkdir -p $CACHE_DIR
+    - make build
   cache:
-    key: go_cache113
+    key: dependency_cache
     paths:
-      - .go_path
-
-test_python_sdk:
-  stage: test
-  image: python:3.7-stretch
-  variables:
-    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  cache:
-    paths:
-      - .cache/pip
-      - venv/
-  script:
-    - cd python_sdk
-    - pip install pipenv
-    - pipenv install -r requirements-dev.txt
-    - pipenv run pytest
-
-test_executor_go:
-  stage: test
-  image: mantikai/golang_build:1.13.1-1
-  variables:
-    GOPATH: "$CI_PROJECT_DIR/.go_path"
-  script:
-    - ./executor/coordinator/build.sh
-    - ./executor/coordinator/test.sh
-  cache:
-    key: go_cache113
-    paths:
-      - .go_path
+      - cache
   artifacts:
     paths:
-      - executor/coordinator/target
-    expire_in: 1 week
+      # Gitlab has no wildcard globbing yet https://gitlab.com/gitlab-org/gitlab-runner/issues/2620
+      - "target"
+      - "*/target"
+      - "*/*/target"
+      - "*/*/*/target"
+      - "*/*/*/*/target"
+      - "*/*/*/*/*/target"
+    expire_in: 3 day
 
-publish_executor_go:
-  stage: publish
+
+test:
+  stage: verify
+  variables:
+    USER_ID: "0" # Disables suid inside docker image
+    CACHE_DIR: "$PWD/cache"
+  script:
+    - mkdir -p $CACHE_DIR
+    - make test
+  cache:
+    key: dependency_cache
+    paths:
+      - cache
+
+docker:
+  stage: verify
   image: docker:stable-git
-  only:
-    - story/8/executor_move
-    - master
-    - tags
+  variables:
+    CACHE_DIR: "$PWD/cache"
+    BUILDSERVER: "true" # Enables some optimizations
+  cache:
+    key: dependency_cache
+    paths:
+      - cache
   services:
     - docker:dind
-  dependencies:
-    - test_executor_go
   script:
-    - export ENABLE_PUSH=TRUE
-    - ./executor/coordinator/create_docker_images.sh
+    - apk add make # TODO: Add to docker Image
+    - mkdir -p $CACHE_DIR
+    - make docker
 
-test_scala:
-  stage: test
-  image: "hseeberger/scala-sbt:8u181_2.12.6_1.2.3"
-  variables:
-    SBT_OPTS: "-Xmx1G -Dsbt.global.base=sbt-cache/sbtboot -Dsbt.boot.directory=sbt-cache/boot -Dsbt.ivy.home=sbt-cache/ivy"
-  cache:
-    untracked: true
-    paths:
-      - "sbt-cache/ivy/cache"
-      - "sbt-cache/boot"
-      - "sbt-cache/sbtboot"
-      - "sbt-cache/target"
-  artifacts:
-    reports:
-      junit:
-        - ds/target/test-reports/TEST-*.xml
-        - executor/api/target/test-reports/TEST-*.xml
-        - executor/app/target/test-reports/TEST-*.xml
-        - planner/test-reports/TEST-*.xml
-        - repository/test-reports/TEST-*.xml
-    paths:
-      - executor/app/target/docker
-    expire_in: 1 day
-  script:
-    - sbt clean test docker:stage
-
-publish_maven_scala:
-  stage: publish
-  image: "hseeberger/scala-sbt:8u181_2.12.6_1.2.3"
-  variables:
-    SBT_OPTS: "-Xmx1G -Dsbt.global.base=sbt-cache/sbtboot -Dsbt.boot.directory=sbt-cache/boot -Dsbt.ivy.home=sbt-cache/ivy"
-  cache:
-    untracked: true
-    paths:
-      - "sbt-cache/ivy/cache"
-      - "sbt-cache/boot"
-      - "sbt-cache/sbtboot"
-      - "sbt-cache/target"
-  only:
-    - story/1/initial_structure
-    - master
-    - tags
-  script:
-    - sbt publish
-  dependencies:
-    - test_scala
-
-publish_scala_docker:
+docker_publish:
   stage: publish
   image: docker:stable-git
-  dependencies:
-    - test_scala
-  script:
-    - export ENABLE_PUSH=TRUE
-    - executor/scripts/ci/create_docker_images.sh
-  only:
-    - story/8/executor_move
-    - master
-    - tags
-
-bridges_dependencies:
-  stage: pull_dependencies
-  cache:
-    key: "tensorflow_c"
-    paths:
-      - "bridge/tf/saved_model/vendor/tensorflow_c/"
-  script:
-    - ./bridge/tf/saved_model/pull_dependencies.sh
-  artifacts:
-    paths:
-      - "bridge/tf/saved_model/vendor/tensorflow_c/"
-    expire_in: 1 week
-
-bridges_test:
-  dependencies:
-    - bridges_dependencies
-  stage: test
-  image: mantikai/golang_build:1.13.1-1
   variables:
-    GOPATH: "$CI_PROJECT_DIR/.go_path"
-  script:
-    - ./bridge/build.sh
-    - ./bridge/test.sh
+    CACHE_DIR: "$PWD/cache"
+    BUILDSERVER: "true"
+  only:
+    - master
+    - story/151/build_system_integration
   cache:
-    key: go_cache113
+    key: dependency_cache
     paths:
-      - .go_path
-
-  artifacts:
-    paths:
-      - bridge/tf/saved_model
-      - bridge/binary/target
-    expire_in: 1 week
-
-bridges_publish:
-  stage: publish
-  image: docker:stable-git
+      - cache
   services:
     - docker:dind
+  script:
+    - apk add make # TODO Add to docker image
+    - mkdir -p $CACHE_DIR
+    - make docker
+    - make docker-publish
+
+other_publish:
+  stage: publish
   only:
-    - bug/72/python_bridge_build
     - master
-    - tags
-  dependencies:
-    - bridges_test
-    - bridge_sklearn_test
-    - bridge_tf_train_test
-  script:
-    - export ENABLE_PUSH=TRUE
-    - ./bridge/tf/saved_model/create_docker_images.sh
-    - ./bridge/binary/create_docker_images.sh
-    - ./bridge/sklearn/simple_learn/create_docker_images.sh
-    - ./bridge/tf/train/create_docker_images.sh
-
-bridge_sklearn_test:
-  stage: test
-  image: python:3.7-stretch
-  variables:
-    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    - story/151/build_system_integration
   cache:
+    key: dependency_cache
     paths:
-      - .cache/pip
-      - venv/
+      - cache
   script:
-    - cd bridge/sklearn/simple_learn
-    - pip install pipenv
-    - pipenv install --deploy --dev
-    - pipenv run pytest
-    - ./smoke_test.sh
-    - ./build.sh
-  artifacts:
-    paths:
-      - bridge/sklearn/simple_learn/target
-
-bridge_tf_train_test:
-  stage: test
-  image: python:3.7-stretch
-  variables:
-    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  cache:
-    paths:
-      - .cache/pip
-      - venv/
-  script:
-    - cd bridge/tf/train
-    - pip install pipenv
-    - pipenv install --deploy --dev
-    - pipenv run pytest
-    - ./build.sh
-  artifacts:
-    paths:
-      - bridge/tf/train/target
-
-test_cli:
-  image: mantikai/golang_build:1.13.1-1
-  stage: test
-  variables:
-    GOPATH: "$CI_PROJECT_DIR/.go_path"
-  script:
-    - ./cli/build.sh
-
-  cache:
-    key: go_cache113
-    paths:
-      - .go_path
+    - make publish
 
 build-docs:
   stage: build
@@ -251,26 +109,6 @@ build-docs:
   artifacts:
     paths:
       - public
-  only:
-    refs:
-      - master
-
-
-publish-nc:
-  extends: .file-drop
-  stage: publish
-  variables:
-    DROP_PASSWORD: "MantikDocs2019"
-    DROP_ID: "X6MeZ6pNgo5KQ28"
-    LOCAL_FILE: "mantik-doc.tar.gz"
-  dependencies:
-    - build-docs
-  before_script:
-    - tar -czf mantik-doc.tar.gz public
-  only:
-    refs:
-      - master
-
 
 pages:
   variables:
@@ -284,5 +122,5 @@ pages:
   script:
     - echo "Uploading pages"
   only:
-    refs:
-      - master
+    - master
+    - story/151/build_system_integration

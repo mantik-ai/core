@@ -17,3 +17,6 @@ protos/proto.make: $(shell find ../engine/src/main/protobuf -name "*.proto")
 .PHONY: docker
 docker:
 	@# Nothing to do
+
+.PHONY: docker-publish
+docker-publish:

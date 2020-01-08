@@ -5,6 +5,12 @@ PROTOBUF_OUT = mantik/engine/_stubs
 # All protobuf dependency files
 PROTOBUF_FILES = $(shell find $(PROTOBUF_INCLUDE) -name "*.proto")
 
+# Caching
+ifdef CACHE_DIR
+  export PIP_CACHE_DIR=$(CACHE_DIR)/pip
+  export PIPENV_CACHE_DIR=$(CACHE_DIR)/pipenv
+endif
+
 build: protobuf
 
 .PHONY: clean
@@ -30,6 +36,7 @@ protobuf: $(PROTOBUF_OUT)/.done.make
 
 $(PROTOBUF_OUT)/.done.make: $(PROTOBUF_FILES)
 	mkdir -p $(PROTOBUF_OUT)
+	pipenv install --dev
 	pipenv run python -m grpc_tools.protoc \
         -I $(PROTOBUF_INCLUDE) \
         --python_out $(PROTOBUF_OUT) \
@@ -42,3 +49,6 @@ $(PROTOBUF_OUT)/.done.make: $(PROTOBUF_FILES)
 .PHONY: docker
 docker:
 	@#"Nothing to do"
+
+.PHONY: docker-publish
+docker-publish:
