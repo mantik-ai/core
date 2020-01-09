@@ -51,6 +51,12 @@ clean:
 .PHONY: test
 test: build
 	go test -v ./...
+	./test/integration_test.sh
+	./test/integration_error_return_test.sh
+	./test/integration_cancellation_test.sh
+	./test/integration_learn_test.sh
+	./test/integration_transformer_test.sh
+	./test/integration_preparer_test.sh
 
 .PHONY: integration_test
 integration_test:

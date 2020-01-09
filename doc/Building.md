@@ -70,22 +70,22 @@ Requirements
 Building Steps
 --------------
 
-There are some prepared build scripts to simplify building in the directory `scripts/developer`
+Building is done with Make.
 
-The main code parts can all be built using
-
-   `build_all.sh`
+   `make build`
    
 However this doesn't create Docker Images needed to run any practical examples.
 
+There is also a build-in help with `make help`.
+
 In order to do that, there are some alternatives:
 
-   * `create_docker_images_all.sh`
+   * `make docker`
    
       This creates all docker images on the local docker instance. You can't execute examples in Minikube with this build.
       But you can run in local docker mode.
       
-   * `create_docker_images_all_minikube.sh`
+   * `make docker-minikube`
    
       This creates all docker images on a running minikube instance. You can use that in order start integration tests.
 
@@ -93,7 +93,7 @@ In order to do that, there are some alternatives:
 Running Unit Tests
 ------------------
 
-All Unit tests can be run via `scripts/developer/test_all.sh`, assuming that the code is already build.
+All Unit tests can be run via `make test`.
 
 If you want to concentrate on Scala Unit tests, you can also issue `test` in the SBT Shell.
 
@@ -112,8 +112,9 @@ Running Integration Tests
 -------------------------
 
 * The (Scala) integration tests are expecting a running Minikube.
+* This can be started using `scripts/dev/start_minikube.sh`
 * You can execute them directly in IntelliJ (they are annotated with `@IntegrationTest` and thus 
   excluded from a regular test run)
-* All integration tests, including (re-)starting Minikube, can be done using `scripts/developer/integration_test_minikube.sh`
+* All integration tests, including (re-)starting Minikube, can be done using `make integration-test`
 
           
