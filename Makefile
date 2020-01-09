@@ -14,7 +14,8 @@ SUB_PROJECTS=\
 	bridge/tf/train \
 	executor/coordinator \
 	cli \
-	python_sdk
+	python_sdk \
+	doc \
 
 
 .PHONY: help

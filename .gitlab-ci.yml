@@ -34,6 +34,7 @@ build:
       - "*/*/*/target"
       - "*/*/*/*/target"
       - "*/*/*/*/*/target"
+      - "public"
     expire_in: 3 day
 
 
@@ -52,7 +53,7 @@ test:
 
 docker:
   stage: verify
-  image: docker:stable-git
+  image: reg.ambrosys.de/mantik/mantikdockerindocker
   variables:
     CACHE_DIR: "$PWD/cache"
     BUILDSERVER: "true" # Enables some optimizations
@@ -63,13 +64,12 @@ docker:
   services:
     - docker:dind
   script:
-    - apk add make # TODO: Add to docker Image
     - mkdir -p $CACHE_DIR
     - make docker
 
 docker_publish:
   stage: publish
-  image: docker:stable-git
+  image: reg.ambrosys.de/mantik/mantikdockerindocker
   variables:
     CACHE_DIR: "$PWD/cache"
     BUILDSERVER: "true"
@@ -83,7 +83,6 @@ docker_publish:
   services:
     - docker:dind
   script:
-    - apk add make # TODO Add to docker image
     - mkdir -p $CACHE_DIR
     - make docker
     - make docker-publish
@@ -100,22 +99,10 @@ other_publish:
   script:
     - make publish
 
-build-docs:
-  stage: build
-  image: mquade/python:3.7-slim
-  script:
-    - cd doc
-    - ./build.sh
-  artifacts:
-    paths:
-      - public
-
 pages:
   variables:
     GIT_STRATEGY: none
   stage: publish
-  dependencies:
-    - build-docs
   artifacts:
     paths:
       - public

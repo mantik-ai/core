@@ -9,6 +9,7 @@ ENABLE_LINUX ?= true
 # Extra targets which act as a dependency for the main target
 EXTRA_DEPS ?=
 MAIN_FILE ?= main.go
+APP_VERSION := $(shell git describe --always --dirty)
 
 ifeq ($(ENABLE_LINUX),true)
 	LINUX_DEPENDENCY = target/${NAME}_linux
@@ -33,10 +34,8 @@ test: target/${NAME}
 	go test -v ./...
 
 target/${NAME}: $(shell find -not -path "./target/*" -name "*.go") $(EXTRA_DEPS)
-	$(eval APP_VERSION := $(shell git describe --always --dirty))
 	gofmt -w .
 	go build -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)
 
 target/${NAME}_linux: target/${NAME} $(EXTRA_DEPS)
-	$(eval APP_VERSION := $(git describe --always --dirty))
-	CGO_ENABLED=0 GOOS=linux go build -a -o $@ -ldflags="-X main.AppVersion=$APP_VERSION" $(MAIN_FILE)
+	CGO_ENABLED=0 GOOS=linux go build -a -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)

@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-// Injected by build.sh
+// Injected by build
 var AppVersion string
 
 func main() {
