@@ -7,7 +7,7 @@ import ai.mantik.ds.FundamentalType.StringType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId}
+import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId}
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository
 import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact, Repository}
@@ -27,7 +27,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
   }
 
   val artifact1 = repository.MantikArtifact(
-    mantikfile = Mantikfile.pure(AlgorithmDefinition(
+    mantikHeader = MantikHeader.pure(AlgorithmDefinition(
       bridge = "stack1",
       `type` = FunctionType(
         input = FundamentalType.Int32,
@@ -70,7 +70,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
   )
 
   val artifact2 = MantikArtifact(
-    mantikfile = Mantikfile.pure(elements.AlgorithmDefinition(
+    mantikHeader = MantikHeader.pure(elements.AlgorithmDefinition(
       bridge = "stack2",
       `type` = FunctionType(
         input = FundamentalType.Int32,
@@ -184,8 +184,8 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
     withRepo { repo =>
       await(repo.store(artifact1))
       val updated = artifact1.copy(
-        mantikfile = Mantikfile.pure(
-          artifact1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition].copy(
+        mantikHeader = MantikHeader.pure(
+          artifact1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition].copy(
             bridge = "other_stack"
           )
         ).toJson,
@@ -200,8 +200,8 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
     withRepo { repo =>
       await(repo.store(artifact1))
       val updated = artifact1.copy(
-        mantikfile = Mantikfile.pure(
-          artifact1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition].copy(
+        mantikHeader = MantikHeader.pure(
+          artifact1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition].copy(
             bridge = "other_stack"
           )
         ).toJson,
@@ -324,7 +324,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
       await(repo.store(artifact3))
 
       val artifact4 = artifact1.copy(
-        mantikfile = Mantikfile.pure(
+        mantikHeader = MantikHeader.pure(
           DataSetDefinition(bridge = "natural", `type` = StringType)
         ).toJson,
         itemId = ItemId.generate(),

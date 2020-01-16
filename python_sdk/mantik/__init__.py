@@ -1,1 +1,1 @@
-from mantik.types import DataType, Mantikfile, MetaVariables, MIME_TYPES, Bundle
+from mantik.types import DataType, MantikHeader, MetaVariables, MIME_TYPES, Bundle

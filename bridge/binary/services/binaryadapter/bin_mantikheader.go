@@ -35,14 +35,14 @@ type FileEntryContent struct {
 	Skip *int `json:"skip"`
 }
 
-type BinaryMantikfile struct {
+type BinaryMantikHeader struct {
 	Type      ds.TypeReference `json:"type"`
 	Directory string           `json:"directory"`
 	Files     []FileEntry      `json:"files"`
 }
 
-func ParseBinaryMantikFile(bytes []byte) (*BinaryMantikfile, error) {
-	var file BinaryMantikfile
+func ParseBinaryMantikHeader(bytes []byte) (*BinaryMantikHeader, error) {
+	var file BinaryMantikHeader
 	err := serving.UnmarshallMetaYaml(bytes, &file)
 	return &file, err
 }

@@ -3,7 +3,7 @@ package ai.mantik.engine.server.services
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_executor.{ DeployItemRequest, FetchItemRequest, SaveItemRequest }
 import ai.mantik.engine.testutil.{ TestArtifacts, TestBaseWithSessions }
@@ -56,7 +56,7 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
 
   "deploy" should "deploy elements" in new Env {
     val algorithm1Artifact = MantikArtifact(
-      Mantikfile.pure(AlgorithmDefinition(bridge = TestArtifacts.algoBridge1.namedId.get, `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
+      MantikHeader.pure(AlgorithmDefinition(bridge = TestArtifacts.algoBridge1.namedId.get, `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()

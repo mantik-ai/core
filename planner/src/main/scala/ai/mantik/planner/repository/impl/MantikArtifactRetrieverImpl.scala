@@ -8,7 +8,7 @@ import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.ds.helper.ZipUtils
 import ai.mantik.elements.errors.{ErrorCodes, MantikException}
-import ai.mantik.elements.{ItemId, MantikDefinition, MantikId, Mantikfile, NamedMantikId}
+import ai.mantik.elements.{ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId}
 import ai.mantik.planner.BuiltInItems
 import ai.mantik.planner.impl.ReferencingItemLoader
 import ai.mantik.planner.repository._
@@ -40,7 +40,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
 
   /** Figures out dependencies to load from Artifacts, skips Built Ins. */
   private def dependencyExtractor(i: MantikArtifact): Seq[MantikId] = {
-    i.parsedMantikfile.definition.referencedItems.filter {
+    i.parsedMantikHeader.definition.referencedItems.filter {
       case n: NamedMantikId => n.account != BuiltInItems.BuiltInAccount
       case _ => true
     }
@@ -51,7 +51,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   private val localOrRemoteLoader = new ReferencingMantikArtifactLoader(localOrRemoteGet)
 
   private def localRepoGet(mantikId: MantikId): Future[MantikArtifact] =
-    FutureHelper.addTimeout(localMantikRegistry.get(mantikId), "Loading Mantikfile from local repository", dbLookupTimeout)
+    FutureHelper.addTimeout(localMantikRegistry.get(mantikId), "Loading MantikHeader from local repository", dbLookupTimeout)
 
   private def localOrRemoteGet(mantikId: MantikId): Future[MantikArtifact] = {
     localRepoGet(mantikId).recoverWith {
@@ -76,7 +76,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
 
   private def wrapRemoteGet(registry: MantikRegistry): MantikId => Future[MantikArtifact] = {
     mantikId =>
-      FutureHelper.addTimeout(registry.get(mantikId), "Loading Mantikfile from remote Registry", registryTimeout)
+      FutureHelper.addTimeout(registry.get(mantikId), "Loading MantikHeader from remote Registry", registryTimeout)
   }
 
   private def wrapRemoteRegistry(customLoginToken: Option[CustomLoginToken]): MantikRegistry = {
@@ -109,20 +109,20 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     }
   }
 
-  override def addLocalDirectoryToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact] = {
-    logger.info(s"Adding local Directory ${dir} with Mantikfile")
-    val file = dir.resolve("Mantikfile")
-    val mantikfileContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
+  override def addLocalMantikItemToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact] = {
+    logger.info(s"Adding local Directory ${dir} with MantikHeader")
+    val file = dir.resolve("MantikHeader")
+    val mantikHeaderContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
     // Parsing
-    val mantikfile = Mantikfile.fromYaml(mantikfileContent) match {
-      case Left(error) => throw new IllegalArgumentException("Could not parse mantik file", error)
+    val mantikHeader = MantikHeader.fromYaml(mantikHeaderContent) match {
+      case Left(error) => throw new IllegalArgumentException("Could not parse mantik header", error)
       case Right(ok)   => ok
     }
 
-    val mantikId = id.orElse(mantikfile.header.id)
+    val mantikId = id.orElse(mantikHeader.header.id)
     val itemId = ItemId.generate()
 
-    ensureDependencies(mantikId.getOrElse(itemId), mantikfile).flatMap { _ =>
+    ensureDependencies(mantikId.getOrElse(itemId), mantikHeader).flatMap { _ =>
       val payloadDir = dir.resolve("payload")
       val payloadSource: Option[(String, Source[ByteString, _])] = if (Files.isDirectory(payloadDir)) {
         val tempFile = Files.createTempFile("mantik_context", ".zip")
@@ -135,7 +135,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
       }
 
 
-      val artifact =  MantikArtifact(mantikfileContent, None, mantikId, itemId)
+      val artifact =  MantikArtifact(mantikHeaderContent, None, mantikId, itemId)
       val timeout = if (payloadSource.isDefined){
         fileTransferTimeout
       } else {
@@ -150,9 +150,9 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     }
   }
 
-  private def ensureDependencies(id: MantikId, mantikfile: Mantikfile[_ <: MantikDefinition]): Future[Unit] = {
+  private def ensureDependencies(id: MantikId, mantikHeader: MantikHeader[_ <: MantikDefinition]): Future[Unit] = {
     logger.debug(s"Ensuring Dependencies of ${id}")
-    val references = mantikfile.definition.referencedItems
+    val references = mantikHeader.definition.referencedItems
     val futures = references.map { referenceId =>
       get(referenceId)
     }

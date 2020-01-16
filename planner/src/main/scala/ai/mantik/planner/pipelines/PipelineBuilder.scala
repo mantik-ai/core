@@ -2,20 +2,20 @@ package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.DataType
 import ai.mantik.elements
-import ai.mantik.elements.{ MantikId, Mantikfile, NamedMantikId, OptionalFunctionType, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{ MantikId, MantikHeader, NamedMantikId, OptionalFunctionType, PipelineDefinition, PipelineStep }
 import ai.mantik.planner.Pipeline.PipelineBuildStep
 import ai.mantik.planner.{ Algorithm, DefinitionSource, MantikItem, Pipeline, Source }
 
 private[planner] object PipelineBuilder {
 
-  /** Build a pipeline from a mantikfile and algorithms. */
-  def buildOrFailFromMantikfile(
+  /** Build a pipeline from a mantikHeader and algorithms. */
+  def buildOrFailFromMantikHeader(
     source: DefinitionSource,
-    mantikfile: Mantikfile[PipelineDefinition],
+    mantikHeader: MantikHeader[PipelineDefinition],
     referenced: Map[MantikId, MantikItem]
   ): Pipeline = {
     val resolved = PipelineResolver.resolvePipeline(
-      mantikfile,
+      mantikHeader,
       referenced
     ) match {
       case Left(error) => throw error
@@ -23,12 +23,12 @@ private[planner] object PipelineBuilder {
     }
     new Pipeline(
       source,
-      mantikfile,
+      mantikHeader,
       resolved
     )
   }
 
-  /** Build a Pipeline from algorithms writing an artifical mantik file. */
+  /** Build a Pipeline from algorithms writing an artifical mantik header. */
   def build(algorithms: Seq[Algorithm]): Either[PipelineException, Pipeline] = {
     val inputType = algorithms.headOption.map(_.functionType.input)
     val highLevelSteps = algorithms.map { algorithm =>
@@ -79,12 +79,12 @@ private[planner] object PipelineBuilder {
       case (as: PipelineStep.AlgorithmStep, Some(algorithm)) => as.algorithm -> algorithm
     }.toMap
 
-    val mantikFile = Mantikfile.pure(pipelineDefinition)
+    val mantikHeader = MantikHeader.pure(pipelineDefinition)
     PipelineResolver.resolvePipeline(
-      mantikFile,
+      mantikHeader,
       referenced
     ).map { resolved =>
-      new Pipeline(DefinitionSource.Constructed(), mantikFile, resolved)
+      new Pipeline(DefinitionSource.Constructed(), mantikHeader, resolved)
     }
   }
 }

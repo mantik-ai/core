@@ -42,7 +42,7 @@ the sidecar where to put data around.
   streams and automatically executing this streams. They are designed in a way, that user data is not streamed via the coordinator
   if thats not necessary.
 - `payload_preparer` A simple init-container, which downloads the initial payload of a container for a bridge container
-  together with it's Mantikfile and places it in the `/data`-Directory.
+  together with it's MantikHeader and places it in the `/data`-Directory.
 
 ## Running
 

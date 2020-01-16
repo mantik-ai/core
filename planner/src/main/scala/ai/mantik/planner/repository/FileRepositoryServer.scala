@@ -17,7 +17,7 @@ import scala.util.{ Failure, Success }
 /** HTTP Server for FileRepository, to make it accessible from Executor. */
 @Singleton
 private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileRepository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
-  val HelloMessage = "This is a Mantik File Repository"
+  val HelloMessage = "This is a mantik header Repository"
 
   private val subConfig = config.getConfig("mantik.fileRepositoryServer")
   private val port = subConfig.getInt("port")
@@ -72,7 +72,7 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
         }
     }, path("") {
       get {
-        complete("Mantik File Repository")
+        complete("File Repository")
       }
     }
   )

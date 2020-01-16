@@ -1,6 +1,6 @@
-# Mantikfile
+# MantikHeader
 
-The Mantikfile describes what a Mantik Artefact (DataSets, Algorithms, ...) is and how it will be handled by Mantik.
+The MantikHeader describes what a Mantik Artefact (DataSets, Algorithms, ...) is and how it will be handled by Mantik.
 
 **Note:** The spec is not yet stable and subject of changes.
 
@@ -17,7 +17,7 @@ They are YAML or JSON Files and contain the following Keys:
 - Optional `author` The author of the artefact
 
 These fields are used by the Mantik CLI Tool for easy uploading, but are otherwise ignored. It is possible for mantik to
-name an artefact under a different name, than what is expressed in Mantikfile (e.g. on copying).
+name an artefact under a different name, than what is expressed in MantikHeader (e.g. on copying).
 
 ## Payload
 
@@ -29,17 +29,17 @@ Other fields which are not required by the sub type are ignored by Mantik and fo
 
 ## Data Type
 
-Each Mantikfile must contain type-related information
+Each MantikHeader must contain type-related information
 
 ### DataSet
 
-A DataSet Mantikfile must contain a field `type` which declares its type.
+A DataSet MantikHeader must contain a field `type` which declares its type.
 
 It must contain a field `format` which maps to a format plugin.
 
 ### Algorithm
 
-A Algorithm Mantikfile must contain a field `type` with sub fields `input` and `output` which declared input and output Data Types.
+A Algorithm MantikHeader must contain a field `type` with sub fields `input` and `output` which declared input and output Data Types.
 
 It must contain a field `stack` which maps to a algorithm plugin.
 
@@ -128,7 +128,7 @@ type:
 
 ### Meta Variables
 
-A Mantik file can contain meta variables. This look like this:
+A Mantik Header can contain meta variables. This look like this:
 
 ```
 name: my-algorithm
@@ -148,7 +148,7 @@ output: float32
 The encoding of a simple meta variable is the same as the JSON-Encoding of a single value (See [DataTypes](DataTypes.md))
 plus an extra `name`-Field.
 
-This name can be referenced by a `"${name}"` String inside a Mantikfile's JSON or YAML.
+This name can be referenced by a `"${name}"` String inside a MantikHeader's JSON or YAML.
 
 Upon loading, all references will be interpolated, before data types are parsed. In the example
 above the type of x would look like

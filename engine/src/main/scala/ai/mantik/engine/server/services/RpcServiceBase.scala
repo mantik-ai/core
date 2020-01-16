@@ -2,7 +2,7 @@ package ai.mantik.engine.server.services
 
 import ai.mantik.componently.ComponentBase
 import ai.mantik.componently.rpc.RpcConversions
-import ai.mantik.elements.errors.{ InvalidMantikfileException, MantikException }
+import ai.mantik.elements.errors.{ InvalidMantikHeaderException, MantikException }
 import com.typesafe.scalalogging.Logger
 import io.grpc.Status.Code
 

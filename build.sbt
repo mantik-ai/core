@@ -305,7 +305,7 @@ lazy val planner = makeProject("planner")
 
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
-      "org.xerial" % "sqlite-jdbc" % "3.18.0",
+      "org.xerial" % "sqlite-jdbc" % "3.28.0",
       "io.getquill" %% "quill-jdbc" % "3.2.0"
     ),
     enableProtocolBuffer,

@@ -5,7 +5,7 @@ import java.time.Instant
 import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
 import ai.mantik.ds.FundamentalType.{ Int32, StringType }
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId }
 import ai.mantik.engine.protos.local_registry.{ AddArtifactRequest, AddArtifactResponse, GetArtifactRequest, GetArtifactWithPayloadResponse, ListArtifactsRequest, TagArtifactRequest }
 import ai.mantik.engine.testutil.TestBaseWithSessions
 import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo, MantikArtifact }
@@ -24,7 +24,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     val localRepo = components.repository
 
     val item = MantikArtifact(
-      Mantikfile.pure(
+      MantikHeader.pure(
         AlgorithmDefinition(bridge = "some_stack", `type` = FunctionType(Int32, Int32))
       ).toJson,
       fileId = Some("1234"),
@@ -33,7 +33,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     )
 
     val item2 = item.copy(
-      mantikfile = Mantikfile.pure(
+      mantikHeader = MantikHeader.pure(
         DataSetDefinition(bridge = "format", `type` = StringType)
       ).toJson,
       itemId = ItemId.generate(),
@@ -140,7 +140,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
     requestObserver.onNext(
       AddArtifactRequest(
-        mantikfile = item.mantikfile
+        mantikHeader = item.mantikHeader
       )
     )
     requestObserver.onCompleted()
@@ -150,10 +150,10 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     Converters.decodeMantikArtifact(result.artifact.get) shouldBe original
   }
 
-  it should "keep YAML code in mantikfiles" in new EnvBase {
+  it should "keep YAML code in mantikHeaders" in new EnvBase {
     val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[AddArtifactResponse]()
     val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
-    val mantikfile =
+    val mantikHeader =
       """kind: algorithm
         |bridge: foobar
         |# This is a comment which should survive
@@ -163,7 +163,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
         |""".stripMargin
     requestObserver.onNext(
       AddArtifactRequest(
-        mantikfile = mantikfile
+        mantikHeader = mantikHeader
       )
     )
     requestObserver.onCompleted()
@@ -171,13 +171,13 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
 
     val stored = await(localRepo.get(ItemId(result.artifact.get.itemId)))
     Converters.decodeMantikArtifact(result.artifact.get) shouldBe stored
-    stored.mantikfile shouldBe mantikfile
-    result.artifact.get.mantikfile shouldBe mantikfile
-    result.artifact.get.mantikfileJson shouldBe stored.parsedMantikfile.toJson
+    stored.mantikHeader shouldBe mantikHeader
+    result.artifact.get.mantikHeader shouldBe mantikHeader
+    result.artifact.get.mantikHeaderJson shouldBe stored.parsedMantikHeader.toJson
 
     val getResult = await(localRegistryServiceImpl.getArtifact(GetArtifactRequest(result.artifact.get.itemId)))
-    getResult.artifact.get.mantikfile shouldBe mantikfile
-    getResult.artifact.get.mantikfileJson shouldBe stored.parsedMantikfile.toJson
+    getResult.artifact.get.mantikHeader shouldBe mantikHeader
+    getResult.artifact.get.mantikHeaderJson shouldBe stored.parsedMantikHeader.toJson
   }
 
   it should "support naming the artifact" in new EnvBase {
@@ -185,7 +185,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
     requestObserver.onNext(
       AddArtifactRequest(
-        mantikfile = item.mantikfile,
+        mantikHeader = item.mantikHeader,
         namedMantikId = "name1"
       )
     )
@@ -207,7 +207,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
     requestObserver.onNext(
       AddArtifactRequest(
-        mantikfile = item.mantikfile,
+        mantikHeader = item.mantikHeader,
         contentType = ContentTypes.ZipFileContentType,
         payload = RpcConversions.encodeByteString(bytes.head)
       )

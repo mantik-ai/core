@@ -2,8 +2,8 @@ package ai.mantik.engine.server.services
 
 import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.errors.InvalidMantikfileException
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.errors.InvalidMantikHeaderException
+import ai.mantik.elements.{ ItemId, MantikId, MantikHeader, NamedMantikId }
 import ai.mantik.engine.protos.local_registry.LocalRegistryServiceGrpc.LocalRegistryService
 import ai.mantik.engine.protos.local_registry._
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
@@ -64,12 +64,12 @@ class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegist
         val itemId = ItemId.generate()
         val maybeContentType = RpcConversions.decodeOptionalString(header.contentType)
         val mantikArtifact = MantikArtifact(
-          mantikfile = header.mantikfile,
+          mantikHeader = header.mantikHeader,
           fileId = None, // will be set by response
           namedId = namedId,
           itemId = itemId
         )
-        mantikArtifact.parsedMantikfile // force parsing
+        mantikArtifact.parsedMantikHeader // force parsing
         val maybePayloadSource: Option[PayloadSource] = maybeContentType.map { contentType =>
           val decodedSource = source.map(r => RpcConversions.decodeByteString(r.payload))
           contentType -> decodedSource

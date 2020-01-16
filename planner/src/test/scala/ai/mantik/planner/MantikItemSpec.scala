@@ -1,7 +1,7 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.util.FakeBridges
 import ai.mantik.testutils.TestBase
@@ -10,7 +10,7 @@ class MantikItemSpec extends TestBase with FakeBridges {
 
   lazy val sample = Algorithm(
     Source.constructed(PayloadSource.Loaded("1", ContentTypes.ZipFileContentType)),
-    Mantikfile.fromYaml(
+    MantikHeader.fromYaml(
       """
         |bridge: algo1
         |metaVariables:
@@ -26,16 +26,16 @@ class MantikItemSpec extends TestBase with FakeBridges {
   )
 
   "withMetaVariable" should "update meta variables" in {
-    sample.mantikfile.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(123)
+    sample.mantikHeader.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(123)
     sample.mantikId shouldBe an[ItemId]
     sample.state.update(_.copy(namedMantikItem = Some("foo")))
     sample.mantikId shouldBe NamedMantikId(name = "foo")
 
     val after = sample.withMetaValue("x", 100)
-    after.mantikfile.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(100)
+    after.mantikHeader.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(100)
     after.payloadSource shouldBe sample.payloadSource
     after.source.definition shouldBe an[DefinitionSource.Derived]
-    after.mantikfile.definition shouldBe an[AlgorithmDefinition]
+    after.mantikHeader.definition shouldBe an[AlgorithmDefinition]
     after.mantikId shouldBe an[ItemId]
   }
 
@@ -47,7 +47,7 @@ class MantikItemSpec extends TestBase with FakeBridges {
         Some(name),
         itemId
       ), PayloadSource.Empty),
-      sample.mantikfile,
+      sample.mantikHeader,
       algoBridge
     )
     algorithm.itemId shouldBe itemId
@@ -67,7 +67,7 @@ class MantikItemSpec extends TestBase with FakeBridges {
         None,
         itemId
       ), PayloadSource.Loaded("file1", ContentTypes.ZipFileContentType)),
-      sample.mantikfile,
+      sample.mantikHeader,
       algoBridge
     )
     algorithm.itemId shouldBe itemId
@@ -91,7 +91,7 @@ class MantikItemSpec extends TestBase with FakeBridges {
           DefinitionSource.Loaded(Some(name), itemId)
         ),
         PayloadSource.Empty),
-      sample.mantikfile,
+      sample.mantikHeader,
       algoBridge
     )
     algorithm.itemId shouldBe itemId
@@ -112,7 +112,7 @@ class MantikItemSpec extends TestBase with FakeBridges {
         Some(name),
         itemId
       ), PayloadSource.Empty).derive,
-      sample.mantikfile,
+      sample.mantikHeader,
       algoBridge
     )
     algorithm.itemId shouldNot be(itemId)

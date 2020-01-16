@@ -1,15 +1,15 @@
 import os
 from mantik.bridge import Algorithm
-from mantik.types import Mantikfile, Bundle
+from mantik.types import MantikHeader, Bundle
 
 
 # Wraps the supplied algorithm
 class AlgorithmWrapper(Algorithm):
-    def __init__(self, mantikfile: Mantikfile):
+    def __init__(self, mantikheader: MantikHeader):
         # TODO: I am pretty sure there is a nicer way to do so
         import sys
 
-        sys.path.append(mantikfile.payload_dir)
+        sys.path.append(mantikheader.payload_dir)
         import algorithm
 
         self.train_func = algorithm.train
@@ -18,7 +18,7 @@ class AlgorithmWrapper(Algorithm):
         self.is_trained_status = False
         self.model = None
         self.training_stats_result = None
-        self.mantikfile = mantikfile
+        self.mantikheader = mantikheader
 
     @property
     def is_trained(self) -> bool:
@@ -26,13 +26,13 @@ class AlgorithmWrapper(Algorithm):
 
     @property
     def trained_data_dir(self) -> str:
-        return self.mantikfile.payload_dir
+        return self.mantikheader.payload_dir
 
     def train(self, bundle):
         old_pwd = os.getcwd()
-        os.chdir(self.mantikfile.payload_dir)
+        os.chdir(self.mantikheader.payload_dir)
         try:
-            stats = self.train_func(bundle, self.mantikfile.meta_variables)
+            stats = self.train_func(bundle, self.mantikheader.meta_variables)
             # This should now work and not catch
             self.model = self.try_init_func()
             print("Reinitialized after successful learn")
@@ -48,7 +48,7 @@ class AlgorithmWrapper(Algorithm):
 
     def try_init_catching(self):
         old_pwd = os.getcwd()
-        os.chdir(self.mantikfile.payload_dir)
+        os.chdir(self.mantikheader.payload_dir)
         try:
             self.model = self.try_init_func()
             print("Successfully loaded Model...")

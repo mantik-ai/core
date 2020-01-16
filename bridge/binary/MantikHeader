@@ -1,4 +1,4 @@
-# Mantikfile for Binary Bridge
+# MantikHeader for Binary Bridge
 kind: bridge
 account: mantik
 name: binary

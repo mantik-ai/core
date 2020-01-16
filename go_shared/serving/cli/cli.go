@@ -16,8 +16,8 @@ import (
 
 // Return Codes
 const RC_INVALID_ARGUMENT = 1
-const RC_COULD_NOT_LOAD_MANTIKFILE = 2
-const RC_COULD_NOT_PARSE_MANTIKFILE = 3
+const RC_COULD_NOT_LOAD_MANTIKHEADER = 2
+const RC_COULD_NOT_PARSE_MANTIKHEADER = 3
 const RC_COULD_NOT_LOAD_ALGORITHM = 4
 const RC_COULD_NOT_ADAPT_ALGORITHM = 5
 const RC_COULD_NOT_CREATE_SERVER = 6
@@ -34,10 +34,10 @@ func printHelp(args []string) {
 		`Usage %s <command> <args>
 Commands:
   help        - Show this help
-  serve       - Serve with the help of a Mantikfile
+  serve       - Serve with the help of a MantikHeader
   analyze     - Print Analysis
 
-Mantikfile lookup is usually done by adding a directory as extra argument
+MantikHeader lookup is usually done by adding a directory as extra argument
 `, args[0])
 	fmt.Println("Usage", args[0], "<command>", "<args>")
 }
@@ -71,8 +71,8 @@ func Start(args []string, backend serving.Backend) {
 	}
 
 	if serveCommand.Parsed() {
-		dir, mantikFile := loadMantikfile(serveCommand)
-		executable := loadAndAdapt(backend, dir, mantikFile)
+		dir, mantikHeader := loadMantikHeader(serveCommand)
+		executable := loadAndAdapt(backend, dir, mantikHeader)
 		address := fmt.Sprintf(":%d", *port)
 		server, err := server.CreateServerForExecutable(executable, address)
 		if err != nil {
@@ -86,8 +86,8 @@ func Start(args []string, backend serving.Backend) {
 		return
 	}
 	if analyzeCommand.Parsed() {
-		dir, mantikfile := loadMantikfile(analyzeCommand)
-		executable := loadAndAdapt(backend, dir, mantikfile)
+		dir, mantikHeader := loadMantikHeader(analyzeCommand)
+		executable := loadAndAdapt(backend, dir, mantikHeader)
 		serialized, err := json.Marshal(executable.ExtensionInfo())
 		if err != nil {
 			printErrorAndQuit(100, "Could not serialize info")
@@ -97,7 +97,7 @@ func Start(args []string, backend serving.Backend) {
 	}
 }
 
-func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Mantikfile) serving.Executable {
+func loadAndAdapt(backend serving.Backend, dirName string, mantikHeader serving.MantikHeader) serving.Executable {
 	payloadDir := path.Join(dirName, "payload")
 	var payloadArg *string
 	if osext.FileExists(payloadDir) {
@@ -105,7 +105,7 @@ func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Ma
 	} else {
 		payloadArg = nil
 	}
-	executable, err := backend.LoadModel(payloadArg, mantikFile)
+	executable, err := backend.LoadModel(payloadArg, mantikHeader)
 
 	if err != nil {
 		printErrorAndQuit(RC_COULD_NOT_LOAD_ALGORITHM, "Could not load executable %s", err.Error())
@@ -113,7 +113,7 @@ func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Ma
 	}
 
 	// trying to bridge it to the expected format
-	adapted, err := serving.AutoAdapt(executable, mantikFile)
+	adapted, err := serving.AutoAdapt(executable, mantikHeader)
 	if err != nil {
 		executable.Cleanup()
 		printErrorAndQuit(RC_COULD_NOT_ADAPT_ALGORITHM, "Could not adapt executable %s", err.Error())
@@ -122,23 +122,23 @@ func loadAndAdapt(backend serving.Backend, dirName string, mantikFile serving.Ma
 	return adapted
 }
 
-// Returns directory of mantik file and parsed mantik file
-func loadMantikfile(flagSet *flag.FlagSet) (string, serving.Mantikfile) {
+// Returns directory of mantik header and parsed mantik header
+func loadMantikHeader(flagSet *flag.FlagSet) (string, serving.MantikHeader) {
 	extraDir := "."
 	if flagSet.NArg() > 0 {
 		extraDir = flagSet.Arg(0)
 	}
 	completeDir := extraDir + "/"
-	mantikFile, err := ioutil.ReadFile(completeDir + "Mantikfile")
+	mantikHeader, err := ioutil.ReadFile(completeDir + "MantikHeader")
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not read Mantikfile: %s\n", err.Error())
-		os.Exit(RC_COULD_NOT_LOAD_MANTIKFILE)
+		fmt.Fprintf(os.Stderr, "Could not read MantikHeader: %s\n", err.Error())
+		os.Exit(RC_COULD_NOT_LOAD_MANTIKHEADER)
 	}
-	parsedMantikFile, err := serving.ParseMantikFile(mantikFile)
+	parsedMantikHeader, err := serving.ParseMantikHeader(mantikHeader)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not parse Mantikfile %s\n", err.Error())
-		os.Exit(RC_COULD_NOT_PARSE_MANTIKFILE)
+		fmt.Fprintf(os.Stderr, "Could not parse MantikHeader %s\n", err.Error())
+		os.Exit(RC_COULD_NOT_PARSE_MANTIKHEADER)
 	}
-	return completeDir, parsedMantikFile
+	return completeDir, parsedMantikHeader
 }

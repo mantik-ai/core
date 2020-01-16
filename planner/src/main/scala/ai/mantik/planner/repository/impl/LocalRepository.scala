@@ -6,7 +6,7 @@ import java.sql.Timestamp
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ ItemId, MantikId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.repository.impl.LocalRepository.DirectoryConfigKey
 import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository }
 import ai.mantik.planner.repository.impl.LocalRepositoryDb._
@@ -101,7 +101,9 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
             db.items.insert(lift(converted))
           )
         } catch {
-          case s: SQLiteException if s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY =>
+          case s: SQLiteException if s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY ||
+            s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT // newer version of sqlite throws this
+            =>
             ErrorCodes.MantikItemConflict.throwIt("Items may not be overwritten with the same itemId")
         }
 
@@ -199,7 +201,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
           try {
             run(db.deployments.insert(lift(converted))) > 0
           } catch {
-            case e: SQLiteException if e.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_FOREIGNKEY =>
+            case e: SQLiteException if e.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_FOREIGNKEY ||
+              e.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT =>
               // entry not present.
               false
           }
@@ -254,7 +257,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
    */
   private def decodeDbArtifact(dbArtifact: DbArtifact): MantikArtifact = {
     MantikArtifact(
-      mantikfile = dbArtifact.item.mantikfile,
+      mantikHeader = dbArtifact.item.mantikheader,
       namedId = dbArtifact.name.map { name =>
         NamedMantikId(
           account = name.account,
@@ -281,10 +284,10 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
    */
   private def encodeDbArtifact(a: MantikArtifact): DbMantikItem = {
     DbMantikItem(
-      mantikfile = a.mantikfile,
+      mantikheader = a.mantikHeader,
       fileId = a.fileId,
       itemId = a.itemId.toString,
-      kind = a.parsedMantikfile.definition.kind
+      kind = a.parsedMantikHeader.definition.kind
     )
   }
 

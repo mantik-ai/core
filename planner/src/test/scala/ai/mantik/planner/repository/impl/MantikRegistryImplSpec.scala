@@ -1,7 +1,7 @@
 package ai.mantik.planner.repository.impl
 
 import ai.mantik.ds.FundamentalType
-import ai.mantik.elements.{ DataSetDefinition, ItemId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.elements.registry.api.{ ApiFileUploadResponse, ApiLoginRequest, ApiLoginResponse, ApiPrepareUploadResponse, MantikRegistryApi, MantikRegistryApiCalls }
 import ai.mantik.planner.repository.{ Bridge, ContentTypes, MantikArtifact }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
@@ -64,7 +64,7 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
     val emptyData = Source(
       List(ByteString.fromString("a"), ByteString(), ByteString.fromString("c")
       ))
-    val mantikfile = Mantikfile.pure(
+    val mantikHeader = MantikHeader.pure(
       DataSetDefinition(
         bridge = Bridge.naturalBridge.mantikId,
         `type` = FundamentalType.Int32
@@ -72,7 +72,7 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
     )
     val response = await(client.addMantikArtifact(
       MantikArtifact(
-        mantikfile.toJson,
+        mantikHeader.toJson,
         fileId = None,
         namedId = Some(NamedMantikId("hello_world")),
         itemId = ItemId.generate(),

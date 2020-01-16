@@ -16,25 +16,25 @@ import (
 )
 
 func loadMantikExecutableAlgorithm(backend serving.Backend, directory string) (serving.ExecutableAlgorithm, error) {
-	mantikFile, err := ioutil.ReadFile(directory + "/Mantikfile")
+	mantikHeader, err := ioutil.ReadFile(directory + "/MantikHeader")
 
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not read Mantikfile")
+		return nil, errors.Wrap(err, "Could not read MantikHeader")
 	}
-	parsedMantikFile, err := serving.ParseMantikFile(mantikFile)
+	parsedMantikHeader, err := serving.ParseMantikHeader(mantikHeader)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not parse Mantikfile")
+		return nil, errors.Wrapf(err, "Could not parse MantikHeader")
 	}
 
 	payloadDir := path.Join(directory, "payload")
-	algorithm, err := backend.LoadModel(&payloadDir, parsedMantikFile)
+	algorithm, err := backend.LoadModel(&payloadDir, parsedMantikHeader)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not load model")
 	}
 
 	// trying to bridge it to the expected format
-	adapted, err := serving.AutoAdapt(algorithm, parsedMantikFile)
+	adapted, err := serving.AutoAdapt(algorithm, parsedMantikHeader)
 	if err != nil {
 		algorithm.Cleanup()
 		return nil, errors.Wrap(err, "Could not adapt algorithm")

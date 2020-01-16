@@ -48,12 +48,12 @@ object ContainerService {
 /**
  * Describes how to initialize a container
  * @param url Zip file URL which is unpacked to /data
- * @param mantikfile Mantikfile content which is put to /data/Mantikfile
+ * @param mantikHeader MantikHeader content which is put to /data/MantikHeader
  */
 @JsonCodec
 case class DataProvider(
     url: Option[String] = None,
-    mantikfile: Option[String] = None
+    mantikHeader: Option[String] = None
 )
 
 object DataProvider {
@@ -61,7 +61,7 @@ object DataProvider {
     Renderable.keyValueList(
       "DataProvider",
       "url" -> d.url,
-      "mantikfile" -> d.mantikfile.map(Renderable.renderPotentialJson)
+      "mantikHeader" -> d.mantikHeader.map(Renderable.renderPotentialJson)
     )
   }
 }

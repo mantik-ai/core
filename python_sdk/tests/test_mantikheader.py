@@ -1,4 +1,4 @@
-from mantik.types import Mantikfile
+from mantik.types import MantikHeader
 import json
 
 
@@ -18,7 +18,7 @@ type:
   output: float32 
     """
 
-    mf = Mantikfile.parse(sample, ".")
+    mf = MantikHeader.parse(sample, ".")
     assert mf.payload_dir == "./payload"
     assert mf.type.input.representation == json.loads(
         '{"columns": {"x":{"type":"tensor","componentType":"float32","shape":[100]}}}'

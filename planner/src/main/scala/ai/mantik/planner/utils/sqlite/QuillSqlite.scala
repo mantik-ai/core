@@ -1,6 +1,7 @@
 package ai.mantik.planner.utils.sqlite
 
 import java.nio.file.{ Files, Path }
+import java.sql.Connection
 import java.util.Properties
 
 import ai.mantik.elements.errors.ErrorCodes
@@ -63,7 +64,8 @@ class QuillSqlite(dbFile: Path) {
   def runSql(sql: String): Unit = {
     val lines = splitSql(sql)
     lines.foreach { line =>
-      context.executeAction(line)
+      // despite it's name this executes this SQL line
+      context.probe(line)
     }
   }
 

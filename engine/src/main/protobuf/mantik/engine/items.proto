@@ -6,8 +6,8 @@ import "mantik/engine/ds.proto";
 /** Represents a Mantik Item. */
 message MantikItem {
     ObjectKind kind = 1;
-    // JSON mantikfile
-    string mantikfile_json = 2;
+    // JSON MantikHeader
+    string mantik_header_json = 2;
     oneof item {
         DataSet dataset = 3;
         Algorithm algorithm = 4;

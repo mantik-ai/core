@@ -3,7 +3,7 @@ package ai.mantik.planner
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikDefinitionWithBridge, MantikDefinitionWithoutBridge, MantikId, Mantikfile, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikDefinitionWithBridge, MantikDefinitionWithoutBridge, MantikId, MantikHeader, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver }
 import ai.mantik.elements.meta.MetaVariableException
 import ai.mantik.planner.repository.{ Bridge, ContentTypes, MantikArtifact }
@@ -25,10 +25,10 @@ trait MantikItem {
   private[mantik] def source: Source = core.source
   /** Returns where the item payload comes from. */
   private[mantik] def payloadSource: PayloadSource = source.payload
-  /** Returns where the mantikfile / item comes from. */
+  /** Returns where the mantikHeader / item comes from. */
   private[mantik] def definitionSource: DefinitionSource = source.definition
-  /** Returns the item's Mantikfile with definition. */
-  private[mantik] def mantikfile: Mantikfile[DefinitionType] = core.mantikfile
+  /** Returns the item's MantikHeader with definition. */
+  private[mantik] def mantikHeader: MantikHeader[DefinitionType] = core.mantikHeader
 
   /** The state of the mantik Item. */
   private[planner] val state: AtomicReference[MantikItemState] = new AtomicReference({
@@ -89,8 +89,8 @@ trait MantikItem {
    * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]])
    */
   def withMetaValues(values: (String, SingleElementBundle)*): OwnType = {
-    val updatedMantikfile = mantikfile.withMetaValues(values: _*)
-    withMantikfile(updatedMantikfile)
+    val updatedMantikHeader = mantikHeader.withMetaValues(values: _*)
+    withMantikHeader(updatedMantikHeader)
   }
 
   /**
@@ -103,12 +103,12 @@ trait MantikItem {
     withMetaValues(name -> Bundle.fundamental(value))
   }
 
-  /** Override the mantik file (not this can be dangerous). */
-  protected def withMantikfile(mantikfile: Mantikfile[DefinitionType]): OwnType = {
+  /** Override the mantik header (not this can be dangerous). */
+  protected def withMantikHeader(mantikHeader: MantikHeader[DefinitionType]): OwnType = {
     withCore(
       MantikItemCore(
         source = source.derive,
-        mantikfile = mantikfile,
+        mantikHeader = mantikHeader,
         bridge = core.bridge
       )
     )
@@ -136,17 +136,17 @@ trait MantikItem {
 /** Contains the common base data for every MantikItem. */
 case class MantikItemCore[T <: MantikDefinition](
     source: Source,
-    mantikfile: Mantikfile[T],
+    mantikHeader: MantikHeader[T],
     bridge: Option[Bridge]
 )
 
 object MantikItemCore {
-  def apply[T <: MantikDefinitionWithBridge](source: Source, mantikfile: Mantikfile[T], bridge: Bridge): MantikItemCore[T] = {
-    MantikItemCore(source, mantikfile, Some(bridge))
+  def apply[T <: MantikDefinitionWithBridge](source: Source, mantikHeader: MantikHeader[T], bridge: Bridge): MantikItemCore[T] = {
+    MantikItemCore(source, mantikHeader, Some(bridge))
   }
 
-  def apply[T <: MantikDefinitionWithoutBridge](source: Source, mantikfile: Mantikfile[T]): MantikItemCore[T] = {
-    MantikItemCore(source, mantikfile, None)
+  def apply[T <: MantikDefinitionWithoutBridge](source: Source, mantikHeader: MantikHeader[T]): MantikItemCore[T] = {
+    MantikItemCore(source, mantikHeader, None)
   }
 }
 
@@ -154,7 +154,7 @@ trait BridgedMantikItem extends MantikItem {
   override type DefinitionType <: MantikDefinitionWithBridge
 
   /** Returns the type's bridge. */
-  def bridgeMantikId: MantikId = mantikfile.definition.bridge
+  def bridgeMantikId: MantikId = mantikHeader.definition.bridge
 
   /** Returns the item bridge. */
   def bridge: Bridge = core.bridge.getOrElse {
@@ -207,23 +207,23 @@ object MantikItem {
       Bridge.fromMantikArtifacts(name, hull, forKind)
     }
 
-    val bridge = artifact.parsedMantikfile.definition match {
+    val bridge = artifact.parsedMantikHeader.definition match {
       case d: MantikDefinitionWithBridge =>
-        Some(forceBridge(d.bridge, artifact.parsedMantikfile.definition.kind))
+        Some(forceBridge(d.bridge, artifact.parsedMantikHeader.definition.kind))
       case _ => None
     }
 
     def forceExtract[T <: MantikDefinition: ClassTag]: MantikItemCore[T] = {
-      val mantikfile = artifact.parsedMantikfile.cast[T].right.get
-      MantikItemCore(source, mantikfile, bridge)
+      val mantikHeader = artifact.parsedMantikHeader.cast[T].right.get
+      MantikItemCore(source, mantikHeader, bridge)
     }
 
-    val item = artifact.parsedMantikfile.definition match {
+    val item = artifact.parsedMantikHeader.definition match {
       case _: AlgorithmDefinition => Algorithm(forceExtract)
       case _: DataSetDefinition   => DataSet(forceExtract)
       case _: TrainableAlgorithmDefinition =>
         val extracted = forceExtract[TrainableAlgorithmDefinition]
-        val trainedBridge = extracted.mantikfile.definition.trainedBridge.map(forceBridge(_, MantikDefinition.AlgorithmKind))
+        val trainedBridge = extracted.mantikHeader.definition.trainedBridge.map(forceBridge(_, MantikDefinition.AlgorithmKind))
           .orElse(bridge).getOrElse {
             ErrorCodes.MantikItemInvalidBridge.throwIt("Missing bridge for trainable algorithm definition")
           }
@@ -233,7 +233,7 @@ object MantikItem {
           val subHull = hull.filter(_.itemId != item.itemId)
           item.mantikId -> fromMantikArtifact(item, subHull)
         }.toMap
-        PipelineBuilder.buildOrFailFromMantikfile(source.definition, forceExtract[PipelineDefinition].mantikfile, referenced)
+        PipelineBuilder.buildOrFailFromMantikHeader(source.definition, forceExtract[PipelineDefinition].mantikHeader, referenced)
       case _: BridgeDefinition =>
         Bridge(forceExtract)
     }

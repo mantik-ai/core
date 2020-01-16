@@ -22,7 +22,7 @@ object ApiErrorResponse {
   /** There was no permission to access this element */
   val NoPermission = "NoPermission"
 
-  val InvalidMantikfile = "InvalidMantikfile"
+  val InvalidMantikHeader = "InvalidMantikHeader"
 
   val InvalidMantikId = "InvalidMantikId"
 

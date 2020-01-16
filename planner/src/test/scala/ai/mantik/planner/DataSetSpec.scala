@@ -13,7 +13,7 @@ class DataSetSpec extends TestBase {
     val cached = sample.cached
     val cachedSource = cached.payloadSource.asInstanceOf[PayloadSource.Cached]
     cachedSource.source shouldBe sample.payloadSource
-    cached.mantikfile shouldBe sample.mantikfile
+    cached.mantikHeader shouldBe sample.mantikHeader
   }
 
   it should "do nothing, if it is already cached" in {

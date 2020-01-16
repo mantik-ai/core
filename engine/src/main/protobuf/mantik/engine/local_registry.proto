@@ -61,8 +61,8 @@ message AddArtifactRequest {
     // Header part
     // Optional Named Mantik Id
     string named_mantik_id = 1;
-    // Mantik file
-    string mantikfile = 2;
+    // Mantik Header
+    string mantik_header = 2;
     // Payload content type
     // Must be set if there is content
     string content_type = 3;

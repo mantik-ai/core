@@ -12,8 +12,8 @@ object DataSetTransformation extends ExampleBase {
   override protected def run(implicit context: Context): Unit = {
     val bridge = Paths.get("bridge/tf/saved_model")
     val sampleFile = Paths.get("bridge/tf/saved_model/test/resources/samples/double_multiply")
-    context.pushLocalMantikFile(bridge)
-    context.pushLocalMantikFile(sampleFile)
+    context.pushLocalMantikItem(bridge)
+    context.pushLocalMantikItem(sampleFile)
 
     val dataset = DataSet.literal(
       Bundle.build(

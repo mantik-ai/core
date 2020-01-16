@@ -1,6 +1,6 @@
 import tensorflow as tf
 from .context import Context
-from mantik.types import Mantikfile
+from mantik.types import MantikHeader
 
 
 class TensorFlowContext(Context):
@@ -9,8 +9,8 @@ class TensorFlowContext(Context):
     The Tensor flow session
     """
 
-    def __init__(self, mantikfile: Mantikfile, session: tf.Session):
-        self.mantikfile = mantikfile
+    def __init__(self, mantikheader: MantikHeader, session: tf.Session):
+        self.mantikheader = mantikheader
         self.session = session
 
     @staticmethod
@@ -21,7 +21,7 @@ class TensorFlowContext(Context):
         :return:
         """
         # Assuning that script is started from data directory
-        mf = Mantikfile.load("../Mantikfile")
+        mf = MantikHeader.load("../MantikHeader")
 
         class LocalContext(TensorFlowContext):
             def __init__(self):

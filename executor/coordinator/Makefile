@@ -90,6 +90,13 @@ DOCKER_TARGETS=$(patsubst %, target/%_docker_image.make, $(EXECUTABLES))
 .PHONY: docker
 docker: $(DOCKER_TARGETS)
 
+# Payload preparer has it's own dockerfile
+target/payload_preparer_docker_image.make: target/payload_preparer_linux
+	$(eval DOCKER_IMAGE_NAME := $(DOCKER_IMAGE_NAME_payload_preparer))
+	$(eval IMAGE_FULL_NAME := $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME))
+	$(eval EXECUTABLE := target/payload_preparer_linux)
+	$(DOCKER) build -f Dockerfile_preparer -t $(IMAGE_FULL_NAME) --build-arg input_executable=$(EXECUTABLE) .
+
 target/%_docker_image.make: target/%_linux
 	$(eval DOCKER_IMAGE_NAME := $(DOCKER_IMAGE_NAME_$*))
 	$(eval IMAGE_FULL_NAME := $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME))

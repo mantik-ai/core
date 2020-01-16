@@ -49,7 +49,7 @@ object DefinitionSource {
   /** The item was artificially constructed (e.g. literals, calculations, ...) */
   case class Constructed() extends DefinitionSource
 
-  /** The item was somehow derived from another one (e.g. changing Mantikfile) */
+  /** The item was somehow derived from another one (e.g. changing MantikHeader) */
   case class Derived(other: DefinitionSource) extends DefinitionSource
 
   /** The item was tagged with a name. */

@@ -111,10 +111,10 @@ private[planner] class PlanExecutorImpl(
         }
       case PlanOp.AddMantikItem(item, fileReference) =>
         val fileId = fileReference.map(files.resolveFileId)
-        val mantikfile = item.mantikfile
+        val mantikHeader = item.mantikHeader
         val id = item.itemId
         val namedId = item.name
-        val artifact = MantikArtifact(mantikfile.toJson, fileId, namedId, item.itemId)
+        val artifact = MantikArtifact(mantikHeader.toJson, fileId, namedId, item.itemId)
         FutureHelper.time(logger, s"Adding Mantik Item $id") {
           repository.store(artifact).andThen {
             case Success(_) =>

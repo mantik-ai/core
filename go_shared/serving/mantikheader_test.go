@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestParseMantikFile(t *testing.T) {
+func TestParseMantikHeader(t *testing.T) {
 	file := `
 type:
   input:
@@ -21,7 +21,7 @@ type:
         shape: [2,3]
         componentType: float32
 `
-	parsed, err := ParseMantikFile([]byte(file))
+	parsed, err := ParseMantikHeader([]byte(file))
 	assert.NoError(t, err)
 	assert.Equal(t, parsed.Kind(), "algorithm")
 	expectedIn := ds.FromJsonStringOrPanic(`{"columns":{"a": "int32", "b": "int32"}}`)
@@ -33,13 +33,13 @@ type:
 	assert.Equal(t, json, parsed.Json())
 
 	algoKind := AlgorithmKind
-	expected := &AlgorithmMantikfile{
+	expected := &AlgorithmMantikHeader{
 		Type: &AlgorithmType{
 			ds.Ref(expectedIn),
 			ds.Ref(expectedOut),
 		},
 		json: json,
-		header: &MantikFileHeader{
+		header: &MantikHeaderMeta{
 			Kind:                &algoKind,
 			Name:                nil,
 			Version:             nil,
@@ -52,7 +52,7 @@ type:
 		expected, parsed)
 }
 
-func TestTrainableMantikFile(t *testing.T) {
+func TestTrainableMantikHeader(t *testing.T) {
 	file :=
 		`
 name: kmeans
@@ -76,7 +76,7 @@ type:
     columns:
       label: int32	
 `
-	parsed, err := ParseMantikFile([]byte(file))
+	parsed, err := ParseMantikHeader([]byte(file))
 
 	json, err := yaml.YamlToJson([]byte(file))
 	assert.NoError(t, err)
@@ -85,7 +85,7 @@ type:
 
 	assert.NoError(t, err)
 	assert.Equal(t, "trainable", parsed.Kind())
-	casted := parsed.(*TrainableMantikfile)
+	casted := parsed.(*TrainableMantikHeader)
 	assert.Equal(t, *casted.Name(), "kmeans")
 	assert.Equal(t, *casted.TrainingType,
 		ds.Ref(ds.FromJsonStringOrPanic(`{"columns":{"coordinates":{"type":"tensor","shape":[2],"componentType":"float64"}}}`)))
@@ -98,17 +98,17 @@ type:
 	assert.Equal(t, "kmeans", *casted.header.NamedMantikId())
 }
 
-func TestDataSetMantikfile(t *testing.T) {
+func TestDataSetMantikHeader(t *testing.T) {
 	file := `
 kind: dataset
 type:
   columns:
     x: int32
 `
-	parsed, err := ParseMantikFile([]byte(file))
+	parsed, err := ParseMantikHeader([]byte(file))
 	assert.NoError(t, err)
 	assert.Equal(t, "dataset", parsed.Kind())
-	casted := parsed.(*DataSetMantikfile)
+	casted := parsed.(*DataSetMantikHeader)
 	assert.Equal(t, ds.FromJsonStringOrPanic(`{"columns":{"x":"int32"}}`), casted.Type.Underlying)
 }
 
@@ -126,7 +126,7 @@ type:
       shape: ["${foo}"]
       componentType: float32
 `
-	parsed, err := ParseMantikFile([]byte(file))
+	parsed, err := ParseMantikHeader([]byte(file))
 
 	json, err := DecodeMetaYaml([]byte(file))
 	assert.NoError(t, err)
@@ -135,7 +135,7 @@ type:
 
 	assert.NoError(t, err)
 	assert.Equal(t, "dataset", parsed.Kind())
-	casted := parsed.(*DataSetMantikfile)
+	casted := parsed.(*DataSetMantikHeader)
 	assert.Equal(t, ds.FromJsonStringOrPanic(`{"columns":{"x":{"type":"tensor","shape":[100],"componentType":"float32"}}}`), casted.Type.Underlying)
 	assert.Equal(t, "foo", parsed.MetaVariables()[0].Name)
 }

@@ -8,11 +8,11 @@ def train(request: TensorFlowTrainRequest, context: TensorFlowContext):
     train_dataset = request.train_dataset()
     # Meta Variables
 
-    batch_size = context.mantikfile.meta_variables.get("batch_size", 128)
-    n_epochs = context.mantikfile.meta_variables.get("n_epochs", 5)
-    learning_rate = context.mantikfile.meta_variables.get("learning_rate", 0.01)
-    width = context.mantikfile.meta_variables.get("width", 28)
-    height = context.mantikfile.meta_variables.get("height", 28)
+    batch_size = context.mantikheader.meta_variables.get("batch_size", 128)
+    n_epochs = context.mantikheader.meta_variables.get("n_epochs", 5)
+    learning_rate = context.mantikheader.meta_variables.get("learning_rate", 0.01)
+    width = context.mantikheader.meta_variables.get("width", 28)
+    height = context.mantikheader.meta_variables.get("height", 28)
 
     stats = []
     batches = train_dataset.batch(batch_size)

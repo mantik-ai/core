@@ -13,13 +13,13 @@ type SelectProgram struct {
 	Projector *runner.Program `json:"projector"`
 }
 
-type SelectMantikfile struct {
+type SelectMantikHeader struct {
 	Type    serving.AlgorithmType `json:"type"`
 	Program SelectProgram         `json:"selectProgram"`
 }
 
-func ParseSelectMantikfile(data []byte) (*SelectMantikfile, error) {
-	var mf SelectMantikfile
+func ParseSelectMantikHeader(data []byte) (*SelectMantikHeader, error) {
+	var mf SelectMantikHeader
 	err := serving.UnmarshallMetaYaml(data, &mf)
 	if err != nil {
 		return nil, err

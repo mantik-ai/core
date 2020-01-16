@@ -21,10 +21,10 @@ abstract class ExampleBase {
       val context = engineClient.createContext()
 
       println("Adding Sample Bridges")
-      context.pushLocalMantikFile(BinaryBridge)
-      context.pushLocalMantikFile(TfTrainBridge)
-      context.pushLocalMantikFile(TfSavedModelBridge)
-      context.pushLocalMantikFile(SkLearnBridge)
+      context.pushLocalMantikItem(BinaryBridge)
+      context.pushLocalMantikItem(TfTrainBridge)
+      context.pushLocalMantikItem(TfSavedModelBridge)
+      context.pushLocalMantikItem(SkLearnBridge)
 
       run(context)
     } finally {

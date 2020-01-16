@@ -245,9 +245,9 @@ class BinaryFormatReaderSpec extends TestBase with GlobalAkkaSupport with TempDi
 
   it should "read mmnist" in {
     val directory = new File("bridge/binary/test/mnist").toPath
-    // DS Doesn't know about Mantikfiles, but the definition is equal
-    val mantikfile = FileUtils.readFileToString(directory.resolve("Mantikfile").toFile, StandardCharsets.UTF_8)
-    val description = YamlParser.parse(mantikfile).forceRight.as[BinaryDataSetDescription].forceRight
+    // DS Doesn't know about MantikHeaders, but the definition is equal
+    val mantikHeader = FileUtils.readFileToString(directory.resolve("MantikHeader").toFile, StandardCharsets.UTF_8)
+    val description = YamlParser.parse(mantikHeader).forceRight.as[BinaryDataSetDescription].forceRight
     val dataDir = directory.resolve("payload")
     val reader = new BinaryFormatReader(description, dataDir)
     val source = reader.read()

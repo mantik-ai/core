@@ -12,7 +12,7 @@ In general they communicate via HTTP Requests, transporting data usually in [Man
 ## Startup
 
 
-Bridges should look for their Mantikfile in the volume `/data/Mantikfile`.
+Bridges should look for their HantikHeader in the volume `/data/MantikHeader`.
 
 Mantik Items may have a payload (usually zipped) which will be unpacked into a directory `/data/payload` before startup.
 
@@ -136,5 +136,5 @@ A trainable algorithm bridge may at the same time be an algorithm bridge, but th
 ## Type Safety
 
 
-- Bridges can be sure that they receive input and output data in the form like it's presented in their Mantikfile.
+- Bridges can be sure that they receive input and output data in the form like it's presented in their MantikHeader.
 - The `type`-Requests are purely for debugging.

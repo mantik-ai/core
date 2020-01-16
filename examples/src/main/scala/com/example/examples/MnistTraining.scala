@@ -14,9 +14,9 @@ object MnistTraining extends ExampleBase {
   val TrainingAlgorithmPath = Paths.get("bridge/tf/train/example/mnist_linear")
 
   override protected def run(implicit context: Context): Unit = {
-    context.pushLocalMantikFile(MnistTrainingPath)
-    context.pushLocalMantikFile(TrainingAlgorithmPath)
-    context.pushLocalMantikFile(MnistTestPath)
+    context.pushLocalMantikItem(MnistTrainingPath)
+    context.pushLocalMantikItem(TrainingAlgorithmPath)
+    context.pushLocalMantikItem(MnistTestPath)
 
     val trainDataSet = context.loadDataSet("mnist_train")
     val testDataSet = context.loadDataSet("mnist_test")

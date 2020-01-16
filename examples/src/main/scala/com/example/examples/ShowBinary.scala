@@ -9,8 +9,8 @@ object ShowBinary extends ExampleBase {
   override protected def run(implicit context: Context): Unit = {
     val binaryBridge = Paths.get("bridge/binary")
     val sampleFile = Paths.get("bridge/binary/test/mnist")
-    context.pushLocalMantikFile(binaryBridge)
-    context.pushLocalMantikFile(sampleFile)
+    context.pushLocalMantikItem(binaryBridge)
+    context.pushLocalMantikItem(sampleFile)
 
     val dataset = context.loadDataSet("mnist_test")
     val fetched = dataset.fetch.run()

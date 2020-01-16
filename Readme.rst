@@ -9,7 +9,7 @@ Content
   Building <Building>
   Datatypes and serialization <DataTypes>
   Bridge documentation <Bridges>
-  Mantikfile documentation <Mantikfile>
+  MantikHeader documentation <MantikHeader>
   Executor Documentation <Executor>
   Executor Docker <Executor.Docker>
   Samples <Samples>
@@ -23,7 +23,7 @@ Code Structure
 - :code:`doc` Contains documentation which can be rendered with `sphinx <https://www.sphinx-doc.org/en/master/usage/quickstart.html>`_.
 - :code:`componently` Scala Helper library, simplifying use of Akka, gRpc and Component-Building.
 - :code:`ds` Contains Mantik DataTypes and their main serialization format.
-- :code:`elements` Contains the basic Mantik definitions: Mantikfile, various Definitions.
+- :code:`elements` Contains the basic Mantik definitions: MantikHeader, various Definitions.
 - :code:`examples` Contains Examples
 - :code:`executor` Contains the Executor, for executing DAG-Execution Plans
 - :code:`go_shared` Contains shared Go Code

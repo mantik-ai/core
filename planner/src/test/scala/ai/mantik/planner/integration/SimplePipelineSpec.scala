@@ -12,7 +12,7 @@ import ai.mantik.testutils.tags.IntegrationTest
 class SimplePipelineSpec extends IntegrationTestBase with Samples {
 
   trait Env extends EnvWithBridges {
-    context.pushLocalMantikFile(doubleMultiplyDirectory)
+    context.pushLocalMantikItem(doubleMultiplyDirectory)
 
     val doubleMultiply = context.loadAlgorithm("double_multiply")
     val toStringConversion = Algorithm.fromSelect(

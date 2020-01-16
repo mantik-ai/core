@@ -8,16 +8,16 @@ import (
 
 // Combines the single file adapters into a full one
 
-func CreateMultiFileAdapter(directory string, mantikfile *BinaryMantikfile) (ElementExtractor, error) {
-	tabularData, ok := mantikfile.Type.Underlying.(*ds.TabularData)
+func CreateMultiFileAdapter(directory string, mantikHeader *BinaryMantikHeader) (ElementExtractor, error) {
+	tabularData, ok := mantikHeader.Type.Underlying.(*ds.TabularData)
 	if !ok {
 		return nil, errors.New("Only tabular data supported")
 	}
-	err := checkColumns(tabularData, mantikfile)
+	err := checkColumns(tabularData, mantikHeader)
 	if err != nil {
 		return nil, err
 	}
-	if len(mantikfile.Files) == 0 {
+	if len(mantikHeader.Files) == 0 {
 		// can this happen?
 		return nil, errors.New("No files given")
 	}
@@ -31,7 +31,7 @@ func CreateMultiFileAdapter(directory string, mantikfile *BinaryMantikfile) (Ele
 			}
 		}
 	}()
-	for _, fileEntry := range mantikfile.Files {
+	for _, fileEntry := range mantikHeader.Files {
 		reader, err := OpenFileReader(directory, &fileEntry)
 		if err != nil {
 			return nil, err
@@ -48,9 +48,9 @@ func CreateMultiFileAdapter(directory string, mantikfile *BinaryMantikfile) (Ele
 }
 
 // Check that all columns are in use
-func checkColumns(tabularData *ds.TabularData, mantikfile *BinaryMantikfile) error {
+func checkColumns(tabularData *ds.TabularData, mantikHeader *BinaryMantikHeader) error {
 	usedColumn := make([]bool, len(tabularData.Columns))
-	for _, file := range mantikfile.Files {
+	for _, file := range mantikHeader.Files {
 		for _, entry := range file.Content {
 			if entry.Element != nil {
 				columnName := *entry.Element

@@ -17,7 +17,7 @@ Item Management
 ---------------
 
 * Show local items `mantik items`
-* Show a single item, including mantik file `mantik item <name>`
+* Show a single item, including mantik header `mantik item <name>`
 * Extract an item into a directory `mantik extract -o <directory> <name>`
 * Pack a directory into a mantik item `mantik add -n <name> <directory>`
 * Tag items with a new name `mantik tag <name> <new-name>`

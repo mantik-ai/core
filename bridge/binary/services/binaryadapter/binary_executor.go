@@ -10,27 +10,27 @@ import (
 )
 
 type BinaryExecutor struct {
-	mf            *BinaryMantikfile
+	mf            *BinaryMantikHeader
 	dataDirectory string
 }
 
 func CreateBinaryExecutorFromDir(rootDir string) (*BinaryExecutor, error) {
 	payloadDir := path.Join(rootDir, "payload")
-	mantikfile, err := serving.LoadMantikfile(path.Join(rootDir, "Mantikfile"))
+	mantikHeader, err := serving.LoadMantikHeader(path.Join(rootDir, "MantikHeader"))
 	if err != nil {
 		return nil, err
 	}
-	return CreateBinaryExecutor(&payloadDir, mantikfile)
+	return CreateBinaryExecutor(&payloadDir, mantikHeader)
 }
 
-func CreateBinaryExecutor(payloadDir *string, mantikfile serving.Mantikfile) (*BinaryExecutor, error) {
+func CreateBinaryExecutor(payloadDir *string, mantikHeader serving.MantikHeader) (*BinaryExecutor, error) {
 	if payloadDir == nil {
 		return nil, errors.New("Expected payload")
 	}
-	var mf BinaryMantikfile
-	err := json.Unmarshal(mantikfile.Json(), &mf)
+	var mf BinaryMantikHeader
+	err := json.Unmarshal(mantikHeader.Json(), &mf)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not parse Mantikfile")
+		return nil, errors.Wrap(err, "Could not parse MantikHeader")
 	}
 	// Creating multi reader for validating correctness
 	multiReader, err := CreateMultiFileAdapter(*payloadDir, &mf)

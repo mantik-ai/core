@@ -46,8 +46,8 @@ selectProgram:
   }
 `
 
-func TestParseSelectMantikfile(t *testing.T) {
-	mf, err := ParseSelectMantikfile([]byte(sampleFile))
+func TestParseSelectMantikHeader(t *testing.T) {
+	mf, err := ParseSelectMantikHeader([]byte(sampleFile))
 	assert.NoError(t, err)
 	assert.Equal(t, ds.Int32, mf.Type.Input.Underlying)
 	assert.Equal(t, ds.String, mf.Type.Output.Underlying)

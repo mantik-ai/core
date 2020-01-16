@@ -67,7 +67,7 @@ sealed trait MantikDefinitionWithBridge extends MantikDefinition {
   override def referencedItems: Seq[MantikId] = Seq(bridge)
 }
 
-/** An Algorithm Definition inside a Mantikfile. */
+/** An Algorithm Definition inside a MantikHeader. */
 case class AlgorithmDefinition(
     // specific
     bridge: MantikId,
@@ -76,7 +76,7 @@ case class AlgorithmDefinition(
   def kind = MantikDefinition.AlgorithmKind
 }
 
-/** A DataSet definition inside a Mantikfile */
+/** A DataSet definition inside a MantikHeader */
 case class DataSetDefinition(
     bridge: MantikId,
     `type`: DataType

@@ -1,4 +1,4 @@
-# Mantikfile for Simple Learn Bridge
+# MantikHeader for Simple Learn Bridge
 kind: bridge
 account: mantik
 name: sklearn.simple

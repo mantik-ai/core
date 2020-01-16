@@ -108,11 +108,11 @@ class SelectSpec extends TestBase {
     ).row(1.toByte).row(1.toByte).row(1.toByte).result
   }
 
-  it should "create valid mantikfiles" in {
+  it should "create valid mantikHeaders" in {
     val select = Select.parse(simpleBundle.model, "select x where x = 1").getOrElse(fail)
-    val mantikFile = select.compileToSelectMantikfile().getOrElse(fail)
-    mantikFile.definition.bridge shouldBe Bridge.selectBridge.mantikId
+    val mantikHeader = select.compileToSelectMantikHeader().getOrElse(fail)
+    mantikHeader.definition.bridge shouldBe Bridge.selectBridge.mantikId
     val program = Compiler.compile(select).right.getOrElse(fail)
-    mantikFile.toJsonValue.asObject.get("selectProgram").get.as[SelectProgram] shouldBe Right(program)
+    mantikHeader.toJsonValue.asObject.get("selectProgram").get.as[SelectProgram] shouldBe Right(program)
   }
 }

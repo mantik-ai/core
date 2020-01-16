@@ -1,6 +1,6 @@
 package ai.mantik.planner.util
 
-import ai.mantik.elements.{ BridgeDefinition, ItemId, MantikDefinition, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ BridgeDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId }
 import ai.mantik.planner.DefinitionSource
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
 
@@ -8,7 +8,7 @@ trait FakeBridges {
 
   val algoBridge = Bridge(
     DefinitionSource.Loaded(Some(NamedMantikId("algo1")), ItemId("@id1")),
-    Mantikfile.pure(
+    MantikHeader.pure(
       BridgeDefinition(
         dockerImage = "docker_algo1",
         suitable = Seq(MantikDefinition.AlgorithmKind),
@@ -20,7 +20,7 @@ trait FakeBridges {
 
   val learningBridge = Bridge(
     DefinitionSource.Loaded(Some(NamedMantikId("training1")), ItemId("@id2")),
-    Mantikfile.pure(
+    MantikHeader.pure(
       BridgeDefinition(
         dockerImage = "docker_training1",
         suitable = Seq(MantikDefinition.AlgorithmKind, MantikDefinition.TrainableAlgorithmKind),
@@ -32,7 +32,7 @@ trait FakeBridges {
 
   val formatBridge = Bridge(
     DefinitionSource.Loaded(Some(NamedMantikId("format1")), ItemId("@id3")),
-    Mantikfile.pure(
+    MantikHeader.pure(
       BridgeDefinition(
         dockerImage = "docker_format1",
         suitable = Seq(MantikDefinition.AlgorithmKind),

@@ -4,7 +4,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.{ AlgorithmStep, SelectStep }
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, Mantikfile, NamedMantikId, PipelineStep }
+import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId, PipelineStep }
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.select.Select
@@ -15,7 +15,7 @@ class PipelineBuilderSpec extends TestBase {
 
   val algorithm1 = Algorithm(
     source = Source(DefinitionSource.Loaded(Some("algo1"), ItemId.generate()), PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)),
-    Mantikfile.pure(
+    MantikHeader.pure(
       AlgorithmDefinition(
         bridge = TestItems.algoBridge.mantikId,
         `type` = FunctionType(
@@ -29,7 +29,7 @@ class PipelineBuilderSpec extends TestBase {
 
   val algorithm2 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
-    Mantikfile.pure(
+    MantikHeader.pure(
       elements.AlgorithmDefinition(
         bridge = TestItems.algoBridge.mantikId,
         `type` = FunctionType(
@@ -61,7 +61,7 @@ class PipelineBuilderSpec extends TestBase {
       val algo2 = pipeline.resolved.steps(1)
       algo2.mantikId shouldBe an[ItemId]
 
-      pipeline.mantikfile.definition.referencedItems.size shouldBe 2
+      pipeline.mantikHeader.definition.referencedItems.size shouldBe 2
     }
   }
 
@@ -73,6 +73,6 @@ class PipelineBuilderSpec extends TestBase {
     val step2 = pipeline.resolved.steps(1)
     step2.select shouldBe empty
 
-    pipeline.mantikfile.definition.referencedItems.size shouldBe 1 // select is not referenced
+    pipeline.mantikHeader.definition.referencedItems.size shouldBe 1 // select is not referenced
   }
 }

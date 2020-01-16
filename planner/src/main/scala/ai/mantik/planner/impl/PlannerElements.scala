@@ -74,7 +74,7 @@ class PlannerElements(config: Config) {
    */
   def dataSet(dataSet: DataSet, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
     val bridge = dataSet.bridge
-    val dockerImage = bridge.mantikfile.definition.dockerImage
+    val dockerImage = bridge.mantikHeader.definition.dockerImage
     // If there is no docker image, then directly pipe through the dataset
     // TODO this is a hack to get natural DataSets working.
     if (dockerImage == ""){
@@ -86,7 +86,7 @@ class PlannerElements(config: Config) {
 
         val node = Node (
           PlanNodeService.DockerContainer (
-            container, data = file, dataSet.mantikfile
+            container, data = file, dataSet.mantikHeader
           ),
           Map (
             getResource -> NodeResource(ResourceType.Source, Some(MantikBundleContentType))
@@ -139,7 +139,7 @@ class PlannerElements(config: Config) {
   def algorithmContainer(algorithm: Algorithm, file: Option[PlanFileReference]): PlanNodeService.DockerContainer = {
     val container = resolveBridge(algorithm.bridge)
     PlanNodeService.DockerContainer(
-      container, data = file, algorithm.mantikfile
+      container, data = file, algorithm.mantikHeader
     )
   }
 
@@ -153,7 +153,7 @@ class PlannerElements(config: Config) {
 
     val node = Node(
       PlanNodeService.DockerContainer(
-        container, data = file, mantikfile = trainableAlgorithm.mantikfile
+        container, data = file, mantikHeader = trainableAlgorithm.mantikHeader
       ),
       Map(
         trainResource -> NodeResource(ResourceType.Sink, Some(MantikBundleContentType)),
@@ -184,7 +184,7 @@ class PlannerElements(config: Config) {
   def resolveBridge(bridge: Bridge): Container = {
     dockerConfig.resolveContainer(
       Container(
-        image = bridge.mantikfile.definition.dockerImage
+        image = bridge.mantikHeader.definition.dockerImage
       )
     )
   }

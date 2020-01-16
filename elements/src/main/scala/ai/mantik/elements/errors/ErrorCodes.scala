@@ -34,7 +34,7 @@ object ErrorCodes {
 
   val MantikItemInvalidBridge = add(MantikItem.derive("InvalidBridge", Some(Code.FAILED_PRECONDITION)))
 
-  val InvalidMantikfile = addCode("InvalidMantikfile", Code.INVALID_ARGUMENT)
+  val InvalidMantikHeader = addCode("InvalidMantikHeader", Code.INVALID_ARGUMENT)
 
   val InvalidMantikId = addCode("InvalidMantikId", Code.INVALID_ARGUMENT)
 

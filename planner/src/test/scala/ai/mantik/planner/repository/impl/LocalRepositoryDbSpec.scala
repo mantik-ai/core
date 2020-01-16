@@ -19,7 +19,7 @@ class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
   val sampleItem = DbMantikItem(
     itemId = ItemId.generate().toString,
     fileId = Some("1"),
-    mantikfile = "blabla",
+    mantikheader = "blabla",
     kind = "kind"
   )
 

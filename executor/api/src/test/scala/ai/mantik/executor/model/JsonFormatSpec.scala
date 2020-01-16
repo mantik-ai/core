@@ -26,7 +26,7 @@ class JsonFormatSpec extends TestBase {
             ),
             dataProvider = Some(DataProvider(
               url = Some("http://url1"),
-              mantikfile = Some("My Mantikfile")
+              mantikHeader = Some("My MantikHeader")
             ))
           )
         ),

@@ -7,20 +7,20 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 )
 
-func AutoAdapt(executable Executable, mantikfile Mantikfile) (Executable, error) {
+func AutoAdapt(executable Executable, mantikHeader MantikHeader) (Executable, error) {
 	algorithm, ok := executable.(ExecutableAlgorithm)
 	if ok {
-		mf := mantikfile.(*AlgorithmMantikfile)
+		mf := mantikHeader.(*AlgorithmMantikHeader)
 		return AutoAdaptExecutableAlgorithm(algorithm, mf.Type.Input.Underlying, mf.Type.Output.Underlying)
 	}
 	trainable, ok := executable.(TrainableAlgorithm)
 	if ok {
-		mf := mantikfile.(*TrainableMantikfile)
+		mf := mantikHeader.(*TrainableMantikHeader)
 		return autoAdaptTrainableAlgorithm(trainable, mf)
 	}
 	dataset, ok := executable.(ExecutableDataSet)
 	if ok {
-		mf := mantikfile.(*DataSetMantikfile)
+		mf := mantikHeader.(*DataSetMantikHeader)
 		return autoAdaptDataSet(dataset, mf)
 	}
 	panic("Implement me")
@@ -130,31 +130,31 @@ func (s *singleIntoMultipleAlgorithmAdapter) ExtensionInfo() interface{} {
 	return s.algorithm.ExtensionInfo()
 }
 
-func autoAdaptTrainableAlgorithm(algorithm TrainableAlgorithm, mantikfile *TrainableMantikfile) (TrainableAlgorithm, error) {
-	trainingAdapter, err := adapt.LookupAutoAdapter(mantikfile.TrainingType.Underlying, algorithm.TrainingType().Underlying)
+func autoAdaptTrainableAlgorithm(algorithm TrainableAlgorithm, mantikHeader *TrainableMantikHeader) (TrainableAlgorithm, error) {
+	trainingAdapter, err := adapt.LookupAutoAdapter(mantikHeader.TrainingType.Underlying, algorithm.TrainingType().Underlying)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not adapter training type")
 	}
-	statAdapter, err := adapt.LookupAutoAdapter(algorithm.StatType().Underlying, mantikfile.StatType.Underlying)
+	statAdapter, err := adapt.LookupAutoAdapter(algorithm.StatType().Underlying, mantikHeader.StatType.Underlying)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not adapt stat type")
 	}
 	// For the embedded algorithm type, we just look if it matches.
-	_, err = adapt.LookupAutoAdapter(mantikfile.Type.Input.Underlying, algorithm.Type().Input.Underlying)
+	_, err = adapt.LookupAutoAdapter(mantikHeader.Type.Input.Underlying, algorithm.Type().Input.Underlying)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not adapt input type")
 	}
-	_, err = adapt.LookupAutoAdapter(algorithm.Type().Output.Underlying, mantikfile.Type.Output.Underlying)
+	_, err = adapt.LookupAutoAdapter(algorithm.Type().Output.Underlying, mantikHeader.Type.Output.Underlying)
 	if err != nil {
 		return nil, errors.Wrap(err, "COuld not adapt output type")
 	}
 	return &adaptedTrainableAlgorithm{
 		original:            algorithm,
 		trainingAdapter:     trainingAdapter,
-		adaptedTrainingType: *mantikfile.TrainingType,
+		adaptedTrainingType: *mantikHeader.TrainingType,
 		statAdapter:         statAdapter,
-		adaptedStatType:     *mantikfile.StatType,
-		adaptedType:         mantikfile.Type,
+		adaptedStatType:     *mantikHeader.StatType,
+		adaptedType:         mantikHeader.Type,
 	}, nil
 }
 
@@ -195,14 +195,14 @@ func (a *adaptedTrainableAlgorithm) LearnResultDirectory() (string, error) {
 	return a.original.LearnResultDirectory()
 }
 
-func autoAdaptDataSet(set ExecutableDataSet, mantikfile *DataSetMantikfile) (ExecutableDataSet, error) {
-	adapter, err := adapt.LookupAutoAdapter(set.Type().Underlying, mantikfile.Type.Underlying)
+func autoAdaptDataSet(set ExecutableDataSet, mantikHeader *DataSetMantikHeader) (ExecutableDataSet, error) {
+	adapter, err := adapt.LookupAutoAdapter(set.Type().Underlying, mantikHeader.Type.Underlying)
 	if err != nil {
 		return nil, err
 	}
 	return &adaptedDataSet{
 		set,
-		mantikfile.Type,
+		mantikHeader.Type,
 		adapter,
 	}, nil
 }

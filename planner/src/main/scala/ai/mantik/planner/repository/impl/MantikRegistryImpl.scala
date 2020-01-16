@@ -3,7 +3,7 @@ package ai.mantik.planner.repository.impl
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.errors.{ ErrorCodes, RemoteRegistryException }
 import ai.mantik.elements.registry.api._
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ ItemId, MantikId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
 import ai.mantik.planner.repository.{ CustomLoginToken, MantikArtifact, MantikRegistry, RemoteMantikRegistry }
 import akka.http.scaladsl.Http
@@ -58,7 +58,7 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
 
   private def decodeMantikArtifact(mantikId: MantikId, apiGetArtifactResponse: ApiGetArtifactResponse): Try[MantikArtifact] = {
     for {
-      _ <- Mantikfile.fromYaml(apiGetArtifactResponse.mantikDefinition).toTry
+      _ <- MantikHeader.fromYaml(apiGetArtifactResponse.mantikDefinition).toTry
     } yield {
       MantikArtifact(
         apiGetArtifactResponse.mantikDefinition,
@@ -88,7 +88,7 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
         ApiPrepareUploadRequest(
           namedId = mantikArtifact.namedId,
           itemId = mantikArtifact.itemId,
-          mantikfile = mantikArtifact.mantikfile,
+          mantikHeader = mantikArtifact.mantikHeader,
           hasFile = payload.nonEmpty
         )
       )

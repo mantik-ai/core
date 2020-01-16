@@ -2,8 +2,8 @@ syntax = "proto3";
 package ai.mantik.planner.repository.protos;
 
 message MantikArtifact {
-    // JSON Mantikfile
-    string mantikfile = 1;
+    // JSON Mantikheader
+    string mantik_header = 1;
     // File Id of Payload
     string file_id = 2;
     // Mantik Id

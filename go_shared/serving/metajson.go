@@ -76,7 +76,7 @@ func (m *MetaVariables) GetByName(name string) *MetaVariable {
 	return nil
 }
 
-/** Decodes the Meta JSON as being used in Mantikfiles. Returns JSON or an error. */
+/** Decodes the Meta JSON as being used in MantikHeaders. Returns JSON or an error. */
 func DecodeMetaJson(data []byte) ([]byte, error) {
 	var d metaVariablesHeader
 	err := json.Unmarshal(data, &d)
@@ -265,7 +265,7 @@ func writeJsonValue(v interface{}, result io.Writer) error {
 	return err
 }
 
-/** Decode Meta JSON encoded as YAML, as being used in Mantikfiles. Returns JSON or an error. */
+/** Decode Meta JSON encoded as YAML, as being used in MantikHeaders. Returns JSON or an error. */
 func DecodeMetaYaml(data []byte) ([]byte, error) {
 	json, err := yaml.YamlToJson(data)
 	if err != nil {

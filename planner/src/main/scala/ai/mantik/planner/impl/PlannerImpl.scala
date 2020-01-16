@@ -129,7 +129,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
     item.core.bridge match {
       case None => throw new PlannerException(s"No bridge defined for ${item}")
       case Some(bridge) =>
-        bridge.mantikfile.definition.payloadContentType match {
+        bridge.mantikHeader.definition.payloadContentType match {
           case Some(contentType) => contentType
           case None              => throw new PlannerException(s"Bridge ${bridge.mantikId} doesn't define a content type")
         }

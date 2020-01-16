@@ -4,7 +4,7 @@ import java.util.UUID
 
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile }
+import ai.mantik.elements.{ AlgorithmDefinition, MantikHeader }
 import ai.mantik.planner.repository.Bridge
 import ai.mantik.planner.select.Select
 
@@ -17,7 +17,7 @@ case class Algorithm(
   override type DefinitionType = AlgorithmDefinition
   override type OwnType = Algorithm
 
-  override def functionType: FunctionType = mantikfile.definition.`type`
+  override def functionType: FunctionType = mantikHeader.definition.`type`
 
   override protected def withCore(core: MantikItemCore[AlgorithmDefinition]): Algorithm = {
     copy(core = core)
@@ -26,13 +26,13 @@ case class Algorithm(
 
 object Algorithm {
 
-  def apply(source: Source, mantikfile: Mantikfile[AlgorithmDefinition], bridge: Bridge): Algorithm = {
-    Algorithm(MantikItemCore(source, mantikfile, bridge = Some(bridge)))
+  def apply(source: Source, mantikHeader: MantikHeader[AlgorithmDefinition], bridge: Bridge): Algorithm = {
+    Algorithm(MantikItemCore(source, mantikHeader, bridge = Some(bridge)))
   }
 
   /** Convert a Select statement into an algorithm. */
   def fromSelect(select: Select): Algorithm = {
-    val mantikFile = select.compileToSelectMantikfile() match {
+    val mantikHeader = select.compileToSelectMantikHeader() match {
       case Left(error) =>
         // TODO: Better exception
         throw new FeatureNotSupported(s"Could not compile select ${error}")
@@ -41,7 +41,7 @@ object Algorithm {
     Algorithm(
       MantikItemCore(
         Source.constructed(),
-        mantikFile,
+        mantikHeader,
         bridge = Some(Bridge.selectBridge)
       ), Some(select))
   }

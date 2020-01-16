@@ -20,15 +20,15 @@ trait Samples extends BeforeAndAfterAll {
   }
 
   trait EnvWithBridges {
-    context.pushLocalMantikFile(Paths.get("bridge/binary"))
-    context.pushLocalMantikFile(Paths.get("bridge/tf/saved_model"))
-    context.pushLocalMantikFile(Paths.get("bridge/tf/train"))
-    context.pushLocalMantikFile(Paths.get("bridge/sklearn/simple_learn"))
+    context.pushLocalMantikItem(Paths.get("bridge/binary"))
+    context.pushLocalMantikItem(Paths.get("bridge/tf/saved_model"))
+    context.pushLocalMantikItem(Paths.get("bridge/tf/train"))
+    context.pushLocalMantikItem(Paths.get("bridge/sklearn/simple_learn"))
   }
 
   trait EnvWithAlgorithm extends EnvWithBridges {
     // Note: this will make the appear the algorithm with a new revision each time
-    private lazy val doubleMultiplyPushed = context.pushLocalMantikFile(doubleMultiplyDirectory)
+    private lazy val doubleMultiplyPushed = context.pushLocalMantikItem(doubleMultiplyDirectory)
     lazy val doubleMultiply = {
       doubleMultiplyPushed;
       context.loadAlgorithm("double_multiply")
@@ -36,7 +36,7 @@ trait Samples extends BeforeAndAfterAll {
   }
 
   trait EnvWithTrainedAlgorithm extends EnvWithBridges {
-    context.pushLocalMantikFile(kmeansDirectory)
+    context.pushLocalMantikItem(kmeansDirectory)
 
     private def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 

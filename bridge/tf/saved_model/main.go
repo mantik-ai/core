@@ -8,7 +8,7 @@ import (
 
 func main() {
 	if len(os.Args) > 2 && os.Args[1] == "direct_analyze" {
-		// enhancement, directly analyze an export without serving or Mantikfile
+		// enhancement, directly analyze an export without serving or MantikHeader
 		dir := os.Args[2]
 		model, err := tfadapter.LoadModel(dir)
 		if err != nil {

@@ -2,19 +2,19 @@ package ai.mantik.planner.repository
 
 import java.time.Instant
 
-import ai.mantik.elements.errors.InvalidMantikfileException
-import ai.mantik.elements.{ ItemId, MantikDefinition, MantikId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.errors.InvalidMantikHeaderException
+import ai.mantik.elements.{ ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId }
 
 /**
  * A Mantik Artefact.
- * @param mantikfile the Mantikfile.
+ * @param mantikHeader the MantikHeader.
  * @param fileId associated file.
  * @param namedId an optional name, if it's not an anonymous item.
  * @param itemId the itemId
  * @param deploymentInfo optional current deployment info.
  */
 case class MantikArtifact(
-    mantikfile: String,
+    mantikHeader: String,
     fileId: Option[String],
     namedId: Option[NamedMantikId],
     itemId: ItemId,
@@ -23,8 +23,8 @@ case class MantikArtifact(
   /** Returns the named Mantik Id if given, or the itemId as fallback */
   def mantikId: MantikId = namedId.getOrElse(itemId)
 
-  /** The parsed Mantikfile. */
-  lazy val parsedMantikfile: Mantikfile[_ <: MantikDefinition] = Mantikfile.fromYaml(mantikfile).fold(e => throw InvalidMantikfileException.wrap(e), identity)
+  /** The parsed MantikHeader. */
+  lazy val parsedMantikHeader: MantikHeader[_ <: MantikDefinition] = MantikHeader.fromYaml(mantikHeader).fold(e => throw InvalidMantikHeaderException.wrap(e), identity)
 }
 
 object MantikArtifact {
@@ -35,7 +35,7 @@ object MantikArtifact {
     fileId: Option[String] = None
   ): MantikArtifact = {
     MantikArtifact(
-      mantikfile = Mantikfile.pure(mantikDefinition).toJson,
+      mantikHeader = MantikHeader.pure(mantikDefinition).toJson,
       fileId = fileId,
       namedId = Some(name),
       itemId = ItemId.generate(),

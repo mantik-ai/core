@@ -1,4 +1,4 @@
-from mantik.types import Mantikfile
+from mantik.types import MantikHeader
 
 
 class Context:
@@ -6,7 +6,7 @@ class Context:
     The context which is given to bridge applications
     """
 
-    mantikfile: Mantikfile
+    mantikheader: MantikHeader
     """
-    Mantikfile instance
+    MantikHeader instance
     """

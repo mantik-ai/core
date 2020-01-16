@@ -26,5 +26,5 @@ trait MantikArtifactRetriever extends Component {
   def push(id: MantikId, customLoginToken: Option[CustomLoginToken] = None): Future[MantikArtifactWithHull]
 
   /** Add a local directory to the local repository. */
-  def addLocalDirectoryToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact]
+  def addLocalMantikItemToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact]
 }

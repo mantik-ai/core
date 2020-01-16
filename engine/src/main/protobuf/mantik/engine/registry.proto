@@ -4,8 +4,8 @@ import "google/protobuf/timestamp.proto";
 
 // Contains information about a MantikArtifact
 message MantikArtifact {
-    // JSON Serialized mantik file
-    string mantikfile_json = 1;
+    // JSON Serialized Mantik Header
+    string mantik_header_json = 1;
     // Kind of the Artifact (e.g. algorithm)
     string artifact_kind = 2;
     // File Id (optional) for Item payload
@@ -17,8 +17,8 @@ message MantikArtifact {
     string item_id = 5;
     // Optional information about a deployment of the item
     DeploymentInfo deployment_info = 6;
-    // Original Mantikfile code (can be YAML)
-    string mantikfile = 7;
+    // Original Mantik Header code (can be YAML)
+    string mantik_header = 7;
 }
 
 // Contains information if some artifact is deployed
