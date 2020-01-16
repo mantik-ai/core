@@ -4,7 +4,7 @@ import java.time.Instant
 
 import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.elements.errors.{ MantikException, MantikRemoteException }
-import ai.mantik.elements.{ ItemId, MantikId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ ItemId, MantikId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact }
 import ai.mantik.planner.repository.protos.types.{ MantikArtifact => ProtoMantikArtifact }
 import ai.mantik.planner.repository.protos.types.{ DeploymentInfo => ProtoDeploymentInfo }
@@ -41,7 +41,7 @@ private[rpc] object Conversions {
 
   def encodeMantikArtifact(item: MantikArtifact): ProtoMantikArtifact = {
     ProtoMantikArtifact(
-      mantikfile = item.mantikfile,
+      mantikHeader = item.mantikHeader,
       fileId = RpcConversions.encodeOptionalString(item.fileId),
       mantikId = RpcConversions.encodeOptionalString(item.namedId.map(encodeMantikId)),
       itemId = encodeItemId(item.itemId),
@@ -51,7 +51,7 @@ private[rpc] object Conversions {
 
   def decodeMantikArtifact(item: ProtoMantikArtifact): MantikArtifact = {
     MantikArtifact(
-      mantikfile = item.mantikfile,
+      mantikHeader = item.mantikHeader,
       fileId = RpcConversions.decodeOptionalString(item.fileId),
       namedId = RpcConversions.decodeOptionalString(item.mantikId).map(Conversions.decodeNamedMantikId),
       itemId = decodeItemId(item.itemId),

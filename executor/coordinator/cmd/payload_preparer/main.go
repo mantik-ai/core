@@ -21,19 +21,19 @@ import (
 
 const RcInvalidArgs = 1
 const RcCouldNotCreateDirectory = 2
-const RcInvalidMantikFile = 3
-const RcCouldNotWriteMantikFile = 4
+const RcInvalidMantikHeader = 3
+const RcCouldNotWriteMantikHeader = 4
 const RcCouldNotReadUrl = 5
 const RcCouldNotUnzip = 6
 const FilePrefix = "file://"
 const TempFile = "download.temp"
 
-/* Prepares the /data directory by unziping a file given as URL. Also places Mantikfile at the correct place. */
+/* Prepares the /data directory by unziping a file given as URL. Also places MantikHeader at the correct place. */
 func main() {
 	options := flag.NewFlagSet("preparer", flag.ExitOnError)
 	url := options.String("url", "", "Optional Url to download")
 	dir := options.String("dir", "/data", "Destination Directory")
-	mantikfile := options.String("mantikfile", "", "Mantikfile to add (Base64 encoded)")
+	mantikHeader := options.String("mantikHeader", "", "MantikHeader to add (Base64 encoded)")
 
 	err := options.Parse(os.Args[1:])
 	if err != nil {
@@ -44,8 +44,8 @@ func main() {
 		os.Exit(RcInvalidArgs)
 	}
 	if len(*url) == 0 {
-		if len(*mantikfile) == 0 {
-			println("Nothing to do, no URL no mantikfile")
+		if len(*mantikHeader) == 0 {
+			println("Nothing to do, no URL no mantikHeader")
 			os.Exit(0)
 		}
 		println("Continuing with empty URL")
@@ -56,15 +56,15 @@ func main() {
 	gid := os.Getgid()
 	fmt.Printf("Current user: %d group: %d\n", uid, gid)
 
-	var parsedMantikfile []byte
-	if len(*mantikfile) > 0 {
-		decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(*mantikfile))
+	var parsedMantikHeader []byte
+	if len(*mantikHeader) > 0 {
+		decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(*mantikHeader))
 		parsed, err := ioutil.ReadAll(decoder)
 		if err != nil {
-			println("Could not parse Mantikfile", err.Error())
-			os.Exit(RcInvalidMantikFile)
+			println("Could not parse MantikHeader", err.Error())
+			os.Exit(RcInvalidMantikHeader)
 		}
-		parsedMantikfile = parsed
+		parsedMantikHeader = parsed
 	}
 	err = os.MkdirAll(*dir, 0755)
 	if err != nil {
@@ -72,13 +72,13 @@ func main() {
 		os.Exit(RcCouldNotCreateDirectory)
 	}
 	println("Ensured ", *dir)
-	if parsedMantikfile != nil {
-		err := ioutil.WriteFile(path.Join(*dir, "Mantikfile"), parsedMantikfile, 0644)
+	if parsedMantikHeader != nil {
+		err := ioutil.WriteFile(path.Join(*dir, "MantikHeader"), parsedMantikHeader, 0644)
 		if err != nil {
-			println("Could not write Mantikfile", err.Error())
-			os.Exit(RcCouldNotWriteMantikFile)
+			println("Could not write MantikHeader", err.Error())
+			os.Exit(RcCouldNotWriteMantikHeader)
 		}
-		println("Wrote Mantikfile...")
+		println("Wrote MantikHeader...")
 	}
 
 	if len(*url) == 0 {

@@ -4,7 +4,7 @@ import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{DataType, TabularData}
 import ai.mantik.ds.element.{Bundle, SingleElementBundle}
 import ai.mantik.elements
-import ai.mantik.elements.{DataSetDefinition, Mantikfile, NamedMantikId}
+import ai.mantik.elements.{DataSetDefinition, MantikHeader, NamedMantikId}
 import ai.mantik.planner.repository.Bridge
 import ai.mantik.planner.select.{AutoAdapt, Select}
 
@@ -20,7 +20,7 @@ case class DataSet(
   override type DefinitionType = DataSetDefinition
   override type OwnType = DataSet
 
-  def dataType: DataType = mantikfile.definition.`type`
+  def dataType: DataType = mantikHeader.definition.`type`
 
   def fetch: Action.FetchAction = Action.FetchAction(this)
 
@@ -99,14 +99,14 @@ object DataSet {
   }
 
 
-  def apply(source: Source, mantikfile: Mantikfile[DataSetDefinition], bridge: Bridge): DataSet = {
-    DataSet(MantikItemCore(source, mantikfile, bridge = Some(bridge)))
+  def apply(source: Source, mantikHeader: MantikHeader[DataSetDefinition], bridge: Bridge): DataSet = {
+    DataSet(MantikItemCore(source, mantikHeader, bridge = Some(bridge)))
   }
 
   /** Creates a natural data source, with serialized data coming direct from a flow. */
   private[planner] def natural(source: Source, dataType: DataType): DataSet = {
     val bridge = Bridge.naturalBridge
-    DataSet(source, Mantikfile.pure(
+    DataSet(source, MantikHeader.pure(
       elements.DataSetDefinition(
         bridge = bridge.mantikId,
         `type` = dataType

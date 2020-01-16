@@ -3,7 +3,7 @@ package ai.mantik.planner.impl
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{ ExecutorModelDefaults, Graph, Link, Node, NodeResource, NodeResourceRef, ResourceType }
 import ai.mantik.planner.impl.exec.FileCache
@@ -129,7 +129,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
             )
           ),
           "2" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
+            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikHeader = TestItems.algorithm1),
             resources = Map(
               ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
@@ -185,7 +185,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
               )
             ),
             "2" -> Node(
-              PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikfile = TestItems.algorithm1),
+              PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikHeader = TestItems.algorithm1),
               resources = Map(
                 ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
               )
@@ -350,7 +350,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
+            PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.dataSet2),
             resources = Map(
               "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
             )
@@ -362,10 +362,10 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
   }
 
   it should "manifest the result of an algorithm" in new Env {
-    val ds1 = DataSet(makeLoadedSource("1"), Mantikfile.pure(DataSetDefinition(
+    val ds1 = DataSet(makeLoadedSource("1"), MantikHeader.pure(DataSetDefinition(
       bridge = Bridge.naturalBridge.mantikId, `type` = TabularData("x" -> FundamentalType.Int32)
     )), Bridge.naturalBridge)
-    val algo1 = Mantikfile.pure(AlgorithmDefinition(
+    val algo1 = MantikHeader.pure(AlgorithmDefinition(
       bridge = TestItems.algoBridge.mantikId,
       `type` = FunctionType(
         input = TabularData("x" -> FundamentalType.Int32),
@@ -394,7 +394,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
             )
           ),
           "2" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikfile = algo1), resources = Map(
+            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikHeader = algo1), resources = Map(
               "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
           )
@@ -419,7 +419,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_training1"), data = Some(PlanFileReference(1)), mantikfile = TestItems.learning1), resources = Map(
+            PlanNodeService.DockerContainer(Container("docker_training1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.learning1), resources = Map(
               "train" -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType)),
               "stats" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType)),
               "result" -> NodeResource(ResourceType.Source, Some(ContentTypes.ZipFileContentType))
@@ -445,7 +445,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(1)), mantikfile = TestItems.algorithm1), resources = Map(
+            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.algorithm1), resources = Map(
               "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
             )
           )
@@ -478,7 +478,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       graph = Graph(
         nodes = Map(
           "1" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikfile = TestItems.dataSet2),
+            PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.dataSet2),
             resources = Map(
               "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
             )

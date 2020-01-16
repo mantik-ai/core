@@ -4,7 +4,7 @@ import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.elements.PipelineStep.MetaVariableSetting
-import ai.mantik.elements.{ MantikId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{ MantikId, MantikHeader, NamedMantikId, PipelineDefinition, PipelineStep }
 import ai.mantik.planner.{ Algorithm, MantikItem }
 import ai.mantik.planner.select.Select
 import ai.mantik.elements.meta.MetaVariableException
@@ -20,23 +20,23 @@ private[planner] object PipelineResolver {
    *
    * Meta Variables are applied to the sub algorithms and the final type is checked.
    *
-   * @param mantikfile the pipeline mantik file
-   * @param algorithms the algorithm mantik files.
+   * @param mantikHeader the pipeline mantik header
+   * @param algorithms the algorithm mantik headers.
    *
    * @return either an error or the resolved pipeline.
    */
   def resolvePipeline(
-    mantikfile: Mantikfile[PipelineDefinition],
+    mantikHeader: MantikHeader[PipelineDefinition],
     algorithms: ReferencedAlgorithms
   ): Either[PipelineException, ResolvedPipeline] = {
     try {
-      val inputType = figureOutInputType(mantikfile, algorithms)
-      val (steps, outputType) = foldingMap(mantikfile.definition.steps.zipWithIndex, inputType) {
+      val inputType = figureOutInputType(mantikHeader, algorithms)
+      val (steps, outputType) = foldingMap(mantikHeader.definition.steps.zipWithIndex, inputType) {
         case ((step, stepNum), currentType) =>
           val resolvedPipelineStep = resolvePipelineStep(stepNum, currentType, step, algorithms)
           resolvedPipelineStep -> resolvedPipelineStep.functionType.output
       }
-      mantikfile.definition.outputType.foreach { expectedOutputType =>
+      mantikHeader.definition.outputType.foreach { expectedOutputType =>
         if (expectedOutputType != outputType) {
           throw new PipelineTypeException(s"Expected output type ${expectedOutputType} doesn't match calculated output type ${outputType}")
         }
@@ -75,10 +75,10 @@ private[planner] object PipelineResolver {
     (builder.result(), s)
   }
 
-  private def figureOutInputType(mantikfile: Mantikfile[PipelineDefinition], algorithms: ReferencedAlgorithms): DataType = {
-    mantikfile.definition.inputType.getOrElse {
+  private def figureOutInputType(mantikHeader: MantikHeader[PipelineDefinition], algorithms: ReferencedAlgorithms): DataType = {
+    mantikHeader.definition.inputType.getOrElse {
       // try to figure out type
-      mantikfile.definition.steps.headOption match {
+      mantikHeader.definition.steps.headOption match {
         case None => throw new InvalidPipelineException("Empty Pipeline")
         case Some(as: PipelineStep.AlgorithmStep) =>
           resolveAlgorithmPipelineStep(0, None, as, algorithms).functionType.input
@@ -151,7 +151,7 @@ private[planner] object PipelineResolver {
       return algorithm
     }
     val newValues = metaVariables.map { ms: MetaVariableSetting =>
-      val mv = algorithm.mantikfile.metaJson.metaVariable(ms.name).getOrElse {
+      val mv = algorithm.mantikHeader.metaJson.metaVariable(ms.name).getOrElse {
         throw new InvalidPipelineException(s"Meta variable ${ms.name} not found in algorithm ${algorithm}")
       }
       val newValue = JsonFormat.deserializeBundleValue(mv.value.model, ms.value) match {

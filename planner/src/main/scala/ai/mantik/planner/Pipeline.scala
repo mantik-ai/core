@@ -3,7 +3,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver, ResolvedPipeline }
 import ai.mantik.componently.utils.EitherExtensions._
 import ai.mantik.ds.DataType
-import ai.mantik.elements.{ Mantikfile, PipelineDefinition }
+import ai.mantik.elements.{ MantikHeader, PipelineDefinition }
 
 /**
  * A Pipeline, like an algorithm but resembles the combination of multiple algorithms after each other.
@@ -15,8 +15,8 @@ case class Pipeline private[planner] (
     private[planner] val resolved: ResolvedPipeline
 ) extends MantikItem with ApplicableMantikItem {
 
-  def this(definitionSource: DefinitionSource, mantikfile: Mantikfile[PipelineDefinition], resolved: ResolvedPipeline) = {
-    this(MantikItemCore(Source(definitionSource, PayloadSource.Empty), mantikfile), resolved)
+  def this(definitionSource: DefinitionSource, mantikHeader: MantikHeader[PipelineDefinition], resolved: ResolvedPipeline) = {
+    this(MantikItemCore(Source(definitionSource, PayloadSource.Empty), mantikHeader), resolved)
   }
 
   override type DefinitionType = PipelineDefinition
@@ -28,13 +28,13 @@ case class Pipeline private[planner] (
   def stepCount: Int = resolved.steps.size
 
   override protected def withCore(updated: MantikItemCore[PipelineDefinition]): Pipeline = {
-    if (updated.mantikfile == core.mantikfile) {
+    if (updated.mantikHeader == core.mantikHeader) {
       return copy(core = updated)
     }
     // Note: this is an expensive operation here
     // as we have to re-resolve the pipeline.
     val referenced = resolved.referencedAlgorithms
-    PipelineResolver.resolvePipeline(mantikfile, referenced) match {
+    PipelineResolver.resolvePipeline(mantikHeader, referenced) match {
       case Left(error) => throw error
       case Right(resolved) =>
         Pipeline(updated, resolved)

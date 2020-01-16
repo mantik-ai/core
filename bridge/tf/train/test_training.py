@@ -1,12 +1,12 @@
 from algorithm_wrapper import AlgorithmWrapper
-from mantik.types import Mantikfile, Bundle
+from mantik.types import MantikHeader, Bundle
 import os
 import time
 
 
 def test_simple_training():
     dir = "example/factor"
-    mf = Mantikfile.load(os.path.join(dir, "Mantikfile"))
+    mf = MantikHeader.load(os.path.join(dir, "MantikHeader"))
 
     with AlgorithmWrapper(mf) as wrapper:
         assert not wrapper.is_trained

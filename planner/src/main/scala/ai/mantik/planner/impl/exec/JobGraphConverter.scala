@@ -94,7 +94,7 @@ private [impl] class JobGraphConverter (fileServiceUri: Uri, isolationSpace: Str
     }
     val dataProvider = DataProvider(
       url = dataUrl,
-      mantikfile = Some(d.mantikfile.toJson)
+      mantikHeader = Some(d.mantikHeader.toJson)
     )
     val containerService = ContainerService(
       main = d.container,

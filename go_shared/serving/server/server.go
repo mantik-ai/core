@@ -15,8 +15,8 @@ const MimeJson string = "application/json"
 const MimeText string = "application/text"
 const MimeZip string = "application/zip"
 const MimeMsgPack string = "application/x-msgpack"
-const MimeMantikBundle string = "application/x-mantik-bundle"          // Mantik Natural Bundle with Header
-const MimeMantikBundleJson string = "application-x-mantik-bundle-json" // Mantik Natural Bundle with Header (JSON)
+const MimeMantikBundle string = "application/x-mantik-bundle"          // Mantik Natural Bundle with Meta
+const MimeMantikBundleJson string = "application-x-mantik-bundle-json" // Mantik Natural Bundle with Meta (JSON)
 
 var SupportedDataMimeTypes []string = []string{MimeJson, MimeMantikBundleJson, MimeMsgPack, MimeMantikBundle}
 

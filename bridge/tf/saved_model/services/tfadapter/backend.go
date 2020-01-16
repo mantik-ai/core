@@ -8,7 +8,7 @@ import (
 type TensorflowBackend struct {
 }
 
-func (t *TensorflowBackend) LoadModel(payloadDir *string, mantikfile serving.Mantikfile) (serving.Executable, error) {
+func (t *TensorflowBackend) LoadModel(payloadDir *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
 	if payloadDir == nil {
 		return nil, errors.New("Payload required")
 	}

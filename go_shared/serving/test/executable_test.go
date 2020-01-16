@@ -40,7 +40,7 @@ func TestAutoAdaptExecutableAlgorithm(t *testing.T) {
 func TestAutoAdaptLearnableAlgorithm(t *testing.T) {
 	learnAlg := NewLearnAlgorithm()
 
-	mantikfile, err := serving.ParseMantikFile([]byte(
+	mantikHeader, err := serving.ParseMantikHeader([]byte(
 		`{
 	"kind":"trainable",
 	"trainingType": {
@@ -69,7 +69,7 @@ func TestAutoAdaptLearnableAlgorithm(t *testing.T) {
 `))
 	assert.NoError(t, err)
 
-	adapted, err := serving.AutoAdapt(learnAlg, mantikfile)
+	adapted, err := serving.AutoAdapt(learnAlg, mantikHeader)
 	assert.NoError(t, err)
 	casted := adapted.(serving.TrainableAlgorithm)
 	result, err := casted.Train(
@@ -90,7 +90,7 @@ func TestAutoAdaptLearnableAlgorithm(t *testing.T) {
 
 func TestAutoAdaptDataSource(t *testing.T) {
 	source := NewDataSet()
-	mantikfile, err := serving.ParseMantikFile([]byte(
+	mantikHeader, err := serving.ParseMantikHeader([]byte(
 		`{
 		"kind": "dataset",
 		"type": {
@@ -102,11 +102,11 @@ func TestAutoAdaptDataSource(t *testing.T) {
 	}
 `))
 	assert.NoError(t, err)
-	adapted, err := serving.AutoAdapt(source, mantikfile)
+	adapted, err := serving.AutoAdapt(source, mantikHeader)
 	assert.NoError(t, err)
 	casted, ok := adapted.(serving.ExecutableDataSet)
 	assert.True(t, ok)
-	assert.Equal(t, casted.Type(), mantikfile.(*serving.DataSetMantikfile).Type)
+	assert.Equal(t, casted.Type(), mantikHeader.(*serving.DataSetMantikHeader).Type)
 	elements, err := element.ReadAllFromStreamReader(casted.Get())
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(elements))

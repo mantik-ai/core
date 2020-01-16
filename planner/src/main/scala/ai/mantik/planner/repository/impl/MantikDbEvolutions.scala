@@ -3,7 +3,7 @@ package ai.mantik.planner.repository.impl
 import java.sql.SQLException
 
 import ai.mantik.ds.helper.circe.CirceJson
-import ai.mantik.elements.Mantikfile
+import ai.mantik.elements.MantikHeader
 import ai.mantik.planner.utils.sqlite.{ QuillSqlite, SqliteEvolutions }
 import io.getquill.Escape
 
@@ -11,7 +11,7 @@ import io.getquill.Escape
 object MantikDbEvolutions {
   val CompleteResource = "/ai.mantik.planner.repository/local_repo_schema.sql"
   val EvolutionResources = "/ai.mantik.planner.repository/evolution"
-  val CurrentVersion = 3
+  val CurrentVersion = 4
 }
 
 /** Mantiks Database Evolution. */
@@ -42,7 +42,7 @@ class MantikDbEvolutions(
   }
 
   private def migration2(): Unit = {
-    // items now have a kind field, which is calculated from the mantikfile
+    // items now have a kind field, which is calculated from the mantikFile (later renamed to mantikFile)
     import quillSqlite.context._
 
     // infix doesn't doesn't seem to work with two results
@@ -52,12 +52,12 @@ class MantikDbEvolutions(
     ).toIndexedSeq
 
     val itemIdWithKind: IndexedSeq[(String, String)] = result.map {
-      case (itemId, mantikfileJson) =>
-        val json = CirceJson.forceParseJson(mantikfileJson)
-        val mantikfile = Mantikfile.parseSingleDefinition(json).right.getOrElse {
-          throw new IllegalStateException(s"Could not patse json ${json}")
+      case (itemId, mantikHeaderJson) =>
+        val json = CirceJson.forceParseJson(mantikHeaderJson)
+        val mantikHeader = MantikHeader.parseSingleDefinition(json).right.getOrElse {
+          throw new IllegalStateException(s"Could not parse json ${json}")
         }
-        itemId -> mantikfile.definition.kind
+        itemId -> mantikHeader.definition.kind
     }
 
     itemIdWithKind.foreach {

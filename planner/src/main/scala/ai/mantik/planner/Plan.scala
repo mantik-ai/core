@@ -3,7 +3,7 @@ package ai.mantik.planner
 import ai.mantik.componently.utils.Renderable
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ ItemId, MantikDefinition, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ ItemId, MantikDefinition, MantikHeader, NamedMantikId }
 import ai.mantik.executor.model.Graph
 import ai.mantik.executor.model.docker.Container
 
@@ -55,7 +55,7 @@ object PlanNodeService {
   case class File(fileReference: PlanFileReference) extends PlanNodeService
 
   /** Represents a docker container in the graph. */
-  case class DockerContainer(container: Container, data: Option[PlanFileReference] = None, mantikfile: Mantikfile[_ <: MantikDefinition]) extends PlanNodeService
+  case class DockerContainer(container: Container, data: Option[PlanFileReference] = None, mantikHeader: MantikHeader[_ <: MantikDefinition]) extends PlanNodeService
 
   implicit val renderable = new Renderable[PlanNodeService] {
     override def buildRenderTree(value: PlanNodeService): Renderable.RenderTree = {
@@ -67,7 +67,7 @@ object PlanNodeService {
             "Docker",
             "container" -> d.container,
             "data" -> d.data.map(_.id.toString),
-            "mantikfile" -> d.mantikfile.toJsonValue.noSpaces
+            "mantikHeader" -> d.mantikHeader.toJsonValue.noSpaces
           )
       }
     }

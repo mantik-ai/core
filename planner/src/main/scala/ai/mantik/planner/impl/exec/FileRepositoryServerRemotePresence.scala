@@ -16,7 +16,7 @@ import scala.concurrent.duration._
  * Helper, which maps the FileRepositoryServer inside the Executor.
  * This is done by starting a remote service.
  * It is necessary, so that Jobs/Services inside the Executor can talk
- * to Mantik Files.
+ * to mantik headers.
  */
 @Singleton
 private[planner] class FileRepositoryServerRemotePresence @Inject() (

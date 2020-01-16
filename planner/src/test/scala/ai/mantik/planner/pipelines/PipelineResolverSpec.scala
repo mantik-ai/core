@@ -4,7 +4,7 @@ import ai.mantik.ds.{ DataType, FundamentalType, TabularData, Tensor }
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.MetaVariableSetting
-import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile, NamedMantikId, OptionalFunctionType, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{ AlgorithmDefinition, MantikHeader, NamedMantikId, OptionalFunctionType, PipelineDefinition, PipelineStep }
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
@@ -15,7 +15,7 @@ class PipelineResolverSpec extends TestBase {
 
   val algorithm1 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)),
-    Mantikfile.pure(
+    MantikHeader.pure(
       AlgorithmDefinition(
         bridge = TestItems.algoBridge.mantikId,
         `type` = FunctionType(
@@ -29,7 +29,7 @@ class PipelineResolverSpec extends TestBase {
 
   val algorithm2 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
-    Mantikfile.pure(
+    MantikHeader.pure(
       elements.AlgorithmDefinition(
         bridge = TestItems.algoBridge.mantikId,
         `type` = FunctionType(
@@ -47,7 +47,7 @@ class PipelineResolverSpec extends TestBase {
     outputType: Option[DataType] = None
   ): Either[PipelineException, ResolvedPipeline] = {
     PipelineResolver.resolvePipeline(
-      Mantikfile.pure(PipelineDefinition(
+      MantikHeader.pure(PipelineDefinition(
         steps = List(
           PipelineStep.AlgorithmStep("a"),
           PipelineStep.AlgorithmStep("b")
@@ -72,7 +72,7 @@ class PipelineResolverSpec extends TestBase {
     outputType: Option[DataType] = None
   ): Either[PipelineException, ResolvedPipeline] = {
     PipelineResolver.resolvePipeline(
-      Mantikfile.pure(PipelineDefinition(
+      MantikHeader.pure(PipelineDefinition(
         steps = List(
           PipelineStep.SelectStep(a),
           PipelineStep.AlgorithmStep("b")
@@ -91,7 +91,7 @@ class PipelineResolverSpec extends TestBase {
 
   it should "deny empty pipelines" in {
     PipelineResolver.resolvePipeline(
-      Mantikfile.pure(PipelineDefinition(
+      MantikHeader.pure(PipelineDefinition(
         steps = Nil
       )), Map.empty
     ).forceLeft.getMessage should include("Empty Pipeline")
@@ -142,7 +142,7 @@ class PipelineResolverSpec extends TestBase {
 
   val algorithm3 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
-    Mantikfile.fromYaml(
+    MantikHeader.fromYaml(
       """kind: algorithm
         |bridge: bridge1
         |metaVariables:
@@ -172,7 +172,7 @@ class PipelineResolverSpec extends TestBase {
     resolved.steps(1).source.definition shouldBe an[DefinitionSource.Constructed]
 
     val resolvedWithApplication = PipelineResolver.resolvePipeline(
-      Mantikfile.pure(PipelineDefinition(
+      MantikHeader.pure(PipelineDefinition(
         steps = List(
           PipelineStep.AlgorithmStep("a"),
           PipelineStep.AlgorithmStep("b", metaVariables = Some(

@@ -33,8 +33,9 @@ trait Context extends CoreComponents {
   }
 
   /**
-   * Push a local mantik file including payload to the repository
+   * Push a local mantik item including payload to the repository.
+   * There must be a MantikItem present.
    * @return Mantik id which was used in the end.
    */
-  def pushLocalMantikFile(dir: Path, id: Option[NamedMantikId] = None): MantikId
+  def pushLocalMantikItem(dir: Path, id: Option[NamedMantikId] = None): MantikId
 }

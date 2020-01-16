@@ -132,8 +132,8 @@ class FunctionType(object):
 
 
 @dataclasses.dataclass
-class Mantikfile(object):
-    """Represents the Mantikfile which controls the way a algorithm/dataset works."""
+class MantikHeader(object):
+    """Represents the MantikHeader which controls the way a algorithm/dataset works."""
 
     yaml_code: dict
     basedir: str
@@ -145,8 +145,8 @@ class Mantikfile(object):
     stat_type: Optional[DataType]
 
     @classmethod
-    def from_yaml(cls, parsed_yaml, basedir) -> Mantikfile:
-        """Contruct Mantikfile from parsed yaml."""
+    def from_yaml(cls, parsed_yaml, basedir) -> MantikHeader:
+        """Contruct MantikHeader from parsed yaml."""
 
         tt = parsed_yaml.get("trainingType", None)
         st = parsed_yaml.get("statType", None)
@@ -166,15 +166,15 @@ class Mantikfile(object):
         return self.training_type is not None
 
     @classmethod
-    def load(cls, file: str) -> Mantikfile:
-        """Load a local mantik file."""
+    def load(cls, file: str) -> MantikHeader:
+        """Load a local mantik header."""
 
         with open(file) as f:
-            return Mantikfile.parse(f.read(), os.path.dirname(file))
+            return MantikHeader.parse(f.read(), os.path.dirname(file))
 
     @classmethod
-    def parse(cls, content: str, root_dir: str) -> Mantikfile:
-        return Mantikfile.from_yaml(parse_and_decode_meta_yaml(content), root_dir)
+    def parse(cls, content: str, root_dir: str) -> MantikHeader:
+        return MantikHeader.from_yaml(parse_and_decode_meta_yaml(content), root_dir)
 
     @property
     def payload_dir(self):

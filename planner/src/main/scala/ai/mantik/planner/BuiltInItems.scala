@@ -1,6 +1,6 @@
 package ai.mantik.planner
 
-import ai.mantik.elements.{ BridgeDefinition, ItemId, MantikDefinition, MantikId, Mantikfile, NamedMantikId }
+import ai.mantik.elements.{ BridgeDefinition, ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
 
 /** Built in Items in Mantik */
@@ -34,7 +34,7 @@ object BuiltInItems {
         DefinitionSource.Loaded(Some(NaturalBridgeName), ItemId("@1")),
         PayloadSource.Empty
       ),
-      Mantikfile.pure(
+      MantikHeader.pure(
         BridgeDefinition(
           dockerImage = "",
           suitable = Seq(MantikDefinition.DataSetKind),
@@ -52,7 +52,7 @@ object BuiltInItems {
         DefinitionSource.Loaded(Some(SelectBridgeName), ItemId("@2")),
         PayloadSource.Empty
       ),
-      Mantikfile.pure(
+      MantikHeader.pure(
         BridgeDefinition(
           dockerImage = "mantikai/bridge.select",
           suitable = Seq(MantikDefinition.DataSetKind),

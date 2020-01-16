@@ -6,7 +6,7 @@ import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
 import ai.mantik.elements.errors.{ ErrorCodes, MantikException, MantikRemoteException }
 import ai.mantik.{ elements, planner }
-import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, Mantikfile, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
@@ -29,13 +29,13 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val session2 = await(sessionManager.create())
 
     val dataset1 = MantikArtifact(
-      Mantikfile.pure(DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = FundamentalType.Int32)).toJson,
+      MantikHeader.pure(DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = FundamentalType.Int32)).toJson,
       fileId = Some("1234"),
       namedId = Some(NamedMantikId("Dataset1")),
       itemId = ItemId.generate()
     )
     val dataset2 = MantikArtifact(
-      Mantikfile.pure(elements.DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = TabularData(
+      MantikHeader.pure(elements.DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = TabularData(
         "x" -> FundamentalType.Int32
       ))).toJson,
       fileId = Some("1234"),
@@ -43,13 +43,13 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       itemId = ItemId.generate()
     )
     val algorithm1 = MantikArtifact(
-      Mantikfile.pure(AlgorithmDefinition(bridge = TestArtifacts.algoBridge1.namedId.get, `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
+      MantikHeader.pure(AlgorithmDefinition(bridge = TestArtifacts.algoBridge1.namedId.get, `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
     val trainable1 = MantikArtifact(
-      Mantikfile.pure(
+      MantikHeader.pure(
         TrainableAlgorithmDefinition(
           bridge = TestArtifacts.trainingBridge1.namedId.get,
           trainedBridge = Some(TestArtifacts.trainedBridge1.namedId.get),
@@ -66,7 +66,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       itemId = ItemId.generate()
     )
     val pipeline1 = MantikArtifact(
-      Mantikfile.pure(
+      MantikHeader.pure(
         PipelineDefinition(
           steps = List(
             PipelineStep.AlgorithmStep("Algorithm1")
@@ -98,7 +98,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     response.itemId shouldBe "1"
     response.item.get.kind shouldBe ObjectKind.KIND_DATASET
     response.item.get.getDataset.`type`.get.json shouldBe "\"int32\""
-    CirceJson.forceParseJson(response.item.get.mantikfileJson) shouldBe dataset1.parsedMantikfile.toJsonValue
+    CirceJson.forceParseJson(response.item.get.mantikHeaderJson) shouldBe dataset1.parsedMantikHeader.toJsonValue
     session1.getItem("1").get shouldBe an[DataSet]
     session2 shouldBe empty
   }
@@ -109,7 +109,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     algoGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_ALGORITHM
 
     val algoItem = algoGet.item.getOrElse(fail).getAlgorithm
-    val ad = algorithm1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition]
+    val ad = algorithm1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition]
     algoItem.inputType.get.json shouldBe ad.`type`.input.toJsonString
     algoItem.outputType.get.json shouldBe ad.`type`.output.toJsonString
   }
@@ -121,7 +121,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
     val trainableItem = trainableGet.item.getOrElse(fail).getTrainableAlgorithm
 
-    val td = trainable1.parsedMantikfile.definition.asInstanceOf[TrainableAlgorithmDefinition]
+    val td = trainable1.parsedMantikHeader.definition.asInstanceOf[TrainableAlgorithmDefinition]
     trainableItem.trainingType.get.json shouldBe td.trainingType.toJsonString
     trainableItem.statType.get.json shouldBe td.statType.toJsonString
     trainableItem.inputType.get.json shouldBe td.`type`.input.toJsonString
@@ -134,7 +134,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     pipelineGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_PIPELINE
 
     val pipelineItem = pipelineGet.item.getOrElse(fail).getPipeline
-    val ad = algorithm1.parsedMantikfile.definition.asInstanceOf[AlgorithmDefinition]
+    val ad = algorithm1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition]
     // Type is deducted from algorithm
     pipelineItem.inputType.get.json shouldBe ad.`type`.input.toJsonString
     pipelineItem.outputType.get.json shouldBe ad.`type`.output.toJsonString
@@ -145,7 +145,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     bridgeGet.itemId shouldBe "1"
     bridgeGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_BRIDGE
     val bridgeItem = bridgeGet.item.getOrElse(fail).getBridge
-    val pd = TestArtifacts.algoBridge1.parsedMantikfile.definition.asInstanceOf[BridgeDefinition]
+    val pd = TestArtifacts.algoBridge1.parsedMantikHeader.definition.asInstanceOf[BridgeDefinition]
     bridgeItem.dockerImage shouldBe pd.dockerImage
     bridgeItem.suitable shouldBe pd.suitable
     bridgeItem.protocol shouldBe pd.protocol
@@ -266,7 +266,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
   trait EnvForPipeline extends PlainEnv {
     val algorithm1 = MantikArtifact(
-      Mantikfile.pure(elements.AlgorithmDefinition(
+      MantikHeader.pure(elements.AlgorithmDefinition(
         bridge = TestArtifacts.algoBridge1.namedId.get,
         `type` = FunctionType(
           input = TabularData(
@@ -370,7 +370,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       )
     )))
     val nameChangedBack = session1.getItemAs[Algorithm](nameChanged.itemId)
-    nameChangedBack.mantikfile.metaJson.metaVariable("a").get.value shouldBe Bundle.fundamental("boom")
+    nameChangedBack.mantikHeader.metaJson.metaVariable("a").get.value shouldBe Bundle.fundamental("boom")
     val intChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(
       sessionId = session1.id,
       itemId = algorithm.itemId,
@@ -380,7 +380,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         )
       ))))
     val intChangedBack = session1.getItemAs[Algorithm](intChanged.itemId)
-    intChangedBack.mantikfile.metaJson.metaVariable("b").get.value shouldBe Bundle.fundamental(100)
+    intChangedBack.mantikHeader.metaJson.metaVariable("b").get.value shouldBe Bundle.fundamental(100)
 
     val bothChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(
       sessionId = session1.id,
@@ -391,17 +391,17 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         MetaVariableValue("a", MetaVariableValue.Value.Bundle(await(Converters.encodeBundle(Bundle.fundamental("Bam"), BundleEncoding.ENCODING_JSON))))
       ))))
     val bothChangedBack = session1.getItemAs[Algorithm](bothChanged.itemId)
-    bothChangedBack.mantikfile.metaJson.metaVariables.map { x => x.name -> x.value }.toMap shouldBe Map(
+    bothChangedBack.mantikHeader.metaJson.metaVariables.map { x => x.name -> x.value }.toMap shouldBe Map(
       "a" -> Bundle.fundamental("Bam"),
       "b" -> Bundle.fundamental(123)
     )
 
     // TODO: Various error scenarios (not existing Meta Variable etc?!)
 
-    withClue("the response contains the serialized Mantikfile, so that gRpc users can evaluate Meta variables") {
+    withClue("the response contains the serialized MantikHeader, so that gRpc users can evaluate Meta variables") {
       CirceJson.forceParseJson(
-        bothChanged.item.get.mantikfileJson
-      ) shouldBe bothChangedBack.core.mantikfile.toJsonValue
+        bothChanged.item.get.mantikHeaderJson
+      ) shouldBe bothChangedBack.core.mantikHeader.toJsonValue
     }
   }
 }

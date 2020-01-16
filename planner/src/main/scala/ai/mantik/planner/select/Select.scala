@@ -4,7 +4,7 @@ import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, Mantikfile }
+import ai.mantik.elements.{ AlgorithmDefinition, MantikHeader }
 import ai.mantik.planner.select.builder.SelectBuilder
 import ai.mantik.planner.select.run.SelectRunner
 import ai.mantik.planner.select.run.Compiler
@@ -48,10 +48,10 @@ case class Select(
   }
 
   /**
-   * Compile select statement to a select mantikfile.
-   * @return either an error or a mantikfile which can execute the selection.
+   * Compile select statement to a select mantikHeader.
+   * @return either an error or a mantikHeader which can execute the selection.
    */
-  def compileToSelectMantikfile(): Either[String, Mantikfile[AlgorithmDefinition]] = {
+  def compileToSelectMantikHeader(): Either[String, MantikHeader[AlgorithmDefinition]] = {
     val selectProgram = Compiler.compile(this)
     selectProgram.map { program =>
 
@@ -60,7 +60,7 @@ case class Select(
         resultingType
       )
 
-      SelectMantikfileBuilder(program, functionType).toMantikfile
+      SelectMantikHeaderBuilder(program, functionType).toMantikHeader
     }
   }
 

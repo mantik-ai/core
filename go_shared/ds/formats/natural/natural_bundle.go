@@ -39,7 +39,7 @@ func EncodeBundle(bundle *element.Bundle, backendType serializer.BackendType) ([
 	return b.Bytes(), nil
 }
 
-// Encode a Bundle value (without Header)
+// Encode a Bundle value (without Meta)
 func EncodeBundleValue(bundle *element.Bundle, backendType serializer.BackendType) ([]byte, error) {
 	var b bytes.Buffer
 	var backend, err = serializer.CreateSerializingBackend(backendType, &b)

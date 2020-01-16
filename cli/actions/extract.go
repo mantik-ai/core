@@ -48,10 +48,10 @@ func ExtractItem(engineClient *client.EngineClient, debug bool, args *ExtractArg
 		fmt.Printf("Receiving item...\n")
 	}
 
-	mantikfilePath := path.Join(args.Directory, serving.MantikfileName)
-	err = ioutil.WriteFile(mantikfilePath, []byte(header.Artifact.Mantikfile), os.ModePerm)
+	mantikHeaderPath := path.Join(args.Directory, serving.MantikHeaderName)
+	err = ioutil.WriteFile(mantikHeaderPath, []byte(header.Artifact.MantikHeader), os.ModePerm)
 	if err != nil {
-		return errors.Wrap(err, "Writing Mantikfile")
+		return errors.Wrap(err, "Writing MantikHeader")
 	}
 	if len(header.ContentType) > 0 {
 		if debug {

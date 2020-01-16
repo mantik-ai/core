@@ -3,7 +3,7 @@ package ai.mantik.planner
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ Mantikfile, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ MantikHeader, TrainableAlgorithmDefinition }
 import ai.mantik.planner.repository.Bridge
 
 /**
@@ -17,11 +17,11 @@ final case class TrainableAlgorithm(
   override type DefinitionType = TrainableAlgorithmDefinition
   override type OwnType = TrainableAlgorithm
 
-  def trainingDataType: DataType = mantikfile.definition.trainingType
+  def trainingDataType: DataType = mantikHeader.definition.trainingType
 
-  def statType: DataType = mantikfile.definition.statType
+  def statType: DataType = mantikHeader.definition.statType
 
-  def functionType: FunctionType = mantikfile.definition.`type`
+  def functionType: FunctionType = mantikHeader.definition.`type`
 
   /**
    * Train this [[TrainableAlgorithm]] with given trainingData.
@@ -32,7 +32,7 @@ final case class TrainableAlgorithm(
 
     val op = Operation.Training(this, adapted)
 
-    val trainedMantikfile = Mantikfile.generateTrainedMantikfile(mantikfile) match {
+    val trainedMantikHeader = MantikHeader.generateTrainedMantikHeader(mantikHeader) match {
       case Left(err) => throw new RuntimeException(s"Could not generate trained mantikfle", err)
       case Right(ok) => ok
     }
@@ -45,7 +45,7 @@ final case class TrainableAlgorithm(
 
     val algorithmResult = Algorithm(
       Source.constructed(PayloadSource.Projection(result)),
-      trainedMantikfile,
+      trainedMantikHeader,
       trainedBridge
     )
     val statsResult = DataSet.natural(Source.constructed(PayloadSource.Projection(result, 1)), statType)
@@ -61,10 +61,10 @@ object TrainableAlgorithm {
 
   def apply(
     source: Source,
-    mantikfile: Mantikfile[TrainableAlgorithmDefinition],
+    mantikHeader: MantikHeader[TrainableAlgorithmDefinition],
     bridge: Bridge,
     trainedBridge: Bridge
   ): TrainableAlgorithm = {
-    TrainableAlgorithm(MantikItemCore(source, mantikfile, bridge), trainedBridge)
+    TrainableAlgorithm(MantikItemCore(source, mantikHeader, bridge), trainedBridge)
   }
 }

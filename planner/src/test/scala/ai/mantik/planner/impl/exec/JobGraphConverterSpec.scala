@@ -68,7 +68,7 @@ class JobGraphConverterSpec extends TestBase {
             ContainerService(
               Container("image1", parameters = Nil),
               dataProvider = Some(
-                DataProvider(url = Some("http://file-service:1234/files/file1"), mantikfile = Some(TestItems.algorithm1.toJson))
+                DataProvider(url = Some("http://file-service:1234/files/file1"), mantikHeader = Some(TestItems.algorithm1.toJson))
               )
             ),
             Map(

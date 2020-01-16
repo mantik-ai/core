@@ -32,9 +32,9 @@ class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempD
   private val sampleDir = Paths.get("bridge/binary/test/mnist")
 
   "addLocalDirectoryToRepository" should "work" in new Env {
-    await(retriever.addLocalDirectoryToRepository(binaryBridge))
+    await(retriever.addLocalMantikItemToRepository(binaryBridge))
     val id = NamedMantikId("mnist_test")
-    val got = await(retriever.addLocalDirectoryToRepository(sampleDir))
+    val got = await(retriever.addLocalMantikItemToRepository(sampleDir))
     got.namedId shouldBe Some(id)
     got.fileId shouldBe defined
     await(localRegistry.get(id)) shouldBe got
@@ -48,14 +48,14 @@ class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempD
   it should "fail on missing dependencies" in new Env {
     // Bridge missing
     interceptErrorCode(ErrorCodes.MantikItemNotFound) {
-      await(retriever.addLocalDirectoryToRepository(sampleDir))
+      await(retriever.addLocalMantikItemToRepository(sampleDir))
     }
   }
 
   it should "accept another mantik id" in new Env {
-    await(retriever.addLocalDirectoryToRepository(binaryBridge))
+    await(retriever.addLocalMantikItemToRepository(binaryBridge))
     val otherId = NamedMantikId("boom")
-    val got = await(retriever.addLocalDirectoryToRepository(sampleDir, Some(otherId)))
+    val got = await(retriever.addLocalMantikItemToRepository(sampleDir, Some(otherId)))
     got.namedId shouldBe Some(otherId)
     await(localRegistry.get(otherId)) shouldBe got
   }

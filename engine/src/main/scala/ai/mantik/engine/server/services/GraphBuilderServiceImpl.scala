@@ -154,7 +154,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
     }
 
     val decodeRequests: Seq[Future[(String, SingleElementBundle)]] = request.values.map { value =>
-      val metaVariable = item.core.mantikfile.metaJson.metaVariable(value.name).getOrElse {
+      val metaVariable = item.core.mantikHeader.metaJson.metaVariable(value.name).getOrElse {
         throw new IllegalArgumentException(s"Meta variable ${value.name} not found")
       }
       val decodedValue = value.value match {

@@ -12,19 +12,19 @@ object PayloadProvider {
   def createExtraArguments(
     dataProvider: DataProvider
   ): List[String] = {
-    val mantikfileArgument = dataProvider.mantikfile.map { mantikfile =>
-      // The container expects the Mantikfile as base64 argument
+    val mantikHeaderArgument = dataProvider.mantikHeader.map { mantikHeader =>
+      // The container expects the MantikHeader as base64 argument
       val base64Encoder = Base64.getEncoder
-      val encodedMantikfile = base64Encoder.encodeToString(
-        mantikfile.getBytes(StandardCharsets.UTF_8)
+      val encodedMantikHeader = base64Encoder.encodeToString(
+        mantikHeader.getBytes(StandardCharsets.UTF_8)
       )
-      List("-mantikfile", encodedMantikfile)
+      List("-mantikHeader", encodedMantikHeader)
     }.getOrElse(Nil)
 
     val urlArgument = dataProvider.url.map { url =>
       List("-url", url)
     }.getOrElse(Nil)
 
-    mantikfileArgument ++ urlArgument
+    mantikHeaderArgument ++ urlArgument
   }
 }

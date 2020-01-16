@@ -8,9 +8,9 @@ import (
 	"os"
 )
 
-type Mantikfile interface {
+type MantikHeader interface {
 	Kind() string
-	Header() *MantikFileHeader
+	Meta() *MantikHeaderMeta
 	Name() *string
 	MetaVariables() MetaVariables
 	// Returns the decoded JSON (after applying meta variables)
@@ -21,13 +21,13 @@ const AlgorithmKind = "algorithm"
 const DatasetKind = "dataset"
 const TrainableAlgorithmKind = "trainable"
 
-// The name of the Mantikfile
-const MantikfileName = "Mantikfile"
+// The name of the MantikHeader
+const MantikHeaderName = "MantikHeader"
 
 // The name of the optional payload file/dir inside a Mantik Bundle
 const PayloadPathElement = "payload"
 
-type MantikFileHeader struct {
+type MantikHeaderMeta struct {
 	Kind                *string       `json:"kind"`
 	Name                *string       `json:"name"`
 	Version             *string       `json:"version"`
@@ -36,7 +36,7 @@ type MantikFileHeader struct {
 }
 
 // Returns a MantikId if there is one encoded in the header
-func (h *MantikFileHeader) NamedMantikId() *string {
+func (h *MantikHeaderMeta) NamedMantikId() *string {
 	if h.Name == nil {
 		return nil
 	} else {
@@ -45,61 +45,61 @@ func (h *MantikFileHeader) NamedMantikId() *string {
 	}
 }
 
-type DataSetMantikfile struct {
+type DataSetMantikHeader struct {
 	Type   ds.TypeReference `json:"type"`
 	json   []byte
-	header *MantikFileHeader
+	header *MantikHeaderMeta
 }
 
-func (d *DataSetMantikfile) Header() *MantikFileHeader {
+func (d *DataSetMantikHeader) Meta() *MantikHeaderMeta {
 	return d.header
 }
 
-func (d *DataSetMantikfile) Kind() string {
+func (d *DataSetMantikHeader) Kind() string {
 	return "dataset"
 }
 
-func (d *DataSetMantikfile) Name() *string {
+func (d *DataSetMantikHeader) Name() *string {
 	return d.header.Name
 }
 
-func (d *DataSetMantikfile) MetaVariables() MetaVariables {
+func (d *DataSetMantikHeader) MetaVariables() MetaVariables {
 	return d.header.ParsedMetaVariables
 }
 
-func (d *DataSetMantikfile) Json() []byte {
+func (d *DataSetMantikHeader) Json() []byte {
 	return d.json
 }
 
-/* The mantik file needed for serving algorithms. */
-type AlgorithmMantikfile struct {
-	header *MantikFileHeader
+/* The mantik header needed for serving algorithms. */
+type AlgorithmMantikHeader struct {
+	header *MantikHeaderMeta
 	/* Type, For Algorithms and Trainables. */
 	Type *AlgorithmType `json:"type"`
 	json []byte
 }
 
-func (a *AlgorithmMantikfile) Header() *MantikFileHeader {
+func (a *AlgorithmMantikHeader) Meta() *MantikHeaderMeta {
 	return a.header
 }
 
-func (a *AlgorithmMantikfile) Kind() string {
+func (a *AlgorithmMantikHeader) Kind() string {
 	return "algorithm"
 }
 
-func (a *AlgorithmMantikfile) Name() *string {
+func (a *AlgorithmMantikHeader) Name() *string {
 	return a.header.Name
 }
 
-func (d *AlgorithmMantikfile) MetaVariables() MetaVariables {
+func (d *AlgorithmMantikHeader) MetaVariables() MetaVariables {
 	return d.header.ParsedMetaVariables
 }
 
-func (d *AlgorithmMantikfile) Json() []byte {
+func (d *AlgorithmMantikHeader) Json() []byte {
 	return d.json
 }
 
-type TrainableMantikfile struct {
+type TrainableMantikHeader struct {
 	/* Type, For Algorithms and Trainables. */
 	Type *AlgorithmType `json:"type"`
 
@@ -108,31 +108,31 @@ type TrainableMantikfile struct {
 	/* Statistic Type (for trainable). */
 	StatType *ds.TypeReference `json:"statType"`
 	json     []byte
-	header   *MantikFileHeader
+	header   *MantikHeaderMeta
 }
 
-func (t *TrainableMantikfile) Header() *MantikFileHeader {
+func (t *TrainableMantikHeader) Meta() *MantikHeaderMeta {
 	return t.header
 }
 
-func (t *TrainableMantikfile) Kind() string {
+func (t *TrainableMantikHeader) Kind() string {
 	return "trainable"
 }
 
-func (t *TrainableMantikfile) Name() *string {
+func (t *TrainableMantikHeader) Name() *string {
 	return t.header.Name
 }
 
-func (d *TrainableMantikfile) MetaVariables() MetaVariables {
+func (d *TrainableMantikHeader) MetaVariables() MetaVariables {
 	return d.header.ParsedMetaVariables
 }
 
-func (d *TrainableMantikfile) Json() []byte {
+func (d *TrainableMantikHeader) Json() []byte {
 	return d.json
 }
 
-func ParseMantikFile(bytes []byte) (Mantikfile, error) {
-	var header MantikFileHeader
+func ParseMantikHeader(bytes []byte) (MantikHeader, error) {
+	var header MantikHeaderMeta
 	plainJson, err := DecodeMetaYaml(bytes)
 	if err != nil {
 		return nil, err
@@ -149,19 +149,19 @@ func ParseMantikFile(bytes []byte) (Mantikfile, error) {
 
 	switch *header.Kind {
 	case DatasetKind:
-		var df DataSetMantikfile
+		var df DataSetMantikHeader
 		err := json.Unmarshal(plainJson, &df)
 		df.json = plainJson
 		df.header = &header
 		return &df, err
 	case AlgorithmKind:
-		var af AlgorithmMantikfile
+		var af AlgorithmMantikHeader
 		err := json.Unmarshal(plainJson, &af)
 		af.json = plainJson
 		af.header = &header
 		return &af, err
 	case TrainableAlgorithmKind:
-		var tf TrainableMantikfile
+		var tf TrainableMantikHeader
 		err := json.Unmarshal(plainJson, &tf)
 		tf.json = plainJson
 		tf.header = &header
@@ -170,7 +170,7 @@ func ParseMantikFile(bytes []byte) (Mantikfile, error) {
 	return nil, errors.Errorf("Unsupported kind %s", *header.Kind)
 }
 
-func LoadMantikfile(filePath string) (Mantikfile, error) {
+func LoadMantikHeader(filePath string) (MantikHeader, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -180,5 +180,5 @@ func LoadMantikfile(filePath string) (Mantikfile, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ParseMantikFile(content)
+	return ParseMantikHeader(content)
 }

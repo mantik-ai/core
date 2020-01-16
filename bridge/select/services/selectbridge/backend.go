@@ -11,23 +11,23 @@ import (
 type SelectBackend struct {
 }
 
-func (s *SelectBackend) LoadModel(payloadDirectory *string, mantikfile serving.Mantikfile) (serving.Executable, error) {
-	return LoadModelFromMantikfile(mantikfile)
+func (s *SelectBackend) LoadModel(payloadDirectory *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
+	return LoadModelFromMantikHeader(mantikHeader)
 }
 
 func LoadModel(directory string) (*SelectRunner, error) {
-	mfPath := path.Join(directory, "Mantikfile")
-	mf, err := serving.LoadMantikfile(mfPath)
+	mfPath := path.Join(directory, "MantikHeader")
+	mf, err := serving.LoadMantikHeader(mfPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not read Mantikfile")
+		return nil, errors.Wrap(err, "Could not read MantikHeader")
 	}
-	return LoadModelFromMantikfile(mf)
+	return LoadModelFromMantikHeader(mf)
 }
 
-func LoadModelFromMantikfile(mantikfile serving.Mantikfile) (*SelectRunner, error) {
-	sm, err := ParseSelectMantikfile(mantikfile.Json())
+func LoadModelFromMantikHeader(mantikHeader serving.MantikHeader) (*SelectRunner, error) {
+	sm, err := ParseSelectMantikHeader(mantikHeader.Json())
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not decode Mantikfile")
+		return nil, errors.Wrap(err, "Could not decode MantikHeader")
 	}
 	var selectorRunner *runner.Runner
 	if sm.Program.Selector != nil {

@@ -1,4 +1,4 @@
-# Mantikfile for TF Saved Model
+# MantikHeader for TF Saved Model
 kind: bridge
 account: mantik
 name: tf.saved_model

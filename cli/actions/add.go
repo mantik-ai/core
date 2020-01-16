@@ -25,20 +25,20 @@ type AddArguments struct {
 }
 
 func AddItem(engineClient *client.EngineClient, debug bool, args *AddArguments) error {
-	mantikfilePath := path.Join(args.Directory, serving.MantikfileName)
-	mfContent, err := ioutil.ReadFile(mantikfilePath)
+	mantikHeaderPath := path.Join(args.Directory, serving.MantikHeaderName)
+	mfContent, err := ioutil.ReadFile(mantikHeaderPath)
 	if err != nil {
-		return errors.Wrapf(err, "Loading %s", mantikfilePath)
+		return errors.Wrapf(err, "Loading %s", mantikHeaderPath)
 	}
-	mf, err := serving.ParseMantikFile(mfContent)
+	mf, err := serving.ParseMantikHeader(mfContent)
 	if err != nil {
-		return errors.Wrapf(err, "Parsing %s", mantikfilePath)
+		return errors.Wrapf(err, "Parsing %s", mantikHeaderPath)
 	}
 	var namedMantikId *string
 	if args.NamedMantikId != "" {
 		namedMantikId = &args.NamedMantikId
 	} else {
-		namedMantikId = mf.Header().NamedMantikId()
+		namedMantikId = mf.Meta().NamedMantikId()
 	}
 
 	requestClient, err := engineClient.LocalRegistry.AddArtifact(context.Background())
@@ -62,7 +62,7 @@ func AddItem(engineClient *client.EngineClient, debug bool, args *AddArguments) 
 
 	header := engine.AddArtifactRequest{
 		NamedMantikId: client.EncodeOptionalString(namedMantikId),
-		Mantikfile:    string(mfContent),
+		MantikHeader:  string(mfContent),
 		ContentType:   contentType,
 	}
 	err = requestClient.Send(&header)

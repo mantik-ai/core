@@ -22,8 +22,8 @@ class HelloWorldSpec extends IntegrationTestBase {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    context.pushLocalMantikFile(sampleBridge)
-    context.pushLocalMantikFile(sampleFile)
+    context.pushLocalMantikItem(sampleBridge)
+    context.pushLocalMantikItem(sampleFile)
   }
 
   it should "be possible to run a simple command" in {

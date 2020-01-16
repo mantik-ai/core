@@ -10,7 +10,7 @@ type jsonSerializer struct {
 	destination io.Writer
 	// A stack for sub elements (arrays, objects)
 	stack []stackElement
-	// A Header has been written and must be closed
+	// A Meta has been written and must be closed
 	hasHeader bool
 	isTabular bool
 	rowCount  int
@@ -70,7 +70,7 @@ func (j *arrayStack) Done() bool {
 
 func (j *jsonSerializer) EncodeHeader(h *Header) error {
 	if j.hasHeader {
-		panic("Header may be encoded only once")
+		panic("Meta may be encoded only once")
 	}
 	encodedData, err := h.Format.MarshalJSON()
 	if err != nil {

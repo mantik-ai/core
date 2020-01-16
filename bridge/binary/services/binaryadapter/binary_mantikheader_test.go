@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestParseBinaryMantikFile(t *testing.T) {
+func TestParseBinaryMantikHeader(t *testing.T) {
 	// Note: the file makes no sense, but tests all elements
 	simple := []byte(
 		`
@@ -24,7 +24,7 @@ files:
       - stride: 1
       - skip: 5
 `)
-	parsed, err := ParseBinaryMantikFile(simple)
+	parsed, err := ParseBinaryMantikHeader(simple)
 	assert.NoError(t, err)
 	assert.Equal(t, ds.FromJsonStringOrPanicRef(`{"columns": {"x": "int32"}}`), parsed.Type)
 	assert.Equal(t, "data", parsed.Directory)
@@ -42,9 +42,9 @@ files:
 }
 
 func TestParseMnist(t *testing.T) {
-	content, err := ioutil.ReadFile("../../test/mnist/Mantikfile")
+	content, err := ioutil.ReadFile("../../test/mnist/MantikHeader")
 	assert.NoError(t, err)
-	parsed, err := ParseBinaryMantikFile(content)
+	parsed, err := ParseBinaryMantikHeader(content)
 	assert.Equal(t, 2, len(parsed.Files))
 	assert.Equal(t, "data", parsed.Directory)
 	assert.Equal(t, 2, len(parsed.Files[0].Content))

@@ -94,7 +94,7 @@ func ShowItem(client *client.EngineClient, arg *ItemArguments) error {
 	return nil
 }
 
-func PrintItem(a *engine.MantikArtifact, withDeployment bool, withMantikfile bool) {
+func PrintItem(a *engine.MantikArtifact, withDeployment bool, withMantikHeader bool) {
 	fmt.Printf("NamedId:    %s\n", formatOptionalString(a.NamedId))
 	fmt.Printf("ItemId:     %s\n", a.ItemId)
 	fmt.Printf("Kind:       %s\n", a.ArtifactKind)
@@ -108,8 +108,8 @@ func PrintItem(a *engine.MantikArtifact, withDeployment bool, withMantikfile boo
 			fmt.Printf("  Timestamp: %s\n", a.DeploymentInfo.Timestamp.String())
 		}
 	}
-	if withMantikfile {
-		fmt.Printf("Mantikfile:\n%s\n", a.MantikfileJson)
+	if withMantikHeader {
+		fmt.Printf("MantikHeader:\n%s\n", a.MantikHeaderJson)
 	}
 }
 

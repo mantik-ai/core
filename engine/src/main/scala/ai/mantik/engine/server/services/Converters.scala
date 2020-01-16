@@ -8,7 +8,7 @@ import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.helper.circe.CirceJson
-import ai.mantik.elements.{ItemId, Mantikfile, NamedMantikId}
+import ai.mantik.elements.{ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.engine.protos.items.MantikItem.Item
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.planner.{Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm}
@@ -80,16 +80,16 @@ private[engine] object Converters {
         kind = ObjectKind.KIND_BRIDGE,
         item = Item.Bridge(
           ProtoBridge(
-            dockerImage = b.mantikfile.definition.dockerImage,
-            suitable = b.mantikfile.definition.suitable,
-            protocol = b.mantikfile.definition.protocol,
-            payloadContentType = RpcConversions.encodeOptionalString(b.mantikfile.definition.payloadContentType)
+            dockerImage = b.mantikHeader.definition.dockerImage,
+            suitable = b.mantikHeader.definition.suitable,
+            protocol = b.mantikHeader.definition.protocol,
+            payloadContentType = RpcConversions.encodeOptionalString(b.mantikHeader.definition.payloadContentType)
           )
         )
       )
     }
     protoResponse.copy(
-      mantikfileJson = mantikItem.mantikfile.toJson
+      mantikHeaderJson = mantikItem.mantikHeader.toJson
     )
   }
 
@@ -173,30 +173,30 @@ private[engine] object Converters {
 
   def encodeMantikArtifact(artifact: MantikArtifact): ProtoMantikArtifact = {
     ProtoMantikArtifact(
-      mantikfileJson = artifact.parsedMantikfile.toJson,
-      artifactKind = artifact.parsedMantikfile.definition.kind,
+      mantikHeaderJson = artifact.parsedMantikHeader.toJson,
+      artifactKind = artifact.parsedMantikHeader.definition.kind,
       fileId = RpcConversions.encodeOptionalString(artifact.fileId),
       namedId = RpcConversions.encodeOptionalString(artifact.namedId.map(_.toString)),
       itemId = artifact.itemId.toString,
       deploymentInfo = artifact.deploymentInfo.map(encodeDeploymentInfo),
-      mantikfile = artifact.mantikfile
+      mantikHeader = artifact.mantikHeader
     )
   }
 
   def decodeMantikArtifact(artifact: ProtoMantikArtifact): MantikArtifact = {
-    val originalMantikfile = RpcConversions.decodeOptionalString(artifact.mantikfile).orElse(
-      RpcConversions.decodeOptionalString(artifact.mantikfileJson)
+    val originalMantikHeader = RpcConversions.decodeOptionalString(artifact.mantikHeader).orElse(
+      RpcConversions.decodeOptionalString(artifact.mantikHeaderJson)
     ).getOrElse(
-        throw new IllegalArgumentException("Missing Mantikfile")
+        throw new IllegalArgumentException("Missing MantikHeader")
       )
     val result = MantikArtifact(
-      mantikfile = originalMantikfile,
+      mantikHeader = originalMantikHeader,
       fileId = RpcConversions.decodeOptionalString(artifact.fileId),
       namedId = RpcConversions.decodeOptionalString(artifact.namedId).map(NamedMantikId.fromString),
       itemId = ItemId(artifact.itemId),
       deploymentInfo = artifact.deploymentInfo.map(decodeDeploymentInfo)
     )
-    result.parsedMantikfile // force parsing
+    result.parsedMantikHeader // force parsing
     result
   }
 

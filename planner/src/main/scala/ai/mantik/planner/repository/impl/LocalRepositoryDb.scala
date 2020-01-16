@@ -45,7 +45,7 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
     querySchema[DbMantikItem](
       "mantik_item",
       _.itemId -> "item_id",
-      _.mantikfile -> "mantikfile",
+      _.mantikheader -> "mantikheader",
       _.fileId -> "file_id",
       _.kind -> "kind"
     )
@@ -70,7 +70,7 @@ private[impl] object LocalRepositoryDb {
   // Item stored in the database
   case class DbMantikItem(
       itemId: String,
-      mantikfile: String,
+      mantikheader: String,
       fileId: Option[String],
       kind: String
   )

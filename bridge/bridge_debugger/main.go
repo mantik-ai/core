@@ -21,7 +21,7 @@ Commands
   select -i <file> -o <file> -c columns                      - Select some columns from a Mantik Bundle
   print -i <file> -n LINECOUNT								 - Print the first rows of a Bundle as JSON.
 
-  run -mf <Mantikfile> [-keepDataDir] -data <zip-File> <image> - Run a Mantik Bridge via Docker with prepared data directory.
+  run -mf <MantikHeader> [-keepDataDir] -data <zip-File> <image> - Run a Mantik Bridge via Docker with prepared data directory.
 
   Default url is http://localhost:8502.
 
@@ -110,14 +110,14 @@ func main() {
 		debugger.PrintBundle(*inputFile, *rows)
 	case "run":
 		runOptions := flag.NewFlagSet("run", flag.ExitOnError)
-		mantikfile := runOptions.String("mf", "", "Mantikfile")
+		mantikHeader := runOptions.String("mf", "", "MantikHeader")
 		dataFile := runOptions.String("data", "", "Data ZIP file")
 		keepDataDir := runOptions.Bool("keepDataDir", false, "Keep Data Directory")
 		runOptions.Parse(os.Args[2:])
 		image := runOptions.Arg(0)
-		assertNonEmpty(*mantikfile, "mf")
+		assertNonEmpty(*mantikHeader, "mf")
 		assertNonEmpty(image, "image")
-		debugger.RunBridge(image, *mantikfile, *dataFile, *keepDataDir)
+		debugger.RunBridge(image, *mantikHeader, *dataFile, *keepDataDir)
 	default:
 		println("Unknown command", os.Args[1])
 		os.Exit(1)

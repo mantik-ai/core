@@ -11,7 +11,7 @@ object TrainAlgorithm extends ExampleBase {
 
   override protected def run(implicit context: Context): Unit = {
     val sampleFile = new File("bridge/sklearn/simple_learn/example/kmeans").toPath
-    context.pushLocalMantikFile(sampleFile)
+    context.pushLocalMantikItem(sampleFile)
 
     def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 

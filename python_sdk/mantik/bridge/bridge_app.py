@@ -11,7 +11,7 @@ from mantik.util import zip_directory
 from .algorithm import Algorithm
 
 
-def create_bridge_app(mantikfile: mantik.types.Mantikfile, algorithm: Algorithm) -> Flask:
+def create_bridge_app(mantikheader: mantik.types.MantikHeader, algorithm: Algorithm) -> Flask:
     """
     Create the Flask app for a given algorithm.
     """
@@ -20,28 +20,28 @@ def create_bridge_app(mantikfile: mantik.types.Mantikfile, algorithm: Algorithm)
 
     @app.route("/")
     def index():
-        return "This is a Bridge to {}".format(mantikfile.name)
+        return "This is a Bridge to {}".format(mantikheader.name)
 
     @app.route("/type")
     def function_type():
-        return Response(mantikfile.type.to_json(), content_type="application/json")
+        return Response(mantikheader.type.to_json(), content_type="application/json")
 
     @app.route("/training_type")
     def training_type():
-        return Response(mantikfile.training_type.to_json(), content_type="application/json")
+        return Response(mantikheader.training_type.to_json(), content_type="application/json")
 
     @app.route("/stat_type")
     def stat_type():
-        return Response(mantikfile.stat_type.to_json(), content_type="application/json")
+        return Response(mantikheader.stat_type.to_json(), content_type="application/json")
 
     @app.route("/train", methods=["POST"])
     def train():
-        if not mantikfile.has_training:
+        if not mantikheader.has_training:
             return make_response("No training available", 404)
         if algorithm.is_trained:
             return make_response("Algorithm already trained", 429)
 
-        decoded = mantik.types.Bundle.decode(request.content_type, request.stream, mantikfile.training_type)
+        decoded = mantik.types.Bundle.decode(request.content_type, request.stream, mantikheader.training_type)
         algorithm.train(decoded)
         # Stat result is catched by algorihtm wrapper.
         return Response("")
@@ -51,20 +51,20 @@ def create_bridge_app(mantikfile: mantik.types.Mantikfile, algorithm: Algorithm)
         if not algorithm.is_trained:
             return make_response("Algorithm not trained", 400)
 
-        decoded = mantik.types.Bundle.decode(request.content_type, request.stream, mantikfile.type.input)
+        decoded = mantik.types.Bundle.decode(request.content_type, request.stream, mantikheader.type.input)
         result = algorithm.apply(decoded)
-        result = (result or mantik.types.Bundle()).__add__(mantikfile.type.output)
+        result = (result or mantik.types.Bundle()).__add__(mantikheader.type.output)
         encoded = result.encode(request.content_type)
         return Response(encoded, content_type=request.content_type)
 
     @app.route("/stats")
     def stats():
-        if not mantikfile.has_training:
+        if not mantikheader.has_training:
             return make_response("No training available", 404)
         if not algorithm.is_trained:
             return make_response("Algorithm not yet trained", 409)
         result = algorithm.training_stats
-        result = (result or mantik.types.Bundle()).__add__(mantikfile.stat_type)
+        result = (result or mantik.types.Bundle()).__add__(mantikheader.stat_type)
         content_type = request.accept_mimetypes.best_match(mantik.types.MIME_TYPES)
         encoded = result.encode(content_type)
         return Response(encoded, content_type=content_type)
@@ -101,33 +101,33 @@ def start_with_args(args, algorithm_provider):
     """ Start the Bridge using parsed arguments.
 
     :param args: parsed arguments
-    :param algorithm_provider: a function which returns the algorithm with given mantikfile.
+    :param algorithm_provider: a function which returns the algorithm with given mantikheader.
     """
 
-    mantik_file_path = os.path.join(args.dir, "Mantikfile")
-    mantikfile = mantik.types.Mantikfile.load(mantik_file_path)
+    mantik_file_path = os.path.join(args.dir, "MantikHeader")
+    mantikheader = mantik.types.MantikHeader.load(mantik_file_path)
 
-    print(f"Payload dir\t{mantikfile.payload_dir}")
-    print(f"Name\t{mantikfile.name}")
+    print(f"Payload dir\t{mantikheader.payload_dir}")
+    print(f"Name\t{mantikheader.name}")
     print(f"Debug\t{args.d}")
     print(f"Port\t{args.port}")
     print(f"Interface\t{args.interface}")
 
-    algorithm = algorithm_provider(mantikfile)
+    algorithm = algorithm_provider(mantikheader)
 
-    app = create_bridge_app(mantikfile, algorithm)
+    app = create_bridge_app(mantikheader, algorithm)
     app.run(debug=args.d, host=args.interface, port=args.port)
 
 
 def start(algorithm_provider):
     """
     Start the bridge using an algorithm provider
-    :param algorithm_provider: a function which returns the algorithm with given mantikfile.
+    :param algorithm_provider: a function which returns the algorithm with given mantikheader.
     :return:
     """
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("dir", help="Directory where Mantikfile is present")
+    ap.add_argument("dir", help="Directory where MantikHeader is present")
     ap.add_argument("-d", required=False, action="store_true", help="Enable Debug Mode")
     ap.add_argument("--port", type=int, default=8502)
     ap.add_argument("--interface", default="0.0.0.0", help="Listening interface")

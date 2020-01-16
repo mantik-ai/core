@@ -9,7 +9,7 @@ object PipelineExample extends ExampleBase {
   val mnistAnnotated = new File("bridge/tf/saved_model/test/resources/samples/mnist_annotated").toPath
 
   override protected def run(implicit context: Context): Unit = {
-    context.pushLocalMantikFile(mnistAnnotated, id = Some("mnist_annotated"))
+    context.pushLocalMantikItem(mnistAnnotated, id = Some("mnist_annotated"))
 
     val mnist = context.loadAlgorithm("mnist_annotated").tag("nob/mnist_annotated") //otherwise it can't be pushed
 

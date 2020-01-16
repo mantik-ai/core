@@ -14,7 +14,7 @@ class AnonymousPipelineSpec extends IntegrationTestBase with Samples {
   def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 
   it should "save and load a pipeline with anonymous elements in it" in new EnvWithBridges {
-    context.pushLocalMantikFile(kmeansDirectory)
+    context.pushLocalMantikItem(kmeansDirectory)
 
     val learningData = Bundle.buildColumnWise
       .withColumn(

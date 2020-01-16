@@ -19,11 +19,11 @@ import (
 	"time"
 )
 
-func RunBridge(imageName string, mantikfile string, dataZipFile string, keepDataDir bool) {
+func RunBridge(imageName string, mantikHeader string, dataZipFile string, keepDataDir bool) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	ExitOnError(err, "Creating Docker client")
-	tempDir := prepareTempDirectory(mantikfile, dataZipFile)
+	tempDir := prepareTempDirectory(mantikHeader, dataZipFile)
 	if !keepDataDir {
 		defer deleteTempDir(tempDir)
 	}
@@ -115,13 +115,13 @@ func deleteTempDir(tempDir string) {
 	os.RemoveAll(tempDir)
 }
 
-func prepareTempDirectory(mantikfilePath string, dataZipFile string) string {
+func prepareTempDirectory(mantikHeaderPath string, dataZipFile string) string {
 	tempDir, err := ioutil.TempDir("", "mantik_bridge_debugger")
 	ExitOnError(err, "Creating Temp directory")
 	println("Preparing Directory ", tempDir)
 
-	_, err = fileutils.CopyFile(mantikfilePath, path.Join(tempDir, "Mantikfile"))
-	ExitOnError(err, "Copy Mantikfile")
+	_, err = fileutils.CopyFile(mantikHeaderPath, path.Join(tempDir, "MantikHeader"))
+	ExitOnError(err, "Copy MantikHeader")
 
 	dataDestinationDir := path.Join(tempDir, "payload")
 

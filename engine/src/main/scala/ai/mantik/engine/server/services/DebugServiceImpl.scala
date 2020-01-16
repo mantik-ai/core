@@ -19,7 +19,7 @@ class DebugServiceImpl @Inject() (context: Context)(implicit akkaRuntime: AkkaRu
     } else {
       Some(NamedMantikId.fromString(request.name))
     }
-    val idToUse = context.pushLocalMantikFile(
+    val idToUse = context.pushLocalMantikItem(
       new File(request.directory).toPath,
       id = mantikId
     )

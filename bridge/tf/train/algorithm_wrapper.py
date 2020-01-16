@@ -1,5 +1,5 @@
 from mantik.bridge import Algorithm
-from mantik.types import Mantikfile, Bundle
+from mantik.types import MantikHeader, Bundle
 from tftrain import TensorFlowContext
 import tensorflow as tf
 import tftrain
@@ -14,19 +14,19 @@ class AlgorithmWrapper(Algorithm):
 
     runner: TrainRun
 
-    def __init__(self, mantikfile: Mantikfile):
+    def __init__(self, mantikheader: MantikHeader):
         self.runner = TrainRun()
         self.session = tf.Session()
         import sys
 
-        sys.path.append(mantikfile.payload_dir)
+        sys.path.append(mantikheader.payload_dir)
         import train  # Entry point
 
         self.train_func = train.train
-        self.context = TensorFlowContext(mantikfile, self.session)
+        self.context = TensorFlowContext(mantikheader, self.session)
 
         # Override working directory, so that Algorithm is in it's own
-        os.chdir(mantikfile.payload_dir)
+        os.chdir(mantikheader.payload_dir)
 
     def __enter__(self):
         return self

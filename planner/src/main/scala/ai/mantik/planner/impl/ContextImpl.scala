@@ -49,7 +49,7 @@ private[planner] class ContextImpl @Inject() (
 
   private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
     val (artifact, hull) = await(retriever.get(id))
-    artifact.parsedMantikfile.definitionAs[T#DefinitionType] match {
+    artifact.parsedMantikHeader.definitionAs[T#DefinitionType] match {
       case Left(error) => throw ErrorCodes.MantikItemWrongType.toException("Wrong item type", error)
       case _           => // ok
     }
@@ -67,8 +67,8 @@ private[planner] class ContextImpl @Inject() (
     Await.result(future, timeout)
   }
 
-  override def pushLocalMantikFile(dir: Path, id: Option[NamedMantikId] = None): MantikId = {
-    await(retriever.addLocalDirectoryToRepository(dir, id)).mantikId
+  override def pushLocalMantikItem(dir: Path, id: Option[NamedMantikId] = None): MantikId = {
+    await(retriever.addLocalMantikItemToRepository(dir, id)).mantikId
   }
 }
 
