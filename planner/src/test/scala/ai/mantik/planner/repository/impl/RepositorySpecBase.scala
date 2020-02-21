@@ -7,11 +7,11 @@ import ai.mantik.ds.FundamentalType.StringType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId}
+import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId }
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository
-import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact, Repository}
-import ai.mantik.planner.util.{ErrorCodeTestUtils, TestBaseWithAkkaRuntime}
+import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository }
+import ai.mantik.planner.util.{ ErrorCodeTestUtils, TestBaseWithAkkaRuntime }
 import ai.mantik.testutils.FakeClock
 
 /** Common tests for repositories. */

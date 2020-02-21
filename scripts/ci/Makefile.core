@@ -9,7 +9,8 @@ else
   SBT_CACHE_PARAMETER = -Dsbt.ivy.home=$(CACHE_DIR)/ivy \
   -Divy.home=$(CACHE_DIR)/ivy \
   -Dsbt.global.base=$(CACHE_DIR)/sbt \
-  -Dsbt.boot.directory=$(CACHE_DIR)/sbt_boot
+  -Dsbt.boot.directory=$(CACHE_DIR)/sbt_boot \
+  -Dsbt.coursier.home=$(CACHE_DIR)/coursier
 endif
 
 SBT = sbt $(SBT_CACHE_PARAMETER) -warn

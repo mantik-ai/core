@@ -5,7 +5,14 @@ ThisBuild / scalaVersion := "2.12.8"
 ThisBuild / scalacOptions += "-feature"
 ThisBuild / scalacOptions += "-deprecation"
 ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats
-ThisBuild / updateOptions := updateOptions.value.withGigahorse(false) // See https://github.com/sbt/sbt/issues/3570
+// ThisBuild / updateOptions := updateOptions.value.withGigahorse(false) // See https://github.com/sbt/sbt/issues/3570
+
+Test / parallelExecution := true
+Test / fork := false
+IntegrationTest / parallelExecution := false
+IntegrationTest / fork := true
+
+concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
 val akkaVersion = "2.5.20"
 val akkaHttpVersion = "10.1.7"
@@ -64,15 +71,6 @@ lazy val testutils = (project in file("testutils"))
     publishSettings
   )
 
-lazy val IntegrationTest = config("it") extend(Test)
-
-val testSettings = Seq (
-  testOptions in Test := Seq(Tests.Argument(TestFrameworks.ScalaTest, "-l", "ai.mantik.testutils.tags.IntegrationTest")),
-  testOptions in IntegrationTest := Seq(Tests.Argument(TestFrameworks.ScalaTest, "-n", "ai.mantik.testutils.tags.IntegrationTest")),
-  parallelExecution in Test := false,
-  parallelExecution in IntegrationTest := false
-) ++ inConfig(IntegrationTest)(Defaults.testTasks)
-
 def enableProtocolBuffer = Seq(
   libraryDependencies ++= Seq(
     "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
@@ -104,13 +102,13 @@ def makeProject(directory: String, id: String = "") = {
     id
   }
   sbt.Project(idToUse, file(directory))
-    .dependsOn(testutils % "test")
+    .dependsOn(testutils % "it,test")
     .configs(IntegrationTest)
     .settings(
       scalariformSettings,
-      testSettings,
       addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
-      publishSettings
+      publishSettings,
+      Defaults.itSettings
     )
 }
 
@@ -230,7 +228,7 @@ lazy val executorCommonTest = makeProject("executor/common-test", "executorCommo
 
 lazy val executorDocker = makeProject("executor/docker", "executorDocker")
   .dependsOn(executorApi, executorCommon)
-  .dependsOn(executorCommonTest % "test")
+  .dependsOn(executorCommonTest % "it")
   .settings(
     name := "executor-docker",
     libraryDependencies ++= Seq(
@@ -242,7 +240,7 @@ lazy val executorDocker = makeProject("executor/docker", "executorDocker")
 
 lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubernetes")
   .dependsOn(executorApi, executorCommon)
-  .dependsOn(executorCommonTest % "test")
+  .dependsOn(executorCommonTest % "it")
   .settings(
     name := "executor-kubernetes",
     libraryDependencies ++= Seq(
@@ -294,7 +292,7 @@ lazy val executorApp = makeProject("executor/app", "executorApp")
 
 lazy val planner = makeProject("planner")
   .dependsOn(ds, elements, executorApi, componently)
-  .dependsOn(executorApp % "test")
+  .dependsOn(executorApp % "it")
   .settings(
     name := "planner",
     libraryDependencies ++= Seq(
@@ -327,7 +325,7 @@ lazy val examples = makeProject("examples")
 
 /** Engine implementation and API. */
 lazy val engine = makeProject("engine")
-  .dependsOn(planner, executorKubernetes % "test", executorDocker % "test")
+  .dependsOn(planner, executorKubernetes % "it", executorDocker % "it")
   .settings(
     name := "engine"
   )
