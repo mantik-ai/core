@@ -1,25 +1,25 @@
 package ai.mantik.executor.kubernetes
 
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant}
+import java.time.{ Clock, Instant }
 import java.util.UUID
 
-import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
 import ai.mantik.executor.model._
-import ai.mantik.executor.{Errors, Executor}
-import akka.actor.{ActorSystem, Cancellable}
+import ai.mantik.executor.{ Errors, Executor }
+import akka.actor.{ ActorSystem, Cancellable }
 import com.google.common.net.InetAddresses
-import javax.inject.{Inject, Provider, Singleton}
+import javax.inject.{ Inject, Provider, Singleton }
 import skuber.Container.Running
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
-import skuber.{Endpoints, ObjectMeta, Pod, Service}
+import skuber.{ Endpoints, ObjectMeta, Pod, Service }
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 /** Kubennetes implementation of [[Executor]]. */
 class KubernetesExecutor(config: Config, ops: K8sOperations)(
@@ -88,7 +88,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
           error = Some(killValue)
         )
       case None =>
-        // ok
+      // ok
     }
     job.status.map { status =>
       logger.trace(s"Decoding job state ${status}")

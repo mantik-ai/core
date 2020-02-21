@@ -8,29 +8,29 @@ import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.helper.circe.CirceJson
-import ai.mantik.elements.{ItemId, MantikHeader, NamedMantikId}
+import ai.mantik.elements.{ ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.engine.protos.items.MantikItem.Item
 import ai.mantik.engine.protos.items.ObjectKind
-import ai.mantik.planner.{Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm}
-import ai.mantik.engine.protos.items.{ObjectKind, MantikItem => ProtoMantikItem}
-import ai.mantik.engine.protos.items.{Algorithm => ProtoAlgorithm}
-import ai.mantik.engine.protos.items.{DataSet => ProtoDataSet}
-import ai.mantik.engine.protos.items.{Pipeline => ProtoPipeline}
-import ai.mantik.engine.protos.items.{Bridge => ProtoBridge}
-import ai.mantik.engine.protos.items.{TrainableAlgorithm => ProtoTrainableAlgorithm}
-import ai.mantik.engine.protos.ds.{BundleEncoding, Bundle => ProtoBundle, DataType => ProtoDataType}
-import ai.mantik.engine.protos.registry.{DeploymentInfo => ProtoDeploymentInfo, MantikArtifact => ProtoMantikArtifact}
-import ai.mantik.planner.repository.{Bridge, DeploymentInfo, MantikArtifact}
-import com.google.protobuf.{ByteString => ProtoByteString}
+import ai.mantik.planner.{ Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
+import ai.mantik.engine.protos.items.{ ObjectKind, MantikItem => ProtoMantikItem }
+import ai.mantik.engine.protos.items.{ Algorithm => ProtoAlgorithm }
+import ai.mantik.engine.protos.items.{ DataSet => ProtoDataSet }
+import ai.mantik.engine.protos.items.{ Pipeline => ProtoPipeline }
+import ai.mantik.engine.protos.items.{ Bridge => ProtoBridge }
+import ai.mantik.engine.protos.items.{ TrainableAlgorithm => ProtoTrainableAlgorithm }
+import ai.mantik.engine.protos.ds.{ BundleEncoding, Bundle => ProtoBundle, DataType => ProtoDataType }
+import ai.mantik.engine.protos.registry.{ DeploymentInfo => ProtoDeploymentInfo, MantikArtifact => ProtoMantikArtifact }
+import ai.mantik.planner.repository.{ Bridge, DeploymentInfo, MantikArtifact }
+import com.google.protobuf.{ ByteString => ProtoByteString }
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 import akka.util.ccompat.IterableOnce
 import com.google.protobuf.timestamp.Timestamp
 import io.circe.syntax._
 import io.circe.parser
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 /** Converters between Protobuf and Mantik elements. */
 private[engine] object Converters {
