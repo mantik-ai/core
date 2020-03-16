@@ -28,7 +28,6 @@ engine-app/target/build.make: ${SCALA_RESOURCES}
 .PHONY: scala-test
 scala-test:
 	$(SBT) test
-	touch $@
 
 .PHONY: scala-install
 scala-install:

@@ -6,6 +6,7 @@ include scripts/ci/Makefile.core
 
 SUB_PROJECTS=\
 	go_shared\
+	mnp/mnpgo\
 	bridge/binary\
 	bridge/bridge_debugger\
 	bridge/select\

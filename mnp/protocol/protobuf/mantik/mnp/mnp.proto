@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/any.proto";
+
+// Mantik Node Protocol
+// Underlying protocol for communication between Network nodes
+// Design Goal: Free of mantik specific terms. Just solving the
+// "Each node can execute tasks and forward output to the next problem"
+service MnpService {
+    // Gathers information about the bridge.
+    rpc About(google.protobuf.Empty) returns (AboutResponse) {}
+
+    // Initialize the Node
+    rpc Init (InitRequest) returns (stream InitResponse) {}
+
+    // Quit the node.
+    rpc Quit (QuitRequest) returns (QuitResponse) {}
+
+    // Gathers information about a session
+    rpc AboutSession(AboutSessionRequest) returns (AboutSessionResponse);
+
+    // Quits the session
+    rpc QuitSession(QuitSessionRequest) returns (QuitSessionResponse);
+
+    // Push data into a port, creating a task when necessary
+    rpc Push(stream PushRequest) returns (PushResponse) {};
+
+    // Pull data from a port
+    rpc Pull(PullRequest) returns (stream PullResponse) {}
+}
+
+message AboutRequest {
+
+}
+
+message AboutResponse {
+    // A Name of the node
+    string name = 1;
+
+    // Upper layer specific response
+    google.protobuf.Any extra = 2;
+}
+
+message InitRequest {
+    // The ID of the session to initialize.
+    string session_id = 1;
+
+    // The configuration to initialize the node
+    // The concrete way of doing this is handled one layer above.
+    google.protobuf.Any configuration = 2;
+
+    // input port configuration
+    repeated ConfigureInputPort inputs = 3;
+    // output port configuration
+    repeated ConfigureOutputPort outputs = 4;
+}
+
+message ConfigureInputPort {
+    // selected content_type, if empty use default
+    string content_type = 1;
+}
+
+// Configures output ports
+message ConfigureOutputPort {
+    // select content_type, if empty use default
+    string content_type = 1;
+    // if non empty, forward output data somewhere else
+    // Format: mnp://address/sessionId/portId  --> then data will be pushed
+    string destination_url = 2;
+}
+
+// Response of an init request.
+message InitResponse {
+    // The session state.
+    SessionState state = 1;
+
+    // Error message (for failure).
+    string error = 2;
+}
+
+enum SessionState {
+    SS_INITIALIZING = 0;
+    SS_DOWNLOADING = 1;
+    SS_STARTING_UP = 2;
+    SS_READY = 3;
+    SS_FAILED = 4;
+}
+
+message QuitRequest {
+
+}
+
+message QuitResponse {
+
+}
+
+message AboutSessionRequest  {
+    // The session to use
+    string session_id = 1;
+}
+
+message AboutSessionResponse {
+    // The state of the session
+    SessionState state = 1;
+}
+
+message QuitSessionRequest {
+    // The session to use
+    string session_id = 1;
+}
+
+message QuitSessionResponse {
+
+}
+
+message PushRequest {
+    // The ID of the session
+    string session_id = 1;
+    // The ID of the task, will be created ad hoc
+    string task_id = 2;
+    // The id of the port the data should go to
+    int32 port = 3;
+    // Data Size hint, undefined if < 0
+    int64 data_size = 4;
+    // If true then this is the last element
+    bool done = 5;
+    // the data payload
+    // can be repeated
+    bytes data = 6;
+}
+
+message PushResponse {
+
+}
+
+message PullRequest {
+    // The ID of the session
+    string session_id = 1;
+    // The ID of the task
+    // If the task is not yet existing, it will block some time
+    string task_id = 2;
+    // The id of the port which data should be read
+    int32 port = 3;
+}
+
+message PullResponse {
+    // Size hint of data, <0 for undefined, header only
+    int64 size = 1;
+    // if true, then this is the last element
+    bool done = 2;
+    // A data blob
+    bytes data = 3;
+}
