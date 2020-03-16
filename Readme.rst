@@ -15,6 +15,7 @@ Content
   Samples <Samples>
   Debugging with Minikube <Minikube>
   Mantik ID <MantikId>
+  MNP Protocol <Mnp>
 
 Code Structure
 --------------

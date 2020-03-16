@@ -3,6 +3,7 @@ package async
 import "sync"
 
 // Helper for running multiple parallel routines and wait for the first error
+// Deprecated: look for something like https://godoc.org/golang.org/x/sync/errgroup
 type ParallelRunner struct {
 	wg     sync.WaitGroup
 	mux    sync.Mutex
