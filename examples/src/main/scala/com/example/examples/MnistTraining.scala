@@ -18,28 +18,31 @@ object MnistTraining extends ExampleBase {
     context.pushLocalMantikItem(TrainingAlgorithmPath)
     context.pushLocalMantikItem(MnistTestPath)
 
+    // Training
     val trainDataSet = context.loadDataSet("mnist_train")
-    val testDataSet = context.loadDataSet("mnist_test")
 
     val trainAlgorithm = context.loadTrainableAlgorithm("mnist_linear")
       .withMetaValue("n_epochs", 5)
 
     val (trained, stats) = trainAlgorithm.train(trainDataSet)
 
+    // Evaluating
+    val testDataSet = context.loadDataSet("mnist_test")
     val adaptedTest = testDataSet.select("select x as image")
     val applied = trained.apply(adaptedTest)
 
-    // Mmmm, for a bit better analysis at the end we would need some zip-functionality with expected labels.
-    val appliedResult = context.execute(applied.fetch)
+    val appliedResult = applied.fetch.run()
     println("Applied:\n" + appliedResult.render())
 
     println("Stats:\n" + context.execute(stats.fetch))
 
+    // Building a Pipeline
     val productionImageInput = TabularData(
       "image" -> Image.plain(
         28, 28, ImageChannel.Black -> FundamentalType.Uint8
       )
     )
+
     val inputFilter = AutoAdapt.autoSelectAlgorithm(productionImageInput, trained.functionType.input).force
 
     val productionPipe = Pipeline.build(
@@ -47,7 +50,8 @@ object MnistTraining extends ExampleBase {
       trained
     )
 
-    val deployResult = context.execute(productionPipe.deploy(ingressName = Some("mnist")))
+    // Deploying
+    val deployResult = productionPipe.deploy(ingressName = Some("mnist")).run()
     println(s"Pipeline deployed: ${deployResult.externalUrl}")
   }
 }

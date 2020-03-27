@@ -8,7 +8,7 @@ pytest = "*"
 
 [packages]
 mantik = {editable = true,path = "./../../../python_sdk"}
-tensorflow = "~=1.13"
+tensorflow = "==1.13.2"
 
 [requires]
 python_version = "3.7"

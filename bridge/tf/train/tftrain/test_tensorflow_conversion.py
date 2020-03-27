@@ -111,8 +111,7 @@ def test_to_mantik():
         # The generated value must be serializable
         mp = bundle.encode_msgpack()
         back = Bundle.decode_msgpack(BytesIO(mp))
-        # (Note: it's loosing the byte strings during that process)
-        assert back.value == [[[1.0], ["A"]], [[2.0], ["B"]], [[3.0], ["C"]]]
+        assert back.value == [[[1.0], [b"A"]], [[2.0], [b"B"]], [[3.0], [b"C"]]]
 
 
 def test_to_mantik_deep_tensor():
