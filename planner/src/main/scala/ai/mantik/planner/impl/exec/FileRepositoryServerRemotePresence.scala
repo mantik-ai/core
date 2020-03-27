@@ -27,6 +27,11 @@ private[planner] class FileRepositoryServerRemotePresence @Inject() (
   private val kubernetesName = config.getString("mantik.core.fileServiceKubernetesName")
   private val isolationSpace = config.getString("mantik.planner.isolationSpace")
   private val serverAddress = fileRepositoryServer.address()
+  /*
+  If the File Service is immediately used after publishing, connections seem to time out.
+  This seems to be like this bug: https://github.com/kubernetes/kubernetes/issues/48719
+   */
+  private val sleepAfterPublish = 3.seconds
 
   def assembledRemoteUri(): Uri = {
     Await.result(prepareKubernetesFileServiceResult, 60.seconds)
@@ -43,6 +48,8 @@ private[planner] class FileRepositoryServerRemotePresence @Inject() (
     logger.debug(s"Preparing FileService ${request.asJson}")
     executor.publishService(request).map { response =>
       logger.info(s"FileService is published with ${response.name}")
+      logger.info(s"Will sleep for ${sleepAfterPublish} to avoid timeouted TCP Connections")
+      Thread.sleep(sleepAfterPublish.toMillis)
       Uri(s"http://${response.name}") // is of format domain:port
     }
   }

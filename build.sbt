@@ -108,7 +108,8 @@ def makeProject(directory: String, id: String = "") = {
       scalariformSettings,
       addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
       publishSettings,
-      Defaults.itSettings
+      Defaults.itSettings,
+      IntegrationTest / testOptions += Tests.Argument("-oDF")
     )
 }
 
@@ -317,7 +318,8 @@ lazy val examples = makeProject("examples")
   .settings(
     name := "examples",
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % "1.2.3"
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     ),
     publish := {},
     publishLocal := {}
