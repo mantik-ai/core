@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package ai.mantik.engine.protos;
+option go_package = "mantik/engine";
 
 /* Represents a DS Datatype by just transporting the JSON String. */
 message DataType {

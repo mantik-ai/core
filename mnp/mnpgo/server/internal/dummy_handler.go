@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/golang/protobuf/ptypes/any"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"io"
 	"io/ioutil"
 )
@@ -15,11 +14,11 @@ The first input is forwarded, the second is multiplied by two per byte.
 */
 type DummyHandler struct {
 	QuitCalled bool
-	Sessions   []*dummySession
+	Sessions   []*DummySession
 }
 
-func (d *DummyHandler) About() (mnpgo.AboutResponse, error) {
-	return mnpgo.AboutResponse{
+func (d *DummyHandler) About() (*mnpgo.AboutResponse, error) {
+	return &mnpgo.AboutResponse{
 		Name:  "TestHandler1",
 		Extra: nil,
 	}, nil
@@ -34,9 +33,9 @@ func (d *DummyHandler) Init(
 	sessionId string,
 	configuration *any.Any,
 	contentTypes *mnpgo.PortConfiguration,
-	stateCallback func(state mnp.SessionState),
+	stateCallback mnpgo.StateCallback,
 ) (mnpgo.SessionHandler, error) {
-	r := &dummySession{
+	r := &DummySession{
 		SessionId:    sessionId,
 		ContentTypes: contentTypes,
 	}
@@ -44,18 +43,20 @@ func (d *DummyHandler) Init(
 	return r, nil
 }
 
-type dummySession struct {
+type DummySession struct {
 	SessionId    string
 	Quitted      bool
 	ContentTypes *mnpgo.PortConfiguration
+	// If set, tasks wil fail
+	Fail error
 }
 
-func (d *dummySession) Quit() error {
+func (d *DummySession) Quit() error {
 	d.Quitted = true
 	return nil
 }
 
-func (d *dummySession) RunTask(
+func (d *DummySession) RunTask(
 	ctx context.Context,
 	taskId string,
 	input []io.Reader,
@@ -83,7 +84,14 @@ func (d *dummySession) RunTask(
 	if err != nil {
 		return err
 	}
+	if d.Fail != nil {
+		return d.Fail
+	}
 	output[0].Close()
 	output[1].Close()
 	return nil
+}
+
+func (d *DummySession) Ports() *mnpgo.PortConfiguration {
+	return d.ContentTypes
 }

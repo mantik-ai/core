@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
 	"gl.ambrosys.de/mantik/go_shared/serving"
 	"net"
 	"net/http"
@@ -11,12 +12,12 @@ import (
 
 const HeaderContentType = "Content-Type"
 const HeaderAccept = "Accept"
-const MimeJson string = "application/json"
+const MimeJson string = natural.MimeJson
 const MimeText string = "application/text"
 const MimeZip string = "application/zip"
-const MimeMsgPack string = "application/x-msgpack"
-const MimeMantikBundle string = "application/x-mantik-bundle"          // Mantik Natural Bundle with Meta
-const MimeMantikBundleJson string = "application-x-mantik-bundle-json" // Mantik Natural Bundle with Meta (JSON)
+const MimeMsgPack string = natural.MimeMsgPack
+const MimeMantikBundle string = natural.MimeMantikBundle
+const MimeMantikBundleJson string = natural.MimeMantikBundleJson
 
 var SupportedDataMimeTypes []string = []string{MimeJson, MimeMantikBundleJson, MimeMsgPack, MimeMantikBundle}
 

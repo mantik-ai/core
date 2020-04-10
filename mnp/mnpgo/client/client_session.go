@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"github.com/sirupsen/logrus"
+	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/util"
 	"golang.org/x/sync/errgroup"
@@ -13,12 +14,14 @@ type ClientSession struct {
 	sessionId string
 	ctx       context.Context
 	service   mnp.MnpServiceClient
+	ports     *mnpgo.PortConfiguration
 }
 
-func NewClientSession(sessionId string, ctx context.Context, service mnp.MnpServiceClient) *ClientSession {
+func NewClientSession(sessionId string, ctx context.Context, ports *mnpgo.PortConfiguration, service mnp.MnpServiceClient) *ClientSession {
 	return &ClientSession{
 		sessionId: sessionId,
 		ctx:       ctx,
+		ports:     ports,
 		service:   service,
 	}
 }
@@ -83,4 +86,8 @@ func (c *ClientSession) RunTask(
 		logrus.Warnf("Task %s failed: %s", taskId, err.Error())
 	}
 	return err
+}
+
+func (c *ClientSession) Ports() *mnpgo.PortConfiguration {
+	return c.ports
 }

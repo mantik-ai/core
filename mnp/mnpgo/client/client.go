@@ -49,28 +49,32 @@ func (c *Client) Quit() error {
 	if err != nil {
 		logrus.Warn("Error on quit call", err)
 	}
+	err = c.con.Close()
+	if err != nil {
+		logrus.Warn("Error on closing connection", err)
+	}
 	return err
 }
 
 func (c *Client) Init(
 	sessionId string,
 	configuration *any.Any,
-	contentTypes *mnpgo.PortConfiguration,
+	portConfiguration *mnpgo.PortConfiguration,
 	stateCallback func(state mnp.SessionState),
 ) (mnpgo.SessionHandler, error) {
 	request := mnp.InitRequest{
 		SessionId:     sessionId,
 		Configuration: configuration,
 	}
-	if contentTypes != nil {
-		request.Inputs = make([]*mnp.ConfigureInputPort, len(contentTypes.Inputs), len(contentTypes.Inputs))
-		for i, inputConfiguration := range contentTypes.Inputs {
+	if portConfiguration != nil {
+		request.Inputs = make([]*mnp.ConfigureInputPort, len(portConfiguration.Inputs), len(portConfiguration.Inputs))
+		for i, inputConfiguration := range portConfiguration.Inputs {
 			request.Inputs[i] = &mnp.ConfigureInputPort{
 				ContentType: inputConfiguration.ContentType,
 			}
 		}
-		request.Outputs = make([]*mnp.ConfigureOutputPort, len(contentTypes.Outputs), len(contentTypes.Outputs))
-		for i, outputConfiguration := range contentTypes.Outputs {
+		request.Outputs = make([]*mnp.ConfigureOutputPort, len(portConfiguration.Outputs), len(portConfiguration.Outputs))
+		for i, outputConfiguration := range portConfiguration.Outputs {
 			// No support for fowrading here
 			request.Outputs[i] = &mnp.ConfigureOutputPort{
 				ContentType: outputConfiguration.ContentType,
@@ -89,7 +93,7 @@ func (c *Client) Init(
 		return nil, err
 	}
 
-	return NewClientSession(sessionId, c.ctx, c.serviceClient), nil
+	return NewClientSession(sessionId, c.ctx, portConfiguration, c.serviceClient), nil
 }
 
 func waitForReady(sessionId string, initClient mnp.MnpService_InitClient, stateCallback func(state mnp.SessionState)) error {

@@ -147,6 +147,7 @@ func (s *ServerSession) runTask(task *ServerTask) {
 		} else {
 			logrus.Infof("Task %s finished", task.taskId)
 		}
+		task.Finalize(err)
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
 		delete(s.tasks, task.taskId)

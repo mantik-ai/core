@@ -5,4 +5,4 @@ name: binary
 suitable:
     - dataset
 dockerImage: mantikai/bridge.binary
-protocol: 1
+protocol: 2

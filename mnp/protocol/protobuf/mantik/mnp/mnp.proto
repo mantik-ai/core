@@ -3,6 +3,8 @@ syntax = "proto3";
 import "google/protobuf/empty.proto";
 import "google/protobuf/any.proto";
 
+option go_package = "mantik/mnp";
+
 // Mantik Node Protocol
 // Underlying protocol for communication between Network nodes
 // Design Goal: Free of mantik specific terms. Just solving the

@@ -5,8 +5,8 @@ build: scala-build build-subprojects
 include scripts/ci/Makefile.core
 
 SUB_PROJECTS=\
-	go_shared\
 	mnp/mnpgo\
+	go_shared\
 	bridge/binary\
 	bridge/bridge_debugger\
 	bridge/select\
