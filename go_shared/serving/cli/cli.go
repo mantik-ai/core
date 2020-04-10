@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	server2 "gl.ambrosys.de/mantik/core/mnp/mnpgo/server"
 	"gl.ambrosys.de/mantik/go_shared/serving"
+	"gl.ambrosys.de/mantik/go_shared/serving/mnpbridge"
 	"gl.ambrosys.de/mantik/go_shared/serving/server"
 	"gl.ambrosys.de/mantik/go_shared/util/osext"
 	"io/ioutil"
@@ -35,6 +38,7 @@ func printHelp(args []string) {
 Commands:
   help        - Show this help
   serve       - Serve with the help of a MantikHeader
+  mnp         - Serve in MNP Mode
   analyze     - Print Analysis
 
 MantikHeader lookup is usually done by adding a directory as extra argument
@@ -45,6 +49,9 @@ MantikHeader lookup is usually done by adding a directory as extra argument
 func Start(args []string, backend serving.Backend) {
 	serveCommand := flag.NewFlagSet("serve", flag.ExitOnError)
 	port := serveCommand.Int("port", 8502, "Port")
+
+	mnpCommand := flag.NewFlagSet("mnp", flag.ExitOnError)
+	mnpPort := mnpCommand.Int("port", 8502, "Port")
 
 	analyzeCommand := flag.NewFlagSet("analyze", flag.ExitOnError)
 
@@ -63,6 +70,8 @@ func Start(args []string, backend serving.Backend) {
 		return
 	case "serve":
 		serveCommand.Parse(args[2:])
+	case "mnp":
+		mnpCommand.Parse(args[2:])
 	case "analyze":
 		analyzeCommand.Parse(args[2:])
 	default:
@@ -84,6 +93,29 @@ func Start(args []string, backend serving.Backend) {
 			printErrorAndQuit(RC_COULD_NOT_START_SERFVER, "Could not start server %s", err.Error())
 		}
 		return
+	}
+	if mnpCommand.Parsed() {
+		quitHandler := func() {
+			println("Exiting due MNP call")
+			os.Exit(0)
+		}
+		name := fmt.Sprintf("Backend %T", backend)
+		logrus.Infof("Starting up %s in MNP mode", name)
+		mnpBackend, err := mnpbridge.NewMnpBackend(backend, name, quitHandler)
+		if err != nil {
+			printErrorAndQuit(RC_COULD_NOT_CREATE_SERVER, "Could not create MNP Backend: %s", err.Error())
+		}
+		mnpServer := server2.NewServer(mnpBackend)
+		address := fmt.Sprintf(":%d", *mnpPort)
+		err = mnpServer.Listen(address)
+		if err != nil {
+			printErrorAndQuit(RC_COULD_NOT_START_SERFVER, "Could not start server %s", err.Error())
+		}
+		err = mnpServer.Serve()
+		if err != nil {
+			printErrorAndQuit(RC_COULD_NOT_START_SERFVER, "Could not serve %s", err.Error())
+		}
+		os.Exit(0)
 	}
 	if analyzeCommand.Parsed() {
 		dir, mantikHeader := loadMantikHeader(analyzeCommand)

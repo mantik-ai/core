@@ -71,3 +71,8 @@ func (t *ServerTask) WriteFailure(port int, err error) {
 func (t *ServerTask) Read(port int) ([]byte, error) {
 	return t.multiplexer.Read(port)
 }
+
+/* Finalize the server task with an error, eventually closing open channels */
+func (t *ServerTask) Finalize(err error) {
+	t.multiplexer.Finalize(err)
+}

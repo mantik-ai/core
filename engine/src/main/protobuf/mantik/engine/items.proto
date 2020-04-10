@@ -2,6 +2,7 @@ syntax = "proto3";
 package ai.mantik.engine.protos;
 
 import "mantik/engine/ds.proto";
+option go_package = "mantik/engine";
 
 /** Represents a Mantik Item. */
 message MantikItem {

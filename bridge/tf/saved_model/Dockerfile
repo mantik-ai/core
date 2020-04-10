@@ -26,9 +26,11 @@ ADD services services
 # Shared Stuff (will be linked statically)
 RUN mkdir /tmp/go_shared
 ADD target/docker_build/go_shared /tmp/go_shared
+ADD target/docker_build/mnp /tmp/mnp
 
 # Patching Build file, so that it find shared go code
 RUN sed -i 's!../../../go_shared!/tmp/go_shared!' go.mod
+RUN sed -i 's!../../../mnp/mnpgo!/tmp/mnp/mnpgo!' go.mod
 
 ENV LD_LIBRARY_PATH=/opt/bridge/vendor/tensorflow_c/lib
 ENV CGO_LDFLAGS=-L/opt/bridge/vendor/tensorflow_c/lib
@@ -58,4 +60,4 @@ ENV LD_LIBRARY_PATH=/opt/bridge/vendor/tensorflow_c/lib
 EXPOSE 8502
 VOLUME ["/data"]
 WORKDIR /opt/bridge
-ENTRYPOINT ["./tfbridge", "serve", "/data"]
+ENTRYPOINT ["./tfbridge", "mnp"]

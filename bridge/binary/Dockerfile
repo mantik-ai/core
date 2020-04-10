@@ -21,4 +21,4 @@ COPY --chown=bridge --from=builder /data /data
 USER bridge
 EXPOSE 8502
 VOLUME ["/data"]
-ENTRYPOINT ["/opt/bin/run", "serve", "/data"]
+ENTRYPOINT ["/opt/bin/run", "mnp"]

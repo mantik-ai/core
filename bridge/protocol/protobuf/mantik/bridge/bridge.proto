@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ai.mantik.bridge.protos;
+option go_package = "mantik/bridge";
+
+// New MNP-Based protocol for bridges
+
+// Mantik specific configuration for initializing a Bridge
+message MantikInitConfiguration {
+    // The Mantik header (JSON).
+    string header = 1;
+    // Payload content type, may be empty if there is no payload.
+    string payload_content_type = 2;
+    oneof payload {
+        // Payload is downloaded by HTTP URL
+        string url = 3;
+        // Payload directory given
+        bytes content = 4;
+    }
+}
+
+// Mantik specific response for about call
+message BridgeAboutResponse {
+    // nothing yet
+}

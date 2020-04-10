@@ -5,4 +5,4 @@ name: tf.saved_model
 suitable:
   - algorithm
 dockerImage: mantikai/bridge.tf.saved_model
-protocol: 1
+protocol: 2

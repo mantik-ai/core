@@ -91,8 +91,27 @@ func (s *StreamMultiplexer) Read(id int) ([]byte, error) {
 	buffer := make([]byte, s.bufSize, s.bufSize)
 	n, err := s.outputs[id].Read(buffer)
 	if n <= 0 && err != nil {
-		s.outputStates[id] = err
+		if s.outputStates[id] == nil {
+			s.outputStates[id] = err
+		} else {
+			err = s.outputStates[id]
+		}
 		return []byte{}, err
 	}
 	return buffer[:n], nil
+}
+
+func (s *StreamMultiplexer) Finalize(err error) {
+	for i, inputState := range s.inputStates {
+		if inputState == nil {
+			s.inputStates[i] = err
+			s.inputs[i].Close()
+		}
+	}
+	for i, outputState := range s.outputStates {
+		if outputState == nil {
+			s.outputStates[i] = err
+			s.OutputWrites[i].Close()
+		}
+	}
 }
