@@ -13,13 +13,15 @@ object DockerConstants {
   val TypeLabelName = "ai.mantik.type"
   val JobType = "job"
   val ServiceType = "service"
+  // New MNP Worker Type
+  val WorkerType = "worker"
 
   /** Main Listening port (e.g. for services) */
   val PortLabel = "ai.mantik.port"
 
   /** Label for manged by (copied from kubernetes implementation). */
   val ManagedByLabelName = "app.kubernetes.io/managed-by"
-  val ManabedByLabelValue = "mantik"
+  val ManagedByLabelValue = "mantik"
 
   /** Name of the label defining the role */
   val RoleLabelName = "ai.mantik.role"

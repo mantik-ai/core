@@ -26,7 +26,10 @@ private[mantik] trait FileRepository extends Component {
   /** Delete a file. Returns true, if the file existed. */
   def deleteFile(id: String): Future[Boolean]
 
-  /** Request retrieval of a file. */
+  /**
+   * Request retrieval of a file.
+   * @return content type and file source
+   */
   def loadFile(id: String): Future[(String, Source[ByteString, _])]
 
   /** Request copying a file. */

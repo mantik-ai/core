@@ -28,6 +28,7 @@ object ListContainerRequestFilter {
 case class ListContainerResponseRow(
     Id: String,
     Image: String,
+    Command: Option[String],
     Names: Vector[String] = Vector.empty,
     Labels: Map[String, String] = Map.empty,
     State: String,

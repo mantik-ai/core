@@ -149,7 +149,7 @@ func TestMnpSingleSession(t *testing.T) {
 			{server2.MimeJson},
 		},
 		Outputs: []mnpgo.OutputPortConfiguration{
-			{server2.MimeJson},
+			{server2.MimeJson, ""},
 		},
 	}
 
@@ -210,7 +210,7 @@ func TestSessionWithDownload(t *testing.T) {
 			{server2.MimeJson},
 		},
 		Outputs: []mnpgo.OutputPortConfiguration{
-			{server2.MimeJson},
+			{server2.MimeJson, ""},
 		},
 	}
 
@@ -247,7 +247,7 @@ func TestSessionPayloadEmbedded(t *testing.T) {
 			{server2.MimeJson},
 		},
 		Outputs: []mnpgo.OutputPortConfiguration{
-			{server2.MimeJson},
+			{server2.MimeJson, ""},
 		},
 	}
 
@@ -306,7 +306,7 @@ func TestSessionTrainable(t *testing.T) {
 			{server2.MimeJson},
 		},
 		Outputs: []mnpgo.OutputPortConfiguration{
-			{server2.MimeZip}, {server2.MimeJson},
+			{server2.MimeZip, ""}, {server2.MimeJson, ""},
 		},
 	}
 
@@ -353,7 +353,7 @@ type:
 	portConf := mnpgo.PortConfiguration{
 		Inputs: []mnpgo.InputPortConfiguration{},
 		Outputs: []mnpgo.OutputPortConfiguration{
-			{server2.MimeJson},
+			{server2.MimeJson, ""},
 		},
 	}
 

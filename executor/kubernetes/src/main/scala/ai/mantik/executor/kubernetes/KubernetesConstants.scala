@@ -13,6 +13,12 @@ object KubernetesConstants {
   /** Label used to mark items which are managed by Mantik. */
   val ManagedLabel = "app.kubernetes.io/managed-by" // see  https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 
+  /** Name of the label containing the (internal) job id. */
+  val IdLabelName = "ai.mantik.id"
+
+  /** An Internal Id for mapping short lived services to pods. */
+  val InternalId = "internalId"
+
   /** Label Value for Managed Items. */
   val ManagedValue = "mantik"
 
@@ -26,6 +32,8 @@ object KubernetesConstants {
 
   val CoordinatorRole = "coordinator"
   val WorkerRole = "worker"
+
+  val GrpcProxyRole = "grpcproxy"
 
   /** Name to store kill annotations */
   val KillAnnotationName = "killed"

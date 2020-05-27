@@ -3,7 +3,7 @@ package ai.mantik.executor.docker
 import ai.mantik.executor.common.PayloadProvider
 import ai.mantik.executor.docker.DockerJob.ContainerDefinition
 import ai.mantik.executor.docker.api.PullPolicy
-import ai.mantik.executor.docker.api.structures.{ CreateContainerHostConfig, CreateContainerRequest }
+import ai.mantik.executor.docker.api.structures.{ CreateContainerHostConfig, CreateContainerNetworkSpecificConfig, CreateContainerRequest }
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{ ContainerService, DataProvider }
 import cats.data.State
@@ -95,5 +95,41 @@ class DockerConverter(
         case Some(other)    => PullPolicy.IfNotPresent
       }
     }
+  }
+
+  def generateNewWorkerContainer(
+    containerName: String,
+    id: String,
+    container: Container,
+    workerNetworkId: Option[String]
+  ): ContainerDefinition = {
+    val resolved = config.common.dockerConfig.resolveContainer(container)
+
+    val request = CreateContainerRequest(
+      Image = resolved.image,
+      Cmd = resolved.parameters.toVector,
+      Labels = defaultLabels + (
+        DockerConstants.RoleLabelName -> DockerConstants.WorkerRole,
+        DockerConstants.TypeLabelName -> DockerConstants.WorkerType,
+        DockerConstants.IdLabelName -> id
+      )
+    )
+
+    val requestWithNetwork = workerNetworkId.map { networkId =>
+      request.withNetwork(
+        config.workerNetwork, CreateContainerNetworkSpecificConfig(
+          NetworkID = Some(networkId)
+        )
+      )
+    }.getOrElse(
+      request
+    )
+
+    ContainerDefinition(
+      containerName,
+      mainPort = Some(8502),
+      pullPolicy = pullPolicy(resolved),
+      requestWithNetwork
+    )
   }
 }

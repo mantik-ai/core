@@ -26,6 +26,10 @@ class ExecutorClient(url: Uri)(implicit akkaRuntime: AkkaRuntime) extends Compon
   private val queryDeployedServiceCall = apiClient.prepare(ExecutorApi.queryDeployedService)
   private val deleteDeployedServiceCall = apiClient.prepare(ExecutorApi.deleteDeployedServices)
   private val versionCall = apiClient.prepare(ExecutorApi.nameAndVersion)
+  private val grpcProxyCall = apiClient.prepare(ExecutorApi.grpcProxy)
+  private val startWorkerCall = apiClient.prepare(ExecutorApi.startWorker)
+  private val listWorkerCall = apiClient.prepare(ExecutorApi.listWorker)
+  private val stopWorkerCall = apiClient.prepare(ExecutorApi.stopWorker)
 
   private def unpackError[T](in: Future[Either[(Int, ExecutorException), T]]): Future[T] = {
     in.recoverWith {
@@ -81,6 +85,30 @@ class ExecutorClient(url: Uri)(implicit akkaRuntime: AkkaRuntime) extends Compon
   override def nameAndVersion: Future[String] = {
     unpackError {
       versionCall(())
+    }
+  }
+
+  override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = {
+    unpackError {
+      grpcProxyCall(isolationSpace)
+    }
+  }
+
+  override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = {
+    unpackError {
+      startWorkerCall(startWorkerRequest)
+    }
+  }
+
+  override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] = {
+    unpackError {
+      listWorkerCall(listWorkerRequest)
+    }
+  }
+
+  override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
+    unpackError {
+      stopWorkerCall(stopWorkerRequest)
     }
   }
 }

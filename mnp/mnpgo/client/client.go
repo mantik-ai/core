@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
+	"gl.ambrosys.de/mantik/core/mnp/mnpgo/grpchttpproxy"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"google.golang.org/grpc"
 	"io"
@@ -21,15 +22,30 @@ type Client struct {
 }
 
 func ConnectClient(address string) (*Client, error) {
-	clientCon, err := grpc.Dial(address, grpc.WithInsecure())
+	return ConnectClientWithProxy(address, nil)
+}
+
+func ConnectClientWithProxy(address string, settings *grpchttpproxy.ProxySettings) (*Client, error) {
+	var clientCon *grpc.ClientConn
+	var err error
+	if settings != nil {
+		dialer := grpchttpproxy.NewPureProxyDialer(settings)
+		clientCon, err = grpc.Dial(address, grpc.WithInsecure(), grpc.WithContextDialer(dialer))
+	} else {
+		clientCon, err = grpc.Dial(address, grpc.WithInsecure())
+	}
 	if err != nil {
 		return nil, err
 	}
+	return ClientFromConnection(clientCon), nil
+}
+
+func ClientFromConnection(clientCon *grpc.ClientConn) *Client {
 	return &Client{
 		con:           clientCon,
 		serviceClient: mnp.NewMnpServiceClient(clientCon),
 		ctx:           context.Background(),
-	}, nil
+	}
 }
 
 func (c *Client) About() (mnpgo.AboutResponse, error) {
@@ -54,6 +70,10 @@ func (c *Client) Quit() error {
 		logrus.Warn("Error on closing connection", err)
 	}
 	return err
+}
+
+func (c *Client) Close() error {
+	return c.con.Close()
 }
 
 func (c *Client) Init(

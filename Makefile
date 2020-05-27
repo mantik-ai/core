@@ -14,6 +14,7 @@ SUB_PROJECTS=\
 	bridge/tf/saved_model \
 	bridge/tf/train \
 	executor/coordinator \
+	executor/tinyproxy \
 	cli \
 	python_sdk \
 	doc \

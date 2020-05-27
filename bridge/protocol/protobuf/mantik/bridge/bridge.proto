@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package ai.mantik.bridge.protos;
 option go_package = "mantik/bridge";
+option java_package = "ai.mantik.bridge.protocol";
 
 // New MNP-Based protocol for bridges
 

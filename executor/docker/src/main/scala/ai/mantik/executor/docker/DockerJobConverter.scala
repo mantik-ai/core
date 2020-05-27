@@ -13,7 +13,7 @@ class DockerJobConverter(job: Job, config: DockerExecutorConfig, jobId: String) 
   val DefaultLabels = Map(
     DockerConstants.IsolationSpaceLabelName -> job.isolationSpace,
     DockerConstants.IdLabelName -> jobId,
-    DockerConstants.ManagedByLabelName -> DockerConstants.ManabedByLabelValue,
+    DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue,
     DockerConstants.TypeLabelName -> DockerConstants.JobType
   )
 

@@ -10,7 +10,8 @@ case class CommonConfig(
     payloadPreparer: Container,
     pipelineController: Container,
     dockerConfig: DockerConfig,
-    disablePull: Boolean
+    disablePull: Boolean,
+    grpcProxy: GrpcProxyConfig,
 )
 
 object CommonConfig {
@@ -26,7 +27,8 @@ object CommonConfig {
       payloadPreparer = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig("payloadPreparer"))),
       pipelineController = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig("pipelineController"))),
       dockerConfig = dockerConfig,
-      disablePull = root.getBoolean("behaviour.disablePull")
+      disablePull = root.getBoolean("behaviour.disablePull"),
+      grpcProxy = GrpcProxyConfig.fromTypesafeConfig(c)
     )
   }
 }

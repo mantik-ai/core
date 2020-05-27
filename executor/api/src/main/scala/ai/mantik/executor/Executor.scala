@@ -1,7 +1,8 @@
 package ai.mantik.executor
 
 import ai.mantik.componently.Component
-import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, DeployedServicesQuery, DeployedServicesResponse, Job, JobStatus, PublishServiceRequest, PublishServiceResponse }
+import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, DeployedServicesQuery, DeployedServicesResponse, GrpcProxy, Job, JobStatus, ListWorkerRequest, ListWorkerResponse, PublishServiceRequest, PublishServiceResponse, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest, StopWorkerResponse }
+import io.grpc.{ ManagedChannelBuilder, ManagedChannelProvider }
 
 import scala.concurrent.Future
 
@@ -41,4 +42,17 @@ trait Executor extends Component {
 
   /** Returns the name and version string of the server (displayed on about page). */
   def nameAndVersion: Future[String]
+
+  // New API
+  /** Returns the gRpc proxy which enables the Engine to communicate with MNP Nodes. */
+  def grpcProxy(isolationSpace: String): Future[GrpcProxy]
+
+  /** Start a new Worker. */
+  def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse]
+
+  /** List workers. */
+  def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse]
+
+  /** Stop worker(s). */
+  def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse]
 }

@@ -91,7 +91,7 @@ object DockerStateManager {
     import ai.mantik.componently.AkkaHelper._
     dockerClient.listContainersFiltered(
       false, ListContainerRequestFilter.forLabelKeyValue(
-        DockerConstants.ManagedByLabelName -> DockerConstants.ManabedByLabelValue
+        DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue
       )
     ).map { runningContainers =>
         // Only services are recovered

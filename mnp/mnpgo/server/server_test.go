@@ -60,7 +60,7 @@ func TestInit(t *testing.T) {
 
 	contentTypes := mnpgo.PortConfiguration{
 		Inputs:  []mnpgo.InputPortConfiguration{{"abc"}},
-		Outputs: []mnpgo.OutputPortConfiguration{{"xyz"}, {"bar"}},
+		Outputs: []mnpgo.OutputPortConfiguration{{"xyz", ""}, {"bar", ""}},
 	}
 
 	callback := func(state mnp.SessionState) {
@@ -93,7 +93,7 @@ func TestDataTransformation(t *testing.T) {
 
 	contentTypes := mnpgo.PortConfiguration{
 		Inputs:  []mnpgo.InputPortConfiguration{{"abc"}},
-		Outputs: []mnpgo.OutputPortConfiguration{{"xyz"}, {"bar"}},
+		Outputs: []mnpgo.OutputPortConfiguration{{"xyz", ""}, {"bar", ""}},
 	}
 
 	session, err := c.Init("session1", nil, &contentTypes, nil)
@@ -133,7 +133,7 @@ func TestFailingTransformation(t *testing.T) {
 
 	contentTypes := mnpgo.PortConfiguration{
 		Inputs:  []mnpgo.InputPortConfiguration{{"abc"}},
-		Outputs: []mnpgo.OutputPortConfiguration{{"xyz"}, {"bar"}},
+		Outputs: []mnpgo.OutputPortConfiguration{{"xyz", ""}, {"bar", ""}},
 	}
 
 	session, err := c.Init("session1", nil, &contentTypes, nil)

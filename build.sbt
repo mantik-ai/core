@@ -163,6 +163,18 @@ lazy val util = makeProject("util")
     )
   )
 
+lazy val mnpScala = makeProject("mnp/mnpscala")
+  .dependsOn(componently)
+  .settings(
+    name := "mnpscala",
+    libraryDependencies ++= Seq(
+      "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
+    ),
+    publishSettings,
+    enableProtocolBuffer,
+    PB.protoSources in Compile := Seq(baseDirectory.value / "../protocol/protobuf")
+)
+
 lazy val elements = makeProject("elements")
   .dependsOn(ds, util)
   .settings(
@@ -292,7 +304,7 @@ lazy val executorApp = makeProject("executor/app", "executorApp")
   )
 
 lazy val planner = makeProject("planner")
-  .dependsOn(ds, elements, executorApi, componently)
+  .dependsOn(ds, elements, executorApi, componently, mnpScala)
   .dependsOn(executorApp % "it")
   .settings(
     name := "planner",
@@ -308,7 +320,8 @@ lazy val planner = makeProject("planner")
       "io.getquill" %% "quill-jdbc" % "3.2.0"
     ),
     enableProtocolBuffer,
-    configureBuildInfo("ai.mantik.planner.buildinfo")
+    configureBuildInfo("ai.mantik.planner.buildinfo"),
+    PB.protoSources in Compile += baseDirectory.value / "../bridge/protocol/protobuf"
   )
   .enablePlugins(BuildInfoPlugin)
 
@@ -353,7 +366,23 @@ lazy val engineApp = makeProject("engine-app", "engineApp")
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, elements, executorApi, executorCommon, executorKubernetes, executorDocker, executorApp, examples, planner, engine, engineApp, componently, util)
+  .aggregate(
+    testutils,
+    ds,
+    mnpScala,
+    elements,
+    executorApi,
+    executorCommon,
+    executorKubernetes,
+    executorDocker,
+    executorApp,
+    examples,
+    planner,
+    engine,
+    engineApp,
+    componently,
+    util
+  )
   .settings(
     name := "mantik-core",
     publish := {},

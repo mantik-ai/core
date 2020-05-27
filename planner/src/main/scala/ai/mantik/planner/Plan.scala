@@ -79,35 +79,42 @@ sealed trait PlanOp[T] {
   override def toString: String = {
     Renderable.renderAsString(this)
   }
+
+  def foldLeftDown[S](s0: S)(f: (S, PlanOp[_]) => S): S = {
+    f(s0, this)
+  }
 }
 
 object PlanOp {
   /** PlanOps which do not produce any values. */
   sealed trait ProceduralPlanOp extends PlanOp[Unit]
 
+  /** Basic operation which doesn't involve the Executor. */
+  sealed trait BasicOp[T] extends PlanOp[T]
+
   /** Nothing to do. */
-  case object Empty extends ProceduralPlanOp
+  case object Empty extends ProceduralPlanOp with BasicOp[Unit]
 
   /** Run a job. */
   case class RunGraph(graph: Graph[PlanNodeService]) extends ProceduralPlanOp
 
   /** Stores a Bundle Content as File. */
-  case class StoreBundleToFile(bundle: Bundle, fileReference: PlanFileReference) extends ProceduralPlanOp
+  case class StoreBundleToFile(bundle: Bundle, fileReference: PlanFileReference) extends ProceduralPlanOp with BasicOp[Unit]
 
   /** Loads a Bundle from a File. */
-  case class LoadBundleFromFile(dataType: DataType, fileReference: PlanFileReference) extends PlanOp[Bundle]
+  case class LoadBundleFromFile(dataType: DataType, fileReference: PlanFileReference) extends PlanOp[Bundle] with BasicOp[Bundle]
 
   /** Add some mantik item (only the itemId) */
-  case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference]) extends ProceduralPlanOp
+  case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference]) extends ProceduralPlanOp with BasicOp[Unit]
 
   /** Tag some Item.  */
-  case class TagMantikItem(item: MantikItem, id: NamedMantikId) extends ProceduralPlanOp
+  case class TagMantikItem(item: MantikItem, id: NamedMantikId) extends ProceduralPlanOp with BasicOp[Unit]
 
   /**
    * Push a Mantik Item to a remote registry.
    * (Must be added first)
    */
-  case class PushMantikItem(item: MantikItem) extends ProceduralPlanOp
+  case class PushMantikItem(item: MantikItem) extends ProceduralPlanOp with BasicOp[Unit]
 
   /** Deploy an algorithm. */
   case class DeployAlgorithm(
@@ -127,7 +134,7 @@ object PlanOp {
   ) extends PlanOp[DeploymentState]
 
   /** Mark files as being cached. */
-  case class MarkCached(files: List[(CacheKey, PlanFileReference)]) extends ProceduralPlanOp {
+  case class MarkCached(files: List[(CacheKey, PlanFileReference)]) extends ProceduralPlanOp with BasicOp[Unit] {
     def cacheGroup: CacheKeyGroup = files.map(_._1)
   }
 
@@ -139,22 +146,27 @@ object PlanOp {
     def size: Int = prefix.size + 1
 
     def plans: Seq[PlanOp[_]] = prefix :+ last
+
+    override def foldLeftDown[S](s0: S)(f: (S, PlanOp[_]) => S): S = {
+      val s1 = super.foldLeftDown(s0)(f)
+      plans.foldLeft(s1)(f)
+    }
   }
 
   /** Plan Op which just returns a fixed value. */
-  case class Const[T](value: T) extends PlanOp[T]
+  case class Const[T](value: T) extends PlanOp[T] with BasicOp[T]
 
   /** Copy a file. */
-  case class CopyFile(from: PlanFileReference, to: PlanFileReference) extends ProceduralPlanOp
+  case class CopyFile(from: PlanFileReference, to: PlanFileReference) extends ProceduralPlanOp with BasicOp[Unit]
 
   /**
    * Plan op which stores the result of the last operation into the memory.
    * Also returns the value again to make it transparent
    */
-  case class MemoryWriter[T](memoryId: MemoryId) extends PlanOp[T]
+  case class MemoryWriter[T](memoryId: MemoryId) extends PlanOp[T] with BasicOp[T]
 
   /** Plan op which reads the result of another one from the memory. Must be called later. */
-  case class MemoryReader[T](memoryId: MemoryId) extends PlanOp[T]
+  case class MemoryReader[T](memoryId: MemoryId) extends PlanOp[T] with BasicOp[T]
 
   /** Convenience method for constructing Sequential Plans. */
   def seq(): Sequential[Unit] = Sequential(Nil, PlanOp.Empty)

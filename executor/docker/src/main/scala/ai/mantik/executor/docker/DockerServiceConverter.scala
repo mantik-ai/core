@@ -19,7 +19,7 @@ class DockerServiceConverter(
     DockerConstants.IsolationSpaceLabelName -> serviceRequest.isolationSpace,
     DockerConstants.IdLabelName -> internalId,
     DockerConstants.UserIdLabelName -> serviceRequest.serviceId,
-    DockerConstants.ManagedByLabelName -> DockerConstants.ManabedByLabelValue,
+    DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue,
     DockerConstants.TypeLabelName -> DockerConstants.ServiceType
   )
 
