@@ -24,16 +24,37 @@ object StreamConversions {
 
   /** Generates a Sink which forwards all to the given stream observer. */
   def sinkFromStreamObserver[T](destination: StreamObserver[T]): Sink[T, NotUsed] = {
+    sinkFromStreamObserverWithSpecialHandling[T, T](destination, identity, identity)
+  }
+
+  /**
+   * Generates a Sink from a stream observer with special handling for the first element.
+   * @param f function used for the first element.
+   * @param g function used for the rest of the elements.
+   * @param completer function used when the stream is complete
+   */
+  def sinkFromStreamObserverWithSpecialHandling[U, T](
+    destination: StreamObserver[T],
+    f: U => T,
+    g: U => T,
+    completer: Unit => Option[T] = { _: Unit => None }
+  ): Sink[U, NotUsed] = {
     var subscribed = false
-    val subscriber = new Subscriber[T] {
+    var first = true
+    val subscriber = new Subscriber[U] {
       override def onSubscribe(s: Subscription): Unit = {
         require(!subscribed, "Can only subscribed once")
         subscribed = true
         s.request(Long.MaxValue)
       }
 
-      override def onNext(t: T): Unit = {
-        destination.onNext(t)
+      override def onNext(t: U): Unit = {
+        if (first) {
+          destination.onNext(f(t))
+          first = false
+        } else {
+          destination.onNext(g(t))
+        }
       }
 
       override def onError(t: Throwable): Unit = {
@@ -41,6 +62,10 @@ object StreamConversions {
       }
 
       override def onComplete(): Unit = {
+        val maybeLast = completer(())
+        maybeLast.foreach { last =>
+          destination.onNext(last)
+        }
         destination.onCompleted()
       }
     }

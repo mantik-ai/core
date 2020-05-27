@@ -59,6 +59,22 @@ class ExecutorServer(
       bindErrors(executor.nameAndVersion)
     }
 
+    bind(ExecutorApi.grpcProxy).to { isolationSpace =>
+      bindErrors(executor.grpcProxy(isolationSpace))
+    }
+
+    bind(ExecutorApi.startWorker).to { req =>
+      bindErrors(executor.startWorker(req))
+    }
+
+    bind(ExecutorApi.listWorker).to { req =>
+      bindErrors(executor.listWorkers(req))
+    }
+
+    bind(ExecutorApi.stopWorker).to { req =>
+      bindErrors(executor.stopWorker(req))
+    }
+
     add {
       path("") {
         get {

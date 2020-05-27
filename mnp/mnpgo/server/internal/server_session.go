@@ -75,7 +75,8 @@ func extractPortConfiguration(req *mnp.InitRequest) (*mnpgo.PortConfiguration, e
 
 	for i, c := range req.Outputs {
 		portConfiguration.Outputs[i] = mnpgo.OutputPortConfiguration{
-			ContentType: c.ContentType,
+			ContentType:    c.ContentType,
+			DestinationUrl: c.DestinationUrl,
 		}
 	}
 	return &portConfiguration, nil

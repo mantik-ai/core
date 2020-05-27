@@ -70,8 +70,8 @@ class DockerProcessRunner(
   /** Assemble a service. */
   def assembleService(service: DockerService): Future[Unit] = {
     val mainResult = for {
-      worker <- createContainer(service.worker)
-      _ <- service.payloadProvider.map(createContainer).sequence
+      worker <- dockerOperations.createContainer(service.worker)
+      _ <- service.payloadProvider.map(dockerOperations.createContainer).sequence
       _ = stateManager.setState(service.id, DockerStateManager.ServiceCreated())
       _ <- service.payloadProvider.map(runPayloadProviderAndWait).sequence
       _ = stateManager.setState(service.id, DockerStateManager.ServiceInitialized())
@@ -106,7 +106,7 @@ class DockerProcessRunner(
       containers <- dockerClient.listContainersFiltered(
         true,
         ListContainerRequestFilter.forLabelKeyValue(
-          DockerConstants.ManagedByLabelName -> DockerConstants.ManabedByLabelValue,
+          DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue,
           DockerConstants.TypeLabelName -> DockerConstants.ServiceType,
           DockerConstants.IdLabelName -> id
         )
@@ -125,22 +125,15 @@ class DockerProcessRunner(
   private def createContainers(job: DockerJob): Future[Unit] = {
     for {
       _ <- Future.sequence(job.payloadProviders.map { payloadProvider =>
-        createContainer(payloadProvider)
+        dockerOperations.createContainer(payloadProvider)
       })
       _ <- Future.sequence(job.workers.map { container =>
-        createContainer(container)
+        dockerOperations.createContainer(container)
       })
-      _ <- createContainer(job.coordinator)
+      _ <- dockerOperations.createContainer(job.coordinator)
     } yield {
       ()
     }
-  }
-
-  private def createContainer(containerDefinition: ContainerDefinition): Future[CreateContainerResponse] = {
-    for {
-      _ <- dockerOperations.executePullPolicy(containerDefinition.pullPolicy, containerDefinition.createRequest.Image)
-      response <- dockerClient.createContainer(containerDefinition.name, containerDefinition.createRequest)
-    } yield response
   }
 
   private def runPayloadProviders(job: DockerJob): Future[Unit] = {

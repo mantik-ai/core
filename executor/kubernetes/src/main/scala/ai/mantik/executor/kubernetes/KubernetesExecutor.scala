@@ -1,25 +1,30 @@
 package ai.mantik.executor.kubernetes
 
 import java.time.temporal.ChronoUnit
-import java.time.{ Clock, Instant }
+import java.time.{Clock, Instant}
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.executor
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
 import ai.mantik.executor.model._
-import ai.mantik.executor.{ Errors, Executor }
-import akka.actor.{ ActorSystem, Cancellable }
+import ai.mantik.executor.model.docker.Container
+import ai.mantik.executor.{Errors, Executor}
+import akka.actor.{ActorSystem, Cancellable}
 import com.google.common.net.InetAddresses
-import javax.inject.{ Inject, Provider, Singleton }
+import javax.inject.{Inject, Provider, Singleton}
+import play.api.libs.json.Json
 import skuber.Container.Running
+import skuber.apps.Deployment
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
-import skuber.{ Endpoints, ObjectMeta, Pod, Service }
+import skuber.{Endpoints, ObjectMeta, Pod, Service}
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Kubennetes implementation of [[Executor]]. */
 class KubernetesExecutor(config: Config, ops: K8sOperations)(
@@ -362,6 +367,274 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     val str = s"KubernetesExecutor ${BuildInfo.version}  (${BuildInfo.gitVersion}-${BuildInfo.buildNum})"
     Future.successful(str)
   }
+
+  override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = {
+    val grpcProxyConfig = config.common.grpcProxy
+    if (!grpcProxyConfig.enabled){
+      return Future.failed(
+        new Errors.NotFoundException("Grpc Proxy not enabled")
+      )
+    }
+    if (grpcProxies.get(isolationSpace) != null){
+      return Future.successful(grpcProxies.get(isolationSpace))
+    }
+    val namespace = namespaceForIsolationSpace(isolationSpace)
+
+    val deployment = Deployment(
+      metadata = ObjectMeta(
+        name = grpcProxyConfig.containerName,
+        labels = Map(
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+        )
+      ),
+      spec = Some(Deployment.Spec(
+        template = Some(
+          Pod.Template.Spec(
+            metadata = ObjectMeta(
+              labels = Map(
+                KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
+                KubernetesConstants.RoleName -> KubernetesConstants.GrpcProxyRole
+              )
+            ),
+            spec = Some(Pod.Spec(
+              containers = List(
+                skuber.Container(
+                  name = "main",
+                  image = grpcProxyConfig.container.image,
+                  args = grpcProxyConfig.container.parameters.toList,
+                  imagePullPolicy = KubernetesConverter.createImagePullPolicy(
+                    config.common.disablePull,
+                    grpcProxyConfig.container
+                  )
+                )
+              )
+            ))
+          )
+        )
+      ))
+    )
+    val service = Service(
+      metadata = ObjectMeta(
+        name = grpcProxyConfig.containerName,
+        labels = Map(
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+        )
+      ),
+      spec = Some(Service.Spec(
+        _type = Service.Type.NodePort,
+        selector = Map(
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
+          KubernetesConstants.RoleName -> KubernetesConstants.GrpcProxyRole
+        ),
+        ports = List(
+          Service.Port(
+            port = grpcProxyConfig.port,
+            targetPort = Some(Left(grpcProxyConfig.port))
+          )
+        )
+      ))
+    )
+    import skuber.json.apps.format.depFormat
+    for {
+      withNamespace <- ops.ensureNamespace(namespace)
+      deploymentAssembled <- ops.createOrReplace(Some(namespace), deployment)
+      serviceAssembled <- ops.createOrReplace(Some(namespace), service)
+    } yield {
+      logger.info("Assembled grpc Proxy")
+      logger.info(s"Service: ${Json.prettyPrint(Json.toJson(serviceAssembled))}")
+      val nodePort = serviceAssembled.spec.get.ports.head.nodePort
+      logger.info(s"Node port ${nodePort}")
+      val grpcProxy = GrpcProxy(
+        proxyUrl = Some(s"http://${kubernetesHost}:$nodePort")
+      )
+      grpcProxies.put(namespace, grpcProxy)
+      grpcProxy
+    }
+  }
+
+  override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = {
+    val resolvedContainer = config.dockerConfig.resolveContainer(startWorkerRequest.container)
+    val internalId = UUID.randomUUID().toString
+    val pod = Pod(
+      metadata = ObjectMeta(
+        labels = Map(
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
+          KubernetesConstants.RoleName -> KubernetesConstants.WorkerRole,
+          KubernetesConstants.IdLabelName -> startWorkerRequest.id,
+          KubernetesConstants.InternalId  -> internalId
+        ),
+        generateName = "worker"
+      ),
+      spec = Some(
+        Pod.Spec(
+          containers = List (
+            skuber.Container (
+              name = "worker",
+              image = resolvedContainer.image,
+              args = resolvedContainer.parameters.toList
+            )
+          )
+        )
+      )
+    )
+    val service = Service(
+      metadata = ObjectMeta(
+        labels = Map(
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
+          KubernetesConstants.RoleName -> KubernetesConstants.WorkerRole,
+          KubernetesConstants.IdLabelName -> startWorkerRequest.id,
+          KubernetesConstants.InternalId -> internalId
+        ),
+        generateName = "worker"
+      ),
+      spec = Some(
+        Service.Spec(
+          selector = Map(
+            KubernetesConstants.InternalId -> internalId
+          ),
+          ports = List(
+            Service.Port(
+              port = 8502
+            )
+          )
+        )
+      )
+    )
+    val namespace = namespaceForIsolationSpace(startWorkerRequest.isolationSpace)
+    for {
+      _ <- ops.ensureNamespace(namespace)
+      createdPod <- ops.create(Some(namespace), pod)
+      createdService <- ops.create(Some(namespace), service)
+    } yield {
+      StartWorkerResponse(
+        nodeName = createdService.name
+      )
+    }
+  }
+
+  override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] = {
+    val namespace = namespaceForIsolationSpace(listWorkerRequest.isolationSpace)
+    listWorkersImpl(namespace, listWorkerRequest.nameFilter, listWorkerRequest.idFilter).map { servicesAndPods =>
+      ListWorkerResponse(
+        servicesAndPods.map { case (service, pod) =>
+          generateListWorkerResponseElement(pod, service)
+        }
+      )
+    }
+  }
+
+  private def listWorkersImpl(namespace: String, nameFilter: Option[String], userIdFilter: Option[String]): Future[Seq[(Service, Pod)]] = {
+    nameFilter match {
+      case Some(name) =>
+        ops.byName[Service](Some(namespace), name).flatMap {
+          case Some(service) if service.metadata.labels.get(KubernetesConstants.ManagedLabel).contains(KubernetesConstants.ManagedValue) =>
+            val maybeInternalId = service.metadata.labels.get(KubernetesConstants.InternalId)
+            maybeInternalId match {
+              case Some(internalId) =>
+                ops.listSelected[Pod](Some(namespace), Seq(
+                  KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
+                  KubernetesConstants.InternalId -> internalId
+                )).map { pods =>
+                  pods.headOption.map { pod =>
+                    (service -> pod)
+                  }.toSeq
+                }
+              case None =>
+                logger.error(s"Found service ${name} but it has no internal id ?!")
+                Future.successful(Nil)
+            }
+          case _ =>
+            // either not existing or not managed by Mantik
+            Future.successful(Nil)
+        }
+      case None =>
+        val filter = Seq(
+          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+        ) ++ userIdFilter.map { id =>
+          KubernetesConstants.IdLabelName -> id
+        }
+        val servicesFuture = ops.listSelected[Service](Some(namespace), filter)
+        val podsFuture = ops.listSelected[Pod](Some(namespace), filter)
+        for {
+          services <- servicesFuture
+          pods <- podsFuture
+        } yield {
+          for {
+            service <- services
+            internalId <- service.metadata.labels.get(KubernetesConstants.InternalId).toList
+            pod <- pods
+            podInternalId <- pod.metadata.labels.get(KubernetesConstants.InternalId).toList
+            if internalId == podInternalId
+          } yield {
+            service -> pod
+          }
+        }
+    }
+  }
+
+  private def generateListWorkerResponseElement(pod: Pod, service: Service): ListWorkerResponseElement = {
+    ListWorkerResponseElement(
+      nodeName = service.name,
+      id = service.metadata.labels.getOrElse(KubernetesConstants.IdLabelName, "unknown"),
+      state = decodeWorkerState(pod),
+      container = {
+        val mainContainer = pod.spec.get.containers.head
+        Container(
+          image = mainContainer.image,
+          parameters = mainContainer.args
+        )
+      }
+    )
+  }
+
+  private def decodeWorkerState(pod: Pod): WorkerState = {
+    val maybeState = for {
+      status <- pod.status
+      containerStatus <- status.containerStatuses.headOption
+      state <- containerStatus.state
+    } yield {
+      state match {
+        case _: skuber.Container.Running => WorkerState.Running
+        case t: skuber.Container.Terminated =>
+          t.exitCode match {
+            case 0 => WorkerState.Succeeded
+            case other => WorkerState.Failed(other)
+          }
+        case t: skuber.Container.Waiting =>
+          WorkerState.Pending
+        case other =>
+          WorkerState.Pending
+      }
+    }
+
+    maybeState.getOrElse(WorkerState.Pending)
+  }
+
+  override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
+    val namespace = namespaceForIsolationSpace(stopWorkerRequest.isolationSpace)
+    listWorkersImpl(namespace, stopWorkerRequest.nameFilter, stopWorkerRequest.idFilter).flatMap { servicesAndPods =>
+      val subFutures = servicesAndPods.map { case (service, pod) =>
+        Future.sequence(Seq(
+          ops.delete[Service](Some(namespace), service.name),
+          ops.delete[Pod](Some(namespace), pod.name)
+        ))
+      }
+      val elements = servicesAndPods.map { case (service, pod) =>
+        StopWorkerResponseElement(
+          id = service.metadata.labels.getOrElse(KubernetesConstants.IdLabelName, "Unknown"),
+          name = service.name
+        )
+      }
+      Future.sequence(subFutures).map { _ =>
+        StopWorkerResponse(
+          elements
+        )
+      }
+    }
+  }
+
+  /** Maps namespace to grpcProxy. */
+  private val grpcProxies = new ConcurrentHashMap[String, GrpcProxy]()
 }
 
 class KubernetesExecutorProvider @Inject() (implicit akkaRuntime: AkkaRuntime) extends Provider[KubernetesExecutor] {

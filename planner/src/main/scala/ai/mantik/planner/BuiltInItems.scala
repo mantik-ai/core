@@ -56,7 +56,7 @@ object BuiltInItems {
         BridgeDefinition(
           dockerImage = "mantikai/bridge.select",
           suitable = Seq(MantikDefinition.DataSetKind),
-          protocol = 1,
+          protocol = 2,
           payloadContentType = None
         )
       )

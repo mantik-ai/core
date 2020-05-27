@@ -1,7 +1,7 @@
 package ai.mantik.executor
 
 import ai.mantik.executor.Errors.ExecutorException
-import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, DeployedServicesQuery, DeployedServicesResponse, Job, JobStatus, PublishServiceRequest, PublishServiceResponse }
+import ai.mantik.executor.model.{ DeployServiceRequest, DeployServiceResponse, DeployedServicesQuery, DeployedServicesResponse, GrpcProxy, Job, JobStatus, ListWorkerRequest, ListWorkerResponse, PublishServiceRequest, PublishServiceResponse, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest, StopWorkerResponse }
 import net.reactivecore.fhttp.{ ApiBuilder, Output }
 
 object ExecutorApi extends ApiBuilder {
@@ -80,6 +80,42 @@ object ExecutorApi extends ApiBuilder {
       resultWithError {
         Output.text()
       }
+    )
+  )
+
+  val grpcProxy = add(get("grpcProxy")
+    .expecting(input.AddQueryParameter("isolationSpace"))
+    .responding(
+      resultWithError(
+        output.circe[GrpcProxy]()
+      )
+    )
+  )
+
+  val startWorker = add(post("worker")
+    .expecting(input.circe[StartWorkerRequest]())
+    .responding(
+      resultWithError(
+        output.circe[StartWorkerResponse]()
+      )
+    )
+  )
+
+  val listWorker = add(get("worker")
+    .expecting(input.circeQuery[ListWorkerRequest])
+    .responding(
+      resultWithError(
+        output.circe[ListWorkerResponse]()
+      )
+    )
+  )
+
+  val stopWorker = add(delete("worker")
+    .expecting(input.circeQuery[StopWorkerRequest])
+    .responding(
+      resultWithError(
+        output.circe[StopWorkerResponse]()
+      )
     )
   )
 }

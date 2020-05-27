@@ -48,10 +48,31 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
     )
   )
 
+  private val startWorkerRequest = StartWorkerRequest(
+    "isolationspace",
+    "1234",
+    container = Container(
+      "foo", Seq("a")
+    )
+  )
+
+  private val listWorkerRequest = ListWorkerRequest(
+    "isolationspace",
+    Some("name"), Some("id")
+  )
+
+  private val stopWorkerRequest = StopWorkerRequest(
+    "isolationspace",
+    Some("name"), Some("id")
+  )
+
   trait Env {
     var receivedPublishRequest: PublishServiceRequest = _
     var receivedDeployServiceRequest: DeployServiceRequest = _
     var receivedDeployedServicesQuery: DeployedServicesQuery = _
+    var receivedStartWorkerRequest: StartWorkerRequest = _
+    var receivedListWorkerRequest: ListWorkerRequest = _
+    var receivedStopWorkerRequest: StopWorkerRequest = _
 
     lazy val executorMock = new Executor with Component {
 
@@ -89,6 +110,42 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
 
       override def nameAndVersion: Future[String] = Future.successful("Super Executor v1.01")
 
+      override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = Future.successful(GrpcProxy(
+        Some("http://nice-proxy.example.com:1234")
+      ))
+
+      override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = {
+        receivedStartWorkerRequest = startWorkerRequest
+        Future.successful(
+          StartWorkerResponse(
+            "foo"
+          )
+        )
+      }
+
+      override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] = {
+        receivedListWorkerRequest = listWorkerRequest
+        Future.successful(
+          ListWorkerResponse(
+            Seq(
+              ListWorkerResponseElement("foo", "bar", Container("image"), WorkerState.Running)
+            )
+          )
+        )
+      }
+
+      override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
+        receivedStopWorkerRequest = stopWorkerRequest
+        Future.successful(
+          StopWorkerResponse(
+            removed = Seq(
+              StopWorkerResponseElement(
+                "foo", "bar"
+              )
+            )
+          )
+        )
+      }
     }
     lazy val server = new ExecutorServer(config, executorMock)
     lazy val client = new ExecutorClient("http://localhost:15001")
@@ -153,6 +210,29 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       receivedDeployedServicesQuery shouldBe deployedServicesQuery
 
       await(client.nameAndVersion) shouldBe "Super Executor v1.01"
+
+      await(client.grpcProxy("isolation1")) shouldBe await(executorMock.grpcProxy("isolation1"))
+
+      await(client.startWorker(startWorkerRequest)) shouldBe StartWorkerResponse(
+        "foo"
+      )
+      receivedStartWorkerRequest shouldBe startWorkerRequest
+
+      await(client.listWorkers(listWorkerRequest)) shouldBe ListWorkerResponse(
+        Seq(
+          ListWorkerResponseElement("foo", "bar", Container("image"), WorkerState.Running)
+        )
+      )
+      receivedListWorkerRequest shouldBe listWorkerRequest
+
+      await(client.stopWorker(stopWorkerRequest)) shouldBe StopWorkerResponse(
+        removed = Seq(
+          StopWorkerResponseElement(
+            "foo", "bar"
+          )
+        )
+      )
+      receivedStopWorkerRequest shouldBe stopWorkerRequest
     }
   }
 
@@ -192,6 +272,14 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       }
 
       override def nameAndVersion: Future[String] = Future { ??? }
+
+      override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = Future.failed(internal)
+
+      override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = Future.failed(internal)
+
+      override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] = Future.failed(internal)
+
+      override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = Future.failed(internal)
     }
 
     server.start()
@@ -220,6 +308,9 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
       }
       intercept[Errors.InternalException] {
         await(client.nameAndVersion)
+      }
+      intercept[Errors.InternalException] {
+        await(client.grpcProxy("isolation"))
       }
     }
   }

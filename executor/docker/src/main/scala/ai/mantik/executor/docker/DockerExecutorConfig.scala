@@ -6,14 +6,16 @@ import com.typesafe.config.Config
 /** Configuration for Docker Executor. */
 case class DockerExecutorConfig(
     common: CommonConfig,
-    ingress: IngressConfig
+    ingress: IngressConfig,
+    workerNetwork: String
 )
 
 object DockerExecutorConfig {
   def fromTypesafeConfig(config: Config): DockerExecutorConfig = {
     DockerExecutorConfig(
       common = CommonConfig.fromTypesafeConfig(config),
-      ingress = IngressConfig.fromTypesafeConfig(config)
+      ingress = IngressConfig.fromTypesafeConfig(config),
+      workerNetwork = config.getString("mantik.executor.docker.workerNetwork")
     )
   }
 }

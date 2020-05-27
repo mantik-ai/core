@@ -23,7 +23,7 @@ import skuber.ext.Ingress
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
-import skuber.{ Container, K8SException, LabelSelector, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition, Secret, Service }
+import skuber.{ Container, K8SException, KListItem, LabelSelector, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition, Secret, Service }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Promise, TimeoutException }
@@ -235,6 +235,32 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
       namespacedClient(namespace).listSelected[ListResource[Service]] {
         encodeServiceLabelSelector(serviceIdFilter)
       }.map(_.items)
+    }
+  }
+
+  def listSelected[T <: KListItem](namespace: Option[String], labelFilter: Seq[(String, String)])(
+    implicit
+    format: Format[ListResource[T]], rd: ResourceDefinition[ListResource[T]]
+  ): Future[ListResource[T]] = {
+    val labelSelector = LabelSelector(
+      (labelFilter.map {
+        case (k, v) =>
+          LabelSelector.IsEqualRequirement(k, KubernetesNamer.encodeLabelValue(v))
+      }.toVector): _*
+    )
+    errorHandling {
+      namespacedClient(namespace).listSelected[ListResource[T]](
+        labelSelector
+      )
+    }
+  }
+
+  def byName[T <: ObjectResource](namespace: Option[String], name: String)(
+    implicit
+    format: Format[T], resourceDefinition: ResourceDefinition[T]
+  ): Future[Option[T]] = {
+    errorHandling {
+      namespacedClient(namespace).getOption[T](name)
     }
   }
 

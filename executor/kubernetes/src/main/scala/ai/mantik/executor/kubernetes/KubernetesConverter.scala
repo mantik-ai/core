@@ -162,7 +162,13 @@ private[kubernetes] class KubernetesConverter(
   }
 
   def createImagePullPolicy(container: ai.mantik.executor.model.docker.Container): Container.PullPolicy.Value = {
-    if (config.common.disablePull) {
+    KubernetesConverter.createImagePullPolicy(config.common.disablePull, container)
+  }
+}
+
+object KubernetesConverter {
+  def createImagePullPolicy(disablePull: Boolean, container: ai.mantik.executor.model.docker.Container): Container.PullPolicy.Value = {
+    if (disablePull) {
       return Container.PullPolicy.Never
     }
     // Overriding the policy to a similar behaviour to kubernetes default
@@ -171,6 +177,5 @@ private[kubernetes] class KubernetesConverter(
       case Some("latest") => Container.PullPolicy.Always
       case _              => Container.PullPolicy.IfNotPresent
     }
-
   }
 }

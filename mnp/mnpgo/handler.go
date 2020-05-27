@@ -47,6 +47,8 @@ type InputPortConfiguration struct {
 type OutputPortConfiguration struct {
 	// Selected content type or empty for default
 	ContentType string
+	// Where data goes to (for debugging only, not managed by Handler)
+	DestinationUrl string
 }
 
 /* A single session. */

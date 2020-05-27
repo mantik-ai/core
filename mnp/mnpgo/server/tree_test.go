@@ -41,13 +41,13 @@ func TestTreeCalculation(t *testing.T) {
 
 	err = session.AddInit("n1", nil, mnpgo.PortConfiguration{
 		Inputs:  []mnpgo.InputPortConfiguration{{"abcd"}},
-		Outputs: []mnpgo.OutputPortConfiguration{{"out1"}, {"out2"}},
+		Outputs: []mnpgo.OutputPortConfiguration{{"out1", ""}, {"out2", ""}},
 	})
 	assert.NoError(t, err)
 
 	session.AddInit("n2", nil, mnpgo.PortConfiguration{
 		Inputs:  []mnpgo.InputPortConfiguration{{"foobar"}},
-		Outputs: []mnpgo.OutputPortConfiguration{{"out3"}, {"out4"}},
+		Outputs: []mnpgo.OutputPortConfiguration{{"out3", ""}, {"out4", ""}},
 	})
 	assert.NoError(t, err)
 

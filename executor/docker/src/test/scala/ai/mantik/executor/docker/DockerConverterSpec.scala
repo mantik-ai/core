@@ -11,9 +11,8 @@ class DockerConverterSpec extends TestBase {
   trait Env {
     val defaultConfig = DockerExecutorConfig.fromTypesafeConfig(typesafeConfig)
     lazy val commonConfig = defaultConfig.common
-    lazy val config = DockerExecutorConfig(
-      common = commonConfig,
-      ingress = defaultConfig.ingress
+    lazy val config = defaultConfig.copy(
+      common = commonConfig
     )
     lazy val defaultLabels = Map("foo" -> "bar")
     lazy val converter = new DockerConverter(config, defaultLabels)

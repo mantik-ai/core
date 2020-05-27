@@ -2,9 +2,11 @@ package ai.mantik.planner.integration
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.componently.utils.GlobalLocalAkkaRuntime
-import ai.mantik.executor.Executor
+import ai.mantik.elements.errors.ConfigurationException
+import ai.mantik.executor.{Executor, ExecutorForIntegrationTest}
 import ai.mantik.executor.client.ExecutorClient
-import ai.mantik.executor.kubernetes.{ExecutorForIntegrationTests, KubernetesCleaner}
+import ai.mantik.executor.docker.{DockerExecutor, DockerExecutorForIntegrationTest}
+import ai.mantik.executor.kubernetes.{KubernetesCleaner, KubernetesExecutorForIntegrationTests}
 import ai.mantik.planner.Context
 import ai.mantik.planner.impl.ContextImpl
 import ai.mantik.planner.repository.impl.{TempFileRepository, TempRepository}
@@ -18,7 +20,7 @@ import scala.concurrent.duration._
 /** Base class for integration tests having a full running executor instance. */
 abstract class IntegrationTestBase extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
 
-  protected var embeddedExecutor: ExecutorForIntegrationTests = _
+  protected var embeddedExecutor: ExecutorForIntegrationTest = _
   override protected lazy val typesafeConfig: Config = ConfigFactory.load("systemtest.conf")
   private var _context: Context = _
   private var _fileRepo: FileRepository = _
@@ -36,29 +38,27 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with Global
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    embeddedExecutor = new ExecutorForIntegrationTests(typesafeConfig)
-    scrapKubernetes()
+    embeddedExecutor = makeExecutorForIntegrationTest()
+    embeddedExecutor.scrap()
+    embeddedExecutor.start()
 
     val repository = new TempRepository()
     _fileRepo = new TempFileRepository()
     val fileRepoServer = new FileRepositoryServer(_fileRepo)
-    val executor = constructExecutorClient()
     val registry = RemoteMantikRegistry.empty
 
     _context = ContextImpl.constructWithComponents(
-      repository, _fileRepo, fileRepoServer, executor, registry
+      repository, _fileRepo, fileRepoServer, embeddedExecutor.executor, registry
     )
   }
 
-  private def constructExecutorClient()(implicit akkaRuntime: AkkaRuntime): Executor = {
-    val executorUrl = akkaRuntime.config.getString("mantik.executor.client.executorUrl")
-    val executor: Executor = new ExecutorClient(executorUrl)
-    executor
-  }
-
-  private def scrapKubernetes(): Unit = {
-    val cleaner = new KubernetesCleaner(embeddedExecutor.kubernetesClient, embeddedExecutor.executorConfig)
-    cleaner.deleteKubernetesContent()
+  private def makeExecutorForIntegrationTest(): ExecutorForIntegrationTest = {
+    val executorType = typesafeConfig.getString("mantik.executor.type")
+    executorType match {
+      case "docker" => return new DockerExecutorForIntegrationTest(typesafeConfig)
+      case "kubernetes" => return new KubernetesExecutorForIntegrationTests(typesafeConfig)
+      case _ => throw new ConfigurationException("Bad executor type")
+    }
   }
 
   override protected def afterAll(): Unit = {

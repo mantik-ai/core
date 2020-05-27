@@ -8,7 +8,7 @@ import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.{ FileCache, FileRepositoryServerRemotePresence, PlanExecutorImpl }
+import ai.mantik.planner.impl.exec.{ FileCache, FileRepositoryServerRemotePresence, MnpPlanExecutor, PlanExecutorImpl }
 import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
 import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
 import javax.inject.Inject
@@ -94,7 +94,7 @@ private[mantik] object ContextImpl {
       remoteFileRepositoryAddress = fileRepositoryServerRemotePresence.assembledRemoteUri()
     )
 
-    val planExecutor = new PlanExecutorImpl(
+    val planExecutor = new MnpPlanExecutor(
       fileRepository,
       repository,
       executor,
