@@ -45,11 +45,17 @@ Requirements
       
 * Python
      
+     - Python 3.7
      - pipenv
      - Python dev (gcc etc.)
      
      The python code is using generated protobuf code. After a clean checkout
-     run a full build before developing within the IDE.       
+     run a full build before developing within the IDE.
+     
+     Installing python 3.7 on Ubuntu 20.04:
+     
+     - Add [Deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
+     - `apt-get install python3.7`
 
 * Integration tests and running
     * [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)

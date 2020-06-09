@@ -6,6 +6,7 @@ include scripts/ci/Makefile.core
 
 SUB_PROJECTS=\
 	mnp/mnpgo\
+	mnp/mnppython\
 	go_shared\
 	bridge/binary\
 	bridge/bridge_debugger\

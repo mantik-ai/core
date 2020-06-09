@@ -1,0 +1,16 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+pytest-timeout = "*"
+mypy = "*"
+
+[packages]
+mnp = {editable = true,path = "."}
+grpcio-tools = "*"
+
+[requires]
+python_version = "3.7"
