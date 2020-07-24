@@ -16,7 +16,7 @@ var sampleImage = ds.Image{
 		{ds.Blue, ds.ImageComponent{ds.Ref(ds.Uint8)}},
 		{ds.Green, ds.ImageComponent{ds.Ref(ds.Uint8)}},
 	},
-	"",
+	"plain",
 }
 
 var grayScaleImage = ds.Image{

@@ -8,10 +8,13 @@ pytest = "*"
 scikit-learn = "*"
 numpy = "*"
 requests = "*"
+mypy = "*"
 
 [packages]
 mantik = {editable = true,path = "."}
+mnp = {editable = true, path = "../mnp/mnppython"}
 grpcio-tools = "*"
+requests = "*"
 
 [requires]
 python_version = "3.7"

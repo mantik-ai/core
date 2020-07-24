@@ -142,8 +142,9 @@ func TestImageJson(t *testing.T) {
 		Components: []ImageComponentElement{
 			{Green, ImageComponent{TypeReference{Uint8}}},
 		},
+		Format: "plain",
 	}
-	expected := "{\"type\":\"image\",\"width\":100,\"height\":200,\"components\":{\"green\":{\"componentType\":\"uint8\"}}}"
+	expected := "{\"type\":\"image\",\"width\":100,\"height\":200,\"components\":{\"green\":{\"componentType\":\"uint8\"}},\"format\":\"plain\"}"
 	assert.Equal(t, expected, ToJsonString(&sample))
 
 	back, err := FromJsonString(expected)

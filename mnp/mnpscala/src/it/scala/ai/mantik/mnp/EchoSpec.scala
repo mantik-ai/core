@@ -84,11 +84,16 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
       val task = session.runTask("task1")
 
       val sink1 = task.push(0)
-      sink1.runWith(Source.single(HelloWorld))
+      val result = Source.single(HelloWorld).runWith(sink1)
+
 
       val source1 = task.pull(0)
       val collected = collectByteSource(source1)
       collected shouldBe HelloWorld
+
+      val (bytes, response) = await(result)
+      bytes shouldBe HelloWorld.size
+
 
       val quitResponse = await(session.quit())
     }
@@ -132,13 +137,16 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
         b
       }.toIterator
 
-      sink2.runWith(Source.fromIterator(() => slowData2Iterator))
-
       val source1 = task.pull(0)
       val source2 = task.pull(1)
 
+      val responseFuture = Source.fromIterator(() => slowData2Iterator).runWith(sink2)
+
       collectByteSource(source1) shouldBe HelloWorld
       collectByteSource(source2) shouldBe data2.reduce(_ ++ _)
+
+      val (bytes, response) = await(responseFuture)
+      bytes shouldBe data2.foldLeft(0L)(_ + _.length)
     }
   }
 }

@@ -29,8 +29,11 @@ service MnpService {
     // Push data into a port, creating a task when necessary
     rpc Push(stream PushRequest) returns (PushResponse) {};
 
-    // Pull data from a port
-    rpc Pull(PullRequest) returns (stream PullResponse) {}
+    // Pull data from a port, creating a task when necesary
+    rpc Pull(PullRequest) returns (stream PullResponse) {};
+
+    // Queries a task (can create if not existent)
+    rpc QueryTask(QueryTaskRequest) returns (QueryTaskResponse) {}
 }
 
 message AboutRequest {
@@ -154,4 +157,18 @@ message PullResponse {
     bool done = 2;
     // A data blob
     bytes data = 3;
+}
+
+message QueryTaskRequest {
+    // the id of the session
+    string session_id = 1;
+    // The id of the task
+    string task_id = 2;
+    // if true, the task will be created if not existing
+    bool ensure = 3;
+}
+
+message QueryTaskResponse {
+    // True if the task exists
+    bool exists = 1;
 }

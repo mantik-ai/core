@@ -109,7 +109,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     }
   }
 
-  override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Unit]]] = {
+  override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Long]]] = {
     for {
       meta <- Future(loadMeta(id))
       part = partFileName(id)
@@ -122,7 +122,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
           Files.move(part, file, StandardCopyOption.ATOMIC_MOVE)
           val newMeta = meta.copy(contentType = Some(contentType))
           saveMeta(id, newMeta)
-          (())
+          ioResult.count
         }
       }
     }

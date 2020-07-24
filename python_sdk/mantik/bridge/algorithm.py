@@ -33,3 +33,9 @@ class Algorithm(metaclass=abc.ABCMeta):
         This will be the new data application algorithms.
 
         """
+
+    def close(self):
+        """
+        Close an algorithm (releasing resources, etc.)
+        """
+        pass

@@ -48,7 +48,7 @@ object DockerApi extends ApiBuilder {
         input.MappedInput(input.AddQueryParameter("all"), boolMapping)
       )
       .responding(
-        jsonResponseWithErrorHandlung[List[ListContainerResponseRow]]
+        jsonResponseWithErrorHandlung[Vector[ListContainerResponseRow]]
       )
   )
 

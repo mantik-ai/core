@@ -44,7 +44,7 @@ class FileRepositoryClientImpl @Inject() (service: FileRepositoryService)(implic
     }
   }
 
-  override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Unit]]] = {
+  override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Long]]] = {
     // TODO: This should be simpler and should do real work at the moment the Sink is materialized.
     Conversions.decodeErrorsIn {
       Future {
@@ -59,9 +59,9 @@ class FileRepositoryClientImpl @Inject() (service: FileRepositoryService)(implic
             StoreFileRequest(chunk = RpcConversions.encodeByteString(data))
           }
         sink.mapMaterializedValue { _ =>
-          future.map { _ =>
+          future.map { response =>
             logger.debug(s"Finished writing sink for ${id}")
-            ()
+            response.bytes
           }
         }
       }

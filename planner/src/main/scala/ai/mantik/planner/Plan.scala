@@ -76,10 +76,6 @@ object PlanNodeService {
 
 /** An operation inside a plan. */
 sealed trait PlanOp[T] {
-  override def toString: String = {
-    Renderable.renderAsString(this)
-  }
-
   def foldLeftDown[S](s0: S)(f: (S, PlanOp[_]) => S): S = {
     f(s0, this)
   }

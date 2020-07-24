@@ -8,6 +8,8 @@ pytest = "*"
 
 [packages]
 mantik = {editable = true,path = "./../../../python_sdk"}
+mnp = {editable = true, path = "./../../../mnp/mnppython"}
+
 tensorflow = "==1.13.2"
 
 [requires]

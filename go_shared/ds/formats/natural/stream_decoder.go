@@ -78,7 +78,7 @@ func (d *streamReader) Read() (element.Element, error) {
 			return nil, err
 		}
 		if !ds.DataTypeEquality(header.Format.Underlying, d.expectedType) {
-			return nil, errors.New("Unexpected type")
+			return nil, errors.Errorf("Unexpected type, got=%s, expected=%s", ds.ToJsonString(header.Format.Underlying), ds.ToJsonString(d.expectedType))
 		}
 		d.waitHeader = false
 	}

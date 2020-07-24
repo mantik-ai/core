@@ -1,4 +1,5 @@
 bridge: mantik/tf.saved_model
+protocol: 2
 type:
   input:
     columns:

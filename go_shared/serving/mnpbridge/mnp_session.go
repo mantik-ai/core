@@ -8,6 +8,7 @@ import (
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"gl.ambrosys.de/mantik/go_shared/protos/mantik/bridge"
 	"gl.ambrosys.de/mantik/go_shared/serving"
+	"gl.ambrosys.de/mantik/go_shared/serving/server"
 	"gl.ambrosys.de/mantik/go_shared/util/dirzip"
 	"io"
 	"io/ioutil"
@@ -35,9 +36,9 @@ func InitSession(
 	}
 
 	var payloadDir *string
-	if len(configuration.PayloadContentType) > 0 {
+	if configuration.Payload != nil {
 		callback(mnp.SessionState_SS_DOWNLOADING)
-		payloadDir, err = initPayload(configuration)
+		payloadDir, err = initPayload(configuration, configuration.PayloadContentType)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not init payload")
 		}
@@ -61,7 +62,7 @@ func InitSession(
 }
 
 // Downloads and initializes payload. Reuturns unpacked payload directory.
-func initPayload(configuration *bridge.MantikInitConfiguration) (*string, error) {
+func initPayload(configuration *bridge.MantikInitConfiguration, contentType string) (*string, error) {
 	tempDir, err := ioutil.TempDir("", "bridge")
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create temporary tempPayloadDirectory")
@@ -93,15 +94,22 @@ func initPayload(configuration *bridge.MantikInitConfiguration) (*string, error)
 		return nil, errors.New("Could not close file")
 	}
 
-	err = unpackFile(tempFile.Name(), tempDir)
+	err = unpackFile(tempFile.Name(), tempDir, contentType)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not unpack payload file")
 	}
 	return &tempDir, nil
 }
 
-func unpackFile(tempFile string, target string) error {
-	return dirzip.UnzipDiectory(tempFile, target, false)
+func unpackFile(tempFile string, target string, contentType string) error {
+	if contentType == server.MimeZip || (len(contentType) == 0) {
+		if len(contentType) == 0 {
+			logrus.Warn("No content type specified, trying unzipping")
+		}
+		return dirzip.UnzipDiectory(tempFile, target, false)
+	} else {
+		return errors.Errorf("Unsupported payload content type %s", contentType)
+	}
 }
 
 // Remove payload, if it exists

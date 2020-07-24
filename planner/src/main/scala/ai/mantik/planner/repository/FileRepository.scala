@@ -21,7 +21,7 @@ private[mantik] trait FileRepository extends Component {
   def requestFileGet(id: String, optimistic: Boolean = false): Future[FileRepository.FileGetResult]
 
   /** Request storing a file (must be requested at first). */
-  def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Unit]]]
+  def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Long]]]
 
   /** Delete a file. Returns true, if the file existed. */
   def deleteFile(id: String): Future[Boolean]

@@ -4,6 +4,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
 	"gl.ambrosys.de/mantik/go_shared/protos/mantik/bridge"
 	"gl.ambrosys.de/mantik/go_shared/serving"
@@ -53,6 +54,6 @@ func (m *MnpBackend) Init(
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not decode mantik configuration")
 	}
-
+	logrus.Infof("Starting session %s", sessionId)
 	return InitSession(sessionId, m.backend, contentTypes, &conf, stateCallback)
 }
