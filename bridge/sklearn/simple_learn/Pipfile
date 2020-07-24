@@ -9,6 +9,7 @@ pytest = "*"
 [packages]
 scikit-learn = "*"
 mantik = {editable = true, path = "./../../../python_sdk"}
+mnp = {editable = true, path = "./../../../mnp/mnppython"}
 
 [requires]
 python_version = "3.7"

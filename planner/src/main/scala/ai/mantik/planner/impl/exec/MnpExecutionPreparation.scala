@@ -9,12 +9,14 @@ import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageR
 import ai.mantik.planner.{ PlanNodeService, PlanOp }
 import akka.http.scaladsl.model.Uri
 import MnpExecutionPreparation._
+import ai.mantik.planner.repository.ContentTypes
 
 /** Information for execution of a [[ai.mantik.planner.PlanOp.RunGraph]] */
 case class MnpExecutionPreparation(
     sessionInitializers: Map[String, SessionInitializer],
     inputPushs: Vector[InputPush],
-    outputPulls: Vector[OutputPull]
+    outputPulls: Vector[OutputPull],
+    taskQueries: Vector[TaskQuery]
 )
 
 object MnpExecutionPreparation {
@@ -29,17 +31,21 @@ object MnpExecutionPreparation {
   /** A Prepared input push */
   case class InputPush(
       nodeId: String,
-      sessionId: String,
       portId: Int,
       fileGetResult: FileGetResult
   )
 
+  /** A prepared output pull */
   case class OutputPull(
       nodeId: String,
-      sessionId: String,
       portId: Int,
       contentType: String,
       fileStorageResult: FileStorageResult
+  )
+
+  /** A prepared task query. */
+  case class TaskQuery(
+      nodeId: String
   )
 }
 
@@ -59,10 +65,12 @@ class MnpExecutionPreparer(
 
     val inputPushes = collectInputPushes()
     val outputPulls = collectOutputPulls()
+    val taskQueries = collectTaskQueries()
     MnpExecutionPreparation(
       initializers,
       inputPushes,
-      outputPulls
+      outputPulls,
+      taskQueries
     )
   }
 
@@ -102,7 +110,12 @@ class MnpExecutionPreparer(
 
     val initConfiguration = MantikInitConfiguration(
       header = dockerContainer.mantikHeader.toJson,
-      payloadContentType = inputData.flatMap(_.contentType).getOrElse(""),
+      payloadContentType = inputData match {
+        case None => "" // encoding for no content type
+        case Some(present) =>
+          // TODO: Content Type should be always present, see #180
+          present.contentType.getOrElse(ContentTypes.ZipFileContentType)
+      },
       payload = inputData.map { data =>
         val fullUrl = Uri(data.path).resolvedAgainst(remoteFileRepositoryAddress).toString()
         MantikInitConfiguration.Payload.Url(fullUrl)
@@ -127,7 +140,6 @@ class MnpExecutionPreparer(
               Some(
                 InputPush(
                   nodeId = link.to.node,
-                  sessionId = sessionIdForNode(link.to.node),
                   portId = portForResource(link.to.resource),
                   fileGetResult = files.resolveFileRead(fromFile.fileReference)
                 )
@@ -154,7 +166,6 @@ class MnpExecutionPreparer(
               Some(
                 OutputPull(
                   nodeId = link.from.node,
-                  sessionId = sessionIdForNode(link.from.node),
                   portId = portForResource(link.from.resource),
                   contentType = contentType,
                   fileStorageResult = files.resolveFileWrite(file.fileReference)
@@ -166,6 +177,16 @@ class MnpExecutionPreparer(
         case _ =>
           None
       }
+    }.toVector
+  }
+
+  private def collectTaskQueries(): Vector[TaskQuery] = {
+    // Task Queries are necessary if a node has no inputs but outputs (DataSets) because it may be forwarded
+    graph.nodes.collect {
+      case (nodeId, Node(_: PlanNodeService.DockerContainer, _)) if !graph.links.exists(_.to.node == nodeId) =>
+        TaskQuery(
+          nodeId = nodeId
+        )
     }.toVector
   }
 
@@ -197,6 +218,7 @@ private object MnpExecutionPreparer {
 
   // TODO: Reflect that in the graph
   private val ResourceMapping = Map(
+    "get" -> 0,
     "apply" -> 0,
     "train" -> 0,
     "result" -> 0,

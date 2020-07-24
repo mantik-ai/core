@@ -4,7 +4,7 @@ import java.nio.file.Path
 
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.errors.ErrorCodes
+import ai.mantik.elements.errors.{ ErrorCodes, MantikAsyncException }
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
@@ -16,6 +16,7 @@ import javax.inject.Inject
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.reflect.ClassTag
+import scala.util.control.NonFatal
 
 private[planner] class ContextImpl @Inject() (
     val localRegistry: LocalMantikRegistry,
@@ -64,7 +65,11 @@ private[planner] class ContextImpl @Inject() (
   }
 
   private def await[T](future: Future[T], timeout: Duration = Duration.Inf) = {
-    Await.result(future, timeout)
+    try {
+      Await.result(future, timeout)
+    } catch {
+      case NonFatal(e) => throw new MantikAsyncException(e)
+    }
   }
 
   override def pushLocalMantikItem(dir: Path, id: Option[NamedMantikId] = None): MantikId = {

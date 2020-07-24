@@ -8,6 +8,7 @@ SUB_PROJECTS=\
 	mnp/mnpgo\
 	mnp/mnppython\
 	go_shared\
+	python_sdk \
 	bridge/binary\
 	bridge/bridge_debugger\
 	bridge/select\
@@ -17,7 +18,6 @@ SUB_PROJECTS=\
 	executor/coordinator \
 	executor/tinyproxy \
 	cli \
-	python_sdk \
 	doc \
 
 

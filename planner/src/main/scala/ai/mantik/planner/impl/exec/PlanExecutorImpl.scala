@@ -97,7 +97,7 @@ private[planner] class PlanExecutorImpl(
         FutureHelper.time(logger, s"Bundle Push $fileId") {
           fileRepository.storeFile(fileId, FileRepository.MantikBundleContentType).flatMap { sink =>
             val source = bundle.encode(withHeader = true)
-            source.runWith(sink)
+            source.runWith(sink).map { _ => () }
           }
         }
       case PlanOp.LoadBundleFromFile(_, fileRef) =>

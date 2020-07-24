@@ -13,7 +13,7 @@ import scalapb.{ GeneratedMessage, GeneratedMessageCompanion, Message }
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 /** Small shim on top of MnpService to make it better usable. */
-class MnpClient(mnpService: MnpService) {
+class MnpClient(val address: String, mnpService: MnpService) {
 
   def about(): Future[AboutResponse] = {
     mnpService.about(Empty())
@@ -23,7 +23,11 @@ class MnpClient(mnpService: MnpService) {
     mnpService.quit(QuitRequest())
   }
 
-  def initSession[T <: GeneratedMessage with Message[T]](
+  /**
+   * Initialize a new MNP Session.
+   * Can throw [[SessionInitException]] when the init fails on remote side
+   */
+  def initSession[T <: GeneratedMessage](
     sessionId: String,
     config: Option[T],
     inputs: Seq[ConfigureInputPort],
@@ -47,7 +51,7 @@ class MnpClient(mnpService: MnpService) {
         value.state match {
           case SessionState.SS_READY =>
             resultPromise.trySuccess(
-              new MnpSession(sessionId, mnpService)
+              new MnpSession(address, sessionId, mnpService)
             )
           case SessionState.SS_FAILED =>
             resultPromise.tryFailure(
@@ -78,9 +82,9 @@ class MnpClient(mnpService: MnpService) {
 
 object MnpClient {
 
-  def forChannel(channel: ManagedChannel): MnpClient = {
+  def forChannel(address: String, channel: ManagedChannel): MnpClient = {
     val serviceStub = new MnpServiceStub(channel)
-    val client = new MnpClient(serviceStub)
+    val client = new MnpClient(address, serviceStub)
     client
   }
 
@@ -88,7 +92,7 @@ object MnpClient {
     val channel: ManagedChannel = ManagedChannelBuilder
       .forTarget(address)
       .usePlaintext().build()
-    (channel, forChannel(channel))
+    (channel, forChannel(address, channel))
   }
 
   @throws[MalformedURLException]("For bad Proxy URLs")
@@ -99,6 +103,6 @@ object MnpClient {
       .forTarget(address)
       .proxyDetector(proxyDetector)
       .usePlaintext().build()
-    (channel, forChannel(channel))
+    (channel, forChannel(address, channel))
   }
 }

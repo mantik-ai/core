@@ -15,7 +15,7 @@ trait NonAsyncFileRepository extends FileRepository {
     await(this.requestFileStorage(temp))
   }
 
-  def storeFileSync(id: String, contentType: String, bytes: ByteString)(implicit materializer: Materializer): Unit = {
+  def storeFileSync(id: String, contentType: String, bytes: ByteString)(implicit materializer: Materializer): Long = {
     val sink = await(this.storeFile(id, contentType))
     await(Source.single(bytes).runWith(sink))
   }

@@ -53,7 +53,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
         )
       }
 
-      override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Unit]]] = ???
+      override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Long]]] = ???
       override def loadFile(id: String): Future[(String, Source[ByteString, _])] = ???
       override def deleteFile(id: String): Future[Boolean] = ???
 

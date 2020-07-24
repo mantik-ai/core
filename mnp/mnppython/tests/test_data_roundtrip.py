@@ -3,7 +3,7 @@ from tests.dummy_handler import DummyHandler
 from mnp._stubs.mantik.mnp.mnp_pb2_grpc import MnpServiceStub
 from mnp._stubs.mantik.mnp.mnp_pb2 import *
 from typing import Tuple
-from mnp import PortConfiguration, InputPortConfiguration, OutputPortConfiguration
+from mnp import PortConfiguration, InputPortConfiguration, OutputPortConfiguration, SessionHandler
 from mnp import Server
 import grpc
 import pytest
@@ -43,6 +43,38 @@ def test_simple_data_roundtrip(dummy_server_handler: Tuple[MnpServiceStub, Dummy
 
     assert result_data == b"Hello World"
 
+    # Testing run_task_with_bytes
+    session: SessionHandler = handler.sessions[0]
+    assert session.session_id == "session1"
+
+    direct_called = session.run_task_with_bytes("task2", [b"This is directly called!"])
+    assert direct_called == [b"This is directly called!"]
+
+
+def test_query_task(dummy_server_handler: Tuple[MnpServiceStub, DummyHandler]):
+    stub, handler = dummy_server_handler
+
+    port_config = PortConfiguration(
+        [InputPortConfiguration("content1")], [OutputPortConfiguration("content2")]
+    )
+
+    response = list(stub.Init(InitRequest(
+        session_id="session1",
+        inputs=port_config.inputs_as_proto(),
+        outputs=port_config.outputs_as_proto()
+    )))
+    assert response[-1].state == SS_READY
+
+    task = stub.QueryTask(QueryTaskRequest(session_id="session1", task_id="task1", ensure=False))
+    assert task.exists is False
+
+    task = stub.QueryTask(QueryTaskRequest(session_id="session1", task_id="task1", ensure=True))
+    assert task.exists is True
+
+    task = stub.QueryTask(QueryTaskRequest(session_id="session1", task_id="task1", ensure=False))
+    assert task.exists is True
+
+    stub.Quit(QuitRequest())
 
 def test_forwarding():
     # Forwarding data from one node to the next one

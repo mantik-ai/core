@@ -18,7 +18,7 @@ trait PlanExecutor {
 object PlanExecutor {
 
   /** An Exception during plan execution. */
-  class PlanExecutorException(msg: String) extends RuntimeException(msg)
+  class PlanExecutorException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
 
   /** The plan to execute is invalid. */
   class InvalidPlanException(msg: String) extends PlanExecutorException(msg)

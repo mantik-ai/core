@@ -1,8 +1,9 @@
 from concurrent import futures
 from queue import Queue
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
-from mnp._stubs.mantik.mnp.mnp_pb2 import QuitResponse, InitResponse, SS_READY, SS_FAILED, PushResponse, PullResponse
+from mnp._stubs.mantik.mnp.mnp_pb2 import QuitResponse, InitResponse, SS_READY, SS_FAILED, PushResponse, PullResponse, \
+    QueryTaskResponse
 from mnp._stubs.mantik.mnp.mnp_pb2 import AboutResponse as MnpAboutResponse
 from mnp._stubs.mantik.mnp.mnp_pb2_grpc import MnpServiceServicer
 from mnp.elements import SessionState as ESessionState, PortConfiguration
@@ -28,7 +29,7 @@ class SessionTask:
         """
         Start this task, it's running asynchronous
         """
-        logging.info("Session {} Starting Task {}", session_handler.session_id, self.task_id)
+        logging.info("Session %s Starting Task %s", session_handler.session_id, self.task_id)
 
         inputs = self.multiplexer.wrapped_inputs()
         outputs = self.multiplexer.wrapped_outputs()
@@ -38,9 +39,10 @@ class SessionTask:
         def on_done(future):
             try:
                 future.result()
+                logging.debug("Session %s Task %s done", session_handler.session_id, self.task_id)
             except Exception as e:
                 msg = repr(e)
-                logging.warning("Task {} failed, {}", self.task_id, msg)
+                logging.warning("Task %s failed, %s", self.task_id, msg, exc_info=True)
                 self.error(repr(e))
             finally:
                 self.multiplexer.close_output()
@@ -55,12 +57,13 @@ class SessionTask:
                 executor.submit(forwarder.run)
                 started += 1
         if started > 0:
-            logging.info("Started {} forwarders", started)
+            logging.info("Started %d forwarders", started)
 
     def error(self, error: str):
         """
         Set this task into an error state
         """
+        logging.error("Task Error %s", error)
         self.error_message = error
         self.multiplexer.close()
         pass
@@ -95,6 +98,9 @@ class SessionServer:
         finally:
             self.mutex.release()
 
+    def get_task(self, task_id: str) -> Optional[SessionTask]:
+        return self.tasks.get(task_id)
+
     def close(self):
         self.handler.quit()
         # No way yet to close running tasks, but we can stop their channels
@@ -116,6 +122,8 @@ class ServiceServer(MnpServiceServicer):
 
     def Quit(self, request, context):
         self.handler.quit()
+        for session_id, session in self.sessions.items():
+            session.close()
         return QuitResponse()
 
     def Init(self, request, context):
@@ -131,7 +139,7 @@ class ServiceServer(MnpServiceServicer):
         state_queue = Queue()
 
         def callback(state: ESessionState) -> None:
-            print("Session state {}".format(state))
+            logging.info("Session state %s", state)
             if state != ESessionState.READY and state != ESessionState.FAILED:
                 state_queue.put(
                     InitResponse(
@@ -151,6 +159,7 @@ class ServiceServer(MnpServiceServicer):
             try:
                 session_handler = f.result()
                 self.sessions[session_id] = SessionServer(session_id, session_handler, self.executor)
+                logging.info("Initialized session %s", session_id)
                 state_queue.put(
                     InitResponse(
                         state=SS_READY
@@ -159,7 +168,7 @@ class ServiceServer(MnpServiceServicer):
                 state_queue.put(sentinel)
             except Exception as e:
                 error_message = repr(e)
-                logging.warning("Could not start session {}".format(session_id), exc_info=True)
+                logging.warning("Could not start session %s", session_id, exc_info=True)
                 state_queue.put(
                     InitResponse(
                         state=SS_FAILED,
@@ -181,6 +190,7 @@ class ServiceServer(MnpServiceServicer):
             raise ValueError("Unknown session")
         task_id = first.task_id
         port = first.port
+        logging.debug("Pushing %s/%s/%d", first.session_id, task_id, port)
         task = session.get_or_create_task(task_id)
 
         task.multiplexer.push(port, first.data)
@@ -204,6 +214,7 @@ class ServiceServer(MnpServiceServicer):
 
         task_id = request.task_id
         port = request.port
+        logging.debug("Pulling %s/%s/%d", request.session_id, task_id, port)
         task = session.get_or_create_task(task_id)
 
         def respond() -> Iterable[PullResponse]:
@@ -223,3 +234,17 @@ class ServiceServer(MnpServiceServicer):
         session.close()
         self.sessions.pop(request.session_id, None)
         return QuitResponse()
+
+    def QueryTask(self, request, context):
+        session = self.sessions.get(request.session_id)
+        if session is None:
+            context.set_details("Unknown session")
+            raise ValueError("Unknown session")
+        task_id = request.task_id
+        ensure: bool = request.ensure
+        task: SessionTask
+        if ensure:
+            task = session.get_or_create_task(task_id)
+        else:
+            task = session.get_task(task_id)
+        return QueryTaskResponse(exists=task is not None)

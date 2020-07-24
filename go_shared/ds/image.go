@@ -11,7 +11,7 @@ type Image struct {
 	Width      int                 `json:"width"`
 	Height     int                 `json:"height"`
 	Components OrderedComponentMap `json:"components"`
-	// Image format: supported "", "plain", "png", "jpeg" (empty is the same as "plain")
+	// Image format: supported "plain", "png", "jpeg" (empty is the same as "plain" during decoding)
 	Format string `json:"format,omitempty"`
 }
 
@@ -38,6 +38,20 @@ var channels = []ImageChannel{
 	Black,
 }
 
+func (t *Image) UnmarshalJSON(i []byte) error {
+	// creates its own type so that UnmarshallJson is not overridden anymore
+	type ImageJson Image
+	err := json.Unmarshal(i, (*ImageJson)(t))
+	if err != nil {
+		return err
+	}
+	// Setting default values
+	if len(t.Format) == 0 {
+		t.Format = "plain"
+	}
+	return nil
+}
+
 /* Create an image definition with a single channel and raw encoding. Convenience Constructor. */
 func CreateSingleChannelRawImage(width int, height int, channel ImageChannel, dataType *FundamentalType) *Image {
 	return &Image{
@@ -60,7 +74,7 @@ func (t *Image) TypeName() string {
 
 // Return true, if this is a plain image.
 func (t *Image) IsPlain() bool {
-	return t.Format == "" || t.Format == "plain"
+	return t.Format == "plain"
 }
 
 func findChannel(s string) (*ImageChannel, error) {

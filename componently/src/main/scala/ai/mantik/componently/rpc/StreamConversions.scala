@@ -24,7 +24,8 @@ object StreamConversions {
 
   /** Generates a Sink which forwards all to the given stream observer. */
   def sinkFromStreamObserver[T](destination: StreamObserver[T]): Sink[T, NotUsed] = {
-    sinkFromStreamObserverWithSpecialHandling[T, T](destination, identity, identity)
+    sinkFromStreamObserverWithSpecialHandling[T, T, Unit](destination, identity, identity, initialState = (), stateUpdate = { (_, _) => () })
+      .mapMaterializedValue(_ => NotUsed)
   }
 
   /**
@@ -32,15 +33,23 @@ object StreamConversions {
    * @param f function used for the first element.
    * @param g function used for the rest of the elements.
    * @param completer function used when the stream is complete
+   *
+   * @tparam U sink type
+   * @tparam T observer type
+   * @tparam S state type (from observer type)
    */
-  def sinkFromStreamObserverWithSpecialHandling[U, T](
+  def sinkFromStreamObserverWithSpecialHandling[U, T, S](
     destination: StreamObserver[T],
     f: U => T,
     g: U => T,
-    completer: Unit => Option[T] = { _: Unit => None }
-  ): Sink[U, NotUsed] = {
+    completer: Unit => Option[T] = { _: Unit => None },
+    initialState: S,
+    stateUpdate: (S, T) => S
+  ): Sink[U, Future[S]] = {
     var subscribed = false
     var first = true
+    var state = initialState
+    val stateResult = Promise[S]
     val subscriber = new Subscriber[U] {
       override def onSubscribe(s: Subscription): Unit = {
         require(!subscribed, "Can only subscribed once")
@@ -49,27 +58,33 @@ object StreamConversions {
       }
 
       override def onNext(t: U): Unit = {
-        if (first) {
-          destination.onNext(f(t))
+        val got = if (first) {
           first = false
+          f(t)
         } else {
-          destination.onNext(g(t))
+          g(t)
         }
+        destination.onNext(got)
+        state = stateUpdate(state, got)
       }
 
       override def onError(t: Throwable): Unit = {
         destination.onError(t)
+        stateResult.tryFailure(t)
       }
 
       override def onComplete(): Unit = {
         val maybeLast = completer(())
         maybeLast.foreach { last =>
           destination.onNext(last)
+          state = stateUpdate(state, last)
         }
         destination.onCompleted()
+        stateResult.trySuccess(state)
       }
     }
     Sink.fromSubscriber(subscriber)
+      .mapMaterializedValue(_ => stateResult.future)
   }
 
   /**
@@ -188,7 +203,10 @@ object StreamConversions {
   def singleStreamObserverFuture[T](): (StreamObserver[T], Future[T]) = {
     val promise = Promise[T]
     val streamObserver = new StreamObserver[T] {
-      override def onNext(value: T): Unit = promise.success(value)
+      override def onNext(value: T): Unit = {
+        println(s"Single Stream Result ${value}")
+        promise.success(value)
+      }
 
       override def onError(t: Throwable): Unit = promise.failure(t)
 

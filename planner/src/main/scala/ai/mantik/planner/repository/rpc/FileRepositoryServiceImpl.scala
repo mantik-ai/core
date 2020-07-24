@@ -56,8 +56,8 @@ class FileRepositoryServiceImpl @Inject() (backend: FileRepository)(implicit akk
         }
         val (streamObserver, result) = byteBlobs.toMat(sink)(Keep.both).run()
         result.onComplete {
-          case Success(_) =>
-            responseObserver.onNext(StoreFileResponse())
+          case Success(writtenBytes) =>
+            responseObserver.onNext(StoreFileResponse(bytes = writtenBytes))
             responseObserver.onCompleted()
           case Failure(e) => responseObserver.onError(e)
         }

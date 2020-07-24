@@ -9,8 +9,9 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model.{ ContainerService, Graph, GrpcProxy, Node, ResourceType, StartWorkerRequest, StopWorkerRequest }
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
-import ai.mantik.mnp.{ MnpClient, MnpSession }
+import ai.mantik.mnp.{ MnpClient, MnpSession, SessionInitException }
 import ai.mantik.mnp.protocol.mnp.{ AboutResponse, ConfigureInputPort, ConfigureOutputPort }
+import ai.mantik.planner.PlanExecutor.PlanExecutorException
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{ InputPush, OutputPull }
@@ -123,14 +124,6 @@ class MnpPlanExecutor(
         }
       case PlanOp.RunGraph(graph) =>
         runGraph(graph)
-      /*
-        val jobGraphConverter = new JobGraphConverter(clientConfig.remoteFileRepositoryAddress, isolationSpace, files, dockerConfig.logins)
-        val job = jobGraphConverter.translateGraphIntoJob(graph)
-        logger.debug(s"Running job ${jobDebugString(job)}")
-        FutureHelper.time(logger, s"Executing Job in isolationSpace ${job.isolationSpace}") {
-          executeJobAndWaitForReady(job)
-        }
-         */
       case da: PlanOp.DeployAlgorithm =>
         // TODO
         ???
@@ -142,6 +135,7 @@ class MnpPlanExecutor(
 
   private case class ReservedContainer(
       name: String,
+      image: String,
       address: String,
       mnpChannel: ManagedChannel,
       mnpClient: MnpClient,
@@ -203,6 +197,7 @@ class MnpPlanExecutor(
       logger.info(s"Spinned up worker ${response.nodeName} image=${container.image} about=${aboutResponse.name} within ${t1 - t0}ms")
       ReservedContainer(
         response.nodeName,
+        container.image,
         address,
         channel,
         mnpClient,
@@ -284,12 +279,17 @@ class MnpPlanExecutor(
   }
 
   private def initializeSession(container: ReservedContainer, initializer: MnpExecutionPreparation.SessionInitializer): Future[MnpSession] = {
+    logger.debug(s"Initializing session ${container.mnpClient.address}/${initializer.sessionId}, ${initializer.config.header}")
+    logger.debug(s"Associated payload: ${initializer.config.payload} (contentType: ${initializer.config.payloadContentType})")
     container.mnpClient.initSession(
       initializer.sessionId,
       Some(initializer.config),
       initializer.inputPorts,
       initializer.outputPorts
-    )
+    ).recover {
+        case e: SessionInitException =>
+          throw new PlanExecutorException(s"Could not init MNP session on ${container.address} (image=${container.image})", e)
+      }
   }
 
   private def runLinks(taskId: String, sessions: Map[String, MnpSession], preparation: MnpExecutionPreparation): Future[Unit] = {
@@ -301,25 +301,37 @@ class MnpPlanExecutor(
     val outputPullFutures = preparation.outputPulls.map { outputPull =>
       runOutputPull(taskId, sessions(outputPull.nodeId), outputPull)
     }
-    Future.sequence(inputPushFutures ++ outputPullFutures).map {
+    val queryTaskFutures = preparation.taskQueries.map { taskQuery =>
+      val session = sessions(taskQuery.nodeId)
+      logger.debug(s"Sending Query Task to ${session.mnpUrl}/${taskId}")
+      session.runTask(taskId).query(true)
+    }
+    Future.sequence(inputPushFutures ++ outputPullFutures ++ queryTaskFutures).map {
       _ => ()
     }
   }
 
   private def runInputPush(taskId: String, session: MnpSession, inputPush: InputPush): Future[Unit] = {
+    logger.debug(s"Starting push from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}")
     fileRepository.loadFile(inputPush.fileGetResult.fileId).flatMap {
       case (contentType, fileSource) =>
         val runTask = session.runTask(taskId)
         val sink = runTask.push(inputPush.portId)
         fileSource.runWith(sink)
-    }.map(_ => ())
+    }.map {
+      case (bytes, response) =>
+        logger.debug(s"Pushed ${bytes} from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}")
+    }
   }
 
   private def runOutputPull(taskId: String, session: MnpSession, outputPull: OutputPull): Future[Unit] = {
+    logger.debug(s"Starting pull from ${session.mnpUrl}/${taskId}/${outputPull.portId} to ${outputPull.fileStorageResult.fileId}")
     fileRepository.storeFile(outputPull.fileStorageResult.fileId, outputPull.contentType).flatMap { fileSink =>
       val runTask = session.runTask(taskId)
       val source = runTask.pull(outputPull.portId)
       source.runWith(fileSink)
+    }.map { bytes =>
+      logger.debug(s"Pulled ${bytes} from ${session.mnpUrl}/${taskId}/${outputPull.portId} to ${outputPull.fileStorageResult.fileId}")
     }
   }
 

@@ -21,4 +21,23 @@ class SelectSpec extends IntegrationTestBase {
       .withPrimitives("y", "a", "c")
       .result
   }
+
+  it should "run with chained selects" in {
+    val input = Bundle.buildColumnWise
+      .withPrimitives("x", 1, 2, 3)
+      .withPrimitives("y", "a", "b", "c")
+      .result
+
+    val inputDs = DataSet.literal(input)
+
+    val inputX = inputDs.select("SELECT x as y")
+    val inputTwoTimes = inputX.select("SELECT (y * 2) as z")
+
+    val expected = Bundle.buildColumnWise
+      .withPrimitives("z", 2, 4, 6)
+      .result
+
+    val got = inputTwoTimes.fetch.run()
+    got shouldBe expected
+  }
 }

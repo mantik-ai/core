@@ -1,6 +1,7 @@
 name: mnist_linear
 bridge: mantik/tf.train
 trainedBridge: mantik/tf.saved_model
+protocol: 2
 
 kind: trainable
 

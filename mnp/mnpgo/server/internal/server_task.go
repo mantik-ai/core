@@ -3,7 +3,7 @@ package internal
 import (
 	"context"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"io"
+	"golang.org/x/sync/errgroup"
 )
 
 type ServerTask struct {
@@ -11,6 +11,7 @@ type ServerTask struct {
 	ctx         context.Context
 	taskId      string
 	multiplexer *StreamMultiplexer
+	forwarder   []*Forwarder
 }
 
 func NewServerTask(
@@ -18,42 +19,51 @@ func NewServerTask(
 	taskId string,
 	ctx context.Context,
 	configuration *mnpgo.PortConfiguration,
-	forwarders []*Forwarder,
 ) (*ServerTask, error) {
 
-	initializedForwarders := make([]io.WriteCloser, len(configuration.Outputs), len(configuration.Outputs))
-	for i := 0; i < len(configuration.Outputs); i++ {
-		if forwarders[i] != nil {
-			initalized, err := forwarders[i].RunTask(ctx, taskId)
-			if err != nil {
-				for _, c := range initializedForwarders {
-					// Close them, there was an error
-					if c != nil {
-						c.Close()
-					}
-				}
-				return nil, err
-			}
-			initializedForwarders[i] = initalized
-		}
-	}
+	var forwarders2 []*Forwarder
 
 	multiplexer := NewStreamMultiplexer(
 		len(configuration.Inputs),
 		len(configuration.Outputs),
-		initializedForwarders,
 	)
+
+	for i, o := range configuration.Outputs {
+		if len(o.DestinationUrl) > 0 {
+			forwarder2, err := MakeForwarder(ctx, multiplexer, i, taskId, o.DestinationUrl)
+			if err != nil {
+				return nil, err
+			}
+			forwarders2 = append(forwarders2, forwarder2)
+		}
+	}
 
 	return &ServerTask{
 		session:     session,
 		ctx:         ctx,
 		taskId:      taskId,
 		multiplexer: multiplexer,
+		forwarder:   forwarders2,
 	}, nil
 }
 
 func (t *ServerTask) Run() error {
-	return t.session.RunTask(t.ctx, t.taskId, t.multiplexer.InputReaders, t.multiplexer.OutputWrites)
+	group := errgroup.Group{}
+
+	for _, f := range t.forwarder {
+		func(f *Forwarder) {
+			group.Go(func() error {
+				err := f.Run()
+				return err
+			})
+		}(f)
+	}
+	group.Go(func() error {
+		err := t.session.RunTask(t.ctx, t.taskId, t.multiplexer.InputReaders, t.multiplexer.OutputWrites)
+		t.multiplexer.Finalize(err)
+		return err
+	})
+	return group.Wait()
 }
 
 func (t *ServerTask) Write(port int, data []byte) error {
@@ -70,9 +80,4 @@ func (t *ServerTask) WriteFailure(port int, err error) {
 
 func (t *ServerTask) Read(port int) ([]byte, error) {
 	return t.multiplexer.Read(port)
-}
-
-/* Finalize the server task with an error, eventually closing open channels */
-func (t *ServerTask) Finalize(err error) {
-	t.multiplexer.Finalize(err)
 }

@@ -59,7 +59,7 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
     wrapError("inspectContainer", apiClient.prepare(DockerApi.inspectContainer))
 
   // Parameter: "all" (otherwise only running containers)
-  val listContainers: Boolean => Future[List[ListContainerResponseRow]] =
+  val listContainers: Boolean => Future[Vector[ListContainerResponseRow]] =
     wrapError("listContainers", apiClient.prepare(DockerApi.listContainers))
 
   val listContainersFiltered: (Boolean, ListContainerRequestFilter) => Future[Vector[ListContainerResponseRow]] =

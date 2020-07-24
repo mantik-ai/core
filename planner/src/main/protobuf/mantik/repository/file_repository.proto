@@ -61,7 +61,8 @@ message StoreFileRequest {
 }
 
 message StoreFileResponse {
-    // currently empty
+    // number of written bytes
+    int64 bytes = 1;
 }
 
 message DeleteFileRequest {

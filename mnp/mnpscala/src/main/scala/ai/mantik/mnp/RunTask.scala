@@ -2,20 +2,24 @@ package ai.mantik.mnp
 
 import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
 import ai.mantik.mnp.protocol.mnp.MnpServiceGrpc.MnpService
-import ai.mantik.mnp.protocol.mnp.{ PullRequest, PullResponse, PushRequest, PushResponse }
+import ai.mantik.mnp.protocol.mnp.{ PullRequest, PullResponse, PushRequest, PushResponse, QueryTaskRequest, QueryTaskResponse }
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class RunTask(sessionId: String, taskId: String, mnpService: MnpService) {
 
-  def push(port: Int): Sink[ByteString, Future[PushResponse]] = {
+  /**
+   * Execute a push.
+   * @return Sink with value of written bytes and Response.
+   */
+  def push(port: Int)(implicit ec: ExecutionContext): Sink[ByteString, Future[(Long, PushResponse)]] = {
     val (streamObserver, responseFuture) = StreamConversions.singleStreamObserverFuture[PushResponse]()
     val pusher = mnpService.push(streamObserver)
 
-    val asSink = StreamConversions.sinkFromStreamObserverWithSpecialHandling[ByteString, PushRequest](
+    val asSink = StreamConversions.sinkFromStreamObserverWithSpecialHandling[ByteString, PushRequest, Long](
       pusher,
       first => {
         PushRequest(
@@ -36,8 +40,15 @@ class RunTask(sessionId: String, taskId: String, mnpService: MnpService) {
             done = true
           )
         )
+      },
+      initialState = 0L,
+      stateUpdate = (bytes, request) => bytes + request.data.size()
+    ).mapMaterializedValue { bytesFuture =>
+        for {
+          bytes <- bytesFuture
+          response <- responseFuture
+        } yield (bytes, response)
       }
-    ).mapMaterializedValue { _ => responseFuture }
 
     asSink
   }
@@ -54,5 +65,14 @@ class RunTask(sessionId: String, taskId: String, mnpService: MnpService) {
     source.map { response =>
       RpcConversions.decodeByteString(response.data)
     }
+  }
+
+  def query(ensure: Boolean): Future[QueryTaskResponse] = {
+    val request = QueryTaskRequest(
+      sessionId,
+      taskId,
+      ensure
+    )
+    mnpService.queryTask(request)
   }
 }

@@ -21,7 +21,7 @@ type StreamMultiplexer struct {
 	OutputWrites []io.WriteCloser
 }
 
-func NewStreamMultiplexer(inputChannels int, outputChannels int, forwarders []io.WriteCloser) *StreamMultiplexer {
+func NewStreamMultiplexer(inputChannels int, outputChannels int) *StreamMultiplexer {
 	bufSize := 65536 // Configurable?
 
 	r := StreamMultiplexer{
@@ -42,14 +42,10 @@ func NewStreamMultiplexer(inputChannels int, outputChannels int, forwarders []io
 	}
 
 	for i := 0; i < outputChannels; i++ {
-		if forwarders[i] != nil {
-			r.OutputWrites[i] = forwarders[i]
-		} else {
-			outputReader, outputWriter := io.Pipe()
-			bufferedOutputReader := bufio.NewReaderSize(outputReader, bufSize)
-			r.outputs[i] = bufferedOutputReader
-			r.OutputWrites[i] = outputWriter
-		}
+		outputReader, outputWriter := io.Pipe()
+		bufferedOutputReader := bufio.NewReaderSize(outputReader, bufSize)
+		r.outputs[i] = bufferedOutputReader
+		r.OutputWrites[i] = outputWriter
 	}
 	return &r
 }
@@ -86,11 +82,20 @@ func (s *StreamMultiplexer) WriteFailure(id int, err error) {
 	s.inputStates[id] = err
 }
 
+func (s *StreamMultiplexer) ReadFailure(id int, err error) {
+	s.OutputWrites[id].Close()
+	s.outputStates[id] = err
+}
+
 // Read something on the output side
 func (s *StreamMultiplexer) Read(id int) ([]byte, error) {
 	buffer := make([]byte, s.bufSize, s.bufSize)
-	n, err := s.outputs[id].Read(buffer)
+
+	n, err := io.ReadFull(s.outputs[id], buffer)
 	if n <= 0 && err != nil {
+		if err == io.ErrUnexpectedEOF {
+			err = io.EOF
+		}
 		if s.outputStates[id] == nil {
 			s.outputStates[id] = err
 		} else {

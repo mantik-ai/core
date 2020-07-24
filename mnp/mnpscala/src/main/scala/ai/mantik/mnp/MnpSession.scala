@@ -8,8 +8,14 @@ import akka.util.ByteString
 
 import scala.concurrent.Future
 
-/** Wraps an Mnp Session. */
-class MnpSession(sessionId: String, mnpService: MnpService) {
+/**
+ * Wraps an Mnp Session.
+ * @param address address (for debugging and logging)
+ * @param sessionId MNP session id
+ */
+class MnpSession(val address: String, val sessionId: String, mnpService: MnpService) {
+
+  def mnpUrl: String = s"mnp://${address}/${sessionId}"
 
   def quit(): Future[QuitSessionResponse] = {
     mnpService.quitSession(QuitSessionRequest(sessionId))

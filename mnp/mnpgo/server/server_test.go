@@ -12,6 +12,7 @@ import (
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/server/internal"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/util"
+	"google.golang.org/grpc"
 	"io"
 	"testing"
 )
@@ -81,6 +82,55 @@ func TestInit(t *testing.T) {
 
 	assert.True(t, originalSession.Quitted)
 	assert.Equal(t, []string{}, s.service.GetSessions())
+}
+
+func TestEnsureTask(t *testing.T) {
+	var dummy internal.DummyHandler
+	s := setupServer(t, &dummy)
+	defer tearDown(s)
+
+	addr := fmt.Sprintf("127.0.0.1:%d", s.Port())
+
+	c, err := client.ConnectClient(addr)
+	assert.NoError(t, err)
+	defer c.Close()
+
+	contentTypes := mnpgo.PortConfiguration{
+		Inputs:  []mnpgo.InputPortConfiguration{{"abc"}},
+		Outputs: []mnpgo.OutputPortConfiguration{{"xyz", ""}, {"bar", ""}},
+	}
+
+	_, err = c.Init("session1", nil, &contentTypes, nil)
+	assert.NoError(t, err)
+
+	clientCon, err := grpc.Dial(addr, grpc.WithInsecure())
+	defer clientCon.Close()
+	assert.NoError(t, err)
+	mnpServiceClient := mnp.NewMnpServiceClient(clientCon)
+
+	response, err := mnpServiceClient.QueryTask(context.Background(), &mnp.QueryTaskRequest{
+		SessionId: "session1",
+		TaskId:    "task1",
+		Ensure:    false,
+	})
+	assert.NoError(t, err)
+	assert.False(t, response.Exists)
+
+	response, err = mnpServiceClient.QueryTask(context.Background(), &mnp.QueryTaskRequest{
+		SessionId: "session1",
+		TaskId:    "task1",
+		Ensure:    true,
+	})
+	assert.NoError(t, err)
+	assert.True(t, response.Exists)
+
+	response, err = mnpServiceClient.QueryTask(context.Background(), &mnp.QueryTaskRequest{
+		SessionId: "session1",
+		TaskId:    "task1",
+		Ensure:    false,
+	})
+	assert.NoError(t, err)
+	assert.True(t, response.Exists)
 }
 
 func TestDataTransformation(t *testing.T) {
@@ -156,8 +206,6 @@ func TestFailingTransformation(t *testing.T) {
 
 	assert.True(t, output1.Closed)
 	assert.True(t, output2.Closed)
-	assert.Equal(t, []byte{1, 2, 3, 4}, output1.Buffer.Bytes())
-	assert.Equal(t, []byte{2, 4, 6, 8}, output2.Buffer.Bytes())
 
 	serverSession, _ := s.service.getSession("session1")
 	assert.Empty(t, serverSession.GetTasks())

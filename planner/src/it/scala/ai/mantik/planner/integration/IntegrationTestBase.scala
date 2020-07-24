@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 abstract class IntegrationTestBase extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
 
   protected var embeddedExecutor: ExecutorForIntegrationTest = _
-  override protected lazy val typesafeConfig: Config = ConfigFactory.load("systemtest.conf")
+  override protected lazy val typesafeConfig: Config = ConfigFactory.load("systemtest_docker.conf")
   private var _context: Context = _
   private var _fileRepo: FileRepository = _
 

@@ -20,6 +20,19 @@ class MantikException(val code: ErrorCode, msg: String, cause: Throwable = null)
   }
 }
 
+/** Wraps an exception in async code to get a better stack trace */
+class MantikAsyncException(code: ErrorCode, msg: String, cause: Throwable = null) extends MantikException(code, msg, cause) {
+
+  def this(cause: Throwable) {
+    this({
+      cause match {
+        case m: MantikException => m.code
+        case other              => ErrorCodes.InternalError
+      }
+    }, cause.getMessage, cause)
+  }
+}
+
 /** A Mantik Exception which happened remote (gRpc), does not have a stack trace. */
 class MantikRemoteException(code: ErrorCode, msg: String) extends MantikException(code, msg) {
 

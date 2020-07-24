@@ -375,10 +375,11 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
         new Errors.NotFoundException("Grpc Proxy not enabled")
       )
     }
-    if (grpcProxies.get(isolationSpace) != null){
-      return Future.successful(grpcProxies.get(isolationSpace))
-    }
     val namespace = namespaceForIsolationSpace(isolationSpace)
+    Option(grpcProxies.get(namespace)) match {
+      case Some(alreadyExists) => return Future.successful(alreadyExists)
+      case None => // continue
+    }
 
     val deployment = Deployment(
       metadata = ObjectMeta(

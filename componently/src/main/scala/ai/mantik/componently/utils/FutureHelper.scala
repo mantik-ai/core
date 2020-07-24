@@ -87,11 +87,12 @@ object FutureHelper {
     val result = Promise[T]
     val clock = Clock.systemUTC()
     val finalTimeout = clock.instant().plus(timeout.toMillis, ChronoUnit.MILLIS)
+    val timeoutException = new TimeoutException(s"Timeout after ${timeout}")
     def tryAgain(): Unit = {
       f.andThen {
         case Success(None) =>
           if (clock.instant().isAfter(finalTimeout)) {
-            result.tryFailure(new TimeoutException(s"Timeout after $timeout"))
+            result.tryFailure(timeoutException)
           } else {
             actorSystem.scheduler.scheduleOnce(tryAgainWaitDuration)(tryAgain())
           }

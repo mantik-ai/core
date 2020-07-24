@@ -135,6 +135,8 @@ class FunctionType(object):
 class MantikHeader(object):
     """Represents the MantikHeader which controls the way a algorithm/dataset works."""
 
+    # TODO: The base dir should not be part of a MantikHeader
+
     yaml_code: dict
     basedir: str
     name: str
@@ -328,7 +330,7 @@ class Bundle:
         return self.__class__(use_type, self.value)
 
     @classmethod
-    def decode(cls, content_type: str, data, assumed_type: DataType = None):
+    def decode(cls, content_type: str, data, assumed_type: DataType = None) -> Bundle:
         """Decode the bundle with the given content type from a file-like data object.
 
         If the content type is unknown, it will try to use JSON.
@@ -398,7 +400,7 @@ class Bundle:
 
         return json.dumps({"type": self.type.representation, "value": self.value})
 
-    def encode_msgpack(self):
+    def encode_msgpack(self) -> bytes:
         if self.type is None:
             is_tabular = True
         else:
@@ -412,7 +414,7 @@ class Bundle:
 
         return packer.bytes()
 
-    def encode_msgpack_bundle(self):
+    def encode_msgpack_bundle(self) -> bytes:
         if self.type is None:
             raise Exception("No type available")
         header = {"format": self.type.representation}

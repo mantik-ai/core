@@ -2,7 +2,7 @@ package ai.mantik.planner
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.planner.impl.{ ContextImpl, PlannerImpl }
-import ai.mantik.planner.impl.exec.PlanExecutorImpl
+import ai.mantik.planner.impl.exec.{ MnpPlanExecutor, PlanExecutorImpl }
 import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, Repository, RepositoryModule }
 import ai.mantik.planner.repository.rpc.{ FileRepositoryClientImpl, RepositoryClientImpl }
 import com.google.inject.AbstractModule
@@ -19,7 +19,7 @@ class PlannerModule(isClient: Option[ClientConfig])(
 
   override def configure(): Unit = {
     bind(classOf[Context]).to(classOf[ContextImpl])
-    bind(classOf[PlanExecutor]).to(classOf[PlanExecutorImpl])
+    bind(classOf[PlanExecutor]).to(classOf[MnpPlanExecutor])
     bind(classOf[Planner]).to(classOf[PlannerImpl])
     isClient match {
       case Some(clientConfig) =>

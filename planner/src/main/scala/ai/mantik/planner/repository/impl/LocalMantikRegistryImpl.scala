@@ -30,7 +30,7 @@ class LocalMantikRegistryImpl @Inject() (
   }
 
   override def addMantikArtifact(mantikArtifact: MantikArtifact, payload: Option[(String, Source[ByteString, _])]): Future[MantikArtifact] = {
-    val fileStorage: Future[Option[(String, Future[Unit])]] = payload.map {
+    val fileStorage: Future[Option[(String, Future[Long])]] = payload.map {
       case (contentType, source) =>
         for {
           storage <- fileRepository.requestFileStorage(temporary = false)
