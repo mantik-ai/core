@@ -1,12 +1,14 @@
 package ai.mantik.executor.kubernetes.integration
 
 import java.time.Clock
+import java.util.UUID
 
 import ai.mantik.executor.kubernetes.{K8sOperations, KubernetesConstants}
 import ai.mantik.testutils.tags.IntegrationTest
 import play.api.libs.json.Json
 import skuber.Pod.Phase
 import skuber.api.client.Status
+import skuber.apps.Deployment
 import skuber.batch.Job
 import skuber.json.batch.format._
 import skuber.json.format._
@@ -242,5 +244,47 @@ class K8sOperationsSpec extends KubernetesTestBase {
     val t1 = System.currentTimeMillis()
     (t1 - t0) shouldBe >=(3000L)
     count shouldBe 4 // retried 3 times.
+  }
+
+  "deploymentSetReplicas" should "work" in new Env {
+    import skuber.json.apps.format.depFormat
+    val ns = config.kubernetes.namespacePrefix + "scaletest"
+    await(k8sOperations.ensureNamespace(ns))
+
+    val labels = Map(
+      KubernetesConstants.InternalId -> UUID.randomUUID().toString
+    )
+
+    val deployment = Deployment(
+      metadata = ObjectMeta(
+        generateName = "deplscaletest1",
+        labels = labels
+      ),
+      spec = Some(
+        Deployment.Spec(
+          template = Some(
+            Pod.Template.Spec(
+              metadata = ObjectMeta(
+                labels = labels
+              ),
+              spec = Some(longRunningPod.withRestartPolicy(RestartPolicy.Always))
+            )
+          )
+        )
+      )
+    )
+    deployment.spec.get.replicas.get shouldBe 1
+    val deployed = await(
+      k8sOperations.create(Some(ns), deployment)
+    )
+    deployed.spec.get.replicas.get shouldBe 1
+    val updated = await(
+      k8sOperations.deploymentSetReplicas(Some(ns), deployed.name, 2)
+    )
+    updated.spec.get.replicas.get shouldBe 2
+    val getAgain = await(
+      k8sOperations.byName[Deployment](Some(ns), deployed.name)
+    )
+    getAgain.get.spec.get.replicas.get shouldBe 2
   }
 }

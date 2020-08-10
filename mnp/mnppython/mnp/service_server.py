@@ -3,7 +3,7 @@ from queue import Queue
 from typing import Dict, Iterable, Optional
 
 from mnp._stubs.mantik.mnp.mnp_pb2 import QuitResponse, InitResponse, SS_READY, SS_FAILED, PushResponse, PullResponse, \
-    QueryTaskResponse
+    QueryTaskResponse, TS_UNKNOWN, TS_EXISTS, TS_FINISHED, TS_FAILED
 from mnp._stubs.mantik.mnp.mnp_pb2 import AboutResponse as MnpAboutResponse
 from mnp._stubs.mantik.mnp.mnp_pb2_grpc import MnpServiceServicer
 from mnp.elements import SessionState as ESessionState, PortConfiguration
@@ -24,6 +24,7 @@ class SessionTask:
         self.port_config = port_config
         self.multiplexer = StreamMultiplexer(len(port_config.inputs), len(port_config.outputs))
         self.error_message = ""
+        self.state = TS_EXISTS
 
     def start(self, executor: futures.Executor, session_handler: SessionHandler):
         """
@@ -40,6 +41,7 @@ class SessionTask:
             try:
                 future.result()
                 logging.debug("Session %s Task %s done", session_handler.session_id, self.task_id)
+                self.state = TS_FINISHED
             except Exception as e:
                 msg = repr(e)
                 logging.warning("Task %s failed, %s", self.task_id, msg, exc_info=True)
@@ -66,7 +68,17 @@ class SessionTask:
         logging.error("Task Error %s", error)
         self.error_message = error
         self.multiplexer.close()
+        if self.state != TS_FINISHED:
+            self.state = TS_FAILED
         pass
+
+    def query(self) -> QueryTaskResponse:
+        return QueryTaskResponse(
+            state=self.state,
+            error=self.error_message,
+            inputs=self.multiplexer.input_port_status(),
+            outputs=self.multiplexer.output_port_status()
+        )
 
 
 class SessionServer:
@@ -247,4 +259,8 @@ class ServiceServer(MnpServiceServicer):
             task = session.get_or_create_task(task_id)
         else:
             task = session.get_task(task_id)
-        return QueryTaskResponse(exists=task is not None)
+
+        if task is None:
+            return QueryTaskResponse(state=TS_UNKNOWN)
+
+        return task.query()

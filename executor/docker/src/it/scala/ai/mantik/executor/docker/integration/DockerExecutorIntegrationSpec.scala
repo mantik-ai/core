@@ -1,11 +1,14 @@
 package ai.mantik.executor.docker.integration
 
+import java.util.Base64
+
 import ai.mantik.executor.Errors
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
 import ai.mantik.executor.docker.{DockerConstants, DockerExecutor, DockerExecutorConfig}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{ListWorkerRequest, PublishServiceRequest, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest, WorkerState}
-import io.circe.Json
+import ai.mantik.executor.model.{ListWorkerRequest, MnpWorkerDefinition, PublishServiceRequest, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest, WorkerState, WorkerType}
+import akka.util.ByteString
+import io.circe.syntax._
 
 class DockerExecutorIntegrationSpec extends IntegrationTestBase {
 
@@ -56,8 +59,10 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
       val startWorkerRequest = StartWorkerRequest (
         isolationSpace = isolationSpace,
         id = id,
-        container = Container(
-          image = "mantikai/bridge.binary"
+        definition = MnpWorkerDefinition(
+          container = Container(
+            image = "mantikai/bridge.binary"
+          )
         )
       )
       await(dockerExecutor.startWorker(startWorkerRequest))
@@ -78,10 +83,54 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
       val containerAgain = await(dockerClient.listContainersFiltered(true, ListContainerRequestFilter.forLabelKeyValue(
         DockerConstants.UserIdLabelName -> "foo"
       )))
-      import io.circe.syntax._
       println(containerAgain.asJson)
       containerAgain.head.State shouldBe "running"
     }
+  }
+
+  it should "be possible to initialize an MNP Node directly" in new Env {
+    // Source: SelectSpec, just dumping it out as Base64
+    val serializedInitRequest =
+      "CiY0YjU0NTk3MS0yMmY4LTRiMjItYWE4Ni1jNmY2NDk4YTI0NWVfMhLRCApDdHlwZS5nb29nbGVhcGlz" +
+      "LmNvbS9haS5tYW50aWsuYnJpZGdlLnByb3Rvcy5NYW50aWtJbml0Q29uZmlndXJhdGlvbhKJCAqGCHsK" +
+      "ICAia2luZCIgOiAiYWxnb3JpdGhtIiwKICAiYnJpZGdlIiA6ICJidWlsdGluL3NlbGVjdCIsCiAgInR5" +
+      "cGUiIDogewogICAgImlucHV0IiA6IHsKICAgICAgInR5cGUiIDogInRhYnVsYXIiLAogICAgICAiY29s" +
+      "dW1ucyIgOiB7CiAgICAgICAgIngiIDogImludDMyIiwKICAgICAgICAieSIgOiAic3RyaW5nIgogICAg" +
+      "ICB9CiAgICB9LAogICAgIm91dHB1dCIgOiB7CiAgICAgICJ0eXBlIiA6ICJ0YWJ1bGFyIiwKICAgICAg" +
+      "ImNvbHVtbnMiIDogewogICAgICAgICJhIiA6ICJpbnQzMiIsCiAgICAgICAgInkiIDogInN0cmluZyIK" +
+      "ICAgICAgfQogICAgfQogIH0sCiAgInNlbGVjdFByb2dyYW0iIDogewogICAgInNlbGVjdG9yIiA6IHsK" +
+      "ICAgICAgImFyZ3MiIDogMSwKICAgICAgInJldFN0YWNrRGVwdGgiIDogMSwKICAgICAgInN0YWNrSW5p" +
+      "dERlcHRoIiA6IDIsCiAgICAgICJvcHMiIDogWwogICAgICAgICJnZXQiLAogICAgICAgIDAsCiAgICAg" +
+      "ICAgImNudCIsCiAgICAgICAgewogICAgICAgICAgInR5cGUiIDogImludDgiLAogICAgICAgICAgInZh" +
+      "bHVlIiA6IDIKICAgICAgICB9LAogICAgICAgICJjYXN0IiwKICAgICAgICAiaW50OCIsCiAgICAgICAg" +
+      "ImludDMyIiwKICAgICAgICAiZXEiLAogICAgICAgICJpbnQzMiIsCiAgICAgICAgIm5lZyIKICAgICAg" +
+      "XQogICAgfSwKICAgICJwcm9qZWN0b3IiIDogewogICAgICAiYXJncyIgOiAyLAogICAgICAicmV0U3Rh" +
+      "Y2tEZXB0aCIgOiAyLAogICAgICAic3RhY2tJbml0RGVwdGgiIDogMiwKICAgICAgIm9wcyIgOiBbCiAg" +
+      "ICAgICAgImdldCIsCiAgICAgICAgMCwKICAgICAgICAiY250IiwKICAgICAgICB7CiAgICAgICAgICAi" +
+      "dHlwZSIgOiAiaW50OCIsCiAgICAgICAgICAidmFsdWUiIDogMQogICAgICAgIH0sCiAgICAgICAgImNh" +
+      "c3QiLAogICAgICAgICJpbnQ4IiwKICAgICAgICAiaW50MzIiLAogICAgICAgICJibiIsCiAgICAgICAg" +
+      "ImludDMyIiwKICAgICAgICAiYWRkIiwKICAgICAgICAiZ2V0IiwKICAgICAgICAxCiAgICAgIF0KICAg" +
+      "IH0KICB9Cn0aHQobYXBwbGljYXRpb24veC1tYW50aWstYnVuZGxlIh0KG2FwcGxpY2F0aW9uL3gtbWFu" +
+      "dGlrLWJ1bmRsZQ=="
+    val initRequest = ByteString(Base64.getDecoder.decode(serializedInitRequest))
+    val startWorkerRequest = StartWorkerRequest (
+      isolationSpace = "start_with_init",
+      id = "startme",
+      definition = MnpWorkerDefinition(
+        container = Container(
+          image = "mantikai/bridge.select"
+        ),
+        initializer = Some(initRequest)
+      )
+    )
+    val response = await(dockerExecutor.startWorker(startWorkerRequest))
+    response.nodeName shouldNot be(empty)
+    val containers = await(dockerClient.listContainers(true))
+    containers.find(_.Names.contains(s"/${response.nodeName}")) shouldBe defined
+    val initContainer = containers.find(_.Names.contains(s"/${response.nodeName}_init"))
+    initContainer shouldBe defined
+    logger.info(s"InitContainer ${initContainer.get.asJson}")
+    initContainer.get.State shouldBe "exited"
   }
 
   "listWorkers" should "work" in new EnvForWorkers {
@@ -94,6 +143,7 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     val response2 = await(dockerExecutor.listWorkers(ListWorkerRequest("other_isolation")))
     response2.workers.size shouldBe 2
     response2.workers.map(_.id) should contain theSameElementsAs Seq("x1", "x2")
+    response2.workers.map(_.`type`) should contain theSameElementsAs Seq(WorkerType.MnpWorker, WorkerType.MnpWorker)
 
     // id filter
     val response3 = await(dockerExecutor.listWorkers(ListWorkerRequest("other_isolation", idFilter = Some("x1"))))
@@ -122,21 +172,21 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     }
 
     // by id
-    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", idFilter = Some("x1"))))
+    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", idFilter = Some("x1"), remove = false)))
     eventually {
       val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test", idFilter = Some("x1"))))
       listResponse.workers.head.state shouldBe an[WorkerState.Failed]
     }
 
     // by name
-    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", nameFilter = Some(container2.nodeName))))
+    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", nameFilter = Some(container2.nodeName), remove = false)))
     eventually {
       val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test", idFilter = Some("x2"))))
       listResponse.workers.head.state shouldBe an[WorkerState.Failed]
     }
 
     // by all
-    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test")))
+    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", remove = false)))
     eventually {
       val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test", idFilter = Some("x3"))))
       listResponse.workers.head.state shouldBe an[WorkerState.Failed]
@@ -148,5 +198,11 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
       listResponse.workers.head.state shouldBe WorkerState.Running
     }
 
+    // removing all
+    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", remove = true)))
+    eventually {
+      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test")))
+      listResponse.workers shouldBe empty
+    }
   }
 }

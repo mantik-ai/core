@@ -64,6 +64,16 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
     } yield response
   }
 
+  /** Creates a container, pulling if necessary and runs it. */
+  def createAndRunContainer(containerDefinition: ContainerDefinition): Future[CreateContainerResponse] = {
+    for {
+      createResponse <- createContainer(containerDefinition)
+      _ = logger.debug(s"Created ${containerDefinition.name} (${containerDefinition.createRequest.Image})")
+      _ <- dockerClient.startContainer(createResponse.Id)
+      _ = logger.debug(s"Started ${containerDefinition.name} (${containerDefinition.createRequest.Image})")
+    } yield createResponse
+  }
+
   /**
    * Wait for a container.
    * This works around TimeoutExceptions from Akka Http.

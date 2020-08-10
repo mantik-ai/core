@@ -51,8 +51,10 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
   private val startWorkerRequest = StartWorkerRequest(
     "isolationspace",
     "1234",
-    container = Container(
-      "foo", Seq("a")
+    definition = MnpWorkerDefinition(
+      container = Container(
+        "foo", Seq("a")
+      )
     )
   )
 
@@ -128,7 +130,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
         Future.successful(
           ListWorkerResponse(
             Seq(
-              ListWorkerResponseElement("foo", "bar", Container("image"), WorkerState.Running)
+              ListWorkerResponseElement("foo", "bar", Some(Container("image")), WorkerState.Running, WorkerType.MnpWorker, None)
             )
           )
         )
@@ -190,7 +192,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
     )
   )
 
-  it should "server all the regular calls" in new Env {
+  it should "serve all the regular calls" in new Env {
     server.start()
     handleServerStop {
       await(client.logs("123", "345")) shouldBe "Logs"
@@ -220,7 +222,7 @@ class ExecutorServerSpec extends TestBase with AkkaSupport {
 
       await(client.listWorkers(listWorkerRequest)) shouldBe ListWorkerResponse(
         Seq(
-          ListWorkerResponseElement("foo", "bar", Container("image"), WorkerState.Running)
+          ListWorkerResponseElement("foo", "bar", Some(Container("image")), WorkerState.Running, WorkerType.MnpWorker, None)
         )
       )
       receivedListWorkerRequest shouldBe listWorkerRequest

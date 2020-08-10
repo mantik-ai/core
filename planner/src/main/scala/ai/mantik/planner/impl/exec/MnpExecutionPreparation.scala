@@ -93,7 +93,7 @@ class MnpExecutionPreparer(
       case (resourceName, resource) if resource.resourceType == ResourceType.Source || resource.resourceType == ResourceType.Transformer =>
         val forwarding = graph.links.collect {
           case link if link.from.node == nodeId && graph.nodes(link.to.node).service.isInstanceOf[DockerContainer] =>
-            mnpUrlForResource(link.to)
+            mnpUrlForResource(link.from, link.to)
         }
         val singleForwarding = forwarding match {
           case x if x.isEmpty => None
@@ -198,14 +198,33 @@ class MnpExecutionPreparer(
     MnpExecutionPreparer.ResourceMapping.getOrElse(resourceName, throw new InconsistencyException(s"No port mapping for resource ${resourceName}"))
   }
 
-  private def mnpUrlForResource(nodeResourceRef: NodeResourceRef): String = {
+  private def mnpUrlForResource(from: NodeResourceRef, nodeResourceRef: NodeResourceRef): String = {
+    val fromAddress = containerAddresses.getOrElse(
+      from.node,
+      throw new InconsistencyException(s"Container ${from.node} not prepared?")
+    )
     val port = portForResource(nodeResourceRef.resource)
     val sessionId = sessionIdForNode(nodeResourceRef.node)
     val address = containerAddresses.getOrElse(
       nodeResourceRef.node,
       throw new InconsistencyException(s"Container ${nodeResourceRef.node} not prepared?")
     )
-    s"mnp://$address/$sessionId/$port"
+
+    val addressToUse = if (fromAddress == address) {
+      /*
+      Special case: A connection back to the container
+      In Tests kubernetes sometimes has problems to resolve container pods own address
+      */
+      val port = address.indexOf(':') match {
+        case -1 => 8502
+        case n  => address.substring(n + 1).toInt
+      }
+      s"localhost:$port"
+    } else {
+      address
+    }
+
+    s"mnp://$addressToUse/$sessionId/$port"
   }
 
   private def sessionIdForNode(nodeId: String): String = {

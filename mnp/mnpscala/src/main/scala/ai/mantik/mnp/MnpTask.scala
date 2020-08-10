@@ -9,7 +9,7 @@ import akka.util.ByteString
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
-class RunTask(sessionId: String, taskId: String, mnpService: MnpService) {
+class MnpTask(sessionId: String, taskId: String, mnpService: MnpService) {
 
   /**
    * Execute a push.

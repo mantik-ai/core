@@ -61,7 +61,7 @@ func InitSession(
 	return SessionFromExecutable(sessionId, adapted, portConfiguration, payloadDir)
 }
 
-// Downloads and initializes payload. Reuturns unpacked payload directory.
+// Downloads and initializes payload. Returns unpacked payload directory.
 func initPayload(configuration *bridge.MantikInitConfiguration, contentType string) (*string, error) {
 	tempDir, err := ioutil.TempDir("", "bridge")
 	if err != nil {

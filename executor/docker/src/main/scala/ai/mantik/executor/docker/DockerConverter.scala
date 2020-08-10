@@ -1,12 +1,16 @@
 package ai.mantik.executor.docker
 
+import java.util.Base64
+
 import ai.mantik.executor.common.PayloadProvider
 import ai.mantik.executor.docker.DockerJob.ContainerDefinition
 import ai.mantik.executor.docker.api.PullPolicy
 import ai.mantik.executor.docker.api.structures.{ CreateContainerHostConfig, CreateContainerNetworkSpecificConfig, CreateContainerRequest }
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{ ContainerService, DataProvider }
+import akka.util.ByteString
 import cats.data.State
+import io.circe.Json
 
 class DockerConverter(
     config: DockerExecutorConfig,
@@ -116,11 +120,7 @@ class DockerConverter(
     )
 
     val requestWithNetwork = workerNetworkId.map { networkId =>
-      request.withNetwork(
-        config.workerNetwork, CreateContainerNetworkSpecificConfig(
-          NetworkID = Some(networkId)
-        )
-      )
+      request.withNetworkId(config.workerNetwork, networkId)
     }.getOrElse(
       request
     )
@@ -129,6 +129,83 @@ class DockerConverter(
       containerName,
       mainPort = Some(8502),
       pullPolicy = pullPolicy(resolved),
+      requestWithNetwork
+    )
+  }
+
+  /** Generate an MNP preparer for a node. */
+  def generateMnpPreparer(
+    mainContainerName: String,
+    initRequest: ByteString,
+    id: String,
+    workerNetworkId: Option[String]
+  ): ContainerDefinition = {
+    val preparerName = mainContainerName + "_init"
+    val mainAddress = s"${mainContainerName}:8502"
+    val parameters = Seq(
+      "--address", mainAddress
+    )
+    val allParameters = config.common.mnpPreparer.parameters ++ parameters
+    val encodedInitRequest = Base64.getEncoder.encodeToString(initRequest.toArray[Byte])
+
+    val envValue = s"MNP_INIT=${encodedInitRequest}"
+
+    val request = CreateContainerRequest(
+      Image = config.common.mnpPreparer.image,
+      Cmd = allParameters.toVector,
+      Labels = defaultLabels + (
+        DockerConstants.RoleLabelName -> DockerConstants.PayloadProviderRole,
+        DockerConstants.TypeLabelName -> DockerConstants.WorkerType,
+        DockerConstants.IdLabelName -> id
+      ),
+      Env = Vector(envValue)
+    )
+
+    val requestWithNetwork = workerNetworkId.map { networkId =>
+      request.withNetworkId(config.workerNetwork, networkId)
+    }.getOrElse(
+      request
+    )
+
+    ContainerDefinition(
+      preparerName,
+      None,
+      pullPolicy = pullPolicy(config.common.mnpPreparer),
+      requestWithNetwork
+    )
+  }
+
+  def generateNewPipelineContainer(
+    containerName: String,
+    id: String,
+    pipelineDefinition: Json,
+    workerNetworkId: Option[String]
+  ): ContainerDefinition = {
+    val container = config.common.mnpPipelineController
+    val pipelineEnv = "PIPELINE=" + pipelineDefinition.noSpaces
+    val extraArgs = Vector("-port", "8502")
+    val allParameters = container.parameters ++ extraArgs
+    val request = CreateContainerRequest(
+      Image = container.image,
+      Cmd = allParameters.toVector,
+      Labels = defaultLabels + (
+        DockerConstants.RoleLabelName -> DockerConstants.PipelineRole,
+        DockerConstants.TypeLabelName -> DockerConstants.WorkerType,
+        DockerConstants.IdLabelName -> id
+      ),
+      Env = Vector(pipelineEnv)
+    )
+
+    val requestWithNetwork = workerNetworkId.map { networkId =>
+      request.withNetworkId(config.workerNetwork, networkId)
+    }.getOrElse(
+      request
+    )
+
+    ContainerDefinition(
+      containerName,
+      Some(8502),
+      pullPolicy = pullPolicy(config.common.mnpPreparer),
       requestWithNetwork
     )
   }

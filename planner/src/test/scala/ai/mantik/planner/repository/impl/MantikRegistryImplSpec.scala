@@ -49,7 +49,6 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
     val server = new ApiServer(fullFakeRoute, port = dummyPort)
     akkaRuntime.lifecycle.addShutdownHook {
       server.close()
-      Future.successful(())
     }
     val client = new MantikRegistryImpl()
   }

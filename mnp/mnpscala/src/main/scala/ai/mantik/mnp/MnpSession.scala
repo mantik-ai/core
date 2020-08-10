@@ -27,7 +27,8 @@ class MnpSession(val address: String, val sessionId: String, mnpService: MnpServ
     ))
   }
 
-  def runTask(taskId: String): RunTask = {
-    new RunTask(sessionId, taskId, mnpService)
+  /** Gives access to task related operations. */
+  def task(taskId: String): MnpTask = {
+    new MnpTask(sessionId, taskId, mnpService)
   }
 }

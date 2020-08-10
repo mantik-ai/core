@@ -14,12 +14,12 @@ import (
 type MnpBackend struct {
 	backend     serving.Backend
 	name        string
-	quitHandler QuitHandler
+	quitHandler QuitHandler // optional
 }
 
 type QuitHandler func()
 
-func NewMnpBackend(backend serving.Backend, name string, quitHandler QuitHandler) (mnpgo.Handler, error) {
+func NewMnpBackend(backend serving.Backend, name string, quitHandler QuitHandler) (*MnpBackend, error) {
 	return &MnpBackend{
 		backend:     backend,
 		name:        name,
@@ -39,7 +39,9 @@ func (m *MnpBackend) About() (*mnpgo.AboutResponse, error) {
 }
 
 func (m *MnpBackend) Quit() error {
-	m.quitHandler()
+	if m.quitHandler != nil {
+		m.quitHandler()
+	}
 	return nil
 }
 

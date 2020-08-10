@@ -1,30 +1,32 @@
 package ai.mantik.executor.kubernetes
 
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant}
+import java.time.{ Clock, Instant }
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.executor
 import ai.mantik.executor.Errors.NotFoundException
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.{Errors, Executor}
-import akka.actor.{ActorSystem, Cancellable}
+import ai.mantik.executor.{ Errors, Executor }
+import akka.actor.{ ActorSystem, Cancellable }
 import com.google.common.net.InetAddresses
-import javax.inject.{Inject, Provider, Singleton}
+import javax.inject.{ Inject, Provider, Singleton }
 import play.api.libs.json.Json
 import skuber.Container.Running
 import skuber.apps.Deployment
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
-import skuber.{Endpoints, ObjectMeta, Pod, Service}
+import skuber.{ Endpoints, ObjectMeta, Pod, Service }
+import cats.implicits._
+import skuber.ext.Ingress
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 /** Kubennetes implementation of [[Executor]]. */
 class KubernetesExecutor(config: Config, ops: K8sOperations)(
@@ -313,7 +315,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     val ImmediatelyFailErros = Seq(
       "ErrImageNeverPull",
       "InvalidImageName",
-      "ImageInspectError",
+      "ImageInspectError"
     )
 
     // Errors which will lead to termination if the timeout is reached
@@ -370,7 +372,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
 
   override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = {
     val grpcProxyConfig = config.common.grpcProxy
-    if (!grpcProxyConfig.enabled){
+    if (!grpcProxyConfig.enabled) {
       return Future.failed(
         new Errors.NotFoundException("Grpc Proxy not enabled")
       )
@@ -378,7 +380,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     val namespace = namespaceForIsolationSpace(isolationSpace)
     Option(grpcProxies.get(namespace)) match {
       case Some(alreadyExists) => return Future.successful(alreadyExists)
-      case None => // continue
+      case None                => // continue
     }
 
     val deployment = Deployment(
@@ -454,181 +456,91 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = {
-    val resolvedContainer = config.dockerConfig.resolveContainer(startWorkerRequest.container)
+    val converter = KubernetesConverter2(config, kubernetesHost)
     val internalId = UUID.randomUUID().toString
-    val pod = Pod(
-      metadata = ObjectMeta(
-        labels = Map(
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
-          KubernetesConstants.RoleName -> KubernetesConstants.WorkerRole,
-          KubernetesConstants.IdLabelName -> startWorkerRequest.id,
-          KubernetesConstants.InternalId  -> internalId
-        ),
-        generateName = "worker"
-      ),
-      spec = Some(
-        Pod.Spec(
-          containers = List (
-            skuber.Container (
-              name = "worker",
-              image = resolvedContainer.image,
-              args = resolvedContainer.parameters.toList
-            )
-          )
-        )
-      )
-    )
-    val service = Service(
-      metadata = ObjectMeta(
-        labels = Map(
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
-          KubernetesConstants.RoleName -> KubernetesConstants.WorkerRole,
-          KubernetesConstants.IdLabelName -> startWorkerRequest.id,
-          KubernetesConstants.InternalId -> internalId
-        ),
-        generateName = "worker"
-      ),
-      spec = Some(
-        Service.Spec(
-          selector = Map(
-            KubernetesConstants.InternalId -> internalId
-          ),
-          ports = List(
-            Service.Port(
-              port = 8502
-            )
-          )
-        )
-      )
-    )
+    val converted = converter.convertStartWorkRequest(internalId, startWorkerRequest)
     val namespace = namespaceForIsolationSpace(startWorkerRequest.isolationSpace)
-    for {
-      _ <- ops.ensureNamespace(namespace)
-      createdPod <- ops.create(Some(namespace), pod)
-      createdService <- ops.create(Some(namespace), service)
-    } yield {
-      StartWorkerResponse(
-        nodeName = createdService.name
-      )
+
+    val t0 = System.currentTimeMillis()
+    ops.ensureNamespace(namespace).flatMap { _ =>
+      converted.create(Some(namespace), ops).map { created =>
+        val t1 = System.currentTimeMillis()
+        val ingressUrl = created.ingressUrl(config, kubernetesHost)
+        logger.info(s"Created Worker ${created.service.name} within ${t1 - t0}ms (ingress=${ingressUrl}, userId=${startWorkerRequest.id}, internalId=${internalId})")
+        StartWorkerResponse(
+          nodeName = created.service.name,
+          externalUrl = ingressUrl
+        )
+      }
     }
   }
 
   override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] = {
     val namespace = namespaceForIsolationSpace(listWorkerRequest.isolationSpace)
-    listWorkersImpl(namespace, listWorkerRequest.nameFilter, listWorkerRequest.idFilter).map { servicesAndPods =>
+    listWorkersImpl(namespace, listWorkerRequest.nameFilter, listWorkerRequest.idFilter).map { workloads =>
       ListWorkerResponse(
-        servicesAndPods.map { case (service, pod) =>
-          generateListWorkerResponseElement(pod, service)
+        workloads.map { workload =>
+          generateListWorkerResponseElement(workload)
         }
       )
     }
   }
 
-  private def listWorkersImpl(namespace: String, nameFilter: Option[String], userIdFilter: Option[String]): Future[Seq[(Service, Pod)]] = {
-    nameFilter match {
-      case Some(name) =>
-        ops.byName[Service](Some(namespace), name).flatMap {
-          case Some(service) if service.metadata.labels.get(KubernetesConstants.ManagedLabel).contains(KubernetesConstants.ManagedValue) =>
-            val maybeInternalId = service.metadata.labels.get(KubernetesConstants.InternalId)
-            maybeInternalId match {
-              case Some(internalId) =>
-                ops.listSelected[Pod](Some(namespace), Seq(
-                  KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
-                  KubernetesConstants.InternalId -> internalId
-                )).map { pods =>
-                  pods.headOption.map { pod =>
-                    (service -> pod)
-                  }.toSeq
-                }
-              case None =>
-                logger.error(s"Found service ${name} but it has no internal id ?!")
-                Future.successful(Nil)
-            }
-          case _ =>
-            // either not existing or not managed by Mantik
-            Future.successful(Nil)
-        }
-      case None =>
-        val filter = Seq(
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
-        ) ++ userIdFilter.map { id =>
-          KubernetesConstants.IdLabelName -> id
-        }
-        val servicesFuture = ops.listSelected[Service](Some(namespace), filter)
-        val podsFuture = ops.listSelected[Pod](Some(namespace), filter)
-        for {
-          services <- servicesFuture
-          pods <- podsFuture
-        } yield {
-          for {
-            service <- services
-            internalId <- service.metadata.labels.get(KubernetesConstants.InternalId).toList
-            pod <- pods
-            podInternalId <- pod.metadata.labels.get(KubernetesConstants.InternalId).toList
-            if internalId == podInternalId
-          } yield {
-            service -> pod
-          }
-        }
-    }
+  private def listWorkersImpl(namespace: String, nameFilter: Option[String], userIdFilter: Option[String]): Future[Vector[Workload]] = {
+    val labels = Seq(
+      KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+    ) ++ userIdFilter.map { id =>
+        KubernetesConstants.IdLabelName -> id
+      }
+    Workload.list(Some(namespace), nameFilter, labels, ops)
   }
 
-  private def generateListWorkerResponseElement(pod: Pod, service: Service): ListWorkerResponseElement = {
+  private def generateListWorkerResponseElement(workload: Workload): ListWorkerResponseElement = {
+    val workerType = workload.service.metadata.labels.get(KubernetesConstants.WorkerTypeLabelName) match {
+      case Some(KubernetesConstants.WorkerTypeMnpWorker)   => WorkerType.MnpWorker
+      case Some(KubernetesConstants.WorkerTypeMnpPipeline) => WorkerType.MnpPipeline
+      case other =>
+        logger.warn(s"Unexpected worker type ${other}, assuming regular mnp worker")
+        WorkerType.MnpWorker
+    }
+    val ingressUrl = workload.ingressUrl(config, kubernetesHost)
     ListWorkerResponseElement(
-      nodeName = service.name,
-      id = service.metadata.labels.getOrElse(KubernetesConstants.IdLabelName, "unknown"),
-      state = decodeWorkerState(pod),
+      nodeName = workload.service.name,
+      id = workload.service.metadata.labels.getOrElse(KubernetesConstants.IdLabelName, "unknown"),
+      state = workload.workerState,
       container = {
-        val mainContainer = pod.spec.get.containers.head
-        Container(
-          image = mainContainer.image,
-          parameters = mainContainer.args
+        val maybeMainContainer = workload.pod.flatMap(_.spec.flatMap(_.containers.headOption)).orElse(
+          workload.deployment.flatMap(_.spec.flatMap(_.template).flatMap(_.spec).flatMap(_.containers.headOption))
         )
-      }
+        maybeMainContainer.map { mainContainer =>
+          Container(
+            image = mainContainer.image,
+            parameters = mainContainer.args
+          )
+        }
+      },
+      `type` = workerType,
+      externalUrl = ingressUrl
     )
-  }
-
-  private def decodeWorkerState(pod: Pod): WorkerState = {
-    val maybeState = for {
-      status <- pod.status
-      containerStatus <- status.containerStatuses.headOption
-      state <- containerStatus.state
-    } yield {
-      state match {
-        case _: skuber.Container.Running => WorkerState.Running
-        case t: skuber.Container.Terminated =>
-          t.exitCode match {
-            case 0 => WorkerState.Succeeded
-            case other => WorkerState.Failed(other)
-          }
-        case t: skuber.Container.Waiting =>
-          WorkerState.Pending
-        case other =>
-          WorkerState.Pending
-      }
-    }
-
-    maybeState.getOrElse(WorkerState.Pending)
   }
 
   override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
     val namespace = namespaceForIsolationSpace(stopWorkerRequest.isolationSpace)
-    listWorkersImpl(namespace, stopWorkerRequest.nameFilter, stopWorkerRequest.idFilter).flatMap { servicesAndPods =>
-      val subFutures = servicesAndPods.map { case (service, pod) =>
-        Future.sequence(Seq(
-          ops.delete[Service](Some(namespace), service.name),
-          ops.delete[Pod](Some(namespace), pod.name)
-        ))
-      }
-      val elements = servicesAndPods.map { case (service, pod) =>
+    listWorkersImpl(namespace, stopWorkerRequest.nameFilter, stopWorkerRequest.idFilter).flatMap { workloads =>
+      val responses = workloads.map { workload =>
         StopWorkerResponseElement(
-          id = service.metadata.labels.getOrElse(KubernetesConstants.IdLabelName, "Unknown"),
-          name = service.name
+          id = workload.service.metadata.labels.getOrElse(KubernetesConstants.IdLabelName, "Unknown"),
+          name = workload.service.name
         )
       }
+
+      val subFutures = workloads.map { workload =>
+        workload.stop(stopWorkerRequest.remove.value, ops)
+      }
+
       Future.sequence(subFutures).map { _ =>
         StopWorkerResponse(
-          elements
+          responses
         )
       }
     }

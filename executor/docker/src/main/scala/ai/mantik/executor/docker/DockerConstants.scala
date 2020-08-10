@@ -36,4 +36,7 @@ object DockerConstants {
 
   /** Suffix used to detect internal services. */
   val InternalServiceNameSuffix = ".internal"
+
+  /** Name of the label for storing the ingress name */
+  val IngressLabelName = "ai.mantik.ingress"
 }

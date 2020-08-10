@@ -19,6 +19,7 @@ def start_mnp_bridge(algorithm_provider: AlgorithmProvider, name: str):
     """
 
     def quit_handler():
+        nonlocal server
         server.stop()
 
     logging.basicConfig()

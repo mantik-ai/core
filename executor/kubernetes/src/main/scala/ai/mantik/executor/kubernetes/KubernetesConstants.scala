@@ -13,11 +13,15 @@ object KubernetesConstants {
   /** Label used to mark items which are managed by Mantik. */
   val ManagedLabel = "app.kubernetes.io/managed-by" // see  https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 
-  /** Name of the label containing the (internal) job id. */
+  /** Name of the label containing the (user supplied) job id. */
   val IdLabelName = "ai.mantik.id"
 
   /** An Internal Id for mapping short lived services to pods. */
   val InternalId = "internalId"
+
+  val WorkerTypeLabelName = "ai.mantik.worker.type"
+  val WorkerTypeMnpWorker = "worker"
+  val WorkerTypeMnpPipeline = "pipeline"
 
   /** Label Value for Managed Items. */
   val ManagedValue = "mantik"

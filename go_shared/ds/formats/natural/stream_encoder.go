@@ -73,6 +73,18 @@ type streamWriter struct {
 }
 
 func (d *streamWriter) Write(e element.Element) error {
+	err := d.startIfNecessary()
+	if err != nil {
+		return err
+	}
+	err = d.backend.NextRow()
+	if err != nil {
+		return err
+	}
+	return d.serializer.Write(d.backend, e)
+}
+
+func (d *streamWriter) startIfNecessary() error {
 	if d.writeHeader {
 		header := serializer.Header{
 			ds.Ref(d.dataType),
@@ -90,15 +102,15 @@ func (d *streamWriter) Write(e element.Element) error {
 		}
 		d.writeTabularPrefix = false
 	}
-	err := d.backend.NextRow()
-	if err != nil {
-		return err
-	}
-	return d.serializer.Write(d.backend, e)
+	return nil
 }
 
 func (d *streamWriter) Close() error {
-	err := d.backend.Finish()
+	err := d.startIfNecessary()
+	if err != nil {
+		return err
+	}
+	err = d.backend.Finish()
 	if err != nil {
 		return err
 	}

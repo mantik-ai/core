@@ -1,31 +1,33 @@
 package ai.mantik.executor.docker
 
+import ai.mantik.executor.docker
 import ai.mantik.executor.docker.api.DockerClient
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 /** Helper for generating root names. Genrates many names at once to not talk to docker too often. */
 class DockerRootNameGenerator(dockerClient: DockerClient)(implicit ec: ExecutionContext) extends ReservedNameGenerator(
-  new DockerRootNameGenerator.DockerBunchGenerator(dockerClient)
+  new docker.DockerRootNameGenerator.DockerBackend(dockerClient)
 )
 
 object DockerRootNameGenerator {
 
-  class DockerBunchGenerator(dockerClient: DockerClient)(implicit val executionContext: ExecutionContext) extends ReservedNameGenerator.PrelistedBunchGenerator {
+  class DockerBackend(dockerClient: DockerClient)(implicit val executionContext: ExecutionContext) extends ReservedNameGenerator.Backend {
 
-    override protected def lookupAlreadyTaken(): Future[Set[String]] = {
+    override def lookupAlreadyTaken(): Future[Set[String]] = {
       dockerClient.listContainers(true).map { containers =>
-        containers.flatMap(_.Names).toSet
+        val rawSet = containers.flatMap(_.Names).toSet
+        rawSet.map(_.stripPrefix("/"))
       }
     }
 
-    override protected def generateSingle(taken: Set[String]): String = {
+    override def generate(prefix: String, taken: Set[String]): String = {
       val maxLength = 5
       var i = 1
       while (i < maxLength) {
-        val candidate = NameGenerator.generateRootName(i)
+        val candidate = NameGenerator.generateRootName(i, prefix)
         if (!taken.exists { usedName =>
-          usedName.startsWith(candidate) || usedName.startsWith("/" + candidate)
+          usedName.startsWith(candidate)
         }) {
           return candidate
         }

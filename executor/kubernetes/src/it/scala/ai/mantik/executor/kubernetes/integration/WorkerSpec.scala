@@ -1,6 +1,6 @@
 package ai.mantik.executor.kubernetes.integration
 
-import ai.mantik.executor.model.{ListWorkerRequest, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest}
+import ai.mantik.executor.model.{ListWorkerRequest, MnpWorkerDefinition, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest}
 import ai.mantik.executor.model.docker.Container
 
 class WorkerSpec extends IntegrationTestBase {
@@ -10,8 +10,10 @@ class WorkerSpec extends IntegrationTestBase {
       val startWorkerRequest = StartWorkerRequest (
         isolationSpace = isolationSpace,
         id = id,
-        container = Container(
-          image = "mantikai/bridge.binary"
+        definition = MnpWorkerDefinition(
+          container = Container(
+            image = "mantikai/bridge.binary"
+          )
         )
       )
       await(executor.startWorker(startWorkerRequest))

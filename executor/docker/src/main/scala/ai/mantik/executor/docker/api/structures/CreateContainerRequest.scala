@@ -22,6 +22,14 @@ case class CreateContainerRequest(
       )
     )
   }
+
+  def withNetworkId(networkName: String, networkId: String): CreateContainerRequest = {
+    withNetwork(
+      networkName, CreateContainerNetworkSpecificConfig(
+      NetworkID = Some(networkId)
+    )
+    )
+  }
 }
 
 @JsonCodec

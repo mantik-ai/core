@@ -168,7 +168,35 @@ message QueryTaskRequest {
     bool ensure = 3;
 }
 
+// The state of a task
+enum TaskState {
+    TS_UNKNOWN = 0;
+    TS_EXISTS = 1;
+    TS_FINISHED = 2;
+    TS_FAILED = 3;
+}
+
+// The state of a task's port
+message TaskPortStatus {
+    // the number of transferred messages
+    int32 msg_count = 1;
+    // the amount of transferred bytes
+    int64 data = 2;
+    // if there was an error on this port
+    string error = 3;
+    // the port is finished
+    bool done = 4;
+}
+
+// Result of a Query Task call
+// Note: not all fields may be supported by all bridges yet
 message QueryTaskResponse {
-    // True if the task exists
-    bool exists = 1;
+    // The status of the task
+    TaskState state = 1;
+    // An error description if known
+    string error = 2;
+    // Information about input ports
+    repeated TaskPortStatus inputs = 3;
+    // Information about output ports
+    repeated TaskPortStatus outputs = 4;
 }

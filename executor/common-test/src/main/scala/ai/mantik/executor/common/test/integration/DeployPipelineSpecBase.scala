@@ -1,6 +1,6 @@
 package ai.mantik.executor.common.test.integration
 
-import ai.mantik.executor.model.{ DeployServiceRequest, DeployableService }
+import ai.mantik.executor.model.{ DeployServiceRequest, DeployableService, ListWorkerRequest, MnpPipelineDefinition, StartWorkerRequest, WorkerType }
 import ai.mantik.testutils.{ HttpSupport, TestBase }
 import akka.util.ByteString
 
@@ -23,18 +23,18 @@ trait DeployPipelineSpecBase {
     val isolationSpace = "deploy-pipe-spec"
     val parsedDef = io.circe.parser.parse(pipeDef).forceRight
 
-    val pipelineRequest = DeployServiceRequest(
-      serviceId = "service1",
+    val pipelineRequest = StartWorkerRequest(
+      id = "service1",
       nameHint = Some("my-service"),
       isolationSpace = isolationSpace,
-      service = DeployableService.Pipeline(
-        pipeline = parsedDef
+      definition = MnpPipelineDefinition(
+        definition = parsedDef
       ),
-      ingress = Some("ingress1")
+      ingressName = Some("ingress1")
     )
 
-    val response = await(executor.deployService(pipelineRequest))
-    response.url shouldNot be(empty)
+    val response = await(executor.startWorker(pipelineRequest))
+    response.nodeName shouldNot be(empty)
     response.externalUrl shouldNot be(empty)
 
     eventually {
@@ -42,5 +42,11 @@ trait DeployPipelineSpecBase {
       val httpPostResponse = httpPost(applyUrl, "application/json", ByteString.fromString("100"))
       httpPostResponse shouldBe ByteString.fromString("100")
     }
+
+    val listResponse = await(executor.listWorkers(ListWorkerRequest(isolationSpace)))
+    val pipe = listResponse.workers.find(_.`type` == WorkerType.MnpPipeline)
+    pipe shouldBe defined
+    pipe.get.nodeName shouldBe response.nodeName
+    pipe.get.externalUrl shouldBe response.externalUrl
   }
 }

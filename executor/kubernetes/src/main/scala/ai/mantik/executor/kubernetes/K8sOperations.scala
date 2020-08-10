@@ -13,10 +13,11 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 import com.typesafe.scalalogging.Logger
-import play.api.libs.json.{ Format, JsObject }
+import play.api.libs.json.{ Format, JsObject, JsValue, Json, Writes }
 import skuber.Container.Running
 import skuber.api.client.{ KubernetesClient, Status, WatchEvent }
-import skuber.api.patch.MetadataPatch
+import skuber.api.patch.{ JsonMergePatch, MetadataPatch }
+import skuber.apps.Deployment
 import skuber.apps.v1.ReplicaSet
 import skuber.batch.Job
 import skuber.ext.Ingress
@@ -105,9 +106,49 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
         logger.info(s"${obj.kind} ${obj.name} already exists, deleting...")
         for {
           _ <- errorHandling(client.delete[O](obj.name))
+          _ = logger.debug(s"Waiting for deletion of ${obj.kind} ${obj.name}")
+          _ <- waitUntilDeleted[O](namespace, obj.name)
           _ = logger.info(s"Recreating ${obj.kind} ${obj.name}")
           r <- errorHandling(client.create(obj))
         } yield r
+    }
+  }
+
+  private def waitUntilDeleted[O <: ObjectResource](namespace: Option[String], name: String)(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[Unit] = {
+    val client = namespacedClient(namespace)
+    def tryFunction(): Future[Option[Boolean]] = {
+      errorHandling {
+        client.getOption[O](name).map {
+          case None    => Some(true)
+          case Some(_) => None
+        }
+      }
+    }
+    FutureHelper.tryMultipleTimes(config.kubernetes.defaultTimeout, config.kubernetes.defaultRetryInterval)(tryFunction()).map { _ =>
+      ()
+    }
+  }
+
+  def deploymentSetReplicas(namespace: Option[String], deploymentName: String, replicas: Int): Future[Deployment] = {
+    val jsonRequest = Json.obj(
+      "replicas" -> replicas
+    )
+    import skuber.json.apps.format.depFormat
+    jsonPatch[Deployment](namespace, deploymentName, jsonRequest)
+  }
+
+  def jsonPatch[O <: ObjectResource](namespace: Option[String], name: String, jsonRequest: JsValue)(
+    implicit
+    fmt: Format[O],
+    rd: ResourceDefinition[O]
+  ): Future[O] = {
+    case object data extends JsonMergePatch
+    implicit val writes: Writes[data.type] = Writes { _ =>
+      Json.obj("spec" -> jsonRequest)
+    }
+    val client = namespacedClient(namespace)
+    errorHandling {
+      client.patch[data.type, O](name, data)
     }
   }
 

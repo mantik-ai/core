@@ -14,6 +14,10 @@ import (
 var tabularExample = ds.BuildTabular().Add("x", ds.Int32).Result()
 var fundamental = ds.Float32
 
+var emptyTabularValue = builder.Bundle(
+	tabularExample,
+)
+
 var tabularValue = builder.Bundle(
 	tabularExample,
 	builder.PrimitiveRow(int32(1)),
@@ -24,6 +28,12 @@ var fundamentalValue = builder.PrimitiveBundle(
 	fundamental,
 	element.Primitive{X: float32(1.5)},
 )
+
+func emptyTableExample(t *testing.T, decoder StreamDecoder, table *bytes.Buffer) {
+	reader := decoder.StartDecoding(table)
+	_, err := reader.Read()
+	assert.Equal(t, io.EOF, err)
+}
 
 func tableExample(t *testing.T, decoder StreamDecoder, table *bytes.Buffer) {
 	reader := decoder.StartDecoding(table)
@@ -47,6 +57,7 @@ func primitiveExample(t *testing.T, decoder StreamDecoder, table *bytes.Buffer) 
 func TestStreamDecoderJson(t *testing.T) {
 	decoder, err := NewStreamDecoder(MimeJson, tabularExample)
 	assert.NoError(t, err)
+	emptyTableExample(t, decoder, bytes.NewBufferString("[]"))
 	tableExample(t, decoder, bytes.NewBufferString("[[1],[2]]"))
 
 	decoder2, err := NewStreamDecoder(MimeJson, fundamental)
@@ -57,6 +68,11 @@ func TestStreamDecoderJson(t *testing.T) {
 func TestStreamDecoderMsgPack(t *testing.T) {
 	decoder, err := NewStreamDecoder(MimeMsgPack, tabularExample)
 	assert.NoError(t, err)
+
+	encodedEmpty, err := EncodeBundleValue(&emptyTabularValue, serializer.BACKEND_MSGPACK)
+	assert.NoError(t, err)
+	emptyTableExample(t, decoder, bytes.NewBuffer(encodedEmpty))
+
 	encoded, err := EncodeBundleValue(&tabularValue, serializer.BACKEND_MSGPACK)
 	assert.NoError(t, err)
 
@@ -71,6 +87,12 @@ func TestStreamDecoderMsgPack(t *testing.T) {
 func TestStreamDecoderJsonWithHeader(t *testing.T) {
 	decoder, err := NewStreamDecoder(MimeMantikBundleJson, tabularExample)
 	assert.NoError(t, err)
+
+	encodedEmpty, err := EncodeBundle(&emptyTabularValue, serializer.BACKEND_JSON)
+
+	assert.NoError(t, err)
+	emptyTableExample(t, decoder, bytes.NewBuffer(encodedEmpty))
+
 	encoded, err := EncodeBundle(&tabularValue, serializer.BACKEND_JSON)
 	assert.NoError(t, err)
 
@@ -85,6 +107,11 @@ func TestStreamDecoderJsonWithHeader(t *testing.T) {
 func TestStreamDecoderMsgPackWithHeader(t *testing.T) {
 	decoder, err := NewStreamDecoder(MimeMantikBundle, tabularExample)
 	assert.NoError(t, err)
+
+	encodedEmpty, err := EncodeBundle(&emptyTabularValue, serializer.BACKEND_MSGPACK)
+	assert.NoError(t, err)
+	emptyTableExample(t, decoder, bytes.NewBuffer(encodedEmpty))
+
 	encoded, err := EncodeBundle(&tabularValue, serializer.BACKEND_MSGPACK)
 	assert.NoError(t, err)
 

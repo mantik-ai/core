@@ -1,6 +1,6 @@
 package ai.mantik.planner.integration
 
-import ai.mantik.executor.model.StartWorkerRequest
+import ai.mantik.executor.model.{MnpWorkerDefinition, StartWorkerRequest}
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.mnp.MnpClient
 import ai.mantik.planner.BuiltInItems
@@ -17,8 +17,10 @@ class HelloMnpBridgeSpec extends IntegrationTestBase {
       StartWorkerRequest(
         isolationSpace,
         "id1",
-        Container(
-          BuiltInItems.SelectBridge.mantikHeader.definition.dockerImage
+        MnpWorkerDefinition(
+          Container(
+            BuiltInItems.SelectBridge.mantikHeader.definition.dockerImage
+          )
         )
       ))
     )
