@@ -6,7 +6,9 @@ include ../../scripts/ci/Makefile.docker_shared
 
 # All Executables which are to be generated
 EXECUTABLES = coordinator \
+	mnp_preparer \
 	payload_preparer \
+	mnp_pipeline_controller \
 	pipeline_controller \
 	executor_sample_source \
 	executor_sample_sink \
@@ -15,7 +17,9 @@ EXECUTABLES = coordinator \
 
 # Map-like structure which contains the name of the main go file
 MAIN_FILE_coordinator = cmd/coordinator/main.go
+MAIN_FILE_mnp_preparer = cmd/mnp_preparer/main.go
 MAIN_FILE_payload_preparer = cmd/payload_preparer/main.go
+MAIN_FILE_mnp_pipeline_controller = cmd/mnp_pipeline_controller/main.go
 MAIN_FILE_pipeline_controller = cmd/pipeline_controller/main.go
 MAIN_FILE_executor_sample_source = cmd/sample_source/main.go
 MAIN_FILE_executor_sample_sink = cmd/sample_sink/main.go
@@ -24,7 +28,9 @@ MAIN_FILE_executor_sample_transformer = cmd/sample_transformer/main.go
 
 # Map-like structure which contains the name of the docker image
 DOCKER_IMAGE_NAME_coordinator = executor.coordinator
+DOCKER_IMAGE_NAME_mnp_preparer = executor.mnp_preparer
 DOCKER_IMAGE_NAME_payload_preparer = executor.payload_preparer
+DOCKER_IMAGE_NAME_mnp_pipeline_controller = executor.mnp_pipeline_controller
 DOCKER_IMAGE_NAME_pipeline_controller = executor.pipeline_controller
 DOCKER_IMAGE_NAME_executor_sample_source = executor.sample_source
 DOCKER_IMAGE_NAME_executor_sample_sink = executor.sample_sink

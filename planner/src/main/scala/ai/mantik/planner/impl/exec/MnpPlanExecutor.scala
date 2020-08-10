@@ -7,20 +7,25 @@ import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.Executor
-import ai.mantik.executor.model.{ ContainerService, Graph, GrpcProxy, Node, ResourceType, StartWorkerRequest, StopWorkerRequest }
+import ai.mantik.executor.model.{ ContainerService, Graph, GrpcProxy, MnpPipelineDefinition, MnpWorkerDefinition, Node, ResourceType, StartWorkerRequest, StopWorkerRequest }
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.mnp.{ MnpClient, MnpSession, SessionInitException }
-import ai.mantik.mnp.protocol.mnp.{ AboutResponse, ConfigureInputPort, ConfigureOutputPort }
+import ai.mantik.mnp.protocol.mnp.{ AboutResponse, ConfigureInputPort, ConfigureOutputPort, InitRequest, QueryTaskResponse, TaskPortStatus }
+import ai.mantik.planner
 import ai.mantik.planner.PlanExecutor.PlanExecutorException
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{ InputPush, OutputPull }
-import ai.mantik.planner.repository.{ FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
-import ai.mantik.planner.{ CacheKey, ClientConfig, Plan, PlanExecutor, PlanNodeService, PlanOp }
+import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
+import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
+import ai.mantik.planner.{ Algorithm, CacheKey, ClientConfig, DeploymentState, Plan, PlanExecutor, PlanNodeService, PlanOp }
 import akka.http.scaladsl.model.Uri
+import akka.util.ByteString
 import javax.inject.{ Inject, Singleton }
 import cats.implicits._
+import com.google.protobuf.any.Any
 import io.grpc.ManagedChannel
+import io.circe.syntax._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -38,6 +43,9 @@ class MnpPlanExecutor(
     fileCache: FileCache,
     clientConfig: ClientConfig
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
+
+  /** Session Name inside deployed items. */
+  val DeployedSessionName = "deployed"
 
   val openFilesBuilder: ExecutionOpenFilesBuilder = new ExecutionOpenFilesBuilder(
     fileRepository,
@@ -125,11 +133,9 @@ class MnpPlanExecutor(
       case PlanOp.RunGraph(graph) =>
         runGraph(graph)
       case da: PlanOp.DeployAlgorithm =>
-        // TODO
-        ???
+        deployAlgorithm(da)
       case dp: PlanOp.DeployPipeline =>
-        // TODO
-        ???
+        deployPipeline(dp)
     }
   }
 
@@ -181,11 +187,15 @@ class MnpPlanExecutor(
 
   /** Spin up a container and creates a connection to it. */
   private def startWorker(grpcProxy: GrpcProxy, jobId: String, container: Container): Future[ReservedContainer] = {
+    val nameHint = "mantik-" + container.simpleImageName
     val startWorkerRequest = StartWorkerRequest(
       isolationSpace,
       id = jobId,
-      container = container,
-      extraLogins = dockerConfig.logins
+      definition = MnpWorkerDefinition(
+        container = container,
+        extraLogins = dockerConfig.logins
+      ),
+      nameHint = Some(nameHint)
     )
     val t0 = System.currentTimeMillis()
     // TODO: Error Handling, shutting down the worker if the mnpClient fails!
@@ -254,12 +264,63 @@ class MnpPlanExecutor(
 
     for {
       sessions <- initializeSessions(graph, containerMapping, preparation)
+      progressTracker = new ProgressTracker(sessions, taskId)
       _ <- runLinks(taskId, sessions, preparation)
+      _ = progressTracker.stop()
       _ <- shutdownSessions(sessions)
     } yield {
       // Done
       ()
     }
+  }
+
+  /** Helper which tracks and prints progress of tasks within the graph. */
+  private class ProgressTracker(nodes: Map[String, MnpSession], taskId: String) {
+
+    private val cancellable = actorSystem.scheduler.schedule(0.second, 5.second) { printProgress() }
+
+    private def printProgress(): Unit = {
+      val progresses: Future[Vector[(String, String, QueryTaskResponse)]] = nodes.toVector.map {
+        case (nodeId, session) =>
+          session.task(taskId).query(false).map { queryResponse =>
+            (nodeId, session.mnpUrl, queryResponse)
+          }
+      }.sequence
+      progresses.andThen {
+        case Failure(err) =>
+          logger.warn(s"Could not fetch task status", err)
+        case Success(value) =>
+          val sorted = value.sortBy(_._1)
+          logger.debug(s"Periodic Task Status, size=${sorted.size}")
+          sorted.zipWithIndex.foreach {
+            case ((nodeId, mnpUrl, queryResponse), idx) =>
+              val error = if (queryResponse.error.nonEmpty) {
+                s"Error: ${queryResponse.error}"
+              } else ""
+              logger.debug(
+                s"${idx + 1}/${sorted.size} ${nodeId} ${mnpUrl} ${error} ${queryResponse.state.toString()} " +
+                  s"input:${formatPortList(queryResponse.inputs)} outputs: ${formatPortList(queryResponse.outputs)}")
+          }
+      }
+    }
+
+    private def formatPortList(list: Seq[TaskPortStatus]): String = {
+      def formatSingle(s: TaskPortStatus): String = {
+        val error = if (s.error.nonEmpty) {
+          s"/Error: ${s.error}"
+        } else ""
+        val closed = if (s.done) {
+          "/Done"
+        } else ""
+        s"${s.data}B/${s.msgCount}C${closed}${error}"
+      }
+      list.map(formatSingle).mkString("[", ",", "]")
+    }
+
+    def stop(): Unit = {
+      cancellable.cancel()
+    }
+
   }
 
   private def initializeSessions(
@@ -304,7 +365,7 @@ class MnpPlanExecutor(
     val queryTaskFutures = preparation.taskQueries.map { taskQuery =>
       val session = sessions(taskQuery.nodeId)
       logger.debug(s"Sending Query Task to ${session.mnpUrl}/${taskId}")
-      session.runTask(taskId).query(true)
+      session.task(taskId).query(true)
     }
     Future.sequence(inputPushFutures ++ outputPullFutures ++ queryTaskFutures).map {
       _ => ()
@@ -315,7 +376,7 @@ class MnpPlanExecutor(
     logger.debug(s"Starting push from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}")
     fileRepository.loadFile(inputPush.fileGetResult.fileId).flatMap {
       case (contentType, fileSource) =>
-        val runTask = session.runTask(taskId)
+        val runTask = session.task(taskId)
         val sink = runTask.push(inputPush.portId)
         fileSource.runWith(sink)
     }.map {
@@ -327,7 +388,7 @@ class MnpPlanExecutor(
   private def runOutputPull(taskId: String, session: MnpSession, outputPull: OutputPull): Future[Unit] = {
     logger.debug(s"Starting pull from ${session.mnpUrl}/${taskId}/${outputPull.portId} to ${outputPull.fileStorageResult.fileId}")
     fileRepository.storeFile(outputPull.fileStorageResult.fileId, outputPull.contentType).flatMap { fileSink =>
-      val runTask = session.runTask(taskId)
+      val runTask = session.task(taskId)
       val source = runTask.pull(outputPull.portId)
       source.runWith(fileSink)
     }.map { bytes =>
@@ -342,6 +403,128 @@ class MnpPlanExecutor(
           session.quit()
       }
     ).map(_ => ())
+  }
+
+  private def deployAlgorithm(deployAlgorithm: PlanOp.DeployAlgorithm)(implicit files: ExecutionOpenFiles): Future[DeploymentState] = {
+    val initCall = buildInitCallForAlgorithmDeployment(deployAlgorithm)
+
+    val startWorkerRequest = StartWorkerRequest(
+      isolationSpace,
+      id = deployAlgorithm.serviceId,
+      definition = MnpWorkerDefinition(
+        container = deployAlgorithm.container.container,
+        extraLogins = dockerConfig.logins,
+        initializer = Some(ByteString(initCall.toByteArray))
+      ),
+      nameHint = deployAlgorithm.serviceNameHint,
+      keepRunning = true
+    )
+
+    for {
+      response <- executor.startWorker(startWorkerRequest)
+      deploymentState = DeploymentState(
+        name = response.nodeName,
+        internalUrl = s"mnp://${response.nodeName}:8502/${DeployedSessionName}",
+        externalUrl = None
+      )
+      deploymentInfo = DeploymentInfo(
+        name = deploymentState.name,
+        internalUrl = deploymentState.internalUrl,
+        timestamp = akkaRuntime.clock.instant()
+      )
+      _ = deployAlgorithm.item.state.update(_.copy(deployment = Some(deploymentState)))
+      _ <- repository.setDeploymentInfo(deployAlgorithm.item.itemId, Some(deploymentInfo))
+    } yield {
+      deploymentState
+    }
+  }
+
+  private def buildInitCallForAlgorithmDeployment(deployAlgorithm: PlanOp.DeployAlgorithm)(implicit files: ExecutionOpenFiles): InitRequest = {
+    val inputPorts: Vector[ConfigureInputPort] = Vector(
+      ConfigureInputPort(ContentTypes.MantikBundleContentType)
+    )
+    val outputPorts: Vector[ConfigureOutputPort] = Vector(
+      ConfigureOutputPort(ContentTypes.MantikBundleContentType)
+    )
+    val inputData = deployAlgorithm.container.data.map(files.resolveFileRead)
+
+    val initConfiguration = MantikInitConfiguration(
+      header = deployAlgorithm.container.mantikHeader.toJson,
+      payloadContentType = inputData match {
+        case None => "" // encoding for no content type
+        case Some(present) =>
+          // TODO: Content Type should be always present, see #180
+          present.contentType.getOrElse(ContentTypes.ZipFileContentType)
+      },
+      payload = inputData.map { data =>
+        val fullUrl = Uri(data.path).resolvedAgainst(clientConfig.remoteFileRepositoryAddress).toString()
+        MantikInitConfiguration.Payload.Url(fullUrl)
+      }.getOrElse(
+        MantikInitConfiguration.Payload.Empty
+      )
+    )
+
+    InitRequest(
+      sessionId = DeployedSessionName,
+      configuration = Some(Any.pack(initConfiguration)),
+      inputs = inputPorts,
+      outputs = outputPorts
+    )
+  }
+
+  private def deployPipeline(dp: PlanOp.DeployPipeline): Future[DeploymentState] = {
+    val runtimeDefinition = buildPipelineRuntimeDefinition(dp)
+
+    val startWorkerRequest = StartWorkerRequest(
+      isolationSpace,
+      id = dp.serviceId,
+      definition = MnpPipelineDefinition(
+        definition = runtimeDefinition.asJson
+      ),
+      keepRunning = true,
+      ingressName = dp.ingress,
+      nameHint = dp.serviceNameHint
+    )
+
+    for {
+      response <- executor.startWorker(startWorkerRequest)
+      deploymentState = DeploymentState(
+        name = response.nodeName,
+        internalUrl = s"http://${response.nodeName}:8502",
+        externalUrl = response.externalUrl
+      )
+      deploymentInfo = DeploymentInfo(
+        name = deploymentState.name,
+        internalUrl = deploymentState.internalUrl,
+        timestamp = akkaRuntime.clock.instant()
+      )
+      _ = dp.item.state.update(_.copy(deployment = Some(deploymentState)))
+      _ <- repository.setDeploymentInfo(dp.item.itemId, Some(deploymentInfo))
+    } yield {
+      logger.info(s"Deployed pipeline ${dp.serviceId} to ${deploymentInfo.internalUrl} (external=${deploymentInfo.externalUrl})")
+      deploymentState
+    }
+  }
+
+  private def buildPipelineRuntimeDefinition(dp: PlanOp.DeployPipeline): PipelineRuntimeDefinition = {
+    def extractStep(algorithm: Algorithm): PipelineRuntimeDefinition.Step = {
+      val url = algorithm.state.get.deployment match {
+        case None    => throw new planner.Planner.InconsistencyException("Required sub algorithm not deployed")
+        case Some(d) => d.internalUrl
+      }
+      val resultType = algorithm.functionType.output
+      PipelineRuntimeDefinition.Step(
+        url,
+        resultType
+      )
+    }
+    val steps = dp.steps.map(extractStep)
+    val inputType = dp.item.functionType.input
+    PipelineRuntimeDefinition(
+      name = dp.item.mantikId.toString,
+      steps,
+      inputType = inputType
+    )
   }
 
   override private[mantik] def cachedFile(cacheKey: CacheKey): Option[String] = {

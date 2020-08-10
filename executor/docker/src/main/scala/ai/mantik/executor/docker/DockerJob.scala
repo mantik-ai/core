@@ -5,6 +5,7 @@ import ai.mantik.executor.docker.api.PullPolicy
 import ai.mantik.executor.docker.api.structures.{ CreateContainerRequest, CreateVolumeRequest }
 
 /** A Job translated into something we can issue to docker. */
+@deprecated("mnp", "Only ContainerDefinition will survive")
 case class DockerJob(
     id: String,
     workers: Vector[ContainerDefinition],

@@ -114,7 +114,7 @@ func TestEnsureTask(t *testing.T) {
 		Ensure:    false,
 	})
 	assert.NoError(t, err)
-	assert.False(t, response.Exists)
+	assert.Equal(t, mnp.TaskState_TS_UNKNOWN, response.State)
 
 	response, err = mnpServiceClient.QueryTask(context.Background(), &mnp.QueryTaskRequest{
 		SessionId: "session1",
@@ -122,7 +122,7 @@ func TestEnsureTask(t *testing.T) {
 		Ensure:    true,
 	})
 	assert.NoError(t, err)
-	assert.True(t, response.Exists)
+	assert.Equal(t, mnp.TaskState_TS_EXISTS, response.State)
 
 	response, err = mnpServiceClient.QueryTask(context.Background(), &mnp.QueryTaskRequest{
 		SessionId: "session1",
@@ -130,7 +130,7 @@ func TestEnsureTask(t *testing.T) {
 		Ensure:    false,
 	})
 	assert.NoError(t, err)
-	assert.True(t, response.Exists)
+	assert.Equal(t, mnp.TaskState_TS_EXISTS, response.State)
 }
 
 func TestDataTransformation(t *testing.T) {
@@ -167,7 +167,24 @@ func TestDataTransformation(t *testing.T) {
 	assert.Equal(t, []byte{2, 4, 6, 8}, output2.Buffer.Bytes())
 
 	serverSession, _ := s.service.getSession("session1")
-	assert.Empty(t, serverSession.GetTasks())
+	assert.Empty(t, serverSession.GetTasks(true))
+	assert.Equal(t, []string{"task1"}, serverSession.GetTasks(false))
+
+	queryResponse, err := s.service.QueryTask(context.Background(), &mnp.QueryTaskRequest{
+		SessionId: "session1",
+		TaskId:    "task1",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, mnp.TaskState_TS_FINISHED, queryResponse.State)
+	assert.Empty(t, queryResponse.Error)
+	assert.Empty(t, queryResponse.Inputs[0].Error)
+	assert.Empty(t, queryResponse.Outputs[0].Error)
+	assert.True(t, queryResponse.Inputs[0].MsgCount > 0)
+	assert.True(t, queryResponse.Inputs[0].Data > 0)
+	assert.True(t, queryResponse.Inputs[0].Done)
+	assert.True(t, queryResponse.Outputs[0].MsgCount > 0)
+	assert.True(t, queryResponse.Outputs[0].Data > 0)
+	assert.True(t, queryResponse.Outputs[0].Done)
 
 	err = session.Quit()
 	assert.NoError(t, err)
@@ -208,7 +225,8 @@ func TestFailingTransformation(t *testing.T) {
 	assert.True(t, output2.Closed)
 
 	serverSession, _ := s.service.getSession("session1")
-	assert.Empty(t, serverSession.GetTasks())
+	assert.Empty(t, serverSession.GetTasks(true))
+	assert.Equal(t, []string{"task1"}, serverSession.GetTasks(false))
 
 	err = session.Quit()
 	assert.NoError(t, err)

@@ -15,11 +15,25 @@ case class Container(
   def imageTag: Option[String] = {
     Container.splitImageRepoTag(image).map(_._2)
   }
+
+  /** Returns the image name without repo or tag. */
+  def simpleImageName: String = {
+    val slashIdx = image.indexOf('/')
+    val withoutRepo = slashIdx match {
+      case -1 => image
+      case n  => image.substring(n + 1)
+    }
+    val tagIdx = withoutRepo.indexOf(':')
+    tagIdx match {
+      case -1 => withoutRepo
+      case n  => withoutRepo.substring(0, n)
+    }
+  }
 }
 
 object Container {
 
-  /** Strip tag from image. If there is no tag, returns "latest" */
+  /** Strip tag from image. If there is no tag, returns None */
   def splitImageRepoTag(imageName: String): Option[(String, String)] = {
     val slashIdx = imageName.indexOf('/')
     val tagIdx = imageName.indexOf(':', slashIdx + 1)

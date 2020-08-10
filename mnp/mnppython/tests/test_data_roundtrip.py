@@ -66,15 +66,18 @@ def test_query_task(dummy_server_handler: Tuple[MnpServiceStub, DummyHandler]):
     assert response[-1].state == SS_READY
 
     task = stub.QueryTask(QueryTaskRequest(session_id="session1", task_id="task1", ensure=False))
-    assert task.exists is False
+    assert task.state == TS_UNKNOWN
 
     task = stub.QueryTask(QueryTaskRequest(session_id="session1", task_id="task1", ensure=True))
-    assert task.exists is True
+    assert task.state == TS_EXISTS
+    assert len(task.inputs) == 1
+    assert len(task.outputs) == 1
 
     task = stub.QueryTask(QueryTaskRequest(session_id="session1", task_id="task1", ensure=False))
-    assert task.exists is True
+    assert task.state == TS_EXISTS
 
     stub.Quit(QuitRequest())
+
 
 def test_forwarding():
     # Forwarding data from one node to the next one
@@ -139,6 +142,15 @@ def test_forwarding():
         result_data = result_data + subresponse.data
 
     assert result_data == b"Hello you will be forwarded!"
+
+    task = stub2.QueryTask(QueryTaskRequest(session_id="session2", task_id="task1", ensure=False))
+    assert task.state == TS_FINISHED
+    assert task.inputs[0].done
+    assert task.inputs[0].data > 0
+    assert task.inputs[0].msg_count > 0
+    assert task.outputs[0].done
+    assert task.outputs[0].data > 0
+    assert task.outputs[0].msg_count > 0
 
     channel.close()
     channel2.close()

@@ -117,7 +117,7 @@ object PlanOp {
       container: PlanNodeService.DockerContainer,
       serviceId: String,
       serviceNameHint: Option[String],
-      item: MantikItem
+      item: Algorithm
   ) extends PlanOp[DeploymentState]
 
   /** Deploy a Pipeline. */

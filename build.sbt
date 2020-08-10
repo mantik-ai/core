@@ -19,7 +19,7 @@ val akkaHttpVersion = "10.1.7"
 val scalaTestVersion = "3.0.5"
 val circeVersion = "0.11.1"
 val slf4jVersion = "1.7.25"
-val fhttpVersion = "0.2.1"
+val fhttpVersion = "0.2.2"
 
 import scalariform.formatter.preferences._
 val scalariformSettings = {

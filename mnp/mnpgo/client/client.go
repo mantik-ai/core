@@ -76,6 +76,16 @@ func (c *Client) Close() error {
 	return c.con.Close()
 }
 
+// Join an existing (assumed) session
+func (c *Client) JoinSession(sessionId string, portConfiguration *mnpgo.PortConfiguration) *ClientSession {
+	return &ClientSession{
+		sessionId: sessionId,
+		ports:     portConfiguration,
+		ctx:       c.ctx,
+		service:   c.serviceClient,
+	}
+}
+
 func (c *Client) Init(
 	sessionId string,
 	configuration *any.Any,

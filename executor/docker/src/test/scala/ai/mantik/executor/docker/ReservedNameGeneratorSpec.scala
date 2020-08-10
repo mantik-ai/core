@@ -17,19 +17,18 @@ class ReservedNameGeneratorSpec extends TestBase with AkkaSupport {
     val MaxSpace = 1500
     val TestSize = 1400
 
-    class Backend extends ReservedNameGenerator.PrelistedBunchGenerator {
+    class Backend extends ReservedNameGenerator.Backend {
 
-      override protected def executionContext: ExecutionContext = ReservedNameGeneratorSpec.this.ec
-
-      override protected def lookupAlreadyTaken(): Future[Set[String]] = {
+      override def lookupAlreadyTaken(): Future[Set[String]] = {
         Future {
-          poolLock.synchronized {
+          val result: Set[String] = poolLock.synchronized {
             pool.toSet
           }
+          result
         }
       }
 
-      override protected def generateSingle(taken: Set[String]): String = generateSingleExec(taken)
+      override def generate(prefix: String, taken: Set[String]): String = generateSingleExec(taken)
 
       @tailrec
       private def generateSingleExec(reserved: Set[String]): String = {
@@ -59,6 +58,27 @@ class ReservedNameGeneratorSpec extends TestBase with AkkaSupport {
       generator.reserve { s =>
         Future {
           poolLock.synchronized {
+            pool += s
+          }
+          s
+        }
+      }
+    }
+    val values = await(Future.sequence(futures))
+    withClue("There should be no duplicates") {
+      values.distinct.size shouldBe values.size
+    }
+  }
+
+  it should "work with a custom prefix" in new Env {
+    // note: the prefix is ignored in this test, but it will fetch the list each time
+    val futures = for (i <- 0 until TestSize) yield {
+      generator.reserveWithPrefix("prefix") { s =>
+        Future {
+          poolLock.synchronized {
+            if (pool.contains(s)) {
+              println(s"Collision for ${s}")
+            }
             pool += s
           }
           s

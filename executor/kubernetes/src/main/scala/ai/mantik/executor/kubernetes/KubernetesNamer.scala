@@ -72,9 +72,12 @@ object KubernetesNamer {
   private val logger = LoggerFactory.getLogger(getClass)
 
   def escapeNodeName(nodeName: String): String = {
-    val filtered = nodeName.toLowerCase.filter { c =>
-      (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'
-    }
+    val filtered = nodeName
+      .toLowerCase
+      .replace('.', '-')
+      .filter { c =>
+        (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'
+      }
     if (filtered.isEmpty || (filtered.last == '-')) {
       filtered + "N"
     } else {

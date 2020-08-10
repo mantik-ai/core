@@ -129,8 +129,6 @@ object StreamConversions {
   def streamObserverSource[T](bufSize: Int = 1): Source[T, StreamObserver[T]] = {
     Source.asSubscriber[T].mapMaterializedValue { subscriber =>
       new StreamObserver[T] with Subscription {
-        subscriber.onSubscribe(this)
-
         private val buf = new ArrayBlockingQueue[T](bufSize)
         private val awaiting = new AtomicLong(0)
 
@@ -138,6 +136,8 @@ object StreamConversions {
         private var failed = false
         private var doneReceived = false
         private var doneSent = false
+
+        subscriber.onSubscribe(this)
 
         private def pump(): Unit = {
           // TODO: This looks a bit slow, but pump() can be called indirectly

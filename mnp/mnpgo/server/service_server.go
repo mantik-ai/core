@@ -222,9 +222,13 @@ func (s *MnpServiceServer) QueryTask(ctx context.Context, req *mnp.QueryTaskRequ
 	if err != nil {
 		return nil, err
 	}
-	return &mnp.QueryTaskResponse{
-		Exists: task != nil,
-	}, nil
+	if task == nil {
+		return &mnp.QueryTaskResponse{
+			State: mnp.TaskState_TS_UNKNOWN,
+		}, nil
+	}
+
+	return task.Query(), nil
 }
 
 func (s *MnpServiceServer) finishPull(res mnp.MnpService_PullServer) error {

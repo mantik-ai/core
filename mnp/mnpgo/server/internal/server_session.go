@@ -119,17 +119,23 @@ func (s *ServerSession) runTask(task *ServerTask) {
 		} else {
 			logrus.Infof("Task %s/%s finished", s.sessionId, task.taskId)
 		}
-		s.mutex.Lock()
-		defer s.mutex.Unlock()
-		delete(s.tasks, task.taskId)
+		// s.mutex.Lock()
+		// defer s.mutex.Unlock()
+		// Do not delete, we want the task status to survice for a while
+		// delete(s.tasks, task.taskId)
 	}()
 }
 
-func (s *ServerSession) GetTasks() []string {
+func (s *ServerSession) GetTasks(aliveOnly bool) []string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	result := make([]string, 0, 0)
-	for k, _ := range s.tasks {
+	for k, t := range s.tasks {
+		if aliveOnly {
+			if t.state == mnp.TaskState_TS_FINISHED || t.state == mnp.TaskState_TS_FAILED {
+				continue
+			}
+		}
 		result = append(result, k)
 	}
 	return result

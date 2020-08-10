@@ -1,106 +1,132 @@
 package ai.mantik.executor.docker
 
-import scala.collection.immutable.Queue
+import ai.mantik.executor.docker.ReservedNameGenerator.SingleExecutableFuture
+
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
  * Helper class for generating names in an efficient manner.
- * Must be thread safe
+ * Must be thread safe, however also be the single source of truth for Mantik Containers.
  */
 class ReservedNameGenerator(
-    backend: ReservedNameGenerator.BunchGenerator,
-    bufSize: Int = 20
+    backend: ReservedNameGenerator.Backend,
+    generatingSize: Int = 20
 )(implicit ex: ExecutionContext) {
 
   private object lock
-  private var nextNames: Queue[String] = Queue.empty
-  private var nextNameUpdate: Option[Future[Unit]] = None
+
+  /** The current (assumed) existing names. */
+  private var existingNames: Set[String] = Set.empty
+
+  /** Reserved names, which can't be given out. */
   private var reserved: Set[String] = Set.empty
 
-  /** Generate a new root name. */
-  def generateRootName(): Future[String] = {
-    reserve { name =>
-      Future.successful(name)
-    }
-  }
+  /** How much names can be given out without listing existing names. */
+  private var countUntilRelisting: Int = 0
 
   /** Reserve a root name, and reserve it for the time of the user defined function. */
   def reserve[T](user: String => Future[T]): Future[T] = {
-    val reservedNextName: Option[String] = lock.synchronized {
-      nextNames.dequeueOption match {
-        case None =>
-          None
-        case Some((nextName, nextQueue)) =>
-          reserved = reserved + nextName
-          nextNames = nextQueue
-          Some(nextName)
-      }
-    }
+    freeAfterUser(fetchNewReservedName(), user)
+  }
 
-    reservedNextName match {
-      case None => withIncreasedBuffer().flatMap { _ => reserve(user) }
-      case Some(name) =>
-        user(name).andThen {
-          case _ =>
-            lock.synchronized {
-              reserved = reserved - name
-            }
-        }
+  /** Reserve a root name with given prefix (more expensive) */
+  def reserveWithPrefix[T](prefix: String)(user: String => Future[T]): Future[T] = {
+    freeAfterUser(reserveNameWithPrefix(prefix, true), user)
+  }
+
+  /** Reserve a root name with optional prefix */
+  def reserveWithOptionalPrefix[T](prefix: Option[String])(user: String => Future[T]): Future[T] = {
+    prefix match {
+      case None         => reserve(user)
+      case Some(prefix) => reserveWithPrefix(prefix)(user)
     }
   }
 
-  private def withIncreasedBuffer(): Future[Unit] = {
-    lock.synchronized {
-      nextNameUpdate match {
-        // do not give out failed futures multiple times
-        case Some(alreadyHappening) if !alreadyHappening.value.exists(_.isFailure) =>
-          alreadyHappening
-        case None =>
-          val future = executeBufferIncreaseLocked()
-          nextNameUpdate = Some(future)
-          future
+  private def freeAfterUser[T](r: Future[String], user: String => Future[T]): Future[T] = {
+    r.flatMap { reservedName =>
+      user(reservedName).andThen {
+        case _ =>
+          lock.synchronized {
+            reserved = reserved - reservedName
+            existingNames += reservedName
+          }
       }
     }
   }
 
-  private def executeBufferIncreaseLocked(): Future[Unit] = {
-    val allReserved: Set[String] = reserved ++ nextNames
-    backend.generate(bufSize, allReserved).map { results =>
+  private def fetchNewReservedName(): Future[String] = {
+    reserveNameWithPrefix(NameGenerator.DefaultPrefix, false)
+  }
+
+  private def reserveNameWithPrefix(prefix: String, forceReload: Boolean): Future[String] = {
+    if (forceReload) {
+      reload().flatMap { _ =>
+        reserveNameWithPrefix(prefix, false)
+      }
+    } else {
       lock.synchronized {
-        nextNames ++= results
-        nextNameUpdate = None
+        if (countUntilRelisting <= 0) {
+          return reserveNameWithPrefix(prefix, true)
+        } else {
+          countUntilRelisting -= 1
+          val chosen = chooseName(prefix)
+          Future.successful(chosen)
+        }
+      }
+    }
+  }
+
+  private def chooseName(prefix: String): String = {
+    lock.synchronized {
+      val allUsed: Set[String] = existingNames ++ reserved
+      val generated = backend.generate(prefix, allUsed)
+      reserved += generated
+      generated
+    }
+  }
+
+  private val reload = new SingleExecutableFuture({
+    backend.lookupAlreadyTaken().map { alreadyTaken =>
+      lock.synchronized {
+        countUntilRelisting = generatingSize
+        existingNames = alreadyTaken
       }
       ()
     }
-  }
+  })
 }
 
 object ReservedNameGenerator {
-  /** Generate bunches of new Names for [[ReservedNameGenerator]] */
-  trait BunchGenerator {
-    def generate(count: Int, reserved: Set[String]): Future[Set[String]]
+
+  trait Backend {
+    /** Lookup already taken Names. */
+    def lookupAlreadyTaken(): Future[Set[String]]
+
+    /** Generate a new random name. */
+    def generate(prefix: String, reserved: Set[String]): String
   }
 
-  /** Generate bunches of new names for [[ReservedNameGenerator]] by looking up all names first. */
-  trait PrelistedBunchGenerator extends BunchGenerator {
-    protected def executionContext: ExecutionContext
+  /** Helper which makes an observing function executable happening once at the same time. */
+  class SingleExecutableFuture[T](f: => Future[T])(implicit ec: ExecutionContext) {
+    private object lock
+    private var current: Option[Future[T]] = None
 
-    override def generate(count: Int, reserved: Set[String]): Future[Set[String]] = {
-      implicit val ec = executionContext
-      lookupAlreadyTaken().map { alreadyTaken =>
-        var fullSet = reserved ++ alreadyTaken
-        val resultSetBuilder = Set.newBuilder[String]
-        for (_ <- 0 until count) {
-          val next = generateSingle(fullSet)
-          resultSetBuilder += next
-          fullSet += next
+    def apply(): Future[T] = {
+      lock.synchronized {
+        current match {
+          case Some(already) => already
+          case None =>
+            val future = f
+            current = Some(future)
+            future.andThen {
+              case _ =>
+                lock.synchronized {
+                  current = None
+                }
+            }
+            future
         }
-        resultSetBuilder.result()
       }
     }
-
-    protected def lookupAlreadyTaken(): Future[Set[String]]
-
-    protected def generateSingle(taken: Set[String]): String
   }
 }

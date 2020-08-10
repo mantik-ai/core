@@ -2,18 +2,27 @@ package internal
 
 import (
 	"bufio"
+	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"io"
+	"sync"
 )
 
 // A Buffered Stream Multiplexer/Demultiplexer
 // Used for handling different input/output channels into a group of readers and writers
 // Readers and writes are generated using pipes
 
+type portInfo struct {
+	err   error
+	calls int
+	bytes int64
+}
+
 type StreamMultiplexer struct {
 	bufSize int
 
-	inputStates  []error
-	outputStates []error
+	inputStates  []portInfo
+	outputStates []portInfo
+	mutex        sync.Mutex
 
 	inputs       []io.WriteCloser
 	InputReaders []io.Reader
@@ -26,8 +35,8 @@ func NewStreamMultiplexer(inputChannels int, outputChannels int) *StreamMultiple
 
 	r := StreamMultiplexer{
 		bufSize:      bufSize,
-		inputStates:  make([]error, inputChannels, inputChannels),
-		outputStates: make([]error, outputChannels, outputChannels),
+		inputStates:  make([]portInfo, inputChannels, inputChannels),
+		outputStates: make([]portInfo, outputChannels, outputChannels),
 		inputs:       make([]io.WriteCloser, inputChannels, inputChannels),
 		InputReaders: make([]io.Reader, inputChannels, inputChannels),
 		outputs:      make([]io.Reader, outputChannels, outputChannels),
@@ -61,30 +70,40 @@ func (s *StreamMultiplexer) OutputWriter(id int) io.Writer {
 // Write something on the input side
 func (s *StreamMultiplexer) Write(id int, bytes []byte) error {
 	_, err := s.inputs[id].Write(bytes)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.inputStates[id].calls += 1
+	s.inputStates[id].bytes += (int64)(len(bytes))
 	if err != nil {
-		s.inputStates[id] = err
+		s.inputStates[id].err = err
 	}
 	return err
 }
 
 func (s *StreamMultiplexer) WriteEof(id int) error {
 	err := s.inputs[id].Close()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	state := err
 	if state == nil {
 		state = io.EOF
 	}
-	s.inputStates[id] = state
+	s.inputStates[id].err = state
 	return err
 }
 
 func (s *StreamMultiplexer) WriteFailure(id int, err error) {
 	s.inputs[id].Close()
-	s.inputStates[id] = err
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.inputStates[id].err = err
 }
 
 func (s *StreamMultiplexer) ReadFailure(id int, err error) {
 	s.OutputWrites[id].Close()
-	s.outputStates[id] = err
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.outputStates[id].err = err
 }
 
 // Read something on the output side
@@ -92,31 +111,67 @@ func (s *StreamMultiplexer) Read(id int) ([]byte, error) {
 	buffer := make([]byte, s.bufSize, s.bufSize)
 
 	n, err := io.ReadFull(s.outputs[id], buffer)
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.outputStates[id].calls += 1
+
 	if n <= 0 && err != nil {
 		if err == io.ErrUnexpectedEOF {
 			err = io.EOF
 		}
-		if s.outputStates[id] == nil {
-			s.outputStates[id] = err
+		if s.outputStates[id].err == nil {
+			s.outputStates[id].err = err
 		} else {
-			err = s.outputStates[id]
+			err = s.outputStates[id].err
 		}
 		return []byte{}, err
 	}
+	s.outputStates[id].bytes += (int64)(n)
 	return buffer[:n], nil
 }
 
 func (s *StreamMultiplexer) Finalize(err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for i, inputState := range s.inputStates {
-		if inputState == nil {
-			s.inputStates[i] = err
+		if inputState.err == nil {
+			s.inputStates[i].err = err
 			s.inputs[i].Close()
 		}
 	}
 	for i, outputState := range s.outputStates {
-		if outputState == nil {
-			s.outputStates[i] = err
+		if outputState.err == nil {
+			s.outputStates[i].err = err
 			s.OutputWrites[i].Close()
 		}
 	}
+}
+
+// Returns port status for input and ouptut
+func (s *StreamMultiplexer) QueryTaskPortStatus() ([]*mnp.TaskPortStatus, []*mnp.TaskPortStatus) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return convertStates(s.inputStates), convertStates(s.outputStates)
+}
+
+func convertStates(info []portInfo) []*mnp.TaskPortStatus {
+	result := make([]*mnp.TaskPortStatus, len(info), len(info))
+	for i, v := range info {
+		state := convertState(v)
+		result[i] = &state
+	}
+	return result
+}
+
+func convertState(info portInfo) mnp.TaskPortStatus {
+	var result mnp.TaskPortStatus
+	if info.err != nil && info.err != io.EOF {
+		result.Error = info.err.Error()
+	}
+	result.MsgCount = (int32)(info.calls)
+	result.Data = info.bytes
+	result.Done = info.err == io.EOF
+	return result
 }

@@ -61,9 +61,9 @@ class NameGeneratorSpec extends TestBase {
   }
 
   it should "give nice examples" in {
-    NameGenerator.generateRootName(0) shouldBe NameGenerator.Prefix
-    NameGenerator.generateRootName(1).size shouldBe NameGenerator.Prefix.length + 1
-    NameGenerator.generateRootName(2).size shouldBe NameGenerator.Prefix.length + 2
+    NameGenerator.generateRootName(0) shouldBe NameGenerator.DefaultPrefix
+    NameGenerator.generateRootName(1).size shouldBe NameGenerator.DefaultPrefix.length + 1
+    NameGenerator.generateRootName(2).size shouldBe NameGenerator.DefaultPrefix.length + 2
   }
 
   val examples5 = for (i <- 0 until 100) yield NameGenerator.generateRootName(5)

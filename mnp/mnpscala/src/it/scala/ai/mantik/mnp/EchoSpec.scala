@@ -81,7 +81,7 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
 
       states.result() shouldBe Vector(SessionState.SS_INITIALIZING, SessionState.SS_STARTING_UP)
 
-      val task = session.runTask("task1")
+      val task = session.task("task1")
 
       val sink1 = task.push(0)
       val result = Source.single(HelloWorld).runWith(sink1)
@@ -122,7 +122,7 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
         List(ConfigureOutputPort("reverseContent1"), ConfigureOutputPort("reverseContent2"))
       ))
 
-      val task = session.runTask("task2")
+      val task = session.task("task2")
 
       val sink1 = task.push(0)
       sink1.runWith(Source.single(HelloWorld))

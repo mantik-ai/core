@@ -3,15 +3,18 @@ package internal
 import (
 	"context"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
+	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"golang.org/x/sync/errgroup"
 )
 
 type ServerTask struct {
-	session     mnpgo.SessionHandler
-	ctx         context.Context
-	taskId      string
-	multiplexer *StreamMultiplexer
-	forwarder   []*Forwarder
+	session      mnpgo.SessionHandler
+	ctx          context.Context
+	taskId       string
+	multiplexer  *StreamMultiplexer
+	forwarder    []*Forwarder
+	state        mnp.TaskState
+	errorMessage string
 }
 
 func NewServerTask(
@@ -21,7 +24,7 @@ func NewServerTask(
 	configuration *mnpgo.PortConfiguration,
 ) (*ServerTask, error) {
 
-	var forwarders2 []*Forwarder
+	var forwarders []*Forwarder
 
 	multiplexer := NewStreamMultiplexer(
 		len(configuration.Inputs),
@@ -34,7 +37,7 @@ func NewServerTask(
 			if err != nil {
 				return nil, err
 			}
-			forwarders2 = append(forwarders2, forwarder2)
+			forwarders = append(forwarders, forwarder2)
 		}
 	}
 
@@ -43,7 +46,8 @@ func NewServerTask(
 		ctx:         ctx,
 		taskId:      taskId,
 		multiplexer: multiplexer,
-		forwarder:   forwarders2,
+		forwarder:   forwarders,
+		state:       mnp.TaskState_TS_EXISTS,
 	}, nil
 }
 
@@ -60,6 +64,12 @@ func (t *ServerTask) Run() error {
 	}
 	group.Go(func() error {
 		err := t.session.RunTask(t.ctx, t.taskId, t.multiplexer.InputReaders, t.multiplexer.OutputWrites)
+		if err == nil {
+			t.state = mnp.TaskState_TS_FINISHED
+		} else {
+			t.state = mnp.TaskState_TS_FAILED
+			t.errorMessage = err.Error()
+		}
 		t.multiplexer.Finalize(err)
 		return err
 	})
@@ -80,4 +90,15 @@ func (t *ServerTask) WriteFailure(port int, err error) {
 
 func (t *ServerTask) Read(port int) ([]byte, error) {
 	return t.multiplexer.Read(port)
+}
+
+func (t *ServerTask) Query() *mnp.QueryTaskResponse {
+	inputStates, outputStates := t.multiplexer.QueryTaskPortStatus()
+
+	return &mnp.QueryTaskResponse{
+		State:   t.state,
+		Error:   t.errorMessage,
+		Inputs:  inputStates,
+		Outputs: outputStates,
+	}
 }
