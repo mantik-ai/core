@@ -1,6 +1,7 @@
 package ai.mantik.executor.docker
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.docker.api.{ DockerClient, DockerOperations }
 import ai.mantik.executor.docker.api.structures.{ CreateContainerHostConfig, CreateContainerNetworkSpecificConfig, CreateContainerNetworkingConfig, CreateContainerRequest, CreateNetworkRequest, PortBindingHost, RestartPolicy }
 
@@ -27,7 +28,8 @@ class ExtraServices(
     Image = executorConfig.ingress.traefikImage,
     Cmd = Vector("--docker"),
     Labels = Map(
-      DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue
+      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
+      LabelConstants.RoleLabelName -> LabelConstants.role.traefik
     ),
     HostConfig = CreateContainerHostConfig(
       PortBindings = Map(
@@ -65,7 +67,8 @@ class ExtraServices(
     Image = executorConfig.common.grpcProxy.container.image,
     Cmd = executorConfig.common.grpcProxy.container.parameters.toVector,
     Labels = Map(
-      DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue
+      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
+      LabelConstants.RoleLabelName -> LabelConstants.role.traefik
     ),
     HostConfig = CreateContainerHostConfig(
       PortBindings = Map(

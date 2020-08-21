@@ -1,20 +1,20 @@
 package ai.mantik.planner.repository.impl
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import java.nio.file.{ Files, Path }
 
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.utils.FutureHelper
-import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.helper.ZipUtils
-import ai.mantik.elements.errors.{ErrorCodes, MantikException}
-import ai.mantik.elements.{ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId}
+import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
+import ai.mantik.elements.{ ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.BuiltInItems
 import ai.mantik.planner.impl.ReferencingItemLoader
 import ai.mantik.planner.repository._
-import akka.stream.scaladsl.{FileIO, Source}
+import akka.stream.scaladsl.{ FileIO, Source }
 import akka.util.ByteString
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 import org.apache.commons.io.FileUtils
 import cats.implicits._
 
@@ -25,7 +25,7 @@ import scala.concurrent.duration.FiniteDuration
 @Singleton
 private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     localMantikRegistry: LocalMantikRegistry,
-    defaultRemoteRegistry: RemoteMantikRegistry,
+    defaultRemoteRegistry: RemoteMantikRegistry
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with MantikArtifactRetriever {
 
   private val dbLookupTimeout = config.getFiniteDuration("mantik.planner.dbLookupTimeout")
@@ -42,7 +42,7 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   private def dependencyExtractor(i: MantikArtifact): Seq[MantikId] = {
     i.parsedMantikHeader.definition.referencedItems.filter {
       case n: NamedMantikId => n.account != BuiltInItems.BuiltInAccount
-      case _ => true
+      case _                => true
     }
   }
 
@@ -134,9 +134,8 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
         None
       }
 
-
-      val artifact =  MantikArtifact(mantikHeaderContent, None, mantikId, itemId)
-      val timeout = if (payloadSource.isDefined){
+      val artifact = MantikArtifact(mantikHeaderContent, None, mantikId, itemId)
+      val timeout = if (payloadSource.isDefined) {
         fileTransferTimeout
       } else {
         dbLookupTimeout
@@ -144,9 +143,9 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
       FutureHelper.addTimeout(
         localMantikRegistry.addMantikArtifact(artifact, payloadSource), "Uploading Artifact", timeout
       ).map { generatedArtifact =>
-        logger.info(s"Stored ${artifact.itemId} done, name=${artifact.namedId}, fileId=${artifact.fileId}")
-        generatedArtifact
-      }
+          logger.info(s"Stored ${artifact.itemId} done, name=${artifact.namedId}, fileId=${artifact.fileId}")
+          generatedArtifact
+        }
     }
   }
 
@@ -195,8 +194,8 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
             FutureHelper.addTimeout(
               to.ensureMantikId(existant.itemId, namedId), "Tagging", changeTimeout
             ).map { _ =>
-              existant.copy(namedId = Some(namedId))
-            }
+                existant.copy(namedId = Some(namedId))
+              }
           case None =>
             logger.info(s"${fromArtifact.itemId} already exists, and is anonymous, no change.")
             Future.successful(existant)

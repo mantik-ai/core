@@ -7,7 +7,7 @@ import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.Executor
-import ai.mantik.executor.model.{ ContainerService, Graph, GrpcProxy, MnpPipelineDefinition, MnpWorkerDefinition, Node, ResourceType, StartWorkerRequest, StopWorkerRequest }
+import ai.mantik.executor.model.{ GrpcProxy, MnpPipelineDefinition, MnpWorkerDefinition, StartWorkerRequest, StopWorkerRequest }
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.mnp.{ MnpClient, MnpSession, SessionInitException }
 import ai.mantik.mnp.protocol.mnp.{ AboutResponse, ConfigureInputPort, ConfigureOutputPort, InitRequest, QueryTaskResponse, TaskPortStatus }
@@ -15,6 +15,7 @@ import ai.mantik.planner
 import ai.mantik.planner.PlanExecutor.PlanExecutorException
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import ai.mantik.planner.Planner.InconsistencyException
+import ai.mantik.planner.graph.{ Graph, Node }
 import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{ InputPush, OutputPull }
 import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
 import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
@@ -254,7 +255,7 @@ class MnpPlanExecutor(
   ): Future[Unit] = {
     val graphId = UUID.randomUUID().toString
     val containerAddresses: Map[String, String] = graph.nodes.collect {
-      case (name, Node(c: PlanNodeService.DockerContainer, _)) =>
+      case (name, Node(c: PlanNodeService.DockerContainer, _, _)) =>
         name -> containerMapping.containers(c.container).address
     }
     val taskId = "evaluation"

@@ -4,7 +4,7 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
 
 import ai.mantik.componently.AkkaRuntime
-import ai.mantik.executor.docker.DockerJob.ContainerDefinition
+import ai.mantik.executor.docker.ContainerDefinition
 import ai.mantik.executor.docker.api.DockerClient.WrappedErrorResponse
 import ai.mantik.executor.docker.api.structures.{ ContainerWaitResponse, CreateContainerRequest, CreateContainerResponse, CreateNetworkRequest, InspectContainerResponse, ListContainerRequestFilter, ListContainerResponseRow, ListNetworkRequestFilter }
 import akka.stream.scaladsl.Sink

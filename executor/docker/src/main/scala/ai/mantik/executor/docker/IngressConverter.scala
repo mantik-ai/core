@@ -1,7 +1,5 @@
 package ai.mantik.executor.docker
 
-import ai.mantik.executor.docker.DockerJob.ContainerDefinition
-
 case class IngressConverter(
     config: DockerExecutorConfig,
     dockerHost: String,

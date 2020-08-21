@@ -4,8 +4,8 @@ import ai.mantik.componently.utils.Renderable
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.{ ItemId, MantikDefinition, MantikHeader, NamedMantikId }
-import ai.mantik.executor.model.Graph
 import ai.mantik.executor.model.docker.Container
+import ai.mantik.planner.graph.Graph
 
 /**
  * A plan is something which can be executed. They are created by the [[Planner]]

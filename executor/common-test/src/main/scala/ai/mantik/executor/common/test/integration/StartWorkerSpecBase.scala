@@ -86,10 +86,6 @@ trait StartWorkerSpecBase {
     response.nodeName shouldNot be(empty)
     response.externalUrl shouldBe empty
 
-    val listResponse = await(executor.listWorkers(ListWorkerRequest(
-      isolationSpace
-    )))
-
     checkExistance(executor, response, WorkerType.MnpWorker)
 
     stopAndKill(executor, response)

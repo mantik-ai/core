@@ -2,6 +2,7 @@ package ai.mantik.executor.docker.integration
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.Executor
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.common.test.integration.IntegrationBase
 import ai.mantik.executor.docker.api.DockerClient
 import ai.mantik.executor.docker.api.structures.ListNetworkRequestFilter
@@ -32,7 +33,7 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
   private def killOldMantikContainers(): Unit = {
     val containers = await(dockerClient.listContainers((true)))
     val mantikContainers = containers.filter(
-      _.Labels.get(DockerConstants.ManagedByLabelName).contains(DockerConstants.ManagedByLabelValue)
+      _.Labels.get(LabelConstants.ManagedByLabelName).contains(LabelConstants.ManagedByLabelValue)
     )
     if (mantikContainers.isEmpty) {
       logger.info("No old mantik containers to kill")
@@ -43,7 +44,7 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
     }
     val volumes = await(dockerClient.listVolumes(()))
     val mantikVolumes = volumes.Volumes.filter(
-      _.effectiveLabels.get(DockerConstants.ManagedByLabelValue).contains(DockerConstants.ManagedByLabelName)
+      _.effectiveLabels.get(LabelConstants.ManagedByLabelValue).contains(LabelConstants.ManagedByLabelName)
     )
     if (mantikVolumes.isEmpty) {
       logger.info("No old mantik volumes to kill")
@@ -54,7 +55,7 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
     }
 
     val mantikNetworks = await(dockerClient.listNetworksFiltered(
-      ListNetworkRequestFilter.forLabels(DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue))
+      ListNetworkRequestFilter.forLabels(LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue))
     )
     mantikNetworks.foreach { network =>
       logger.info(s"Killing network ${network.Name}")

@@ -1,15 +1,15 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.bridge.protocol.bridge.MantikInitConfiguration
-import ai.mantik.executor.model.{ Graph, Node, NodeResourceRef, ResourceType }
 import ai.mantik.mnp.protocol.mnp.{ ConfigureInputPort, ConfigureOutputPort }
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import ai.mantik.planner.Planner.InconsistencyException
-import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
-import ai.mantik.planner.{ PlanNodeService, PlanOp }
-import akka.http.scaladsl.model.Uri
-import MnpExecutionPreparation._
+import ai.mantik.planner.impl.exec.MnpExecutionPreparation._
 import ai.mantik.planner.repository.ContentTypes
+import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
+import ai.mantik.planner._
+import ai.mantik.planner.graph.{ Graph, Node, NodePortRef }
+import akka.http.scaladsl.model.Uri
 
 /** Information for execution of a [[ai.mantik.planner.PlanOp.RunGraph]] */
 case class MnpExecutionPreparation(
@@ -60,7 +60,7 @@ class MnpExecutionPreparer(
 
   def build(): MnpExecutionPreparation = {
     val initializers = graph.nodes.collect {
-      case (nodeId, Node(d: DockerContainer, _)) => nodeId -> buildSessionCall(nodeId, d)
+      case (nodeId, Node(d: DockerContainer, _, _)) => nodeId -> buildSessionCall(nodeId, d)
     }
 
     val inputPushes = collectInputPushes()
@@ -81,18 +81,16 @@ class MnpExecutionPreparer(
       files.resolveFileRead(data.id)
     }
 
-    // TODO: Input/Output Ports should be reflected inside the graph, this is a buggy workaround.
     val graphNode = graph.nodes(nodeId)
 
-    val inputPorts: Vector[ConfigureInputPort] = graphNode.resources.collect {
-      case (resourceName, resource) if resource.resourceType == ResourceType.Sink || resource.resourceType == ResourceType.Transformer =>
-        portForResource(resourceName) -> ConfigureInputPort(resource.contentType.getOrElse(""))
-    }.toVector.sortBy(_._1).map(_._2)
+    val inputPorts = graphNode.inputs.map { input =>
+      ConfigureInputPort(input.contentType.getOrElse(""))
+    }
 
-    val outputPorts: Vector[ConfigureOutputPort] = graphNode.resources.collect {
-      case (resourceName, resource) if resource.resourceType == ResourceType.Source || resource.resourceType == ResourceType.Transformer =>
+    val outputPorts = graphNode.outputs.zipWithIndex.map {
+      case (output, outPort) =>
         val forwarding = graph.links.collect {
-          case link if link.from.node == nodeId && graph.nodes(link.to.node).service.isInstanceOf[DockerContainer] =>
+          case link if link.from.node == nodeId && link.from.port == outPort && graph.nodes(link.to.node).service.isInstanceOf[DockerContainer] =>
             mnpUrlForResource(link.from, link.to)
         }
         val singleForwarding = forwarding match {
@@ -101,12 +99,11 @@ class MnpExecutionPreparer(
           case multiple =>
             throw new InconsistencyException(s"Only a single forwarding is allowed, broken plan? found ${multiple} as goal of ${nodeId}")
         }
-
-        portForResource(resourceName) -> ConfigureOutputPort(
-          contentType = resource.contentType.getOrElse(""),
+        ConfigureOutputPort(
+          contentType = output.contentType.getOrElse(""),
           destinationUrl = singleForwarding.getOrElse("")
         )
-    }.toVector.sortBy(_._1).map(_._2)
+    }
 
     val initConfiguration = MantikInitConfiguration(
       header = dockerContainer.mantikHeader.toJson,
@@ -140,7 +137,7 @@ class MnpExecutionPreparer(
               Some(
                 InputPush(
                   nodeId = link.to.node,
-                  portId = portForResource(link.to.resource),
+                  portId = link.to.port,
                   fileGetResult = files.resolveFileRead(fromFile.fileReference)
                 )
               )
@@ -153,7 +150,7 @@ class MnpExecutionPreparer(
   private def collectOutputPulls(): Vector[OutputPull] = {
     graph.links.flatMap { link =>
       val to = graph.nodes(link.to.node)
-      val (from, fromResource) = graph.resolveReference(link.from).getOrElse {
+      val (from, fromResource) = graph.resolveOutput(link.from).getOrElse {
         throw new InconsistencyException(s"Could not resolve reference ${link.from}")
       }
       from.service match {
@@ -166,7 +163,7 @@ class MnpExecutionPreparer(
               Some(
                 OutputPull(
                   nodeId = link.from.node,
-                  portId = portForResource(link.from.resource),
+                  portId = link.from.port,
                   contentType = contentType,
                   fileStorageResult = files.resolveFileWrite(file.fileReference)
                 )
@@ -183,31 +180,23 @@ class MnpExecutionPreparer(
   private def collectTaskQueries(): Vector[TaskQuery] = {
     // Task Queries are necessary if a node has no inputs but outputs (DataSets) because it may be forwarded
     graph.nodes.collect {
-      case (nodeId, Node(_: PlanNodeService.DockerContainer, _)) if !graph.links.exists(_.to.node == nodeId) =>
+      case (nodeId, Node(_: PlanNodeService.DockerContainer, _, _)) if !graph.links.exists(_.to.node == nodeId) =>
         TaskQuery(
           nodeId = nodeId
         )
     }.toVector
   }
 
-  /**
-   * Resolve a port number for a resource name
-   * Workaround as long this is not reflected in the Plan itself.
-   */
-  private def portForResource(resourceName: String): Int = {
-    MnpExecutionPreparer.ResourceMapping.getOrElse(resourceName, throw new InconsistencyException(s"No port mapping for resource ${resourceName}"))
-  }
-
-  private def mnpUrlForResource(from: NodeResourceRef, nodeResourceRef: NodeResourceRef): String = {
+  private def mnpUrlForResource(from: NodePortRef, target: NodePortRef): String = {
     val fromAddress = containerAddresses.getOrElse(
       from.node,
       throw new InconsistencyException(s"Container ${from.node} not prepared?")
     )
-    val port = portForResource(nodeResourceRef.resource)
-    val sessionId = sessionIdForNode(nodeResourceRef.node)
+    val port = target.port
+    val sessionId = sessionIdForNode(target.node)
     val address = containerAddresses.getOrElse(
-      nodeResourceRef.node,
-      throw new InconsistencyException(s"Container ${nodeResourceRef.node} not prepared?")
+      target.node,
+      throw new InconsistencyException(s"Container ${target.node} not prepared?")
     )
 
     val addressToUse = if (fromAddress == address) {
@@ -231,16 +220,4 @@ class MnpExecutionPreparer(
     graphId + "_" + nodeId
   }
 
-}
-
-private object MnpExecutionPreparer {
-
-  // TODO: Reflect that in the graph
-  private val ResourceMapping = Map(
-    "get" -> 0,
-    "apply" -> 0,
-    "train" -> 0,
-    "result" -> 0,
-    "stats" -> 1
-  )
 }

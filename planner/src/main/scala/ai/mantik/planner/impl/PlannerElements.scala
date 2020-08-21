@@ -1,10 +1,10 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.executor.model._
-import ai.mantik.executor.model.docker.{Container, DockerConfig}
+import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.planner
 import ai.mantik.planner._
-import ai.mantik.planner.repository.{Bridge, ContentTypes}
+import ai.mantik.planner.graph._
+import ai.mantik.planner.repository.{ Bridge, ContentTypes }
 import cats.data.State
 import com.typesafe.config.Config
 
@@ -44,7 +44,7 @@ class PlannerElements(config: Config) {
             nodeId -> node
           )
         ),
-        inputs = Seq(NodeResourceRef(nodeId, ExecutorModelDefaults.SinkResource))
+        inputs = Seq(NodePortRef(nodeId, 0))
       )
     }
   }
@@ -62,7 +62,7 @@ class PlannerElements(config: Config) {
       ResourcePlan(
         pre = PlanOp.Empty,
         graph = graph,
-        outputs = Seq(NodeResourceRef(nodeId, ExecutorModelDefaults.SourceResource))
+        outputs = Seq(NodePortRef(nodeId, 0))
       )
     }
   }
@@ -77,62 +77,37 @@ class PlannerElements(config: Config) {
     val dockerImage = bridge.mantikHeader.definition.dockerImage
     // If there is no docker image, then directly pipe through the dataset
     // TODO this is a hack to get natural DataSets working.
-    if (dockerImage == ""){
+    if (dockerImage == "") {
       val fileToUse = file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
       loadFileNode(PlanFileWithContentType(fileToUse, ContentTypes.MantikBundleContentType))
     } else {
       val container = resolveBridge(bridge)
-      val getResource = "get"
 
-        val node = Node (
-          PlanNodeService.DockerContainer (
-            container, data = file, dataSet.mantikHeader
-          ),
-          Map (
-            getResource -> NodeResource(ResourceType.Source, Some(MantikBundleContentType))
-          )
-        )
+      val node = Node.source(
+        PlanNodeService.DockerContainer(
+          container, data = file, dataSet.mantikHeader
+        ),
+        Some(MantikBundleContentType)
+      )
+      makeSingleNodeResourcePlan(node)
+    }
+  }
 
-        PlanningState.stateChange(_.withNextNodeId) { nodeId =>
-          val graph = Graph (
-            nodes = Map (
-              nodeId -> node
-            )
-          )
-          ResourcePlan (
-            graph = graph,
-            inputs = Nil,
-            outputs = Seq(NodeResourceRef(nodeId, getResource))
-          )
-        }
+  private def makeSingleNodeResourcePlan(node: Node[PlanNodeService]): State[PlanningState, ResourcePlan] = {
+    PlanningState.stateChange(_.withNextNodeId) { nodeId =>
+      ResourcePlan.singleNode(nodeId, node)
     }
   }
 
   /** Generates the plan for an algorithm which runtime data may come from a file. */
   def algorithm(algorithm: Algorithm, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
-    val applyResource = "apply"
-
     val container = algorithmContainer(algorithm, file)
     val node = Node(
       container,
-      Map(
-        applyResource -> NodeResource(ResourceType.Transformer, Some(MantikBundleContentType)),
-      )
+      inputs = Vector(NodePort(Some(MantikBundleContentType))),
+      outputs = Vector(NodePort(Some(MantikBundleContentType)))
     )
-
-    PlanningState.stateChange(_.withNextNodeId) { nodeId =>
-      val graph = Graph(
-        nodes = Map(
-          nodeId -> node
-        )
-      )
-      ResourcePlan(
-        pre = PlanOp.Empty,
-        graph = graph,
-        inputs = Seq(NodeResourceRef(nodeId, applyResource)),
-        outputs = Seq(NodeResourceRef(nodeId, applyResource))
-      )
-    }
+    makeSingleNodeResourcePlan(node)
   }
 
   /** Generates the algorithm container for an Algorithm. */
@@ -147,38 +122,22 @@ class PlannerElements(config: Config) {
   def trainableAlgorithm(trainableAlgorithm: TrainableAlgorithm, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
     val container = resolveBridge(trainableAlgorithm.bridge)
 
-    val trainResource = "train"
-    val statsResource = "stats"
-    val resultResource = "result"
-
     val node = Node(
       PlanNodeService.DockerContainer(
         container, data = file, mantikHeader = trainableAlgorithm.mantikHeader
       ),
-      Map(
-        trainResource -> NodeResource(ResourceType.Sink, Some(MantikBundleContentType)),
-        statsResource -> NodeResource(ResourceType.Source, Some(MantikBundleContentType)),
-        resultResource -> NodeResource(ResourceType.Source, Some(ZipFileContentType))
+      inputs = Vector(
+        NodePort(Some(MantikBundleContentType))
+      ),
+      outputs = Vector(
+        // result
+        NodePort(Some(ZipFileContentType)),
+        // stats
+        NodePort(Some(MantikBundleContentType))
       )
     )
-
-    PlanningState.stateChange(_.withNextNodeId) { nodeId =>
-      val graph = Graph(
-        nodes = Map(
-          nodeId -> node
-        )
-      )
-      ResourcePlan(
-        graph = graph,
-        inputs = Seq(NodeResourceRef(nodeId, trainResource)),
-        outputs = Seq(
-          NodeResourceRef(nodeId, resultResource),
-          NodeResourceRef(nodeId, statsResource)
-        )
-      )
-    }
+    makeSingleNodeResourcePlan(node)
   }
-
 
   /** Construct a container for a Bridge. */
   def resolveBridge(bridge: Bridge): Container = {

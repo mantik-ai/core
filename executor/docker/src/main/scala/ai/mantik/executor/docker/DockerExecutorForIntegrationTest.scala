@@ -3,6 +3,7 @@ package ai.mantik.executor.docker
 import java.time.Clock
 
 import ai.mantik.componently.AkkaRuntime
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.{ Executor, ExecutorForIntegrationTest }
 import ai.mantik.executor.docker.api.DockerClient
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
@@ -34,7 +35,7 @@ class DockerExecutorForIntegrationTest(config: TypesafeConfig)(implicit akkaRunt
       Await.result(f, 60.seconds)
     }
     val mantikContainers = await(dockerClient.listContainersFiltered(true, ListContainerRequestFilter.forLabelKeyValue(
-      DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue
+      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
     )))
 
     if (mantikContainers.isEmpty) {
@@ -46,7 +47,7 @@ class DockerExecutorForIntegrationTest(config: TypesafeConfig)(implicit akkaRunt
     }
     val volumes = await(dockerClient.listVolumes(()))
     val mantikVolumes = volumes.Volumes.filter(
-      _.effectiveLabels.get(DockerConstants.ManagedByLabelValue).contains(DockerConstants.ManagedByLabelName)
+      _.effectiveLabels.get(LabelConstants.ManagedByLabelValue).contains(LabelConstants.ManagedByLabelName)
     )
     if (mantikVolumes.isEmpty) {
       logger.info("No old mantik volumes to kill")

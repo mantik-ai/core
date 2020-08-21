@@ -2,7 +2,7 @@ package ai.mantik.planner
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.planner.impl.{ ContextImpl, PlannerImpl }
-import ai.mantik.planner.impl.exec.{ MnpPlanExecutor, PlanExecutorImpl }
+import ai.mantik.planner.impl.exec.MnpPlanExecutor
 import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, Repository, RepositoryModule }
 import ai.mantik.planner.repository.rpc.{ FileRepositoryClientImpl, RepositoryClientImpl }
 import com.google.inject.AbstractModule

@@ -55,7 +55,7 @@ class ReservedNameGenerator(
   }
 
   private def fetchNewReservedName(): Future[String] = {
-    reserveNameWithPrefix(NameGenerator.DefaultPrefix, false)
+    reserveNameWithPrefix(DockerNameGenerator.DefaultPrefix, false)
   }
 
   private def reserveNameWithPrefix(prefix: String, forceReload: Boolean): Future[String] = {

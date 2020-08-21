@@ -1,6 +1,6 @@
 package ai.mantik.executor.common.test.integration
 
-import ai.mantik.executor.model.{ DeployServiceRequest, DeployableService, ListWorkerRequest, MnpPipelineDefinition, StartWorkerRequest, WorkerType }
+import ai.mantik.executor.model.{ ListWorkerRequest, MnpPipelineDefinition, StartWorkerRequest, WorkerType }
 import ai.mantik.testutils.{ HttpSupport, TestBase }
 import akka.util.ByteString
 

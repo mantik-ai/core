@@ -25,34 +25,8 @@ class ExecutorServer(
 
   val route = new ApiServerRoute {
 
-    bind(ExecutorApi.schedule).to { job =>
-      bindErrors(executor.schedule(job))
-    }
-
-    bind(ExecutorApi.status).to {
-      case (isolationSpace, jobId) =>
-        bindErrors(executor.status(isolationSpace, jobId))
-    }
-
-    bind(ExecutorApi.logs).to {
-      case (isolationSpace, jobId) =>
-        bindErrors(executor.logs(isolationSpace, jobId))
-    }
-
     bind(ExecutorApi.publishService).to { req =>
       bindErrors(executor.publishService(req))
-    }
-
-    bind(ExecutorApi.deployService).to { req =>
-      bindErrors(executor.deployService(req))
-    }
-
-    bind(ExecutorApi.queryDeployedService).to { req =>
-      bindErrors(executor.queryDeployedServices(req))
-    }
-
-    bind(ExecutorApi.deleteDeployedServices).to { req =>
-      bindErrors(executor.deleteDeployedServices(req))
     }
 
     bind(ExecutorApi.nameAndVersion).to { _ =>

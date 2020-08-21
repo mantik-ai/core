@@ -1,6 +1,11 @@
 package ai.mantik.executor.kubernetes
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.model.WorkerState
+import com.typesafe.scalalogging.Logger
 import skuber.apps.Deployment
 import skuber.ext.Ingress
 import skuber.ext.Ingress.Backend
@@ -10,6 +15,7 @@ import skuber.json.ext.format._
 import skuber.json.format._
 import skuber.json.apps.format.depFormat
 import skuber.json.apps.format.deployListFormat
+import cats.implicits._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -53,7 +59,7 @@ case class Workload(
   }
 
   /** Stop a workload. */
-  def stop(remove: Boolean, ops: K8sOperations)(implicit ec: ExecutionContext): Future[Unit] = {
+  def stop(remove: Boolean, ops: K8sOperations, killReason: Option[String] = None)(implicit ec: ExecutionContext): Future[Unit] = {
     def ns[T <: ObjectResource](value: T): Option[String] = {
       Some(value.namespace).filter(_.nonEmpty)
     }
@@ -73,13 +79,18 @@ case class Workload(
         _ <- maybeDelete(ingress)
       } yield ()
     } else {
-      deployment match {
-        case Some(definedDeployment) =>
-          // Scale to 0 (also see workerState)
-          ops.deploymentSetReplicas(ns(definedDeployment), definedDeployment.name, 0).map { _ => () }
-        case None =>
-          // Kubernetes has no way to stop pods. So we remove it
-          maybeDelete(pod)
+
+      killReason.map { reason =>
+        ops.sendKillPatch[Service](service.name, ns(service), reason)
+      }.sequence.flatMap { _ =>
+        deployment match {
+          case Some(definedDeployment) =>
+            // Scale to 0 (also see workerState)
+            ops.deploymentSetReplicas(ns(definedDeployment), definedDeployment.name, 0).map { _ => () }
+          case None =>
+            // Kubernetes has no way to stop pods. So we remove it
+            maybeDelete(pod)
+        }
       }
     }
   }
@@ -112,9 +123,24 @@ case class Workload(
       if replicas == 0
     } yield WorkerState.Succeeded
 
-    podState.orElse {
+    val killStatus = service.metadata.annotations.get(KubernetesConstants.KillAnnotationName).map { reason =>
+      WorkerState.Failed(255, Some(reason))
+    }
+
+    killStatus.orElse(
       deploymentStopped
-    }.getOrElse(WorkerState.Pending)
+    ).orElse(
+      podState
+    ).getOrElse(
+      WorkerState.Pending
+    )
+  }
+
+  /** Check if this workload has a broken image. */
+  def hasBrokenImage(config: Config, currentTime: Instant): Option[String] = {
+    pod.flatMap { pod =>
+      Workload.podImageError(config, currentTime, pod)
+    }
   }
 
   private def updateIngressMainService(ingress: Ingress, service: Service): Ingress = {
@@ -155,7 +181,9 @@ case class Workload(
 }
 
 object Workload {
+  val logger = Logger(getClass)
 
+  /** List Workloads */
   def list(namespace: Option[String], serviceNameFilter: Option[String], labelFilters: Seq[(String, String)], ops: K8sOperations)(implicit ec: ExecutionContext): Future[Vector[Workload]] = {
     serviceNameFilter match {
       case Some(serviceName) =>
@@ -175,6 +203,44 @@ object Workload {
     }
   }
 
+  def byInternalId(namespace: String, internalId: String, ops: K8sOperations)(implicit ec: ExecutionContext): Future[Option[Workload]] = {
+    val labelFilter = Seq(
+      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
+      LabelConstants.InternalIdLabelName -> internalId
+    )
+    val podFuture = ops.listSelected[Pod](Some(namespace), labelFilter)
+    val serviceFuture = ops.listSelected[Service](Some(namespace), labelFilter)
+    val deploymentFuture = ops.listSelected[Deployment](Some(namespace), labelFilter)
+    val ingressFuture = ops.listSelected[Ingress](Some(namespace), labelFilter)
+    for {
+      pods <- podFuture
+      services <- serviceFuture
+      deployments <- deploymentFuture
+      ingresses <- ingressFuture
+    } yield {
+      correlate(services.toVector, pods.toVector, deployments.toVector, ingresses.toVector).headOption
+    }
+  }
+
+  /** List Workloads which are pending in all namespaces */
+  def listPending(ops: K8sOperations)(implicit ec: ExecutionContext): Future[Vector[Workload]] = {
+    ops.getAllManagedPendingPods().flatMap { namespacePods =>
+      val namespaceInternalIds = namespacePods.toVector.flatMap {
+        case (namespace, podList) =>
+          podList.flatMap(_.metadata.labels.get(LabelConstants.InternalIdLabelName)).map { internalId =>
+            namespace -> internalId
+          }
+      }
+      val futures = namespaceInternalIds.map {
+        case (namespace, internalId) =>
+          byInternalId(namespace, internalId, ops)
+      }
+      Future.sequence(futures).map { results =>
+        results.flatten
+      }
+    }
+  }
+
   /** Figure out other related items by finding sibling of the services. */
   def expand(namespace: Option[String], services: Vector[Service], ops: K8sOperations, labelFilters: Seq[(String, String)])(
     implicit
@@ -185,13 +251,13 @@ object Workload {
     }
 
     val internalIds = services.flatMap { service =>
-      service.metadata.labels.get(KubernetesConstants.InternalId)
+      service.metadata.labels.get(LabelConstants.InternalIdLabelName)
     }
 
     // Optimization: if it's only one element, we can use it's internalId to load it directly
     val labelsToUse = internalIds match {
       case Vector(internalId) =>
-        labelFilters :+ (KubernetesConstants.InternalId -> internalId)
+        labelFilters :+ (LabelConstants.InternalIdLabelName -> internalId)
       case _ =>
         labelFilters
     }
@@ -212,7 +278,7 @@ object Workload {
   private def correlate(services: Vector[Service], pods: Vector[Pod], deployments: Vector[Deployment], ingresses: Vector[Ingress]): Vector[Workload] = {
     def makeLookup[T <: ObjectResource](in: Vector[T]): Map[String, T] = {
       in.flatMap { x =>
-        x.metadata.labels.get(KubernetesConstants.InternalId).map { internalId =>
+        x.metadata.labels.get(LabelConstants.InternalIdLabelName).map { internalId =>
           internalId -> x
         }
       }.toMap
@@ -223,7 +289,7 @@ object Workload {
     val ingressMap = makeLookup(ingresses)
     for {
       service <- services
-      internalId <- service.metadata.labels.get(KubernetesConstants.InternalId)
+      internalId <- service.metadata.labels.get(LabelConstants.InternalIdLabelName)
       pod = podMap.get(internalId)
       deployment = deploymentMap.get(internalId)
       ingress = ingressMap.get(internalId)
@@ -237,5 +303,61 @@ object Workload {
         loaded = true
       )
     }
+  }
+
+  /**
+   * Check if a pod has an image error, so that we can kill it.
+   * @return the first image error found.
+   */
+  def podImageError(config: Config, currentTime: Instant, pod: Pod): Option[String] = {
+    // See: https://github.com/kubernetes/kubernetes/blob/d24fe8a801748953a5c34fd34faa8005c6ad1770/pkg/kubelet/images/types.go
+
+    // Errors which will lead to termination immediately
+    val ImmediatelyFailErros = Seq(
+      "ErrImageNeverPull",
+      "InvalidImageName",
+      "ImageInspectError"
+    )
+
+    // Errors which will lead to termination if the timeout is reached
+    val Errors = Set(
+      "ImagePullBackOff",
+      "ErrImagePull",
+      "RegistryUnavailable"
+    )
+
+    /** Look if the container image has a status which should be terminated. */
+    def imageError(startTime: skuber.Timestamp, container: skuber.Container.Status): Option[String] = {
+      container.state match {
+        case Some(w: skuber.Container.Waiting) =>
+          w.reason match {
+            case Some(reason) if ImmediatelyFailErros.contains(reason) =>
+              Some(reason)
+            case Some(reason) if Errors.contains(reason) && reachedTimeout(startTime) =>
+              Some(reason)
+            case Some(reason) =>
+              logger.debug(s"Pod ${pod.name} reached a status ${reason} which is not yet worth to terminate")
+              None
+            case _ => None
+          }
+        case _ => None
+      }
+    }
+
+    /** Check if startTime reached the timeout. */
+    def reachedTimeout(startTime: skuber.Timestamp): Boolean = {
+      startTime.toInstant.plus(config.kubernetes.podPullImageTimeout.toMillis, ChronoUnit.MILLIS).isBefore(currentTime)
+    }
+
+    val imageErrors = for {
+      status <- pod.status.toList
+      startTime <- status.startTime.toList
+      if status.phase.contains(Pod.Phase.Pending)
+      containerStatus <- status.containerStatuses
+      if !containerStatus.ready
+      imageError <- imageError(startTime, containerStatus)
+    } yield imageError
+
+    imageErrors.headOption
   }
 }
