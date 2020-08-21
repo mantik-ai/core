@@ -31,7 +31,7 @@ object WorkerState {
   case object Running extends WorkerState {
     override def isTerminal: Boolean = false
   }
-  case class Failed(status: Int) extends WorkerState {
+  case class Failed(status: Int, error: Option[String] = None) extends WorkerState {
     override def isTerminal: Boolean = true
   }
   case object Succeeded extends WorkerState {

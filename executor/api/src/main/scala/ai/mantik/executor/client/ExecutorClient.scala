@@ -18,13 +18,7 @@ class ExecutorClient(url: Uri)(implicit akkaRuntime: AkkaRuntime) extends Compon
   private val http = Http()
   private val apiClient = new ApiClient(http, url)
 
-  private val scheduleCall = apiClient.prepare(ExecutorApi.schedule)
-  private val statusCall = apiClient.prepare(ExecutorApi.status)
-  private val logCall = apiClient.prepare(ExecutorApi.logs)
   private val publishServiceCall = apiClient.prepare(ExecutorApi.publishService)
-  private val deployServiceCall = apiClient.prepare(ExecutorApi.deployService)
-  private val queryDeployedServiceCall = apiClient.prepare(ExecutorApi.queryDeployedService)
-  private val deleteDeployedServiceCall = apiClient.prepare(ExecutorApi.deleteDeployedServices)
   private val versionCall = apiClient.prepare(ExecutorApi.nameAndVersion)
   private val grpcProxyCall = apiClient.prepare(ExecutorApi.grpcProxy)
   private val startWorkerCall = apiClient.prepare(ExecutorApi.startWorker)
@@ -40,45 +34,9 @@ class ExecutorClient(url: Uri)(implicit akkaRuntime: AkkaRuntime) extends Compon
     }
   }
 
-  override def schedule(job: Job): Future[String] = {
-    unpackError(
-      scheduleCall(job)
-    )
-  }
-
-  override def status(isolationSpace: String, id: String): Future[JobStatus] = {
-    unpackError {
-      statusCall((isolationSpace, id))
-    }
-  }
-
-  override def logs(isolationSpace: String, id: String): Future[String] = {
-    unpackError {
-      logCall(isolationSpace, id)
-    }
-  }
-
   override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
     unpackError {
       publishServiceCall(publishServiceRequest)
-    }
-  }
-
-  override def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse] = {
-    unpackError {
-      deployServiceCall(deployServiceRequest)
-    }
-  }
-
-  override def queryDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[DeployedServicesResponse] = {
-    unpackError {
-      queryDeployedServiceCall(deployedServicesQuery)
-    }
-  }
-
-  override def deleteDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[Int] = {
-    unpackError {
-      deleteDeployedServiceCall(deployedServicesQuery)
     }
   }
 

@@ -1,5 +1,6 @@
 package ai.mantik.executor.docker.integration
 
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.docker.DockerConstants
 import ai.mantik.executor.docker.api.DockerClient
 import ai.mantik.executor.docker.api.structures.{CreateContainerNetworkSpecificConfig, CreateContainerNetworkingConfig, CreateContainerRequest, CreateNetworkRequest, CreateVolumeRequest, ListNetworkRequestFilter}
@@ -41,7 +42,7 @@ class DockerClientAliveSpec extends IntegrationTestBase {
     val container = await(dockerClient.createContainer("mantik-systemtest-helloworld", CreateContainerRequest(
       Image = helloWorld,
       Labels = Map(
-        DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue
+        LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
       )
     )))
     await(dockerClient.startContainer(container.Id))
@@ -70,7 +71,7 @@ class DockerClientAliveSpec extends IntegrationTestBase {
       CreateVolumeRequest(
         Name = testVolume,
         Labels = Map(
-          DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue
+          LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
         )
       )
     ))
@@ -94,7 +95,7 @@ class DockerClientAliveSpec extends IntegrationTestBase {
       CreateNetworkRequest(
         Name = testNetwork,
         Labels = Map(
-          DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue
+          LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
         )
       )
     ))
@@ -104,7 +105,7 @@ class DockerClientAliveSpec extends IntegrationTestBase {
     val element = listThem.find(_.Name == testNetwork).get
     element.Name shouldBe testNetwork
     element.Id shouldBe response.Id
-    element.labels(DockerConstants.ManagedByLabelName) shouldBe DockerConstants.ManagedByLabelValue
+    element.labels(LabelConstants.ManagedByLabelName) shouldBe LabelConstants.ManagedByLabelValue
 
     val (_, source) = await(dockerClient.pullImage(helloWorld))
     collectByteSource(source)
@@ -112,7 +113,7 @@ class DockerClientAliveSpec extends IntegrationTestBase {
     val container = await(dockerClient.createContainer("mantik-systemtest-helloworld-network", CreateContainerRequest(
       Image = helloWorld,
       Labels = Map(
-        DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue
+        LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
       ),
       NetworkingConfig = CreateContainerNetworkingConfig(
         Map(
@@ -127,12 +128,12 @@ class DockerClientAliveSpec extends IntegrationTestBase {
     containerBack.NetworkSettings.Networks(testNetwork).NetworkID shouldBe response.Id
 
     val listThemDifferentFilter = await(dockerClient.listNetworksFiltered(
-      ListNetworkRequestFilter.forLabels(DockerConstants.ManagedByLabelName -> DockerConstants.ManagedByLabelValue)
+      ListNetworkRequestFilter.forLabels(LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue)
     ))
     listThemDifferentFilter.find(_.Id == response.Id) shouldBe defined
 
     val listThemDifferentFilter2 = await(dockerClient.listNetworksFiltered(
-      ListNetworkRequestFilter.forLabels(DockerConstants.ManagedByLabelName -> "notexisting")
+      ListNetworkRequestFilter.forLabels(LabelConstants.ManagedByLabelName -> "notexisting")
     ))
     listThemDifferentFilter2.find(_.Id == response.Id) shouldBe empty
 
@@ -150,7 +151,7 @@ class DockerClientAliveSpec extends IntegrationTestBase {
     val inspectIt = await(dockerClient.inspectNetwork(response.Id))
     inspectIt.Id shouldBe response.Id
     inspectIt.Name shouldBe testNetwork
-    inspectIt.labels(DockerConstants.ManagedByLabelName) shouldBe DockerConstants.ManagedByLabelValue
+    inspectIt.labels(LabelConstants.ManagedByLabelName) shouldBe LabelConstants.ManagedByLabelValue
 
     await(dockerClient.removeNetwork(response.Id))
 

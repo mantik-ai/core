@@ -2,8 +2,8 @@ package ai.mantik.planner.impl
 
 import ai.mantik.ds.FundamentalType.Int32
 import ai.mantik.ds.element.{ Bundle, Primitive, SingleElement }
-import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
+import ai.mantik.planner.graph.{ Graph, Link, Node, NodePort, NodePortRef }
 import ai.mantik.planner.{ PlanFileReference, PlanNodeService, PlanOp }
 import ai.mantik.testutils.TestBase
 
@@ -18,19 +18,17 @@ class ResourcePlanSpec extends TestBase {
     pre = PlanOp.seq(pusher),
     graph = Graph(
       Map(
-        "1" -> Node(
+        "1" -> Node.transformer(
           PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
-          resources = Map(
-            "inout" -> NodeResource(ResourceType.Transformer)
-          )
+          Some("SomeType")
         )
       )
     ),
     inputs = Seq(
-      NodeResourceRef("1", "inout")
+      NodePortRef("1", 0)
     ),
     outputs = Seq(
-      NodeResourceRef("1", "inout")
+      NodePortRef("1", 0)
     )
   )
 
@@ -38,19 +36,17 @@ class ResourcePlanSpec extends TestBase {
     pre = PlanOp.seq(pusher2),
     graph = Graph(
       Map(
-        "2" -> Node(
+        "2" -> Node.transformer(
           PlanNodeService.DockerContainer(Container("bar"), None, TestItems.algorithm1),
-          resources = Map(
-            "inout" -> NodeResource(ResourceType.Transformer)
-          )
+          Some("SomeType")
         )
       )
     ),
     inputs = Seq(
-      NodeResourceRef("2", "inout")
+      NodePortRef("2", 0)
     ),
     outputs = Seq(
-      NodeResourceRef("2", "inout")
+      NodePortRef("2", 0)
     )
   )
 
@@ -60,20 +56,17 @@ class ResourcePlanSpec extends TestBase {
       Map(
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-          resources = Map(
-            "in1" -> NodeResource(ResourceType.Sink),
-            "out1" -> NodeResource(ResourceType.Source),
-            "out2" -> NodeResource(ResourceType.Source)
-          )
+          inputs = Vector(NodePort(None)),
+          outputs = Vector(NodePort(None), NodePort(None))
         )
       )
     ),
     inputs = Seq(
-      NodeResourceRef("1", "in1")
+      NodePortRef("1", 0)
     ),
     outputs = Seq(
-      NodeResourceRef("1", "out1"),
-      NodeResourceRef("1", "out2")
+      NodePortRef("1", 0),
+      NodePortRef("1", 1)
     )
   )
 
@@ -83,20 +76,22 @@ class ResourcePlanSpec extends TestBase {
       Map(
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-          resources = Map(
-            "in1" -> NodeResource(ResourceType.Sink),
-            "in2" -> NodeResource(ResourceType.Sink),
-            "out" -> NodeResource(ResourceType.Source)
+          inputs = Vector(
+            NodePort(None),
+            NodePort(None)
+          ),
+          outputs = Vector(
+            NodePort(None)
           )
         )
       )
     ),
     inputs = Seq(
-      NodeResourceRef("1", "in1"),
-      NodeResourceRef("1", "in2")
+      NodePortRef("1", 0),
+      NodePortRef("1", 1)
     ),
     outputs = Seq(
-      NodeResourceRef("1", "out")
+      NodePortRef("1", 0)
     )
   )
 
@@ -104,16 +99,14 @@ class ResourcePlanSpec extends TestBase {
     pre = PlanOp.seq(pusher2),
     graph = Graph(
       Map(
-        "2" -> Node(
+        "2" -> Node.source(
           PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-          resources = Map(
-            "out" -> NodeResource(ResourceType.Source)
-          )
+          None
         )
       )
     ),
     outputs = Seq(
-      NodeResourceRef("2", "out")
+      NodePortRef("2", 0)
     )
   )
 
@@ -146,25 +139,15 @@ class ResourcePlanSpec extends TestBase {
       pre = PlanOp.seq(pusher, pusher2),
       graph = Graph(
         Map(
-          "1" -> Node(
-            PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
-            resources = Map(
-              "inout" -> NodeResource(ResourceType.Transformer)
-            )
-          ),
-          "2" -> Node(
-            PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-            resources = Map(
-              "out" -> NodeResource(ResourceType.Source)
-            )
-          )
+          "1" -> algorithm.graph.nodes("1"),
+          "2" -> dataset.graph.nodes("2")
         ),
         links = Seq(
-          Link(NodeResourceRef("2", "out"), NodeResourceRef("1", "inout"))
+          Link(NodePortRef("2", 0), NodePortRef("1", 0))
         )
       ),
       inputs = Seq.empty,
-      outputs = Seq(NodeResourceRef("1", "inout"))
+      outputs = Seq(NodePortRef("1", 0))
     )
   }
 
@@ -175,25 +158,25 @@ class ResourcePlanSpec extends TestBase {
         Map(
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-            resources = Map(
-              "in1" -> NodeResource(ResourceType.Sink),
-              "in2" -> NodeResource(ResourceType.Sink),
-              "out" -> NodeResource(ResourceType.Source)
+            inputs = Vector(
+              NodePort(None),
+              NodePort(None)
+            ),
+            outputs = Vector(
+              NodePort(None)
             )
           ),
-          "2" -> Node(
+          "2" -> Node.source(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-            resources = Map(
-              "out" -> NodeResource(ResourceType.Source)
-            )
+            None
           )
         ),
         links = Seq(
-          Link(NodeResourceRef("2", "out"), NodeResourceRef("1", "in1"))
+          Link(NodePortRef("2", 0), NodePortRef("1", 0))
         )
       ),
-      inputs = Seq(NodeResourceRef("1", "in2")),
-      outputs = Seq(NodeResourceRef("1", "out"))
+      inputs = Seq(NodePortRef("1", 1)),
+      outputs = Seq(NodePortRef("1", 0))
     )
   }
 
@@ -204,27 +187,29 @@ class ResourcePlanSpec extends TestBase {
         Map(
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-            resources = Map(
-              "in1" -> NodeResource(ResourceType.Sink),
-              "out1" -> NodeResource(ResourceType.Source),
-              "out2" -> NodeResource(ResourceType.Source)
+            inputs = Vector(
+              NodePort(None)
+            ),
+            outputs = Vector(
+              NodePort(None),
+              NodePort(None)
             )
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-            resources = Map(
-              "out" -> NodeResource(ResourceType.Source)
+            outputs = Vector(
+              NodePort(None)
             )
           )
         ),
         links = Seq(
-          Link(NodeResourceRef("2", "out"), NodeResourceRef("1", "in1"))
+          Link(NodePortRef("2", 0), NodePortRef("1", 0))
         )
       ),
       inputs = Nil,
       outputs = Seq(
-        NodeResourceRef("1", "out1"),
-        NodeResourceRef("1", "out2")
+        NodePortRef("1", 0),
+        NodePortRef("1", 1)
       )
     )
   }
@@ -235,28 +220,18 @@ class ResourcePlanSpec extends TestBase {
       pre = PlanOp.seq(pusher2, pusher),
       graph = Graph(
         Map(
-          "1" -> Node(
-            PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
-            resources = Map(
-              "inout" -> NodeResource(ResourceType.Transformer)
-            )
-          ),
-          "2" -> Node(
-            PlanNodeService.DockerContainer(Container("bar"), None, TestItems.algorithm1),
-            resources = Map(
-              "inout" -> NodeResource(ResourceType.Transformer)
-            )
-          )
+          "1" -> algorithm.graph.nodes("1"),
+          "2" -> algorithm2.graph.nodes("2")
         ),
         links = Seq(
-          Link(NodeResourceRef("1", "inout"), NodeResourceRef("2", "inout"))
+          Link(NodePortRef("1", 0), NodePortRef("2", 0))
         )
       ),
       inputs = Seq(
-        NodeResourceRef("1", "inout")
+        NodePortRef("1", 0)
       ),
       outputs = Seq(
-        NodeResourceRef("2", "inout")
+        NodePortRef("2", 0)
       )
     )
   }

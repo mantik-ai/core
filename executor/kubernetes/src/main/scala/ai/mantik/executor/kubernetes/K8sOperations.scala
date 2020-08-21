@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.executor.Errors.InternalException
+import ai.mantik.executor.common.LabelConstants
 import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
@@ -40,43 +41,12 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     ns.map(rootClient.usingNamespace).getOrElse(rootClient)
   }
 
-  /** Start Multiple Pods and return their IP Address. */
-  def startPodsAndGetIpAdresses(namespace: Option[String] = None, pods: Seq[Pod]): Future[Map[String, String]] = {
-    Future.sequence {
-      pods.map { pod =>
-        startPodAndGetIpAddress(namespace, pod).map { ip =>
-          pod.name -> ip
-        }
-      }
-    }.map(_.toMap)
-  }
-
   /**
    * Figures out the name/ip of Kubernetes we are talking to.
    * (For ingress interpolation)
    */
   def clusterServer: Uri = {
     Uri(rootClient.clusterServer)
-  }
-
-  /** Start a Pod and return it's IP Address. */
-  def startPodAndGetIpAddress(namespace: Option[String] = None, pod: Pod): Future[String] = {
-    val startTime = clock.instant()
-    create(namespace, pod).flatMap { result =>
-      val ip = result.status.flatMap(_.podIP)
-      ip match {
-        case Some(ip) =>
-          logger.debug(s"Get IP in direct response")
-          Future.successful(ip)
-        case None =>
-          val getPodAddressResult = getPodAddress(namespace, result.name)
-          getPodAddressResult.foreach { ip =>
-            val endTime = clock.instant()
-            logger.debug(s"Got IP Address of new pod ${result.name} ${ip} within ${endTime.toEpochMilli - startTime.toEpochMilli}ms")
-          }
-          getPodAddressResult
-      }
-    }
   }
 
   /** Create an object in Kubernetes. */
@@ -159,28 +129,6 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     }
   }
 
-  /** Watch an Object. */
-  def watch[O <: ObjectResource](namespace: Option[String], obj: O)(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[Source[WatchEvent[O], _]] = {
-    errorHandling {
-      namespacedClient(namespace).watch(obj)
-    }
-  }
-
-  /** Tries to get a Pod address. */
-  def getPodAddress(namespace: Option[String] = None, name: String): Future[String] = {
-    def tryFunction(): Future[Option[String]] = {
-      namespacedClient(namespace).get[Pod](name).map { pod =>
-        val ip = for {
-          status <- pod.status
-          ip <- status.podIP
-        } yield ip
-        ip
-      }
-    }
-
-    FutureHelper.tryMultipleTimes(config.kubernetes.defaultTimeout, config.kubernetes.defaultRetryInterval)(tryFunction())
-  }
-
   /** Ensure the existence of a namespace, and returns a kubernetes client for this namespace. */
   def ensureNamespace(namespace: String): Future[Namespace] = {
     errorHandling(rootClient.get[Namespace](namespace)).map { ns =>
@@ -194,11 +142,6 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
           case Failure(error) => logger.error(s"Creating namespace ${namespace} failed", error)
         }
     }
-  }
-
-  /** Returns the namespace if available. */
-  def getNamespace(namespace: String): Future[Option[Namespace]] = {
-    errorHandling(rootClient.getOption[Namespace](namespace))
   }
 
   /** Returns all Pods which are managed by this executor and which are in pending state. */
@@ -227,55 +170,12 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
       namespacedClient(namespace).listWithOptions[ListResource[skuber.Pod]](
         skuber.ListOptions(
           labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
-            LabelSelector.IsEqualRequirement(KubernetesConstants.TrackerIdLabel, KubernetesNamer.encodeLabelValue(config.podTrackerId))
+            LabelSelector.IsEqualRequirement(LabelConstants.ManagedByLabelName, LabelConstants.ManagedByLabelValue),
+            LabelSelector.IsEqualRequirement(LabelConstants.RoleLabelName, LabelConstants.role.worker)
           )),
           fieldSelector = Some("status.phase==Pending")
         )
       ).map(_.items)
-    }
-  }
-
-  /** Figures out a job by its id. */
-  def getPodsByJobId(namespace: Option[String] = None, jobId: String): Future[List[Pod]] = {
-    errorHandling {
-      namespacedClient(namespace).listWithOptions[ListResource[Pod]](
-        skuber.ListOptions(
-          labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
-            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, KubernetesNamer.encodeLabelValue(jobId))
-          ))
-        )
-      ).map(_.items)
-    }
-  }
-
-  /** Finds a Job in Kubernetes. */
-  def getJob(namespace: Option[String] = None, jobId: String): Future[Option[Job]] = {
-    errorHandling {
-      namespacedClient(namespace).listWithOptions[ListResource[Job]] {
-        skuber.ListOptions(
-          labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
-            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, KubernetesNamer.encodeLabelValue(jobId))
-          ))
-        )
-      }.map {
-        case x if x.isEmpty => None
-        case x if x.length > 1 =>
-          logger.warn(s"Multiple instances of jobs for id ${jobId} found")
-          x.items.headOption
-        case x => x.items.headOption
-      }
-    }
-  }
-
-  /** Looks for services. */
-  def getServices(namespace: Option[String], serviceIdFilter: Option[String]): Future[List[Service]] = {
-    errorHandling {
-      namespacedClient(namespace).listSelected[ListResource[Service]] {
-        encodeServiceLabelSelector(serviceIdFilter)
-      }.map(_.items)
     }
   }
 
@@ -305,185 +205,6 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     }
   }
 
-  /** Delete deployed services and related stuff (Services, ReplicaSets, Secrets). */
-  def deleteDeployedServicesAndRelated(namespace: Option[String], serviceIdFilter: Option[String]): Future[Int] = {
-    errorHandling {
-      val c = namespacedClient(namespace)
-      val selector = encodeServiceLabelSelector(serviceIdFilter)
-      val serviceDeletion = c.listSelected[ListResource[Service]](selector).flatMap { services =>
-        if (services.items.length == 0) {
-          logger.debug(s"Found no services matching filter ${serviceIdFilter} in namespace ${namespace}")
-        }
-        Future.sequence(services.map { element =>
-          logger.debug(s"Deleting service ${element.name}")
-          c.delete[Service](element.name)
-        }).map { _ => services }
-      }
-      // This fails with 405 somehow ?!
-      // val serviceDeletion = c.deleteAllSelected[ListResource[Service]](selector)
-      val replicaSetDeletion = c.deleteAllSelected[ListResource[ReplicaSet]](selector)
-      val secretDeletion = c.deleteAllSelected[ListResource[Secret]](selector)
-      val ingressDeletion = c.deleteAllSelected[ListResource[Ingress]](selector)
-      for {
-        services <- serviceDeletion
-        replicas <- replicaSetDeletion
-        secrets <- secretDeletion
-        ingresses <- ingressDeletion
-      } yield {
-        val deletedServices = services.items.length
-        val deletedReplicaSets = replicas.items.length
-        if (deletedServices != deletedReplicaSets) {
-          logger.warn(s"Deleted Replica Set Count ${deletedReplicaSets} was != Deleted Service Result ${deletedServices}. Orphaned items?")
-        }
-        logger.debug(s"Deleted ${deletedServices} services (ingress=${ingresses.size}, secrets=${secrets.items.length}) in ${namespace} serviceIdFilter=${serviceIdFilter}")
-
-        // do not warn for secrets, some deployed services do not have them...
-        services.items.size
-      }
-    }
-  }
-
-  private def encodeServiceLabelSelector(serviceIdFilter: Option[String]): skuber.LabelSelector = {
-    buildLabelSelector(
-      KubernetesConstants.ManagedLabel -> Some(KubernetesConstants.ManagedValue),
-      KubernetesConstants.ServiceIdLabel -> serviceIdFilter
-    )
-  }
-
-  private def buildLabelSelector(values: (String, Option[String])*): skuber.LabelSelector = {
-    LabelSelector(
-      values.collect {
-        case (key, Some(value)) => LabelSelector.IsEqualRequirement(key, KubernetesNamer.encodeLabelValue(value))
-      }: _*
-    )
-  }
-
-  def getManagedNonFinishedJobsForAllNamespaces(): Future[Seq[Job]] = {
-    errorHandling(getManagedNamespaces).flatMap { namespaces =>
-      val futures = namespaces.map { namespace =>
-        val jobs = getManagedNonFinishedJobs(Some(namespace))
-        jobs
-      }
-      Future.sequence(futures).map(_.flatten)
-    }
-  }
-
-  def getManagedNonFinishedJobs(namespace: Option[String] = None): Future[List[Job]] = {
-    errorHandling {
-      namespacedClient(namespace).listWithOptions[ListResource[Job]](
-        skuber.ListOptions(
-          labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
-            LabelSelector.IsEqualRequirement(KubernetesConstants.TrackerIdLabel, config.podTrackerId)
-          ))
-        )
-      ).map { jobs =>
-          // Unfortunately there seem no way to filter for non-finished jobs directly, so we filter afterwards.
-          // at least not with Field Selectors (Error: field label "status.succeeded" not supported for batchv1.Job )
-          // This can become a bottleneck
-
-          jobs.items.filter { job =>
-            // Status/Condition/Type seems not acessable, however we can look for failed/successful runs
-            // as we only use jobs with one run.
-            val succeeded = job.status.flatMap(_.succeeded)
-            val failed = job.status.flatMap(_.failed)
-            succeeded.forall(_ == 0) && failed.forall(_ == 0)
-          }
-        }
-    }
-  }
-
-  def getJobById(namespace: Option[String] = None, jobId: String): Future[Option[Job]] = {
-    errorHandling {
-      namespacedClient(namespace).listSelected[ListResource[skuber.batch.Job]](
-        LabelSelector(
-          LabelSelector.IsEqualRequirement(KubernetesConstants.ManagedLabel, KubernetesConstants.ManagedValue),
-          LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, jobId)
-        )
-      ).map { jobs =>
-          if (jobs.items.length > 1) {
-            throw new InternalException(s"Job ${jobId} found multiple times (${jobs.items.size} in isolation space ${namespace}")
-          }
-          jobs.items.headOption
-        }
-    }
-  }
-
-  def getJobLog(namespace: Option[String] = None, id: String): Future[String] = {
-    getCoordinatorPod(namespace, id).flatMap {
-      case None => Future.failed(new RuntimeException("Pod not found"))
-      case Some(pod) =>
-        errorHandling {
-          val killValue = pod.metadata.annotations.get(KubernetesConstants.KillAnnotationName)
-          val killSuffix = killValue.map { value =>
-            s"""
-               |** Killed because of ${value} **""".stripMargin
-          }.getOrElse("")
-          rootClient.getPodLogSource(pod.name, Pod.LogQueryParams(), namespace).flatMap { source =>
-            val collector = Sink.seq[ByteString]
-            implicit val mat = ActorMaterializer()
-            source.runWith(collector).map { byteStrings =>
-              val combined = byteStrings.reduce(_ ++ _)
-              combined.utf8String ++ killSuffix
-            }
-          }
-        }
-    }
-  }
-
-  private def getCoordinatorPod(namespace: Option[String] = None, jobId: String): Future[Option[Pod]] = {
-    errorHandling {
-      val client = namespacedClient(namespace)
-      client.listWithOptions[ListResource[Pod]](
-        skuber.ListOptions(
-          labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(KubernetesConstants.JobIdLabel, jobId),
-            LabelSelector.IsEqualRequirement(KubernetesConstants.RoleName, KubernetesConstants.CoordinatorRole)
-          ))
-        )
-      ).map {
-          case x if x.length > 1 =>
-            throw new InternalException(s"Found multiple coordinator pods for job  ${jobId} in namespacespace ${namespace}")
-          case otherwise =>
-            otherwise.headOption
-        }
-    }
-  }
-
-  /** Kills a Mantik Job. This works by removing the workers and cancelling the coordinators. */
-  def killMantikJob(namespace: String, jobId: String, reason: String): Future[Unit] = {
-    logger.info(s"Canceling Mantik job ${jobId}")
-
-    def roleFiler(role: String): Pod => Boolean = {
-      pod => pod.metadata.labels.get(KubernetesConstants.RoleName).contains(role)
-    }
-
-    for {
-      job <- getJobById(Some(namespace), jobId)
-      _ <- Future.sequence(job.toSeq.map { job => sendKillPatch[Job](job.name, Some(job.namespace), reason) })
-      pods <- getPodsByJobId(Some(namespace), jobId)
-      workers = pods.filter(roleFiler(KubernetesConstants.WorkerRole))
-      coordinator = pods.filter(roleFiler(KubernetesConstants.CoordinatorRole))
-      _ = logger.debug(s"Job ${jobId} has ${workers.length} workers and ${coordinator.length} coordinators")
-      _ <- Future.sequence(coordinator.map(c => cancelMantikPod(c, reason)))
-      _ <- Future.sequence(workers.map { w => delete[Pod](Some(w.namespace), w.name) })
-    } yield {
-      ()
-    }
-  }
-
-  /** Cancels a Mantik Pod. */
-  def cancelMantikPod(pod: Pod, reason: String): Future[Unit] = {
-    for {
-      _ <- sendKillPatch[Pod](pod.name, Some(pod.namespace), reason)
-      cancelableContainers = filterRunningSidecarOrCoordinator(pod).map(_.name).toList
-      _ = logger.info(s"Pod ${pod.name} cancellable containers: ${cancelableContainers}")
-      _ <- Future.sequence(cancelableContainers.map { c => sendCancelSignal(pod, c, reason) })
-    } yield {
-      ()
-    }
-  }
-
   /**  Add Kill-Annotations to some items. */
   def sendKillPatch[T <: ObjectResource](name: String, namespace: Option[String], reason: String)(
     implicit
@@ -495,31 +216,6 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     errorHandling {
       rootClient.patch[MetadataPatch, T](name, patch, namespace)
     }.map { _ => () }
-  }
-
-  private def sendCancelSignal(pod: Pod, containerName: String, reason: String): Future[Unit] = {
-    val outputSink: Sink[String, Future[Done]] = Sink.foreach { s =>
-      logger.debug(s"Stdout of Cancel call: ${s}")
-    }
-    val stdErrSink: Sink[String, Future[Done]] = Sink.foreach { s =>
-      logger.debug(s"Stderr of Cancel Call: ${s}")
-    }
-    rootClient.usingNamespace(pod.namespace).exec(
-      // This is a bid hardcoded..
-      pod.name, command = List("/opt/bin/run", "cancel", "-reason", reason), maybeContainerName = Some(containerName), /*maybeStdout = Some(outputSink),*/ maybeStderr = Some(stdErrSink)
-    )
-  }
-
-  /** Look for a running sidecar or coordinator inside a Mantik Pod */
-  def filterRunningSidecarOrCoordinator(pod: Pod): Option[skuber.Container.Status] = {
-    val result = for {
-      status <- pod.status.toList
-      containerStatus <- status.containerStatuses
-      if containerStatus.name == KubernetesConstants.SidecarContainerName || containerStatus.name == KubernetesConstants.CoordinatorContainerName
-      state <- containerStatus.state.toList
-      if state.isInstanceOf[Running]
-    } yield containerStatus
-    result.headOption
   }
 
   /** Some principal k8s Error handling. */

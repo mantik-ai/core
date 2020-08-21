@@ -87,12 +87,6 @@ class BasicOpExecutor(
             ()
         }
         Future.successful(())
-      case da: PlanOp.DeployAlgorithm =>
-        // TODO
-        ???
-      case dp: PlanOp.DeployPipeline =>
-        // TODO
-        ???
       case c: PlanOp.Const[T] =>
         Future.successful(c.value)
       case c: PlanOp.CopyFile =>

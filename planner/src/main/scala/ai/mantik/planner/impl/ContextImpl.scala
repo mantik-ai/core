@@ -8,7 +8,7 @@ import ai.mantik.elements.errors.{ ErrorCodes, MantikAsyncException }
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.{ FileCache, FileRepositoryServerRemotePresence, MnpPlanExecutor, PlanExecutorImpl }
+import ai.mantik.planner.impl.exec.{ FileCache, FileRepositoryServerRemotePresence, MnpPlanExecutor }
 import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
 import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
 import javax.inject.Inject

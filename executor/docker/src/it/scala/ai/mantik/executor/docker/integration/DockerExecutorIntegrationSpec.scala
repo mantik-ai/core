@@ -3,6 +3,7 @@ package ai.mantik.executor.docker.integration
 import java.util.Base64
 
 import ai.mantik.executor.Errors
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
 import ai.mantik.executor.docker.{DockerConstants, DockerExecutor, DockerExecutorConfig}
 import ai.mantik.executor.model.docker.Container
@@ -75,13 +76,13 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     val containers = await(dockerClient.listContainers(true))
     val container = containers.find(_.Names.contains("/" + response.nodeName)).getOrElse(fail)
     container.Labels(DockerConstants.IsolationSpaceLabelName) shouldBe "some_isolation"
-    container.Labels(DockerConstants.UserIdLabelName) shouldBe "foo"
-    container.Labels(DockerConstants.ManagedByLabelName) shouldBe DockerConstants.ManagedByLabelValue
-    container.Labels(DockerConstants.TypeLabelName) shouldBe DockerConstants.WorkerType
+    container.Labels(LabelConstants.UserIdLabelName) shouldBe "foo"
+    container.Labels(LabelConstants.ManagedByLabelName) shouldBe LabelConstants.ManagedByLabelValue
+    container.Labels(LabelConstants.WorkerTypeLabelName) shouldBe LabelConstants.workerType.mnpWorker
 
     eventually {
       val containerAgain = await(dockerClient.listContainersFiltered(true, ListContainerRequestFilter.forLabelKeyValue(
-        DockerConstants.UserIdLabelName -> "foo"
+        LabelConstants.UserIdLabelName -> "foo"
       )))
       println(containerAgain.asJson)
       containerAgain.head.State shouldBe "running"

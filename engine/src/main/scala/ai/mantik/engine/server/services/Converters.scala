@@ -51,7 +51,7 @@ private[engine] object Converters {
         item = Item.Dataset(
           ProtoDataSet(
             d.bridgeMantikId.toString,
-            `type` = Some(ProtoDataType(d.dataType.asJson.noSpaces)),
+            `type` = Some(ProtoDataType(d.dataType.asJson.noSpaces))
           )
         )
       )

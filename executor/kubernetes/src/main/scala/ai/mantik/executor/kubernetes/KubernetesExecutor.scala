@@ -1,32 +1,26 @@
 package ai.mantik.executor.kubernetes
 
+import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.{ Clock, Instant }
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.executor
-import ai.mantik.executor.Errors.NotFoundException
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.{ Errors, Executor }
-import akka.actor.{ ActorSystem, Cancellable }
+import akka.actor.Cancellable
 import com.google.common.net.InetAddresses
-import javax.inject.{ Inject, Provider, Singleton }
+import javax.inject.{ Inject, Provider }
 import play.api.libs.json.Json
-import skuber.Container.Running
 import skuber.apps.Deployment
-import skuber.json.batch.format._
-import skuber.json.ext.format._
 import skuber.json.format._
 import skuber.{ Endpoints, ObjectMeta, Pod, Service }
-import cats.implicits._
-import skuber.ext.Ingress
 
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future }
 
 /** Kubennetes implementation of [[Executor]]. */
 class KubernetesExecutor(config: Config, ops: K8sOperations)(
@@ -37,88 +31,11 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   logger.info(s"Initializing with kubernetes at address ${kubernetesHost}")
   logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
   logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
-  logger.info(s"Node collapsing:     ${config.enableExistingServiceNodeCollapse}")
   logger.info(s"Disable Pull:        ${config.common.disablePull}")
-
-  override def schedule(job: Job): Future[String] = {
-    val jobId = UUID.randomUUID().toString
-    val namespace = namespaceForIsolationSpace(job.isolationSpace)
-    logger.debug(s"Creating job ${jobId} in namespace ${namespace}...")
-
-    val converter = try {
-      new KubernetesJobConverter(config, job, jobId)
-    } catch {
-      case e: GraphAnalysis.AnalyzerException =>
-        logger.error(s"Graph analysis failed", e)
-        return Future.failed(new Errors.BadRequestException(s"Graph analysis failed: e: ${e.getMessage}"))
-    }
-
-    val maybePullSecret = converter.pullSecret
-
-    for {
-      _ <- ops.ensureNamespace(namespace)
-      _ <- ops.maybeCreate(Some(namespace), maybePullSecret)
-      // Pods are not reachable by it's name but by their IP Address, however we must first start them to get their IP Address.
-      podsWithIpAdresses <- ops.startPodsAndGetIpAdresses(Some(namespace), converter.pods)
-      _ = logger.debug(s"Created pods for ${jobId}: ${podsWithIpAdresses.values}")
-      configMap = converter.configuration(podsWithIpAdresses)
-      _ <- ops.create(Some(namespace), configMap)
-      _ = logger.debug(s"Created ConfigMap for ${jobId}")
-      job = converter.convertCoordinator
-      _ <- ops.create(Some(namespace), job)
-    } yield {
-      logger.info(s"Created ${podsWithIpAdresses.size} pods, config map and job ${job.name}")
-      jobId
-    }
-  }
 
   private def namespaceForIsolationSpace(isolationSpace: String): String = {
     // TODO: Escape invalid characters.
     config.kubernetes.namespacePrefix + isolationSpace
-  }
-
-  override def status(isolationSpace: String, id: String): Future[JobStatus] = {
-    val namespace = namespaceForIsolationSpace(isolationSpace)
-    ops.getJobById(Some(namespace), id).map {
-      case None =>
-        throw new NotFoundException(s"Job ${id} not found in isolationSpace ${isolationSpace}")
-      case Some(job) =>
-        decodeJobStatus(id, namespace, job)
-    }
-  }
-
-  private def decodeJobStatus(id: String, namespace: String, job: skuber.batch.Job): JobStatus = {
-    job.metadata.annotations.get(KubernetesConstants.KillAnnotationName) match {
-      case Some(killValue) =>
-        return JobStatus(
-          JobState.Failed,
-          error = Some(killValue)
-        )
-      case None =>
-      // ok
-    }
-    job.status.map { status =>
-      logger.trace(s"Decoding job state ${status}")
-      status.active match {
-        case Some(a) if a > 0 => JobStatus(JobState.Running)
-        case _ =>
-          status.failed match {
-            case Some(x) if x > 0 => JobStatus(JobState.Failed)
-            case _ =>
-              status.succeeded match {
-                case Some(x) if x > 0 => JobStatus(JobState.Finished)
-                case _ =>
-                  logger.debug(s"Could not decode ${status}, probably pending")
-                  JobStatus(JobState.Pending)
-              }
-          }
-      }
-    }.getOrElse {
-      logger.debug(s"No job state found for ${id} in ${namespace}, probably pending")
-      JobStatus(
-        state = JobState.Pending
-      )
-    }
   }
 
   override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
@@ -187,83 +104,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     }
   }
 
-  override def deployService(deployServiceRequest: DeployServiceRequest): Future[DeployServiceResponse] = {
-    val namespace = namespaceForIsolationSpace(deployServiceRequest.isolationSpace)
-    val converter = new KubernetesServiceConverter(config, deployServiceRequest, kubernetesHost)
-    val maybePullSecret = converter.pullSecret
-    val replicaSet = converter.replicaSet
-    val service = converter.service
-
-    for {
-      _ <- ops.ensureNamespace(namespace)
-      _ <- ops.maybeCreate(Some(namespace), maybePullSecret)
-      _ <- ops.create(Some(namespace), replicaSet)
-      usedService <- ops.create(Some(namespace), service)
-      maybeIngress = converter.ingress(usedService.name)
-      _ <- maybeIngress.map { ingress =>
-        ops.createOrReplace(Some(namespace), ingress)
-      }.getOrElse(Future.successful(()))
-    } yield {
-      val serviceUrl = s"http://${usedService.name}"
-      val ingressUrl = converter.ingressExternalUrl
-      logger.info(s"Deployed ${deployServiceRequest.serviceId} as ${service.name} under ${serviceUrl} in namespace ${namespace}, ingress=${ingressUrl}")
-      DeployServiceResponse(
-        serviceName = usedService.name,
-        url = serviceUrl,
-        externalUrl = ingressUrl
-      )
-    }
-  }
-
-  override def queryDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[DeployedServicesResponse] = {
-    val namespace = namespaceForIsolationSpace(deployedServicesQuery.isolationSpace)
-    ops.getNamespace(namespace).flatMap {
-      case None =>
-        logger.debug(s"Namespace ${namespace} doesn't exist, returning 0 services")
-        Future.successful(DeployedServicesResponse(Nil))
-      case Some(_) =>
-        ops.getServices(
-          Some(namespace),
-          serviceIdFilter = deployedServicesQuery.serviceId
-        ).map { services =>
-            val entries = services.map { service =>
-              val serviceId = KubernetesNamer.decodeLabelValueNoCrashing(
-                service.metadata.labels.getOrElse(KubernetesConstants.ServiceIdLabel, {
-                  logger.error(s"Found a service without service id: ${namespace}/${service.name}")
-                  ""
-                }
-                ))
-              DeployedServicesEntry(
-                serviceId = serviceId,
-                serviceUrl = s"http://${service.name}"
-              )
-            }
-            DeployedServicesResponse(
-              entries
-            )
-          }
-    }
-  }
-
-  override def deleteDeployedServices(deployedServicesQuery: DeployedServicesQuery): Future[Int] = {
-    val namespace = namespaceForIsolationSpace(deployedServicesQuery.isolationSpace)
-    ops.getNamespace(namespace).flatMap {
-      case None =>
-        logger.debug(s"Namespace ${namespace} not found, no services deleted")
-        Future.successful(0)
-      case Some(_) =>
-        ops.deleteDeployedServicesAndRelated(
-          Some(namespace),
-          serviceIdFilter = deployedServicesQuery.serviceId
-        )
-    }
-  }
-
-  override def logs(isolationSpace: String, id: String): Future[String] = {
-    val namespace = namespaceForIsolationSpace(isolationSpace)
-    ops.getJobLog(Some(namespace), id)
-  }
-
   private val checkPodCancellation = config.kubernetes.checkPodInterval match {
     case f: FiniteDuration =>
       actorSystem.scheduler.schedule(f, f)(checkPods())
@@ -278,86 +118,20 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   private def checkBrokenImagePods(currentTime: Instant): Unit = {
-    ops.getAllManagedPendingPods().foreach { pendingPods =>
-      pendingPods.foreach {
-        case (namespaceName, pendingPods) =>
-          for {
-            pod <- pendingPods
-            imageError <- podImageError(currentTime, pod)
-          } {
-            handleBrokenImagePod(pod, imageError)
-          }
+    Workload.listPending(ops).foreach { pending =>
+      val withImageError: Vector[(Workload, String)] = pending.flatMap { workload =>
+        workload.hasBrokenImage(config, currentTime).map { brokenImage =>
+          workload -> brokenImage
+        }
+      }
+
+      withImageError.foreach {
+        case (workload, imageError) =>
+          logger.info(s"Stopping workload ${workload.internalId} because of image error ${imageError}")
+          val error = s"Pod has image error ${imageError}"
+          workload.stop(false, ops, Some(error))
       }
     }
-  }
-
-  private def handleBrokenImagePod(pod: Pod, imageError: String): Unit = {
-    val maybeJobId = pod.metadata.labels.get(KubernetesConstants.JobIdLabel)
-    logger.info(s"Detected broken image in ${pod.namespace}/${pod.name}, jobId=${maybeJobId} error=${imageError}")
-    val error = s"Pod has image error ${imageError}"
-    maybeJobId match {
-      case Some(id) =>
-        ops.killMantikJob(pod.namespace, id, error)
-      case None =>
-        // job without id ?!
-        ops.delete[Pod](Some(pod.namespace), pod.name)
-    }
-  }
-
-  /**
-   * Check if a pod has an image error, so that we can kill it.
-   * @return the first image error found.
-   */
-  private def podImageError(currentTime: Instant, pod: Pod): Option[String] = {
-    // See: https://github.com/kubernetes/kubernetes/blob/d24fe8a801748953a5c34fd34faa8005c6ad1770/pkg/kubelet/images/types.go
-
-    // Errors which will lead to termination immediately
-    val ImmediatelyFailErros = Seq(
-      "ErrImageNeverPull",
-      "InvalidImageName",
-      "ImageInspectError"
-    )
-
-    // Errors which will lead to termination if the timeout is reached
-    val Errors = Set(
-      "ImagePullBackOff",
-      "ErrImagePull",
-      "RegistryUnavailable"
-    )
-
-    /** Look if the container image has a status which should be terminated. */
-    def imageError(startTime: skuber.Timestamp, container: skuber.Container.Status): Option[String] = {
-      container.state match {
-        case Some(w: skuber.Container.Waiting) =>
-          w.reason match {
-            case Some(reason) if ImmediatelyFailErros.contains(reason) =>
-              Some(reason)
-            case Some(reason) if Errors.contains(reason) && reachedTimeout(startTime) =>
-              Some(reason)
-            case Some(reason) =>
-              logger.debug(s"Pod ${pod.name} reached a status ${reason} which is not yet worth to terminate")
-              None
-            case _ => None
-          }
-        case _ => None
-      }
-    }
-
-    /** Check if startTime reached the timeout. */
-    def reachedTimeout(startTime: skuber.Timestamp): Boolean = {
-      startTime.toInstant.plus(config.kubernetes.podPullImageTimeout.toMillis, ChronoUnit.MILLIS).isBefore(currentTime)
-    }
-
-    val imageErrors = for {
-      status <- pod.status.toList
-      startTime <- status.startTime.toList
-      if status.phase.contains(Pod.Phase.Pending)
-      containerStatus <- status.containerStatuses
-      if !containerStatus.ready
-      imageError <- imageError(startTime, containerStatus)
-    } yield imageError
-
-    imageErrors.headOption
   }
 
   addShutdownHook {
@@ -387,7 +161,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       metadata = ObjectMeta(
         name = grpcProxyConfig.containerName,
         labels = Map(
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+          LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
         )
       ),
       spec = Some(Deployment.Spec(
@@ -395,8 +169,8 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
           Pod.Template.Spec(
             metadata = ObjectMeta(
               labels = Map(
-                KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
-                KubernetesConstants.RoleName -> KubernetesConstants.GrpcProxyRole
+                LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
+                LabelConstants.RoleLabelName -> LabelConstants.role.grpcProxy
               )
             ),
             spec = Some(Pod.Spec(
@@ -420,14 +194,14 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       metadata = ObjectMeta(
         name = grpcProxyConfig.containerName,
         labels = Map(
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+          LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
         )
       ),
       spec = Some(Service.Spec(
         _type = Service.Type.NodePort,
         selector = Map(
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue,
-          KubernetesConstants.RoleName -> KubernetesConstants.GrpcProxyRole
+          LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
+          LabelConstants.RoleLabelName -> LabelConstants.role.grpcProxy
         ),
         ports = List(
           Service.Port(
@@ -456,7 +230,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = {
-    val converter = KubernetesConverter2(config, kubernetesHost)
+    val converter = KubernetesConverter(config, kubernetesHost)
     val internalId = UUID.randomUUID().toString
     val converted = converter.convertStartWorkRequest(internalId, startWorkerRequest)
     val namespace = namespaceForIsolationSpace(startWorkerRequest.isolationSpace)
@@ -488,17 +262,17 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
 
   private def listWorkersImpl(namespace: String, nameFilter: Option[String], userIdFilter: Option[String]): Future[Vector[Workload]] = {
     val labels = Seq(
-      KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
+      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
     ) ++ userIdFilter.map { id =>
-        KubernetesConstants.IdLabelName -> id
+        LabelConstants.UserIdLabelName -> KubernetesNamer.encodeLabelValue(id)
       }
     Workload.list(Some(namespace), nameFilter, labels, ops)
   }
 
   private def generateListWorkerResponseElement(workload: Workload): ListWorkerResponseElement = {
-    val workerType = workload.service.metadata.labels.get(KubernetesConstants.WorkerTypeLabelName) match {
-      case Some(KubernetesConstants.WorkerTypeMnpWorker)   => WorkerType.MnpWorker
-      case Some(KubernetesConstants.WorkerTypeMnpPipeline) => WorkerType.MnpPipeline
+    val workerType = workload.service.metadata.labels.get(LabelConstants.WorkerTypeLabelName) match {
+      case Some(LabelConstants.workerType.mnpWorker)   => WorkerType.MnpWorker
+      case Some(LabelConstants.workerType.mnpPipeline) => WorkerType.MnpPipeline
       case other =>
         logger.warn(s"Unexpected worker type ${other}, assuming regular mnp worker")
         WorkerType.MnpWorker
@@ -506,7 +280,9 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     val ingressUrl = workload.ingressUrl(config, kubernetesHost)
     ListWorkerResponseElement(
       nodeName = workload.service.name,
-      id = workload.service.metadata.labels.getOrElse(KubernetesConstants.IdLabelName, "unknown"),
+      id = KubernetesNamer.decodeLabelValue(
+        workload.service.metadata.labels.getOrElse(LabelConstants.UserIdLabelName, "unknown")
+      ),
       state = workload.workerState,
       container = {
         val maybeMainContainer = workload.pod.flatMap(_.spec.flatMap(_.containers.headOption)).orElse(
@@ -529,7 +305,10 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     listWorkersImpl(namespace, stopWorkerRequest.nameFilter, stopWorkerRequest.idFilter).flatMap { workloads =>
       val responses = workloads.map { workload =>
         StopWorkerResponseElement(
-          id = workload.service.metadata.labels.getOrElse(KubernetesConstants.IdLabelName, "Unknown"),
+          id =
+            KubernetesNamer.decodeLabelValue(
+              workload.service.metadata.labels.getOrElse(LabelConstants.UserIdLabelName, "Unknown")
+            ),
           name = workload.service.name
         )
       }

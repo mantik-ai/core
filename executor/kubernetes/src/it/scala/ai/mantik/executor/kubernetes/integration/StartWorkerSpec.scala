@@ -1,5 +1,6 @@
 package ai.mantik.executor.kubernetes.integration
 
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.common.test.integration.StartWorkerSpecBase
 import ai.mantik.executor.kubernetes.{K8sOperations, KubernetesConstants}
 import skuber.apps.Deployment
@@ -15,7 +16,7 @@ class StartWorkerSpec extends IntegrationTestBase with StartWorkerSpecBase {
     val ops = new K8sOperations(config, _kubernetesClient)
     val ns = config.kubernetes.namespacePrefix + isolationSpace
     val labelFilter = Seq(
-      KubernetesConstants.IdLabelName -> userId
+      LabelConstants.UserIdLabelName -> userId
     )
     eventually {
       await(ops.listSelected[Pod](Some(ns), labelFilter)).toList shouldBe empty

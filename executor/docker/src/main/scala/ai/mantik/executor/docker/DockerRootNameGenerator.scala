@@ -25,7 +25,7 @@ object DockerRootNameGenerator {
       val maxLength = 5
       var i = 1
       while (i < maxLength) {
-        val candidate = NameGenerator.generateRootName(i, prefix)
+        val candidate = DockerNameGenerator.generateRootName(i, prefix)
         if (!taken.exists { usedName =>
           usedName.startsWith(candidate)
         }) {
