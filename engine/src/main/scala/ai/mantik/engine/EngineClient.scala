@@ -1,23 +1,18 @@
 package ai.mantik.engine
 
-import java.net.{ InetAddress, InetSocketAddress }
-
-import ai.mantik.componently.di.AkkaModule
 import ai.mantik.componently.{ AkkaRuntime, Component }
 import ai.mantik.engine.protos.engine.AboutServiceGrpc.AboutServiceBlockingStub
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderServiceBlockingStub
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorServiceBlockingStub
 import ai.mantik.engine.protos.local_registry.LocalRegistryServiceGrpc.LocalRegistryServiceStub
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionServiceBlockingStub
-import ai.mantik.planner.{ ClientConfig, Context }
-import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.{ FileRepositoryService, FileRepositoryServiceStub }
-import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.{ RepositoryService, RepositoryServiceStub }
-import com.google.inject.{ AbstractModule, Guice }
+import ai.mantik.planner.PlanningContext
+import ai.mantik.planner.impl.RemotePlanningContextImpl
+import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.PlanningContextServiceStub
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
 import io.grpc.Status.Code
 import io.grpc.{ ManagedChannel, ManagedChannelBuilder, StatusRuntimeException }
-import io.circe.syntax._
 
 import scala.concurrent.Future
 
@@ -38,41 +33,15 @@ class EngineClient(address: String)(implicit val akkaRuntime: AkkaRuntime) exten
       throw e
   }
   logger.info(s"Connected to Mantik Engine ${version.version}")
-  val clientConfig: ClientConfig = {
-    val response = aboutService.clientConfig(Empty())
-    (for {
-      parsed <- io.circe.parser.parse(response.config)
-      converted <- parsed.as[ClientConfig]
-    } yield converted) match {
-      case Left(error) => throw new RuntimeException("Could not parse client config", error)
-      case Right(ok)   => ok
-    }
-  }
-  logger.info(s"Client Config ${clientConfig.asJson}")
 
   val sessionService = new SessionServiceBlockingStub(channel)
   val graphBuilder = new GraphBuilderServiceBlockingStub(channel)
   val graphExecutor = new GraphExecutorServiceBlockingStub(channel)
-  val repositoryServiceStub = new RepositoryServiceStub(channel)
-  val fileRepositoryServiceStub = new FileRepositoryServiceStub(channel)
   val localRegistryService = new LocalRegistryServiceStub(channel)
+  val planningContextStub = new PlanningContextServiceStub(channel)
 
-  /** Create a new context for Scala Applications. */
-  def createContext(): Context = {
-    val injector = Guice.createInjector(
-      new AkkaModule(),
-      new EngineModule(Some(clientConfig)),
-      createClientServiceModule()
-    )
-    injector.getInstance(classOf[Context])
-  }
-
-  /** Create a Guice module which contains the needed gRpc clients to talk to the engine server. */
-  private def createClientServiceModule(): AbstractModule = new AbstractModule {
-    override def configure(): Unit = {
-      bind(classOf[RepositoryService]).toInstance(repositoryServiceStub)
-      bind(classOf[FileRepositoryService]).toInstance(fileRepositoryServiceStub)
-    }
+  val planningContext: PlanningContext = {
+    new RemotePlanningContextImpl(planningContextStub)
   }
 
   akkaRuntime.lifecycle.addShutdownHook {

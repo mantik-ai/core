@@ -28,16 +28,16 @@ class DeployPipelineSpec extends IntegrationTestBase with Samples with HttpSuppo
       outputAdapter
     )
 
-    pipeline.state.get.deployment shouldBe empty
-    doubleMultiply.state.get.deployment shouldBe empty
+    context.state(pipeline).deployment shouldBe empty
+    context.state(doubleMultiply).deployment shouldBe empty
 
     val deploymentState = context.execute(pipeline.deploy(ingressName = Some("pipe1")))
 
-    pipeline.state.get.deployment shouldBe Some(deploymentState)
+    context.state(pipeline).deployment shouldBe Some(deploymentState)
     deploymentState.externalUrl shouldNot be(empty)
 
     // Sub algorithms are now also deployed
-    doubleMultiply.state.get.deployment shouldBe 'defined
+    context.state(doubleMultiply).deployment shouldBe 'defined
 
     val applyUrl = s"${deploymentState.externalUrl.get}/apply"
     val sampleData = ByteString("[[4],[5]]")

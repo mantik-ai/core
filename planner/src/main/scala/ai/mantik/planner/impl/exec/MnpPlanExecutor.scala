@@ -5,33 +5,31 @@ import java.util.UUID
 import ai.mantik.bridge.protocol.bridge.MantikInitConfiguration
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.ds.element.Bundle
 import ai.mantik.executor.Executor
-import ai.mantik.executor.model.{ GrpcProxy, MnpPipelineDefinition, MnpWorkerDefinition, StartWorkerRequest, StopWorkerRequest }
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
+import ai.mantik.executor.model._
+import ai.mantik.mnp.protocol.mnp._
 import ai.mantik.mnp.{ MnpClient, MnpSession, SessionInitException }
-import ai.mantik.mnp.protocol.mnp.{ AboutResponse, ConfigureInputPort, ConfigureOutputPort, InitRequest, QueryTaskResponse, TaskPortStatus }
 import ai.mantik.planner
 import ai.mantik.planner.PlanExecutor.PlanExecutorException
-import ai.mantik.planner.PlanNodeService.DockerContainer
-import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.graph.{ Graph, Node }
+import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{ InputPush, OutputPull }
 import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
-import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
-import ai.mantik.planner.{ Algorithm, CacheKey, ClientConfig, DeploymentState, Plan, PlanExecutor, PlanNodeService, PlanOp }
+import ai.mantik.planner.repository._
+import ai.mantik.planner._
 import akka.http.scaladsl.model.Uri
 import akka.util.ByteString
-import javax.inject.{ Inject, Singleton }
 import cats.implicits._
 import com.google.protobuf.any.Any
-import io.grpc.ManagedChannel
 import io.circe.syntax._
+import io.grpc.ManagedChannel
+import javax.inject.{ Inject, Singleton }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
+import scala.util.{ Failure, Success }
 
 /** Naive MNP Implementation of an Executor. */
 class MnpPlanExecutor(
@@ -41,22 +39,21 @@ class MnpPlanExecutor(
     isolationSpace: String,
     dockerConfig: DockerConfig,
     artifactRetriever: MantikArtifactRetriever,
-    fileCache: FileCache,
-    clientConfig: ClientConfig
+    fileRepositoryServerRemotePresence: FileRepositoryServerRemotePresence,
+    mantikItemStateManager: MantikItemStateManager
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
 
   /** Session Name inside deployed items. */
   val DeployedSessionName = "deployed"
 
   val openFilesBuilder: ExecutionOpenFilesBuilder = new ExecutionOpenFilesBuilder(
-    fileRepository,
-    fileCache
+    fileRepository
   )
   val basicOpExecutor = new BasicOpExecutor(
     fileRepository,
     repository,
     artifactRetriever,
-    fileCache
+    mantikItemStateManager
   )
 
   @Singleton
@@ -66,8 +63,8 @@ class MnpPlanExecutor(
     repository: Repository,
     executor: Executor,
     retriever: MantikArtifactRetriever,
-    fileCache: FileCache,
-    clientConfig: ClientConfig
+    fileRepositoryServerRemotePresence: FileRepositoryServerRemotePresence,
+    mantikItemStateManager: MantikItemStateManager
   )(implicit akkaRuntime: AkkaRuntime) {
     this(
       fileRepository,
@@ -78,8 +75,8 @@ class MnpPlanExecutor(
         akkaRuntime.config.getConfig("mantik.bridge.docker")
       ),
       retriever,
-      fileCache,
-      clientConfig
+      fileRepositoryServerRemotePresence: FileRepositoryServerRemotePresence,
+      mantikItemStateManager
     )
   }
 
@@ -260,7 +257,7 @@ class MnpPlanExecutor(
     }
     val taskId = "evaluation"
     val preparation: MnpExecutionPreparation = new MnpExecutionPreparer(
-      graphId, graph, containerAddresses, files, clientConfig.remoteFileRepositoryAddress
+      graphId, graph, containerAddresses, files, fileRepositoryServerRemotePresence.assembledRemoteUri()
     ).build()
 
     for {
@@ -433,7 +430,7 @@ class MnpPlanExecutor(
         internalUrl = deploymentState.internalUrl,
         timestamp = akkaRuntime.clock.instant()
       )
-      _ = deployAlgorithm.item.state.update(_.copy(deployment = Some(deploymentState)))
+      _ = mantikItemStateManager.upsert(deployAlgorithm.item, _.copy(deployment = Some(deploymentState)))
       _ <- repository.setDeploymentInfo(deployAlgorithm.item.itemId, Some(deploymentInfo))
     } yield {
       deploymentState
@@ -458,7 +455,7 @@ class MnpPlanExecutor(
           present.contentType.getOrElse(ContentTypes.ZipFileContentType)
       },
       payload = inputData.map { data =>
-        val fullUrl = Uri(data.path).resolvedAgainst(clientConfig.remoteFileRepositoryAddress).toString()
+        val fullUrl = Uri(data.path).resolvedAgainst(fileRepositoryServerRemotePresence.assembledRemoteUri()).toString()
         MantikInitConfiguration.Payload.Url(fullUrl)
       }.getOrElse(
         MantikInitConfiguration.Payload.Empty
@@ -499,7 +496,7 @@ class MnpPlanExecutor(
         internalUrl = deploymentState.internalUrl,
         timestamp = akkaRuntime.clock.instant()
       )
-      _ = dp.item.state.update(_.copy(deployment = Some(deploymentState)))
+      _ = mantikItemStateManager.upsert(dp.item, _.copy(deployment = Some(deploymentState)))
       _ <- repository.setDeploymentInfo(dp.item.itemId, Some(deploymentInfo))
     } yield {
       logger.info(s"Deployed pipeline ${dp.serviceId} to ${deploymentInfo.internalUrl} (external=${deploymentInfo.externalUrl})")
@@ -509,7 +506,8 @@ class MnpPlanExecutor(
 
   private def buildPipelineRuntimeDefinition(dp: PlanOp.DeployPipeline): PipelineRuntimeDefinition = {
     def extractStep(algorithm: Algorithm): PipelineRuntimeDefinition.Step = {
-      val url = algorithm.state.get.deployment match {
+      val state = mantikItemStateManager.getOrInit(algorithm)
+      val url = state.deployment match {
         case None    => throw new planner.Planner.InconsistencyException("Required sub algorithm not deployed")
         case Some(d) => d.internalUrl
       }
@@ -526,10 +524,5 @@ class MnpPlanExecutor(
       steps,
       inputType = inputType
     )
-  }
-
-  override private[mantik] def cachedFile(cacheKey: CacheKey): Option[String] = {
-    // still necessary?
-    fileCache.get(cacheKey)
   }
 }

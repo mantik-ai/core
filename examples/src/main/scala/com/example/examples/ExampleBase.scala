@@ -4,7 +4,7 @@ import java.nio.file.Paths
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.engine.EngineClient
-import ai.mantik.planner.Context
+import ai.mantik.planner.PlanningContext
 
 /** Implements boiler plate for local mantik sample applications. */
 abstract class ExampleBase {
@@ -18,13 +18,14 @@ abstract class ExampleBase {
     implicit val akkaRuntime = AkkaRuntime.createNew()
     try {
       val engineClient = EngineClient.create()
-      val context = engineClient.createContext()
+      val context = engineClient.planningContext
 
       println("Adding Sample Bridges")
       context.pushLocalMantikItem(BinaryBridge)
       context.pushLocalMantikItem(TfTrainBridge)
       context.pushLocalMantikItem(TfSavedModelBridge)
       context.pushLocalMantikItem(SkLearnBridge)
+      println("Done Adding Sample Bridges")
 
       run(context)
     } finally {
@@ -32,5 +33,5 @@ abstract class ExampleBase {
     }
   }
 
-  protected def run(implicit context: Context): Unit
+  protected def run(implicit context: PlanningContext): Unit
 }

@@ -6,18 +6,17 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner.graph.{ Graph, Link, Node, NodePort, NodePortRef }
-import ai.mantik.planner.impl.exec.FileCache
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
-import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, DefinitionSource, Operation, PayloadSource, Pipeline, PlanFile, PlanFileReference, PlanNodeService, PlanOp, Planner, Source, TrainableAlgorithm }
+import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, DefinitionSource, MantikItemState, Operation, PayloadSource, Pipeline, PlanFile, PlanFileReference, PlanNodeService, PlanOp, Planner, Source, TrainableAlgorithm }
 import ai.mantik.testutils.TestBase
 import cats.data.State
 
 class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   private trait Env {
-    val fileCache = new FileCache()
     val elements = new PlannerElements(typesafeConfig)
-    val resourcePlanBuilder = new ResourcePlanBuilder(elements, fileCache)
+    val mantikItemStateManager = new MantikItemStateManager()
+    val resourcePlanBuilder = new ResourcePlanBuilder(elements, mantikItemStateManager)
 
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
       f.run(PlanningState()).value
@@ -218,12 +217,13 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val cache = PayloadSource.Cached(
       PayloadSource.OperationResult(
         Operation.Application(algorithm1, dataset1)
-      )
+      ),
+      Vector(ItemId.generate())
     )
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe Set(cache.cacheGroup)
+    state.cacheItems shouldBe Set(cache.siblings)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
   }
 
@@ -231,15 +231,14 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val cache = PayloadSource.Cached(
       PayloadSource.OperationResult(
         Operation.Application(algorithm1, dataset1)
-      )
+      ),
+      Vector(ItemId.generate())
     )
-    fileCache.add(
-      cache.cacheGroup.ensuring(_.size == 1).head, "file1"
-    )
+    mantikItemStateManager.set(cache.siblings.head, MantikItemState(cacheFile = Some("file1")))
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe Set(cache.cacheGroup)
+    state.cacheItems shouldBe Set(cache.siblings)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe empty
   }
 
@@ -247,12 +246,13 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val cache = PayloadSource.Cached(
       PayloadSource.OperationResult(
         Operation.Application(algorithm1, dataset1)
-      )
+      ),
+      Vector(ItemId.generate())
     )
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = true
     ))
-    state.cacheGroups shouldBe Set(cache.cacheGroup)
+    state.cacheItems shouldBe Set(cache.siblings)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
 
     val (state2, files2) = resourcePlanBuilder.translateItemPayloadSourceAsFiles(
@@ -270,7 +270,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val (state, filesPlan) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       projection, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe empty
+    state.cacheItems shouldBe empty
     splitOps(filesPlan.preOp) shouldBe empty
     filesPlan.files.size shouldBe 1
   }

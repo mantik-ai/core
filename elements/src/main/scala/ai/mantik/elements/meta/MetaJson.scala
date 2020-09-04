@@ -2,7 +2,7 @@ package ai.mantik.elements.meta
 
 import ai.mantik.ds.element.SingleElementBundle
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, JsonObject }
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, JsonObject, ObjectEncoder }
 import io.circe.syntax._
 
 /** Exception thrown if a Meta Variable changing doesn't work. */
@@ -104,18 +104,19 @@ object MetaJson {
     }
   }
 
-  implicit val encoder: Encoder[MetaJson] = new Encoder[MetaJson] {
-    override def apply(a: MetaJson): Json = {
+  implicit val encoder: ObjectEncoder[MetaJson] = new ObjectEncoder[MetaJson] {
+
+    override def encodeObject(a: MetaJson): JsonObject = {
       val skipMeta = a.missingMetaVariables && a.metaVariables.isEmpty
       if (skipMeta) {
-        return Json.fromJsonObject(a.sourceJson)
+        return a.sourceJson
       }
       val variablesJson = a.metaVariables.asJson
       Json.obj(
         MetaVariablesKey -> variablesJson
       ).deepMerge(
           Json.fromJsonObject(a.sourceJson)
-        )
+        ).asObject.get
     }
   }
 

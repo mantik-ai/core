@@ -5,6 +5,8 @@ import java.nio.file.Path
 import ai.mantik.componently.Component
 import ai.mantik.elements.{ MantikId, NamedMantikId }
 import ai.mantik.planner.repository.impl.MantikArtifactRetrieverImpl
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.google.inject.ImplementedBy
 
 import scala.concurrent.Future
@@ -27,4 +29,7 @@ trait MantikArtifactRetriever extends Component {
 
   /** Add a local directory to the local repository. */
   def addLocalMantikItemToRepository(dir: Path, id: Option[NamedMantikId] = None): Future[MantikArtifact]
+
+  /** Add a mantikheader / file stream to a local repository (more raw way) */
+  def addMantikItemToRepository(mantikHeader: String, id: Option[NamedMantikId], payload: Option[(String, Source[ByteString, _])]): Future[MantikArtifact]
 }

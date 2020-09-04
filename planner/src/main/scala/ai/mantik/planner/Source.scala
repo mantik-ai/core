@@ -1,7 +1,5 @@
 package ai.mantik.planner
 
-import java.util.UUID
-
 import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.{ ItemId, NamedMantikId }
 
@@ -81,18 +79,22 @@ case object Operation {
 }
 
 /** Represents the way [[MantikItem]](s) gets their Payload Data from. */
-sealed abstract class PayloadSource(val resultCount: Int)
+sealed trait PayloadSource {
+  def resultCount: Int = 1
+}
 
 object PayloadSource {
 
   /** There is no payload. */
-  case object Empty extends PayloadSource(0)
+  case object Empty extends PayloadSource {
+    override def resultCount = 0
+  }
 
   /** A fixed location in the file repository. */
-  case class Loaded(fileId: String, contentType: String) extends PayloadSource(1)
+  case class Loaded(fileId: String, contentType: String) extends PayloadSource
 
   /** A fixed data block. */
-  sealed abstract class Literal extends PayloadSource(1)
+  sealed abstract class Literal extends PayloadSource
 
   /** A Literal which contains a bundle. */
   case class BundleLiteral(content: Bundle) extends Literal()
@@ -101,23 +103,25 @@ object PayloadSource {
    * It's the result of some operation.
    * If projection is > 0, the non main result is used.
    */
-  case class OperationResult(op: Operation) extends PayloadSource(op.resultCount)
+  case class OperationResult(op: Operation) extends PayloadSource {
+    override def resultCount: Int = op.resultCount
+  }
 
   /** Projects one of multiple results of the source. */
-  case class Projection(source: PayloadSource, projection: Int = 0) extends PayloadSource(1) {
+  case class Projection(source: PayloadSource, projection: Int = 0) extends PayloadSource {
     require(projection >= 0 && projection < source.resultCount)
   }
 
-  /** A Cached source value. */
+  /**
+   * A Cached source value.
+   * @param siblings the parallel elements which are evaluated at the same time.
+   */
   case class Cached(
-      source: PayloadSource
-  ) extends PayloadSource(source.resultCount) {
+      source: PayloadSource,
+      siblings: Vector[ItemId]
+  ) extends PayloadSource {
+    override def resultCount: Int = source.resultCount
 
-    /** Identifies the source elements. */
-    private[mantik] val cacheGroup: CacheKeyGroup = {
-      (for (_ <- 0 until source.resultCount) yield {
-        UUID.randomUUID()
-      }).toList
-    }
+    require(source.resultCount == siblings.size, "Results must match items")
   }
 }

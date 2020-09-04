@@ -60,9 +60,9 @@ class HelloWorldSpec extends IntegrationTestBase {
   }
 
   it should "give access to a context" in {
-    val context = engineClient.createContext()
+    val context = engineClient.planningContext
     intercept[MantikException] {
-      await(context.localRegistry.get("Not-existing"))
+      context.loadDataSet("not-existing")
     }.code.isA(ErrorCodes.MantikItemNotFound)
   }
 

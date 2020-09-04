@@ -56,7 +56,7 @@ class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegist
   }
 
   override def addArtifact(responseObserver: StreamObserver[AddArtifactResponse]): StreamObserver[AddArtifactRequest] = {
-    StreamConversions.streamingRequest[AddArtifactRequest, AddArtifactResponse](translateError, responseObserver) {
+    StreamConversions.respondMultiInSingleOutWithHeader[AddArtifactRequest, AddArtifactResponse](translateError, responseObserver) {
       case (header, source) =>
         val namedId = RpcConversions.decodeOptionalString(header.namedMantikId).map(
           NamedMantikId.apply

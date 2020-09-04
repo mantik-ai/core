@@ -2,13 +2,13 @@ package com.example.examples
 import java.io.File
 
 import ai.mantik.elements.NamedMantikId
-import ai.mantik.planner.{ Context, Pipeline }
+import ai.mantik.planner.{ PlanningContext, Pipeline }
 
 object PipelineExample extends ExampleBase {
 
   val mnistAnnotated = new File("bridge/tf/saved_model/test/resources/samples/mnist_annotated").toPath
 
-  override protected def run(implicit context: Context): Unit = {
+  override protected def run(implicit context: PlanningContext): Unit = {
     context.pushLocalMantikItem(mnistAnnotated, id = Some("mnist_annotated"))
 
     val mnist = context.loadAlgorithm("mnist_annotated").tag("nob/mnist_annotated") //otherwise it can't be pushed

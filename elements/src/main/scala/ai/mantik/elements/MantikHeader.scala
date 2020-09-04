@@ -150,7 +150,7 @@ object MantikHeader {
 
   /** Encodes a MantikHeader to it's json value. */
   implicit def encoder[T <: MantikDefinition]: ObjectEncoder[MantikHeader[T]] = new ObjectEncoder[MantikHeader[T]] {
-    override def encodeObject(a: MantikHeader[T]): JsonObject = a.metaJson.sourceJson
+    override def encodeObject(a: MantikHeader[T]): JsonObject = a.metaJson.asJsonObject
   }
 
   /** Decodes a MantikHeader from JSON. */

@@ -69,7 +69,11 @@ class PipelineBuilderSpec extends TestBase {
     val pipeline = PipelineBuilder.build(Seq(selectAlgorithm, algorithm2)).forceRight
     val step1 = pipeline.resolved.steps.head
     val encodedStep = step1
-    encodedStep shouldBe selectAlgorithm
+    // TODO: the itemId is lost when going through the PipelineBuilder
+    // However we should think about, if we want an itemId in SELECTs anyway ?!
+    encodedStep shouldBe selectAlgorithm.copy(
+      core = selectAlgorithm.core.copy(itemId = encodedStep.itemId)
+    )
     val step2 = pipeline.resolved.steps(1)
     step2.select shouldBe empty
 

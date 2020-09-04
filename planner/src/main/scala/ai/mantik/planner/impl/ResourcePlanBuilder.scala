@@ -1,7 +1,8 @@
 package ai.mantik.planner.impl
 
+import ai.mantik.elements.ItemId
 import ai.mantik.planner.Planner.InconsistencyException
-import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, CacheKeyGroup, DataSet, Operation, PayloadSource, Pipeline, PlanFileReference, PlanOp, Planner, TrainableAlgorithm }
+import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, Operation, PayloadSource, Pipeline, PlanFileReference, PlanOp, Planner, TrainableAlgorithm }
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
 import cats.data.State
 import cats.implicits._
@@ -10,7 +11,7 @@ import cats.implicits._
  * Responsible for building [[ResourcePlan]] and [[FilesPlan]] for evaluating Mantik Items in Graphs.
  * Part of [[PlannerImpl]]
  */
-private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: CachedFiles) {
+private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemStateManager: MantikItemStateManager) {
 
   /**
    * Generate the node, which provides a the data payload of a mantik item.
@@ -115,7 +116,7 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
   /** Assembles a plan for having a cached item present (temporary). */
   private def cachedTemporarySource(cachedSource: PayloadSource.Cached): State[PlanningState, FilesPlan] = {
     PlanningState.flat { planningState =>
-      planningState.evaluatedCache(cachedSource.cacheGroup) match {
+      planningState.evaluatedCache(cachedSource.siblings) match {
         case Some(files) =>
           // Node was already evalauted
           PlanningState.pure(FilesPlan(files = files))
@@ -123,7 +124,7 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
           // Node need to be re-evaluated
           for {
             filesPlan <- reevaluateCachedSource(cachedSource)
-            _ <- PlanningState.modify(_.withEvaluatedCache(cachedSource.cacheGroup, filesPlan.files))
+            _ <- PlanningState.modify(_.withEvaluatedCache(cachedSource.siblings, filesPlan.files))
           } yield {
             filesPlan
           }
@@ -133,7 +134,7 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
 
   /** Forces reassembly of a cached item. */
   private def reevaluateCachedSource(cachedSource: PayloadSource.Cached): State[PlanningState, FilesPlan] = {
-    cachedFiles.cached(cachedSource.cacheGroup) match {
+    cacheState(cachedSource.siblings) match {
       case Some(files) =>
         for {
           contentTypes <- fileContentTypes(cachedSource.source)
@@ -142,14 +143,14 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
               PlanningState(_.readFileRefWithContentType(fileId, contentType))
           }.sequence
         } yield {
-          FilesPlan(files = fileReads.toIndexedSeq)
+          FilesPlan(files = fileReads)
         }
       case None =>
         for {
           opFiles <- translateItemPayloadSourceAsFiles(cachedSource.source, canBeTemporary = true)
-          _ <- markFileAsCachedFile(opFiles.fileRefs, cachedSource.cacheGroup)
+          _ <- markFileAsCachedFile(opFiles.fileRefs, cachedSource.siblings)
         } yield {
-          val cacheFiles = cachedSource.cacheGroup.zip(opFiles.fileRefs)
+          val cacheFiles = cachedSource.siblings.zip(opFiles.fileRefs)
           FilesPlan(
             PlanOp.combine(
               opFiles.preOp,
@@ -158,6 +159,20 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
             files = opFiles.files
           )
         }
+    }
+  }
+
+  /** Returns the FileIds of a cached sibling set, if and only if all of them are cached available. */
+  private def cacheState(siblings: Vector[ItemId]): Option[Vector[String]] = {
+    val cacheFiles = for {
+      itemId <- siblings
+      state <- mantikItemStateManager.get(itemId)
+      cacheFile <- state.cacheFile
+    } yield cacheFile
+    if (cacheFiles.size == siblings.size) {
+      Some(cacheFiles)
+    } else {
+      None
     }
   }
 
@@ -171,8 +186,8 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, cachedFiles: 
     }
   }
 
-  private def markFileAsCachedFile(files: IndexedSeq[PlanFileReference], cacheKeys: CacheKeyGroup): State[PlanningState, Unit] = {
-    val toCached = files.zip(cacheKeys).toMap
+  private def markFileAsCachedFile(files: IndexedSeq[PlanFileReference], items: Vector[ItemId]): State[PlanningState, Unit] = {
+    val toCached = files.zip(items).toMap
     PlanningState { state =>
       val updatedState = state
         .markCached(toCached)
