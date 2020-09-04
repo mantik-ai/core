@@ -4,7 +4,7 @@ import java.nio.file.Paths
 import ai.mantik.componently.utils.EitherExtensions._
 import ai.mantik.ds.{ FundamentalType, Image, ImageChannel, TabularData }
 import ai.mantik.planner.select.AutoAdapt
-import ai.mantik.planner.{ Context, Pipeline }
+import ai.mantik.planner.{ PlanningContext, Pipeline }
 
 object MnistTraining extends ExampleBase {
 
@@ -13,7 +13,7 @@ object MnistTraining extends ExampleBase {
 
   val TrainingAlgorithmPath = Paths.get("bridge/tf/train/example/mnist_linear")
 
-  override protected def run(implicit context: Context): Unit = {
+  override protected def run(implicit context: PlanningContext): Unit = {
     context.pushLocalMantikItem(MnistTrainingPath)
     context.pushLocalMantikItem(TrainingAlgorithmPath)
     context.pushLocalMantikItem(MnistTestPath)

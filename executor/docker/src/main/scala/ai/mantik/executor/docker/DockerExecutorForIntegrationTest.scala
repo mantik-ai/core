@@ -1,18 +1,15 @@
 package ai.mantik.executor.docker
 
-import java.time.Clock
-
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.common.LabelConstants
-import ai.mantik.executor.{ Executor, ExecutorForIntegrationTest }
 import ai.mantik.executor.docker.api.DockerClient
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
-import ai.mantik.executor.server.{ ExecutorServer, ServerConfig }
+import ai.mantik.executor.{ Executor, ExecutorForIntegrationTest }
 import com.typesafe.config.{ Config => TypesafeConfig }
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
 class DockerExecutorForIntegrationTest(config: TypesafeConfig)(implicit akkaRuntime: AkkaRuntime) extends ExecutorForIntegrationTest {
   val logger = Logger(getClass)

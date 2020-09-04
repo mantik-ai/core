@@ -5,11 +5,11 @@ import java.nio.file.Paths
 
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
-import ai.mantik.planner.{ Context, DataSet }
+import ai.mantik.planner.{ PlanningContext, DataSet }
 
 object DataSetTransformation extends ExampleBase {
 
-  override protected def run(implicit context: Context): Unit = {
+  override protected def run(implicit context: PlanningContext): Unit = {
     val bridge = Paths.get("bridge/tf/saved_model")
     val sampleFile = Paths.get("bridge/tf/saved_model/test/resources/samples/double_multiply")
     context.pushLocalMantikItem(bridge)

@@ -9,14 +9,15 @@ import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ Session, SessionManager }
-import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, BuiltInItems, DataSet, MantikItem, Pipeline, TrainableAlgorithm }
+import ai.mantik.planner.impl.MantikItemStateManager
+import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, BuiltInItems, DataSet, MantikItem, MantikItemState, Pipeline, TrainableAlgorithm }
 import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
 import javax.inject.Inject
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService with RpcServiceBase {
+class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateManager: MantikItemStateManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService with RpcServiceBase {
 
   override def get(request: GetRequest): Future[NodeResponse] = handleErrors {
     for {
@@ -32,7 +33,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager)(implici
       case Some(builtIn) => Future.successful(builtIn)
       case None => session.components.retriever.get(name).map {
         case (artifact, hull) =>
-          MantikItem.fromMantikArtifact(artifact, hull)
+          MantikItem.fromMantikArtifact(artifact, stateManager, hull)
       }
     }
   }

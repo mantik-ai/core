@@ -15,6 +15,7 @@ class LearnCachingSpec extends IntegrationTestBase with Samples {
   }
 
   it should "make cache files persistent when needed" in new EnvWithTrainedAlgorithm {
+    MantikItemAnalyzer(stats).isCached shouldBe true
     MantikItemAnalyzer(stats).isCacheEvaluated shouldBe false
     stats.fetch.run()
     MantikItemAnalyzer(stats).isCacheEvaluated shouldBe true
@@ -22,7 +23,7 @@ class LearnCachingSpec extends IntegrationTestBase with Samples {
     await(fileRepository.requestFileGet(cacheFile)).isTemporary shouldBe true
 
     stats.save().run()
-    stats.state.get.payloadFile.get shouldNot be(cacheFile)
-    await(fileRepository.requestFileGet(stats.state.get.payloadFile.get)).isTemporary shouldBe false
+    context.state(stats).payloadFile.get shouldNot be(cacheFile)
+    await(fileRepository.requestFileGet(context.state(stats).payloadFile.get)).isTemporary shouldBe false
   }
 }

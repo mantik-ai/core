@@ -17,15 +17,15 @@ import javax.inject.Inject
  *
  * This way it's pure functional and easier to test.
  */
-private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: CachedFiles) extends Planner {
+private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateManager: MantikItemStateManager) extends Planner {
 
   val elements = new PlannerElements(config)
-  val resourcePlanBuilder = new ResourcePlanBuilder(elements, cachedFiles)
+  val resourcePlanBuilder = new ResourcePlanBuilder(elements, mantikItemStateManager)
 
   override def convert[T](action: Action[T]): Plan[T] = {
     val (planningState, planOp) = convertSingleAction(action).run(PlanningState()).value
     val compressed = PlanOp.compress(planOp)
-    Plan(compressed, planningState.files, planningState.cacheGroups.toList)
+    Plan(compressed, planningState.files, planningState.cacheItems)
   }
 
   def convertSingleAction[T](action: Action[T]): State[PlanningState, PlanOp[T]] = {
@@ -59,7 +59,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
 
   /** Ensure that the item is stored inside the database. */
   def ensureItemStored(item: MantikItem): State[PlanningState, FilesPlan] = {
-    PlanningState.inspect(_.overrideState(item)).flatMap { itemState =>
+    PlanningState.inspect(_.overrideState(item, mantikItemStateManager)).flatMap { itemState =>
       item.mantikId match {
         case i: ItemId =>
           if (itemState.stored) {
@@ -77,7 +77,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
               for {
                 plan <- readPayloadFile(item)
                 withTag = plan.copy(preOp = PlanOp.combine(plan.preOp, PlanOp.TagMantikItem(item, n)))
-                _ <- PlanningState.modify(_.withOverrideFunc(item, _.copy(storedWithName = Some(n))))
+                _ <- PlanningState.modify(_.withOverrideFunc(item, mantikItemStateManager, _.copy(storedWithName = Some(n))))
               } yield {
                 withTag
               }
@@ -93,8 +93,8 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
   /** An empty operation which returns the payload file of an item, with a given itemState. */
   private def readPayloadFile(item: MantikItem): State[PlanningState, FilesPlan] = {
     PlanningState { planningState =>
-      val overrideState = planningState.overrideState(item)
-      val itemState = item.state.get
+      val overrideState = planningState.overrideState(item, mantikItemStateManager)
+      val itemState = mantikItemStateManager.getOrInit(item)
       overrideState.payloadAvailable match {
         case Some(already) =>
           // Payload already loaded
@@ -111,6 +111,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
               val files = IndexedSeq(readFileWithContentType)
               val updatedState2 = updatedState.withOverrideFunc(
                 item,
+                mantikItemStateManager,
                 _.copy(payloadAvailable = Some(files))
               )
               updatedState2 -> FilesPlan(
@@ -155,10 +156,10 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
     resourcePlanBuilder.translateItemPayloadSourceAsFiles(item.payloadSource, canBeTemporary = false).flatMap { filesPlan =>
       val files = filesPlan.files
       PlanningState.apply { state =>
-        val updatedState = state.withOverrideFunc(item, e => e.copy(
+        val updatedState = state.withOverrideFunc(item, mantikItemStateManager, e => e.copy(
           payloadAvailable = Some(files),
           stored = true,
-          storedWithName = item.name.orElse(e.storedWithName)
+          storedWithName = mantikItemStateManager.getOrInit(item).namedMantikItem.orElse(e.storedWithName)
         )
         )
         val fileRef = files.headOption.map(_.ref)
@@ -187,7 +188,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
 
   private def deployAlgorithm(algorithm: Algorithm, nameHint: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
-      state.overrideState(algorithm).deployed match {
+      state.overrideState(algorithm, mantikItemStateManager).deployed match {
         case Some(Left(existing)) =>
           // already deployed before the planner ran
           PlanningState.pure(PlanOp.Const(existing))
@@ -199,7 +200,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
           for {
             filePlan <- ensureItemStored(algorithm)
             memoryId <- PlanningState.apply(_.withNextMemoryId)
-            _ <- PlanningState.modify { _.withOverrideFunc(algorithm, _.copy(deployed = Some(Right(memoryId)))) }
+            _ <- PlanningState.modify { _.withOverrideFunc(algorithm, mantikItemStateManager, _.copy(deployed = Some(Right(memoryId)))) }
           } yield {
             val file = filePlan.files.headOption
             val container = elements.algorithmContainer(algorithm, file.map(_.ref))
@@ -224,7 +225,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
   /** Deploy a pipeline. */
   def deployPipeline(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
-      state.overrideState(pipeline).deployed match {
+      state.overrideState(pipeline, mantikItemStateManager).deployed match {
         case Some(Left(existing)) =>
           // already deployed before the planner ran
           PlanningState.pure(PlanOp.Const(existing))
@@ -250,7 +251,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
   private def buildPipelineDeployment(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
     for {
       memoryId <- PlanningState.apply(_.withNextMemoryId)
-      _ <- PlanningState.modify(_.withOverrideFunc(pipeline, _.copy(
+      _ <- PlanningState.modify(_.withOverrideFunc(pipeline, mantikItemStateManager, _.copy(
         deployed = Some(Right(memoryId))
       )))
     } yield {
@@ -280,7 +281,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, cachedFiles: Cached
   /** Ensure that an algorithm is deployed. */
   def ensureAlgorithmDeployed(algorithm: Algorithm): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
-      state.overrideState(algorithm).deployed match {
+      state.overrideState(algorithm, mantikItemStateManager).deployed match {
         case Some(Left(deploymentState)) =>
           // already deployed
           PlanningState.pure(PlanOp.Const(deploymentState))

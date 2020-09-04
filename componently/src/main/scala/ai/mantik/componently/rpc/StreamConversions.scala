@@ -3,6 +3,7 @@ package ai.mantik.componently.rpc
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicLong
 
+import ai.mantik.componently.AkkaHelper.materializer
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Keep, Sink, Source }
@@ -204,7 +205,6 @@ object StreamConversions {
     val promise = Promise[T]
     val streamObserver = new StreamObserver[T] {
       override def onNext(value: T): Unit = {
-        println(s"Single Stream Result ${value}")
         promise.success(value)
       }
 
@@ -239,61 +239,17 @@ object StreamConversions {
   }
 
   /**
-   * Generate a StreamObserver with a special handling for the first element
-   * and a generic handling for all elements (including first).
-   * This can be used, when requesting streamy data, where the first element contains some extra information.
-   *
-   * @param decodeHeader the method which decodes the first element
-   * @param decodeAll the method which decodes all elemensts, including the first
-   * @param errorDecoder a partial fucntion for error decoding.
-   *
-   * @tparam T the element type of the StreamObserver
-   * @tparam H the decoded header type
-   * @tparam A the decoded type for the whole stream.
-   *
-   * @return A stream observer, and a future to the decoded header and a source for the result of decodeAll.
-   */
-  def headerStreamSource[T, H, A](
-    decodeHeader: T => H,
-    decodeAll: T => A,
-    errorDecoder: PartialFunction[Throwable, Throwable] = PartialFunction.empty
-  )(implicit ec: ExecutionContext, materializer: Materializer): (StreamObserver[T], Future[(H, Source[A, _])]) = {
-    val promise = Promise[(H, Source[A, _])]
-    val observer = StreamConversions.splitFirst[T] {
-      case Success(value) =>
-        val header = decodeHeader(value)
-        val constructed: Source[A, StreamObserver[T]] = StreamConversions
-          .streamObserverSource[T]().prependMat(Source.single(value))(Keep.left)
-          .map(decodeAll)
-          .mapError(errorDecoder)
-        val (observer, source) = constructed.preMaterialize()
-        promise.trySuccess(header -> source)
-        observer
-      case Failure(error) =>
-        promise.tryFailure(error)
-        StreamConversions.empty
-    }
-    observer -> promise.future.transform {
-      case Success(ok)                               => Success(ok)
-      case Failure(e) if errorDecoder.isDefinedAt(e) => Failure(errorDecoder(e))
-      case Failure(e)                                => Failure(e)
-    }
-  }
-
-  /**
    * Helper to implement streamy input functions with special treating for the first (header) element.
    *
    * The function f is called with the first element and the source of ALL elements (including the first)
    *
    * f is allowed to block, but not too long.
    *
-   * This is like the inverse of [[headerStreamSource]]
-   *
    * @param errorHandler an error handling function.
    * @param f handler function
    * @return a A Stream Observer which handles the input type.
    */
-  def streamingRequest[Input, Output](
+  def respondMultiInSingleOutWithHeader[Input, Output](
     errorHandler: PartialFunction[Throwable, Throwable],
     responseObserver: StreamObserver[Output]
   )(
@@ -332,5 +288,44 @@ object StreamConversions {
             StreamConversions.empty
         }
     }
+  }
+
+  /** Respond to a multi out request. */
+  def respondMultiOut[Output](
+    errorHandler: PartialFunction[Throwable, Throwable],
+    responseObserver: StreamObserver[Output],
+    source: Source[Output, _]
+  )(implicit materializer: Materializer): Unit = {
+    val sink = sinkFromStreamObserver(responseObserver)
+    source.mapError(errorHandler).runWith(sink)
+  }
+
+  /** Call a multi out request. */
+  def callMultiOut[Input, Output, R](
+    errorHandler: PartialFunction[Throwable, Throwable],
+    f: (Input, StreamObserver[Output]) => Unit,
+    argument: Input
+  )(handler: Sink[Output, R])(implicit materializer: Materializer): R = {
+
+    try {
+      val (observer, source) = streamObserverSource[Output]().preMaterialize()
+      f(argument, observer)
+      source.mapError(errorHandler).runWith(handler)
+    } catch {
+      case e if errorHandler.isDefinedAt(e) => throw errorHandler(e)
+    }
+  }
+
+  /**
+   * Calls an gRpc resource with multiple input and a single output with special header handling
+   * @param f gRpc Function
+   * @param header the header to sent
+   */
+  def callMultiInSingleOutWithHeader[I, O](f: StreamObserver[O] => StreamObserver[I], header: I): Sink[I, Future[O]] = {
+    // TODO: This should be simpler and should do real work at the moment the Sink is materialized ?!
+    val (responseObserver, future) = StreamConversions.singleStreamObserverFuture[O]()
+    val inputHandler = f(responseObserver)
+    inputHandler.onNext(header)
+    StreamConversions.sinkFromStreamObserver(inputHandler).mapMaterializedValue(_ => future)
   }
 }

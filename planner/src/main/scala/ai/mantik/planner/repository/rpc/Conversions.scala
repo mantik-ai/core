@@ -1,19 +1,15 @@
 package ai.mantik.planner.repository.rpc
 
-import java.time.Instant
-
-import ai.mantik.componently.rpc.RpcConversions
-import ai.mantik.elements.errors.{ MantikException, MantikRemoteException }
-import ai.mantik.elements.{ ItemId, MantikId, MantikHeader, NamedMantikId }
-import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact }
-import ai.mantik.planner.repository.protos.types.{ MantikArtifact => ProtoMantikArtifact }
-import ai.mantik.planner.repository.protos.types.{ DeploymentInfo => ProtoDeploymentInfo }
-import io.grpc.Status.Code
-import io.grpc.{ Status, StatusRuntimeException }
+import ai.mantik.elements.errors.{ ErrorCodes, MantikException, MantikRemoteException }
+import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
+import akka.util.ByteString
+import io.circe.Decoder
+import io.circe.jawn.JawnParser
+import io.grpc.StatusRuntimeException
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-private[rpc] object Conversions {
+private[mantik] object Conversions {
 
   def encodeMantikId(mantikId: MantikId): String = {
     mantikId.toString
@@ -37,44 +33,6 @@ private[rpc] object Conversions {
 
   def decodeItemId(str: String): ItemId = {
     ItemId.fromString(str)
-  }
-
-  def encodeMantikArtifact(item: MantikArtifact): ProtoMantikArtifact = {
-    ProtoMantikArtifact(
-      mantikHeader = item.mantikHeader,
-      fileId = RpcConversions.encodeOptionalString(item.fileId),
-      mantikId = RpcConversions.encodeOptionalString(item.namedId.map(encodeMantikId)),
-      itemId = encodeItemId(item.itemId),
-      deploymentInfo = item.deploymentInfo.map(encodeDeploymentInfo)
-    )
-  }
-
-  def decodeMantikArtifact(item: ProtoMantikArtifact): MantikArtifact = {
-    MantikArtifact(
-      mantikHeader = item.mantikHeader,
-      fileId = RpcConversions.decodeOptionalString(item.fileId),
-      namedId = RpcConversions.decodeOptionalString(item.mantikId).map(Conversions.decodeNamedMantikId),
-      itemId = decodeItemId(item.itemId),
-      deploymentInfo = item.deploymentInfo.map(decodeDeploymentInfo)
-    )
-  }
-
-  def encodeDeploymentInfo(item: DeploymentInfo): ProtoDeploymentInfo = {
-    ProtoDeploymentInfo(
-      name = item.name,
-      internalUrl = item.internalUrl,
-      externalUrl = RpcConversions.encodeOptionalString(item.externalUrl),
-      timestamp = item.timestamp.toEpochMilli
-    )
-  }
-
-  def decodeDeploymentInfo(deploymentInfo: ProtoDeploymentInfo): DeploymentInfo = {
-    DeploymentInfo(
-      name = deploymentInfo.name,
-      internalUrl = deploymentInfo.internalUrl,
-      externalUrl = RpcConversions.decodeOptionalString(deploymentInfo.externalUrl),
-      timestamp = Instant.ofEpochMilli(deploymentInfo.timestamp)
-    )
   }
 
   val encodeErrors: PartialFunction[Throwable, Throwable] = {
@@ -106,6 +64,29 @@ private[rpc] object Conversions {
     f.recover {
       case e if decodeErrors.isDefinedAt(e) =>
         throw decodeErrors(e)
+    }
+  }
+
+  private val jawnParser = new JawnParser()
+
+  /**
+   * Decode some serialized JSON object.
+   * @param json the JSON object
+   * @param msg message to throw if decoding fails (with original exception message)
+   */
+  def decodeJsonItem[T: Decoder](json: String, msg: String => String): T = {
+    val maybeItem = jawnParser.decode[T](json)
+    maybeItem match {
+      case Left(error) => ErrorCodes.ProtocolError.throwIt(msg(Option(error.getMessage).getOrElse("unknown")))
+      case Right(ok)   => ok
+    }
+  }
+
+  /** Like decodeJsonItem but uses byte buffers to avoid copying. */
+  def decodeLargeJsonItem[T: Decoder](json: ByteString, msg: String => String): T = {
+    jawnParser.decodeByteBuffer[T](json.asByteBuffer) match {
+      case Left(error) => ErrorCodes.ProtocolError.throwIt(msg(Option(error.getMessage).getOrElse("unknown")))
+      case Right(ok)   => ok
     }
   }
 }

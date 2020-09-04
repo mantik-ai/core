@@ -46,6 +46,8 @@ object ErrorCodes {
 
   val RemoteRegistryCouldNotGetToken = add(RemoteRegistryFailure.derive("CouldNotGetToken"))
 
+  val ProtocolError = addCode("ProtocolError", Code.INVALID_ARGUMENT)
+
   val InternalError = addCode("Internal", Code.INTERNAL)
 
   /** Return a list of default error codes. */

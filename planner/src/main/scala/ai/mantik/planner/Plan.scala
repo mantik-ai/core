@@ -16,7 +16,7 @@ import ai.mantik.planner.graph.Graph
 case class Plan[T](
     op: PlanOp[T],
     files: List[PlanFile],
-    cacheGroups: List[CacheKeyGroup]
+    cachedItems: Set[Vector[ItemId]]
 )
 
 /** An Id for a [[PlanFile]] */
@@ -36,10 +36,10 @@ case class PlanFile(
     write: Boolean = false,
     fileId: Option[String] = None,
     temporary: Boolean = false,
-    cacheKey: Option[CacheKey] = None
+    cacheItemId: Option[ItemId] = None
 ) {
   override def toString: String = {
-    s"File(ref=${ref},read=${read},write=${write},fileId=${fileId},temp=${temporary},cacheKey=${cacheKey})"
+    s"File(ref=${ref},read=${read},write=${write},fileId=${fileId},temp=${temporary},cacheItemId=${cacheItemId})"
   }
 }
 
@@ -130,8 +130,8 @@ object PlanOp {
   ) extends PlanOp[DeploymentState]
 
   /** Mark files as being cached. */
-  case class MarkCached(files: List[(CacheKey, PlanFileReference)]) extends ProceduralPlanOp with BasicOp[Unit] {
-    def cacheGroup: CacheKeyGroup = files.map(_._1)
+  case class MarkCached(files: Vector[(ItemId, PlanFileReference)]) extends ProceduralPlanOp with BasicOp[Unit] {
+    def siblingIds: Vector[ItemId] = files.map(_._1)
   }
 
   /**

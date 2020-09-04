@@ -1,11 +1,11 @@
 package com.example.examples
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
-import ai.mantik.planner.{ Context, DataSet }
+import ai.mantik.planner.{ PlanningContext, DataSet }
 
 object CacheExample extends ExampleBase {
 
-  override protected def run(implicit context: Context): Unit = {
+  override protected def run(implicit context: PlanningContext): Unit = {
 
     val sample = DataSet.literal(
       Bundle.build(

@@ -2,11 +2,11 @@ package com.example.examples
 
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
-import ai.mantik.planner.{ Context, DataSet }
+import ai.mantik.planner.{ PlanningContext, DataSet }
 
 object ShowDataSet extends ExampleBase {
 
-  override protected def run(implicit context: Context): Unit = {
+  override protected def run(implicit context: PlanningContext): Unit = {
     val id = "sample1"
 
     val ds = DataSet.literal(

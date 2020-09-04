@@ -113,9 +113,28 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     logger.info(s"Adding local Directory ${dir} with MantikHeader")
     val file = dir.resolve("MantikHeader")
     val mantikHeaderContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
+
+    val payloadDir = dir.resolve("payload")
+    val tempFile = Files.createTempFile("mantik_context", ".zip")
+    val payloadSource: Option[(String, Source[ByteString, _])] = if (Files.isDirectory(payloadDir)) {
+
+      ZipUtils.zipDirectory(payloadDir, tempFile)
+      val source = FileIO.fromPath(tempFile)
+      Some(ContentTypes.ZipFileContentType -> source)
+    } else {
+      logger.info("No payload directory found, assuming no payload")
+      None
+    }
+
+    addMantikItemToRepository(mantikHeaderContent, id, payloadSource).andThen {
+      case _ => tempFile.toFile.delete()
+    }
+  }
+
+  override def addMantikItemToRepository(mantikHeaderContent: String, id: Option[NamedMantikId], payload: Option[(String, Source[ByteString, _])]): Future[MantikArtifact] = {
     // Parsing
     val mantikHeader = MantikHeader.fromYaml(mantikHeaderContent) match {
-      case Left(error) => throw new IllegalArgumentException("Could not parse mantik header", error)
+      case Left(error) => throw error
       case Right(ok)   => ok
     }
 
@@ -123,25 +142,14 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     val itemId = ItemId.generate()
 
     ensureDependencies(mantikId.getOrElse(itemId), mantikHeader).flatMap { _ =>
-      val payloadDir = dir.resolve("payload")
-      val payloadSource: Option[(String, Source[ByteString, _])] = if (Files.isDirectory(payloadDir)) {
-        val tempFile = Files.createTempFile("mantik_context", ".zip")
-        ZipUtils.zipDirectory(payloadDir, tempFile)
-        val source = FileIO.fromPath(tempFile)
-        Some(ContentTypes.ZipFileContentType -> source)
-      } else {
-        logger.info("No payload directory found, assuming no payload")
-        None
-      }
-
       val artifact = MantikArtifact(mantikHeaderContent, None, mantikId, itemId)
-      val timeout = if (payloadSource.isDefined) {
+      val timeout = if (payload.isDefined) {
         fileTransferTimeout
       } else {
         dbLookupTimeout
       }
       FutureHelper.addTimeout(
-        localMantikRegistry.addMantikArtifact(artifact, payloadSource), "Uploading Artifact", timeout
+        localMantikRegistry.addMantikArtifact(artifact, payload), "Uploading Artifact", timeout
       ).map { generatedArtifact =>
           logger.info(s"Stored ${artifact.itemId} done, name=${artifact.namedId}, fileId=${artifact.fileId}")
           generatedArtifact

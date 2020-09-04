@@ -10,8 +10,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 /** Generates [[ExecutionOpenFiles]]. */
 private[impl] class ExecutionOpenFilesBuilder(
-    fileRepository: FileRepository,
-    fileCache: FileCache
+    fileRepository: FileRepository
 )(implicit ex: ExecutionContext) {
 
   private val logger = LoggerFactory.getLogger(getClass)
@@ -37,7 +36,7 @@ private[impl] class ExecutionOpenFilesBuilder(
   }
 
   private def openFile(state: ExecutionOpenFiles, file: PlanFile): Future[ExecutionOpenFiles] = {
-    if (file.cacheKey.isDefined) {
+    if (file.cacheItemId.isDefined) {
       if (state.readFiles.contains(file.ref)) {
         // already opened from caching
         return Future.successful(state)

@@ -54,10 +54,15 @@ class ReservedNameGeneratorSpec extends TestBase with AkkaSupport {
 
   it should "work for a lot of elements" in new Env {
     // there is only place for MaxSpace elements, so we will have collisions
+    var count = 0
     val futures = for (i <- 0 until TestSize) yield {
       generator.reserve { s =>
         Future {
           poolLock.synchronized {
+            count += 1
+            if (pool.contains(s)) {
+              println(s"Collision for ${s} after ${count}")
+            }
             pool += s
           }
           s
@@ -72,12 +77,14 @@ class ReservedNameGeneratorSpec extends TestBase with AkkaSupport {
 
   it should "work with a custom prefix" in new Env {
     // note: the prefix is ignored in this test, but it will fetch the list each time
+    var count = 0
     val futures = for (i <- 0 until TestSize) yield {
       generator.reserveWithPrefix("prefix") { s =>
         Future {
           poolLock.synchronized {
+            count += 1
             if (pool.contains(s)) {
-              println(s"Collision for ${s}")
+              println(s"Collision for ${s} after ${count}")
             }
             pool += s
           }

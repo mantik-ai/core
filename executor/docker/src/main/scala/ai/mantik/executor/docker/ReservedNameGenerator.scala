@@ -65,14 +65,14 @@ class ReservedNameGenerator(
       }
     } else {
       lock.synchronized {
-        if (countUntilRelisting <= 0) {
-          return reserveNameWithPrefix(prefix, true)
-        } else {
+        if (countUntilRelisting > 0) {
           countUntilRelisting -= 1
           val chosen = chooseName(prefix)
-          Future.successful(chosen)
+          return Future.successful(chosen)
         }
       }
+      // must be outside the lock to avoid deadlocks
+      reserveNameWithPrefix(prefix, forceReload = true)
     }
   }
 
@@ -86,10 +86,15 @@ class ReservedNameGenerator(
   }
 
   private val reload = new SingleExecutableFuture({
+    // Note: there is a race condition after the lookup
+    // So we also add reserved names before to the existing Names list.
+    val oldReserved = lock.synchronized {
+      reserved
+    }
     backend.lookupAlreadyTaken().map { alreadyTaken =>
       lock.synchronized {
         countUntilRelisting = generatingSize
-        existingNames = alreadyTaken
+        existingNames = alreadyTaken ++ oldReserved
       }
       ()
     }

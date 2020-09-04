@@ -27,7 +27,7 @@ case class Algorithm(
 object Algorithm {
 
   def apply(source: Source, mantikHeader: MantikHeader[AlgorithmDefinition], bridge: Bridge): Algorithm = {
-    Algorithm(MantikItemCore(source, mantikHeader, bridge = Some(bridge)))
+    Algorithm(MantikItemCore(source, mantikHeader, bridge))
   }
 
   /** Convert a Select statement into an algorithm. */
@@ -42,7 +42,7 @@ object Algorithm {
       MantikItemCore(
         Source.constructed(),
         mantikHeader,
-        bridge = Some(Bridge.selectBridge)
+        bridge = Bridge.selectBridge
       ), Some(select))
   }
 }

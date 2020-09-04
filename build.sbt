@@ -208,23 +208,7 @@ lazy val componently = makeProject("componently")
 lazy val executorApi = makeProject("executor/api", "executorApi")
   .dependsOn(componently)
   .settings(
-    name := "executor-api",
-    libraryDependencies ++= Seq(
-      "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
-
-      // Akka
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      // Akka http Circe JSON,
-      "de.heikoseeberger" %% "akka-http-circe" % "1.25.2",
-
-      // Circe
-      "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
-
-      // Logging
-      "org.slf4j" % "slf4j-api" % slf4jVersion,
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-    )
+    name := "executor-api"
   )
 
 lazy val executorCommon = makeProject("executor/common", "executorCommon")
@@ -278,34 +262,9 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
   .enablePlugins(BuildInfoPlugin)
   .settings(configureBuildInfo("ai.mantik.executor.kubernetes.buildinfo"))
 
-lazy val executorApp = makeProject("executor/app", "executorApp")
-  .dependsOn(executorKubernetes, executorDocker)
-  .settings(
-    name := "executor-app"
-  )
-  .enablePlugins(BuildInfoPlugin)
-  .settings(
-    libraryDependencies ++= Seq(
-      // Logging
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-    )
-  )
-  .settings(configureBuildInfo("ai.mantik.executor.buildinfo"))
-  .enablePlugins(DockerPlugin, AshScriptPlugin)
-  .settings(
-    mainClass in Compile := Some("ai.mantik.executor.Main"),
-    packageName := "executor",
-    dockerExposedPorts := Seq(8085),
-    dockerBaseImage := "openjdk:8u191-jre-alpine3.9",
-    daemonUserUid in Docker := None,
-    daemonUser in Docker := "daemon",
-    version in Docker := "latest"
-  )
-
 lazy val planner = makeProject("planner")
   .dependsOn(ds, elements, executorApi, componently, mnpScala)
-  .dependsOn(executorApp % "it")
+  .dependsOn(executorKubernetes % "it", executorDocker % "it")
   .settings(
     name := "planner",
     libraryDependencies ++= Seq(
@@ -375,7 +334,6 @@ lazy val root = (project in file("."))
     executorCommon,
     executorKubernetes,
     executorDocker,
-    executorApp,
     examples,
     planner,
     engine,

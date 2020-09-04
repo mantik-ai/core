@@ -5,9 +5,35 @@ import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMant
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.util.FakeBridges
 import ai.mantik.testutils.TestBase
+import io.circe.syntax._
 
-class MantikItemSpec extends TestBase with FakeBridges {
+class MantikItemSpec extends TestBase {
+  import MantikItemSpec.sample
 
+  "MantikItem" should "be JSON serializable" in {
+    val asJson = (MantikItemSpec.sample: MantikItem).asJson
+    val back = asJson.as[MantikItem]
+    back.forceRight.asJson shouldBe asJson
+    val wanted = Right(MantikItemSpec.sample)
+    back shouldBe wanted
+    // More Tests are in MantikItemCodecSpec
+  }
+
+  "withMetaVariable" should "update meta variables" in {
+    sample.mantikHeader.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(123)
+    sample.mantikId shouldBe an[ItemId]
+
+    val after = sample.withMetaValue("x", 100)
+    after.mantikHeader.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(100)
+    after.payloadSource shouldBe sample.payloadSource
+    after.source.definition shouldBe an[DefinitionSource.Derived]
+    after.mantikHeader.definition shouldBe an[AlgorithmDefinition]
+    after.mantikId shouldBe an[ItemId]
+    after.itemId shouldNot be(sample.itemId)
+  }
+}
+
+object MantikItemSpec extends FakeBridges {
   lazy val sample = Algorithm(
     Source.constructed(PayloadSource.Loaded("1", ContentTypes.ZipFileContentType)),
     MantikHeader.fromYaml(
@@ -21,108 +47,7 @@ class MantikItemSpec extends TestBase with FakeBridges {
         |  input: int32
         |  output: float32
       """.stripMargin
-    ).right.getOrElse(fail).cast[AlgorithmDefinition].getOrElse(fail),
+    ).right.getOrElse(???).cast[AlgorithmDefinition].getOrElse(???),
     algoBridge
   )
-
-  "withMetaVariable" should "update meta variables" in {
-    sample.mantikHeader.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(123)
-    sample.mantikId shouldBe an[ItemId]
-    sample.state.update(_.copy(namedMantikItem = Some("foo")))
-    sample.mantikId shouldBe NamedMantikId(name = "foo")
-
-    val after = sample.withMetaValue("x", 100)
-    after.mantikHeader.metaJson.metaVariable("x").get.value shouldBe Bundle.fundamental(100)
-    after.payloadSource shouldBe sample.payloadSource
-    after.source.definition shouldBe an[DefinitionSource.Derived]
-    after.mantikHeader.definition shouldBe an[AlgorithmDefinition]
-    after.mantikId shouldBe an[ItemId]
-  }
-
-  "initialisation" should "take over values correctly for loaded items" in {
-    val name = NamedMantikId("foo/bar")
-    val itemId = ItemId.generate()
-    val algorithm = Algorithm(
-      Source(DefinitionSource.Loaded(
-        Some(name),
-        itemId
-      ), PayloadSource.Empty),
-      sample.mantikHeader,
-      algoBridge
-    )
-    algorithm.itemId shouldBe itemId
-    algorithm.name shouldBe Some(name)
-    val state = algorithm.state.get
-    state.itemStored shouldBe true
-    state.nameStored shouldBe true
-    state.deployment shouldBe None
-    state.namedMantikItem shouldBe Some(name)
-    state.payloadFile shouldBe None
-  }
-
-  it should "also work for anonymous items" in {
-    val itemId = ItemId.generate()
-    val algorithm = Algorithm(
-      Source(DefinitionSource.Loaded(
-        None,
-        itemId
-      ), PayloadSource.Loaded("file1", ContentTypes.ZipFileContentType)),
-      sample.mantikHeader,
-      algoBridge
-    )
-    algorithm.itemId shouldBe itemId
-    algorithm.name shouldBe empty
-    val state = algorithm.state.get
-    state.itemStored shouldBe true
-    state.nameStored shouldBe false
-    state.deployment shouldBe None
-    state.namedMantikItem shouldBe None
-    state.payloadFile shouldBe Some("file1")
-  }
-
-  it should "also work for tagged items" in {
-    val name = NamedMantikId("foo/bar")
-    val otherName = NamedMantikId("new/name")
-    val itemId = ItemId.generate()
-    val algorithm = Algorithm(
-      Source(
-        DefinitionSource.Tagged(
-          otherName,
-          DefinitionSource.Loaded(Some(name), itemId)
-        ),
-        PayloadSource.Empty),
-      sample.mantikHeader,
-      algoBridge
-    )
-    algorithm.itemId shouldBe itemId
-    algorithm.name shouldBe Some(otherName)
-    val state = algorithm.state.get
-    state.itemStored shouldBe true
-    state.nameStored shouldBe false
-    state.deployment shouldBe None
-    state.namedMantikItem shouldBe Some(otherName)
-    state.payloadFile shouldBe None
-  }
-
-  it should "also work for derived items" in {
-    val name = NamedMantikId("foo/bar")
-    val itemId = ItemId.generate()
-    val algorithm = Algorithm(
-      Source(DefinitionSource.Loaded(
-        Some(name),
-        itemId
-      ), PayloadSource.Empty).derive,
-      sample.mantikHeader,
-      algoBridge
-    )
-    algorithm.itemId shouldNot be(itemId)
-    algorithm.name shouldBe empty
-    val state = algorithm.state.get
-    state.itemStored shouldBe false
-    state.nameStored shouldBe false
-    state.deployment shouldBe None
-    state.namedMantikItem shouldBe None
-    state.payloadFile shouldBe None
-  }
-
 }

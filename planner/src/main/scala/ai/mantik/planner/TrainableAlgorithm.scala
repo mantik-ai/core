@@ -3,7 +3,7 @@ package ai.mantik.planner
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ MantikHeader, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ ItemId, MantikHeader, TrainableAlgorithmDefinition }
 import ai.mantik.planner.repository.Bridge
 
 /**
@@ -37,18 +37,26 @@ final case class TrainableAlgorithm(
       case Right(ok) => ok
     }
 
+    val opResult = PayloadSource.OperationResult(op)
+
+    val algorithmId = ItemId.generate()
+    val statsId = ItemId.generate()
+
     val result = if (cached) {
-      PayloadSource.Cached(PayloadSource.OperationResult(op))
+      PayloadSource.Cached(opResult, Vector(algorithmId, statsId))
     } else {
-      PayloadSource.OperationResult(op)
+      opResult
     }
 
     val algorithmResult = Algorithm(
       Source.constructed(PayloadSource.Projection(result)),
       trainedMantikHeader,
       trainedBridge
+    ).withItemId(algorithmId)
+
+    val statsResult = DataSet.natural(Source.constructed(PayloadSource.Projection(result, 1)), statType).withItemId(
+      statsId
     )
-    val statsResult = DataSet.natural(Source.constructed(PayloadSource.Projection(result, 1)), statType)
     (algorithmResult, statsResult)
   }
 

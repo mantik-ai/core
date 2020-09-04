@@ -4,7 +4,7 @@ import ai.mantik.componently.AkkaRuntime
 import ai.mantik.componently.di.AkkaModule
 import ai.mantik.engine.server.{EngineServer, ServiceModule}
 import ai.mantik.engine.{EngineClient, EngineModule}
-import ai.mantik.planner.Context
+import ai.mantik.planner.PlanningContext
 import ai.mantik.testutils.{AkkaSupport, TestBase}
 import com.google.inject.Guice
 import com.typesafe.config.{Config, ConfigFactory}
@@ -12,7 +12,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 /** Base classes for integration tests. */
 abstract class IntegrationTestBase extends TestBase with AkkaSupport {
 
-  protected var context: Context = _
+  protected var context: PlanningContext = _
   protected var engineServer: EngineServer = _
   protected var engineClient: EngineClient = _
 
@@ -24,11 +24,11 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport {
     val injector = Guice.createInjector(
       new AkkaModule(),
       ServiceModule,
-      new EngineModule(clientConfig = None)
+      new EngineModule()
     )
     engineServer = injector.getInstance(classOf[EngineServer])
     engineServer.start()
     engineClient = new EngineClient(s"localhost:${engineServer.port}")
-    context = engineClient.createContext()
+    context = engineClient.planningContext
   }
 }

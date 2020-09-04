@@ -8,7 +8,7 @@ import ai.mantik.elements.errors.{ ErrorCodes, MantikAsyncException }
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.{ FileCache, FileRepositoryServerRemotePresence, MnpPlanExecutor }
+import ai.mantik.planner.impl.exec.{ FileRepositoryServerRemotePresence, MnpPlanExecutor }
 import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
 import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
 import javax.inject.Inject
@@ -18,44 +18,24 @@ import scala.concurrent.{ Await, Future }
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
-private[planner] class ContextImpl @Inject() (
+private[planner] class PlanningContextImpl @Inject() (
     val localRegistry: LocalMantikRegistry,
     val planner: Planner,
     val planExecutor: PlanExecutor,
     val remoteRegistry: RemoteMantikRegistry,
-    val retriever: MantikArtifactRetriever
-)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Context {
+    val retriever: MantikArtifactRetriever,
+    val mantikItemStateManager: MantikItemStateManager
+)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanningContext {
   private val jobTimeout = config.getFiniteDuration("mantik.planner.jobTimeout")
 
-  override def loadDataSet(id: MantikId): DataSet = {
-    load[DataSet](id)
-  }
-
-  override def loadAlgorithm(id: MantikId): Algorithm = {
-    load[Algorithm](id)
-  }
-
-  override def loadTrainableAlgorithm(id: MantikId): TrainableAlgorithm = {
-    load[TrainableAlgorithm](id)
-  }
-
-  override def loadPipeline(id: MantikId): Pipeline = {
-    load[Pipeline](id)
+  override def load(id: MantikId): MantikItem = {
+    val (artifact, hull) = await(retriever.get(id))
+    MantikItem.fromMantikArtifact(artifact, mantikItemStateManager, hull)
   }
 
   override def pull(id: MantikId): MantikItem = {
     val (artifact, hull) = await(retriever.pull(id))
-    MantikItem.fromMantikArtifact(artifact, hull)
-  }
-
-  private def load[T <: MantikItem](id: MantikId)(implicit classTag: ClassTag[T#DefinitionType]): T = {
-    val (artifact, hull) = await(retriever.get(id))
-    artifact.parsedMantikHeader.definitionAs[T#DefinitionType] match {
-      case Left(error) => throw ErrorCodes.MantikItemWrongType.toException("Wrong item type", error)
-      case _           => // ok
-    }
-    val item = MantikItem.fromMantikArtifact(artifact, hull)
-    item.asInstanceOf[T]
+    MantikItem.fromMantikArtifact(artifact, mantikItemStateManager, hull)
   }
 
   override def execute[T](action: Action[T]): T = {
@@ -75,9 +55,13 @@ private[planner] class ContextImpl @Inject() (
   override def pushLocalMantikItem(dir: Path, id: Option[NamedMantikId] = None): MantikId = {
     await(retriever.addLocalMantikItemToRepository(dir, id)).mantikId
   }
+
+  override def state(item: MantikItem): MantikItemState = {
+    mantikItemStateManager.getOrDefault(item)
+  }
 }
 
-private[mantik] object ContextImpl {
+private[mantik] object PlanningContextImpl {
 
   /**
    * Construct a context with components
@@ -89,25 +73,22 @@ private[mantik] object ContextImpl {
     fileRepositoryServer: FileRepositoryServer,
     executor: Executor,
     registry: RemoteMantikRegistry
-  )(implicit akkaRuntime: AkkaRuntime): Context = {
-    val fileCache = new FileCache()
-    val planner = new PlannerImpl(akkaRuntime.config, fileCache)
+  )(implicit akkaRuntime: AkkaRuntime): PlanningContextImpl = {
+    val mantikItemStateManager = new MantikItemStateManager()
+    val planner = new PlannerImpl(akkaRuntime.config, mantikItemStateManager)
     val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
     val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
     val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
-    val clientConfig = ClientConfig(
-      remoteFileRepositoryAddress = fileRepositoryServerRemotePresence.assembledRemoteUri()
-    )
 
     val planExecutor = new MnpPlanExecutor(
       fileRepository,
       repository,
       executor,
       retriever,
-      fileCache,
-      clientConfig
+      fileRepositoryServerRemotePresence,
+      mantikItemStateManager
     )
-    val context = new ContextImpl(localRegistry, planner, planExecutor, registry, retriever)
+    val context = new PlanningContextImpl(localRegistry, planner, planExecutor, registry, retriever, mantikItemStateManager)
     context
   }
 }
