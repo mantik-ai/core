@@ -7,8 +7,6 @@ It consists of a
 * Definition of Data
 * Definition of how Data can be serialized.
 
-**Note:** The format is not yet stable and subject of changes.
-
 ## Design Ideas and Goals
 
 Using the format, the following goals should be archived
@@ -18,9 +16,7 @@ The format itself should
 * be human readable (at least in one serialization format and in it's definition)
 * language / software stack agnostic
 * be tolerant with changes of data structures
-  
-  It should be easy for a machine to adapt an old format to a new format.
-  
+* be adaptable by a machine from an old format to a new format  
 * be extensible
 * be composable
 * be completely typed
@@ -257,8 +253,3 @@ More types will follow, e.g. Lists.
 ## Implementation
 
 The Scala implementation resides in `ds`. A Golang implementation resides in the `go_shared/ds` project.
-
-## Problems:
-
-- No Random Access Patterns as each element can have a different size.
-

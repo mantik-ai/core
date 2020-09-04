@@ -1,6 +1,13 @@
 Mantik Core
 ===========
 
+Mantik Core is a runtime engine designed for evaluating, executing and deploying AI/ML Applications.
+It is designed around Mantik Items which can be combined into a graph.
+
+Various Frameworks and Data-Formats are encapsulated through Bridges.
+
+**Note:** Mantik Definitions are not stable and subject of changes.
+
 Content
 -------
 .. toctree::
@@ -8,14 +15,15 @@ Content
 
   Building <Building>
   Datatypes and serialization <DataTypes>
+  MNP Protocol <Mnp>
   Bridge documentation <Bridges>
   MantikHeader documentation <MantikHeader>
   Executor Documentation <Executor>
-  Executor Docker <Executor.Docker>
   Samples <Samples>
   Debugging with Minikube <Minikube>
   Mantik ID <MantikId>
-  MNP Protocol <Mnp>
+  Glossary <Glossary>
+  Architecture <Architecture>
 
 Code Structure
 --------------

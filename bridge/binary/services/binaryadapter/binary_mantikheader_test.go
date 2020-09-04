@@ -27,7 +27,6 @@ files:
 	parsed, err := ParseBinaryMantikHeader(simple)
 	assert.NoError(t, err)
 	assert.Equal(t, ds.FromJsonStringOrPanicRef(`{"columns": {"x": "int32"}}`), parsed.Type)
-	assert.Equal(t, "data", parsed.Directory)
 	assert.Equal(t, 1, len(parsed.Files))
 	file1 := parsed.Files[0]
 	assert.Equal(t, "sample1", file1.File)
@@ -46,7 +45,6 @@ func TestParseMnist(t *testing.T) {
 	assert.NoError(t, err)
 	parsed, err := ParseBinaryMantikHeader(content)
 	assert.Equal(t, 2, len(parsed.Files))
-	assert.Equal(t, "data", parsed.Directory)
 	assert.Equal(t, 2, len(parsed.Files[0].Content))
 	assert.Equal(t, 2, len(parsed.Files[1].Content))
 }

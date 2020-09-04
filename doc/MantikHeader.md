@@ -2,11 +2,9 @@
 
 The MantikHeader describes what a Mantik Artefact (DataSets, Algorithms, ...) is and how it will be handled by Mantik.
 
-**Note:** The spec is not yet stable and subject of changes.
-
 They are YAML or JSON Files and contain the following Keys:
 
-- `kind` (optional) must be either `dataset`, `algorithm`, `trainable`, defaulting to `algorithm`. Describes what Kind of artefact it is.
+- `kind` (optional) must be either `dataset`, `algorithm`, `trainable`, `bridge`, defaulting to `algorithm`. Describes what Kind of artefact it is.
 - `metaVariables` variables which can be accessed by the bridges and which are interpolated into other values.
    (See [Meta Variables](#meta-variables))
 
@@ -21,27 +19,31 @@ name an artefact under a different name, than what is expressed in MantikHeader 
 
 ## Payload
 
-Mantik Items may contain payload content. Upon execution this payload is unpacked into a directory `payload`.
+Mantik Artifacts may contain payload content. On session-initialization it is unpacked by the bridge.
+
+Bridges do not have payload.
+
+## Bridges
+
+Mantik Artifacts which are used together with Bridges must have a field `bridge`, which names the
+Name of the Bridge.
+
 
 ## Other fields
 
-Other fields which are not required by the sub type are ignored by Mantik and forwared to the bridges.
+Other fields which are not required by the sub type are ignored by Mantik and forwarded to the bridges.
 
 ## Data Type
 
-Each MantikHeader must contain type-related information
+Each MantikHeader must contain type-related information, which is dependent on the Artifact Type
 
 ### DataSet
 
 A DataSet MantikHeader must contain a field `type` which declares its type.
 
-It must contain a field `format` which maps to a format plugin.
-
 ### Algorithm
 
 A Algorithm MantikHeader must contain a field `type` with sub fields `input` and `output` which declared input and output Data Types.
-
-It must contain a field `stack` which maps to a algorithm plugin.
 
 ### Trainable Algorithm
 
@@ -50,81 +52,11 @@ Also it needs to have a field `statType` which contains the type of statistical 
 
 It must also contain a `type` field which represents the type a trained algorithm has (with sub fields `input` and `output`, like for Algorithms).
 
-It must contain a field `stack` which maps to a trainable algorithm plugin.
-
-
 ## Examples
 
-Example for a Data Set definition
-
-```
-kind: dataset
-name: mnist_test
-format: binary
-type:
-  columns:
-    x:
-      type: image
-      width: 28
-      height: 28
-      components:
-        black:
-          componentType: uint8
-    label: uint8
-files:
-  - file: t10k-labels-idx1-ubyte.gz
-    compression: gzip
-    skip: 8 # Magic Number and Length byte
-    content:
-      - element: label
-      - stride: 1 # Could be auto detected, as this is the default for the element size
-  - file: t10k-images-idx3-ubyte.gz
-    compression: gzip
-    skip: 16 # Magic Number and Length Byte
-    content:
-      - element: x
-      - stride: 784 # Could be auto detected, as this is the default for the image size
-```
-
-Example for a Algorithm Definition:
-
-```
-name: double_multiply
-stack: tf.saved_model
-type:
-  input:
-    columns:
-      x: float64
-  output:
-    columns:
-      "y": float64 # Note: pure 'y' would be interpreted as "true" in YAML.
-```
-
-Example for a Trainable Algorithm Definition
-
-```
-name: kmeans
-stack: sklearn.simple_learn
-kind: trainable
-
-trainingType:
-  columns:
-    coordinates:
-      type: tensor
-      shape: [2]
-      componentType: float64
-statType: void
-type:
-  input:
-    columns:
-      coordinates:
-        type: tensor
-        shape: [2]
-        componentType: float64
-  output:
-    columns:
-      label: int32
-```
+- Example for a Data Set definition: `bridge/binary/test/mnist/MantikHeader`
+- Example for an Algorithm definition: `bridge/tf/saved_model/test/resources/samples/double_multiply/MantikHeader`
+- Example for a Trainable definition: `bridge/binary/test/mnist/MantikHeader`
 
 ### Meta Variables
 
@@ -163,9 +95,9 @@ This way, an algorithm can have Meta-Variable-specific input and output types.
 
 **Fixed Meta Variables**
 
-The planner is allowed to change the value of meta variables. In some cases this is not good
+The planner is allowed to change the value of meta variables. In some cases this is not a good idea
 e.g. if an algorithm is the result of a trained algorithm. For that case, Meta variables
-can have an extra attribute `fix` which accepts a boolen value.
+can have an extra attribute `fix` which accepts a boolean value.
 
 In case of algorithms which are the result of a trainable algorithm, all meta variables
 are automatically fixed.

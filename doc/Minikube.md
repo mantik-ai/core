@@ -7,7 +7,7 @@ It is possible to debug Mantik Engine locally using Minikube.
 - You must have [Minikube](https://kubernetes.io/docs/setup/minikube/) up and running.
 - You must habe built all Artefacts: 
   
-      scripts/dev/build_all.sh
+      make
 
 ## Building Images directly inside Minikube
 
@@ -15,16 +15,11 @@ In contrast to Mikrok8s, Minikube provides it's own Docker Context, where images
 
 This Docker context can be used for building images, use the script 
 
-    scripts/dev/create_docker_images_all_minikube.sh 
+    make docker-minikube 
 
-## Starting Executor with Minikube Support
-
-As of #95, it's not necessary anymore to start the executor, as it is now embedded within the engine.
-  
 ## Start the Engine
 
 Now you can directly execute the engine within IntelliJ or by using 
-
     
     scripts/dev/start_engine_minikube.sh
     

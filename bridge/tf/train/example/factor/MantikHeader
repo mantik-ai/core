@@ -2,7 +2,6 @@ name: factor
 bridge: mantik/tf.train
 trainedBridge: mantik/tf.saved_model
 kind: trainable
-protocol: 2
 
 # Dummy model which figures out the factor between a and b
 
