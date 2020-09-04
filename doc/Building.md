@@ -108,19 +108,18 @@ Open in IDE
 
 * The mantik-core directory can be opened and edited in IntelliJ
   
-  IntellIJ doesn't automatically generate gRpc stubs. You can force evaluation using `test:compile` in the SBT shell.  
+  IntellIJ doesn't automatically generate gRpc stubs. You can force evaluation using `test:compile` in the SBT shell.
   
-* All go applications can be edited in Goland, and it seems as also Visual Studio Code is working with code completion.
+  Or calling `make`  
+  
+* All go applications can be~~~~ edited in Goland, and it seems as also Visual Studio Code is working with code completion.
   (However it looks as you can only open one project, not all-at-once).
 
 
 Running Integration Tests
 -------------------------
 
-* The (Scala) integration tests are expecting a running Minikube.
 * This can be started using `scripts/dev/start_minikube.sh`
-* You can execute them directly in IntelliJ (they are annotated with `@IntegrationTest` and thus 
-  excluded from a regular test run)
-* All integration tests, including (re-)starting Minikube, can be done using `make integration-test`
+* All integration tests can be run using `make integration-test`
 
           
