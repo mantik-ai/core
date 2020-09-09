@@ -2,6 +2,11 @@
 
 All Terms are defined in the Way Mantik Core is using them
 
+## Action
+
+Something the planner (and with it, the Engine) can execute. It contains all necessary dependencies, is serializable
+and changes state (e.g. using many resources or deploying/saving something).
+
 ## Algorithm
 
 A MantikItem which transforms input data to output data.
@@ -32,7 +37,8 @@ The term is used when referring to the local database.
 
 ## MantikItem
 
-A logical block for the graphs which can be built using Mantik. 
+A logical block for the graphs which can be built using Mantik. Using combinators (e.g. `apply`) it can be comined 
+with other Mantik Items. Mantik Items are immutable and do not change state (in contrast to Actions).
 
 ## Pipeline
 
