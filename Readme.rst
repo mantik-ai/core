@@ -13,6 +13,7 @@ Content
 .. toctree::
   :maxdepth: 1
 
+  Getting Started <GettingStarted>
   Building <Building>
   Datatypes and serialization <DataTypes>
   MNP Protocol <Mnp>

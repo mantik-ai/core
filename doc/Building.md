@@ -28,8 +28,7 @@ Requirements
 
 * Go Code
 
-    * [Go](https://golang.org/dl/). Although 1.11.x (x >= 10) should do it, new code will be using 1.13
-      and the build server will be migrated to 1.13
+    * [Go](https://golang.org/dl/). We are using Version 1.13.
     * Protobuf
 
       ```
@@ -56,6 +55,15 @@ Requirements
      
      - Add [Deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
      - `apt-get install python3.7`
+
+* Docker Images
+
+     - [Docker](https://docker.io)
+       ```
+       # Ubuntu 18.04
+       apt-get install docker.io
+       ```
+       For Mac, follow this [Installation Guide](https://docs.docker.com/docker-for-mac/)
 
 * Integration tests and running
     * [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
