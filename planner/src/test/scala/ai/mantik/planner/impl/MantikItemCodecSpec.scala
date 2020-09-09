@@ -2,11 +2,11 @@ package ai.mantik.planner.impl
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader }
 import ai.mantik.planner.impl.TestItems.algoBridge
 import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.select.Select
 import ai.mantik.planner._
 import ai.mantik.testutils.TestBase
 import io.circe.syntax._

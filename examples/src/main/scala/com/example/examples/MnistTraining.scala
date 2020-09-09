@@ -2,9 +2,10 @@ package com.example.examples
 import java.nio.file.Paths
 
 import ai.mantik.componently.utils.EitherExtensions._
+import ai.mantik.ds.sql.AutoSelect
 import ai.mantik.ds.{ FundamentalType, Image, ImageChannel, TabularData }
 import ai.mantik.planner.select.AutoAdapt
-import ai.mantik.planner.{ PlanningContext, Pipeline }
+import ai.mantik.planner.{ Algorithm, Pipeline, PlanningContext }
 
 object MnistTraining extends ExampleBase {
 
@@ -43,7 +44,9 @@ object MnistTraining extends ExampleBase {
       )
     )
 
-    val inputFilter = AutoAdapt.autoSelectAlgorithm(productionImageInput, trained.functionType.input).force
+    val inputFilter = Algorithm.fromSelect(
+      AutoSelect.autoSelect(productionImageInput, trained.functionType.input).force
+    )
 
     val productionPipe = Pipeline.build(
       inputFilter,

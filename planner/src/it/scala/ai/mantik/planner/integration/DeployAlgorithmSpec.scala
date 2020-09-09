@@ -1,8 +1,8 @@
 package ai.mantik.planner.integration
 
+import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.planner.Algorithm
-import ai.mantik.planner.select.Select
 
 class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
 

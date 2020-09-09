@@ -2,7 +2,7 @@ package ai.mantik.planner.integration
 
 import ai.mantik.ds.TabularData
 import ai.mantik.ds.element.Bundle
-import ai.mantik.planner.select.Select
+import ai.mantik.ds.sql.Select
 import ai.mantik.planner.{Algorithm, DataSet, Pipeline}
 
 class SimplePipelineSpec extends IntegrationTestBase with Samples {

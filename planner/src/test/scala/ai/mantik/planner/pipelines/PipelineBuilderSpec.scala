@@ -1,13 +1,13 @@
 package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.{ AlgorithmStep, SelectStep }
 import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId, PipelineStep }
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.select.Select
 import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
 import ai.mantik.testutils.TestBase
 
