@@ -1,11 +1,11 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.helper.circe.DiscriminatorDependentCodec
+import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.elements._
 import ai.mantik.planner.pipelines.ResolvedPipeline
 import ai.mantik.planner.repository.Bridge
-import ai.mantik.planner.select.Select
 import ai.mantik.planner._
 import io.circe.generic.semiauto
 import io.circe.{ Decoder, Encoder, ObjectEncoder }

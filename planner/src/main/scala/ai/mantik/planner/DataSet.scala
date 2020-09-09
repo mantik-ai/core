@@ -3,10 +3,11 @@ package ai.mantik.planner
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{DataType, TabularData}
 import ai.mantik.ds.element.{Bundle, SingleElementBundle}
+import ai.mantik.ds.sql.{AutoSelect, Select}
 import ai.mantik.elements
 import ai.mantik.elements.{DataSetDefinition, ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.planner.repository.Bridge
-import ai.mantik.planner.select.{AutoAdapt, Select}
+import ai.mantik.planner.select.AutoAdapt
 import io.circe.{Decoder, Encoder}
 
 /** A DataSet cannot be automatically converted to an expected type. */
@@ -64,9 +65,12 @@ case class DataSet(
     * Conversions can only be done if they do not loose precision or cannot fail single rows.
     * @throws ConversionNotApplicableException if the conversion can not be applied. */
   def autoAdaptOrFail(targetType: DataType): DataSet = {
-    AutoAdapt.autoAdapt(this, targetType) match {
+    if (targetType == dataType) {
+      return this
+    }
+    AutoSelect.autoSelect(dataType, targetType) match {
       case Left(msg) => throw new ConversionNotApplicableException(msg)
-      case Right(adapted) => adapted
+      case Right(select) => this.select(select)
     }
   }
 

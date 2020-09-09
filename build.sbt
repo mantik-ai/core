@@ -129,6 +129,12 @@ lazy val ds = makeProject("ds")
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
 
+      // Cats
+      "org.typelevel" %% "cats-core" % "1.6.0",
+
+      // Parboiled (Parsers)
+      "org.parboiled" %% "parboiled" % "2.1.5",
+
       // https://mvnrepository.com/artifact/commons-io/commons-io
       "commons-io" % "commons-io" % "2.6",
 
@@ -268,11 +274,6 @@ lazy val planner = makeProject("planner")
   .settings(
     name := "planner",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % "1.6.0",
-
-      // Parboiled (Parsers)
-      "org.parboiled" %% "parboiled" % "2.1.5",
-
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "org.xerial" % "sqlite-jdbc" % "3.28.0",
