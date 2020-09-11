@@ -3,11 +3,13 @@ package server
 import (
 	"bytes"
 	"context"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/client"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/server/internal"
+	"gl.ambrosys.de/mantik/core/mnp/mnpgo/util"
 	"io"
 	"testing"
 )
@@ -39,13 +41,13 @@ func TestTreeCalculation(t *testing.T) {
 
 	err = session.AddInit("n1", nil, mnpgo.PortConfiguration{
 		Inputs:  []mnpgo.InputPortConfiguration{{"abcd"}},
-		Outputs: []mnpgo.OutputPortConfiguration{{"out1"}, {"out2"}},
+		Outputs: []mnpgo.OutputPortConfiguration{{"out1", ""}, {"out2", ""}},
 	})
 	assert.NoError(t, err)
 
 	session.AddInit("n2", nil, mnpgo.PortConfiguration{
 		Inputs:  []mnpgo.InputPortConfiguration{{"foobar"}},
-		Outputs: []mnpgo.OutputPortConfiguration{{"out3"}, {"out4"}},
+		Outputs: []mnpgo.OutputPortConfiguration{{"out3", ""}, {"out4", ""}},
 	})
 	assert.NoError(t, err)
 
@@ -75,18 +77,36 @@ func TestTreeCalculation(t *testing.T) {
 	assert.Equal(t, 3, initialized.OutputCount())
 
 	input := bytes.NewBuffer([]byte{1, 2, 3, 4})
-	output1 := CloseableBuffer{}
-	output2 := CloseableBuffer{}
-	output3 := CloseableBuffer{}
+	output1 := util.NewClosableBuffer()
+	output2 := util.NewClosableBuffer()
+	output3 := util.NewClosableBuffer()
 
 	err = initialized.RunTask(
 		context.Background(),
 		"task1",
 		[]io.Reader{input},
-		[]io.WriteCloser{&output1, &output2, &output3},
+		[]io.WriteCloser{output1, output2, output3},
 	)
 
 	assert.NoError(t, err)
+	assert.True(t, output1.Closed)
+	assert.True(t, output2.Closed)
+	assert.True(t, output3.Closed)
+	assert.Equal(t, []byte{1, 2, 3, 4}, output1.Buffer.Bytes())
+	assert.Equal(t, []byte{2, 4, 6, 8}, output2.Buffer.Bytes())
+	assert.Equal(t, []byte{4, 8, 12, 16}, output3.Buffer.Bytes())
+
+	// 2nd task with failure
+	dummy1.Sessions[0].Fail = errors.New("I am dead")
+
+	err = initialized.RunTask(
+		context.Background(),
+		"task2",
+		[]io.Reader{input},
+		[]io.WriteCloser{output1, output2, output3},
+	)
+
+	assert.Error(t, err)
 	assert.True(t, output1.Closed)
 	assert.True(t, output2.Closed)
 	assert.True(t, output3.Closed)

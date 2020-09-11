@@ -5,12 +5,11 @@ import com.typesafe.config.{ Config => TypesafeConfig }
 
 /** Common settings for various executors. */
 case class CommonConfig(
-    sideCar: Container,
-    coordinator: Container,
-    payloadPreparer: Container,
-    pipelineController: Container,
+    mnpPreparer: Container,
+    mnpPipelineController: Container,
     dockerConfig: DockerConfig,
-    disablePull: Boolean
+    disablePull: Boolean,
+    grpcProxy: GrpcProxyConfig
 )
 
 object CommonConfig {
@@ -20,13 +19,15 @@ object CommonConfig {
     val dockerPath = root.getConfig("docker")
     val containersConfig = root.getConfig("containers")
     val dockerConfig = DockerConfig.parseFromConfig(dockerPath)
+    def rc(name: String): Container = {
+      dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig(name)))
+    }
     CommonConfig(
-      sideCar = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig("sideCar"))),
-      coordinator = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig("coordinator"))),
-      payloadPreparer = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig("payloadPreparer"))),
-      pipelineController = dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig("pipelineController"))),
+      mnpPreparer = rc("mnpPreparer"),
+      mnpPipelineController = rc("mnpPipelineController"),
       dockerConfig = dockerConfig,
-      disablePull = root.getBoolean("behaviour.disablePull")
+      disablePull = root.getBoolean("behaviour.disablePull"),
+      grpcProxy = GrpcProxyConfig.fromTypesafeConfig(c)
     )
   }
 }

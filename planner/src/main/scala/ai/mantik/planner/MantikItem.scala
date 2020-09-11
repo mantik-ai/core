@@ -3,17 +3,20 @@ package ai.mantik.planner
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikDefinitionWithBridge, MantikDefinitionWithoutBridge, MantikId, MantikHeader, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikDefinitionWithBridge, MantikDefinitionWithoutBridge, MantikHeader, MantikId, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver }
 import ai.mantik.elements.meta.MetaVariableException
+import ai.mantik.planner.impl.{ MantikItemCodec, MantikItemStateManager }
 import ai.mantik.planner.repository.{ Bridge, ContentTypes, MantikArtifact }
 import ai.mantik.planner.utils.AtomicReference
+import io.circe.{ Decoder, Encoder }
 
 import scala.reflect.ClassTag
 
 /**
- * A single Item inside the Planner DSL.
+ * A single Item inside the Planner API.
  * Can represent data or algorithms.
+ * Can be serialized to JSON.
  */
 trait MantikItem {
   type DefinitionType <: MantikDefinition
@@ -30,20 +33,6 @@ trait MantikItem {
   /** Returns the item's MantikHeader with definition. */
   private[mantik] def mantikHeader: MantikHeader[DefinitionType] = core.mantikHeader
 
-  /** The state of the mantik Item. */
-  private[planner] val state: AtomicReference[MantikItemState] = new AtomicReference({
-    val file = source.payload match {
-      case PayloadSource.Loaded(fileId, _) => Some(fileId)
-      case _                               => None
-    }
-    MantikItemState(
-      namedMantikItem = source.definition.name,
-      itemStored = source.definition.itemStored,
-      nameStored = source.definition.nameStored,
-      payloadFile = file
-    )
-  })
-
   /**
    * Tag the item, giving it an additional name.
    *
@@ -59,6 +48,14 @@ trait MantikItem {
     )
   )
 
+  /**
+   * Explicitly set the item Id.
+   * Note: this may be dangerous (itemIds are referenced from MantikState etc.)
+   */
+  private[mantik] def withItemId(itemId: ItemId): OwnType = withCore(
+    core.copy(itemId = itemId)
+  )
+
   /** Save an item back in the local database */
   def save(): Action.SaveAction = Action.SaveAction(this)
 
@@ -66,22 +63,15 @@ trait MantikItem {
   def push(): Action.PushAction = Action.PushAction(this)
 
   /**
-   * Returns the [[NamedMantikId]] of the Item. This can be anonymous.
-   * Note: this doesn't mean that the item is stored.
+   * Returns the [[ItemId]] of the item.
    */
-  def mantikId: MantikId = {
-    name.getOrElse(itemId)
-  }
-
-  /** Returns the name of the item, if it has one. */
-  def name: Option[NamedMantikId] = {
-    state.get.namedMantikItem
-  }
+  def itemId: ItemId = core.itemId
 
   /**
-   * Returns the [[ItemId]] of the item. This is a new value if the item was not loaded.
+   * Returns the mantik id.
+   * (Note: if it was stored after generating, it may not reflect the name)
    */
-  lazy val itemId: ItemId = source.definition.storedItemId.getOrElse(ItemId.generate())
+  def mantikId: MantikId = source.definition.name.getOrElse(itemId)
 
   /**
    * Update Meta Variables.
@@ -109,7 +99,8 @@ trait MantikItem {
       MantikItemCore(
         source = source.derive,
         mantikHeader = mantikHeader,
-        bridge = core.bridge
+        bridge = core.bridge,
+        itemId = ItemId.generate()
       )
     )
   }
@@ -118,14 +109,7 @@ trait MantikItem {
     val builder = StringBuilder.newBuilder
     builder ++= getClass.getSimpleName
     builder += ' '
-    builder ++= mantikId.toString
-    val s = state.get
-    if (s.itemStored) {
-      builder ++= " itemStored"
-    }
-    if (s.nameStored) {
-      builder ++= " nameStored"
-    }
+    builder ++= itemId.toString
     builder.result()
   }
 
@@ -137,16 +121,21 @@ trait MantikItem {
 case class MantikItemCore[T <: MantikDefinition](
     source: Source,
     mantikHeader: MantikHeader[T],
-    bridge: Option[Bridge]
+    bridge: Option[Bridge],
+    itemId: ItemId
 )
 
 object MantikItemCore {
   def apply[T <: MantikDefinitionWithBridge](source: Source, mantikHeader: MantikHeader[T], bridge: Bridge): MantikItemCore[T] = {
-    MantikItemCore(source, mantikHeader, Some(bridge))
+    MantikItemCore(source, mantikHeader, Some(bridge), generateItemId(source))
   }
 
   def apply[T <: MantikDefinitionWithoutBridge](source: Source, mantikHeader: MantikHeader[T]): MantikItemCore[T] = {
-    MantikItemCore(source, mantikHeader, None)
+    MantikItemCore(source, mantikHeader, None, generateItemId(source))
+  }
+
+  private[mantik] def generateItemId(source: Source): ItemId = {
+    source.definition.storedItemId.getOrElse(ItemId.generate())
   }
 }
 
@@ -187,12 +176,19 @@ trait ApplicableMantikItem extends MantikItem {
 
 object MantikItem {
 
+  // JSON Codec
+  implicit val encoder: Encoder[MantikItem] = MantikItemCodec
+  implicit val decoder: Decoder[MantikItem] = MantikItemCodec
+
   /**
    * Convert a (loaded) [[MantikArtifact]] to a [[MantikItem]].
    * @param defaultItemLookup if true, default items are favorized.
    */
   private[mantik] def fromMantikArtifact(
-    artifact: MantikArtifact, hull: Seq[MantikArtifact] = Seq.empty, defaultItemLookup: Boolean = true
+    artifact: MantikArtifact,
+    mantikItemStateManager: MantikItemStateManager,
+    hull: Seq[MantikArtifact] = Seq.empty,
+    defaultItemLookup: Boolean = true
   ): MantikItem = {
     val payloadSource = artifact.fileId.map { fileId =>
       PayloadSource.Loaded(fileId, ContentTypes.ZipFileContentType)
@@ -215,7 +211,7 @@ object MantikItem {
 
     def forceExtract[T <: MantikDefinition: ClassTag]: MantikItemCore[T] = {
       val mantikHeader = artifact.parsedMantikHeader.cast[T].right.get
-      MantikItemCore(source, mantikHeader, bridge)
+      MantikItemCore(source, mantikHeader, bridge, MantikItemCore.generateItemId(source))
     }
 
     val item = artifact.parsedMantikHeader.definition match {
@@ -231,7 +227,7 @@ object MantikItem {
       case _: PipelineDefinition =>
         val referenced = hull.map { item =>
           val subHull = hull.filter(_.itemId != item.itemId)
-          item.mantikId -> fromMantikArtifact(item, subHull)
+          item.mantikId -> fromMantikArtifact(item, mantikItemStateManager, subHull)
         }.toMap
         PipelineBuilder.buildOrFailFromMantikHeader(source.definition, forceExtract[PipelineDefinition].mantikHeader, referenced)
       case _: BridgeDefinition =>
@@ -239,17 +235,15 @@ object MantikItem {
     }
 
     artifact.deploymentInfo.foreach { deploymentInfo =>
-      item.state.update {
-        _.copy(
-          deployment = Some(
-            DeploymentState(
-              name = deploymentInfo.name,
-              internalUrl = deploymentInfo.internalUrl,
-              externalUrl = deploymentInfo.externalUrl
-            )
+      mantikItemStateManager.upsert(item, _.copy(
+        deployment = Some(
+          DeploymentState(
+            name = deploymentInfo.name,
+            internalUrl = deploymentInfo.internalUrl,
+            externalUrl = deploymentInfo.externalUrl
           )
         )
-      }
+      ))
     }
 
     item

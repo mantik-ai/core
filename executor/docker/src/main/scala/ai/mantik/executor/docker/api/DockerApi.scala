@@ -1,6 +1,6 @@
 package ai.mantik.executor.docker.api
 
-import ai.mantik.executor.docker.api.structures.{ ContainerWaitResponse, CreateContainerRequest, CreateContainerResponse, CreateVolumeRequest, CreateVolumeResponse, InspectContainerResponse, InspectImageResult, InspectVolumeResponse, ListContainerRequestFilter, ListContainerResponseRow, ListVolumeResponse, RemoveImageRow, VersionResponse }
+import ai.mantik.executor.docker.api.structures.{ ContainerWaitResponse, CreateContainerRequest, CreateContainerResponse, CreateNetworkRequest, CreateNetworkResponse, CreateVolumeRequest, CreateVolumeResponse, InspectContainerResponse, InspectImageResult, InspectNetworkResult, InspectVolumeResponse, ListContainerRequestFilter, ListContainerResponseRow, ListNetworkRequestFilter, ListNetworkResponseRow, ListVolumeResponse, RemoveImageRow, VersionResponse }
 import io.circe.{ Decoder, Encoder, Json }
 import net.reactivecore.fhttp.{ ApiBuilder, Input, Output }
 
@@ -16,6 +16,8 @@ object DockerApi extends ApiBuilder {
         jsonResponseWithErrorHandlung[VersionResponse]
       )
   )
+
+  // Container Management
 
   val createContainer = add(
     post("containers", "create")
@@ -46,7 +48,7 @@ object DockerApi extends ApiBuilder {
         input.MappedInput(input.AddQueryParameter("all"), boolMapping)
       )
       .responding(
-        jsonResponseWithErrorHandlung[List[ListContainerResponseRow]]
+        jsonResponseWithErrorHandlung[Vector[ListContainerResponseRow]]
       )
   )
 
@@ -116,6 +118,8 @@ object DockerApi extends ApiBuilder {
       )
   )
 
+  // Images
+
   // Note: the pull operation fails, if the (empty) content is not consumed!
   val pullImage = add(
     post("images", "create")
@@ -141,6 +145,8 @@ object DockerApi extends ApiBuilder {
         jsonResponseWithErrorHandlung[InspectImageResult]
       )
   )
+
+  // Volumes
 
   val createVolume = add(
     post("volumes", "create")
@@ -170,6 +176,53 @@ object DockerApi extends ApiBuilder {
     get("volumes")
       .responding(
         jsonResponseWithErrorHandlung[ListVolumeResponse]
+      )
+  )
+
+  // Networks
+  val listNetworks = add(
+    get("networks")
+      .responding(
+        jsonResponseWithErrorHandlung[Vector[ListNetworkResponseRow]]
+      )
+  )
+
+  val listNetworkFilterMapping = Input.pureMapping[String, ListNetworkRequestFilter](
+    { s => io.circe.parser.parse(s).flatMap(_.as[ListNetworkRequestFilter]).left.map(_.toString) },
+    { f => Right(f.asJson.noSpaces) }
+  )
+
+  val listNetworksFiltered = add(
+    get("networks")
+      .expecting(
+        input.MappedInput(input.AddQueryParameter("filters"), listNetworkFilterMapping)
+      )
+      .responding(
+        jsonResponseWithErrorHandlung[Vector[ListNetworkResponseRow]]
+      )
+  )
+
+  val inspectNetwork = add(
+    get("networks")
+      .expecting(input.ExtraPath)
+      .responding(
+        jsonResponseWithErrorHandlung[InspectNetworkResult]
+      )
+  )
+
+  val createNetwork = add(
+    post("networks/create")
+      .expecting(Input.circe[CreateNetworkRequest]())
+      .responding(
+        jsonResponseWithErrorHandlung[CreateNetworkResponse]
+      )
+  )
+
+  val removeNetwork = add(
+    delete("networks")
+      .expecting(input.ExtraPath)
+      .responding(
+        respondWithErrorHandling(output.Empty)
       )
   )
 

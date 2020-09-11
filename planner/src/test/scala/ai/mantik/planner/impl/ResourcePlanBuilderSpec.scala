@@ -5,19 +5,18 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{ ExecutorModelDefaults, Graph, Link, Node, NodeResource, NodeResourceRef, ResourceType }
-import ai.mantik.planner.impl.exec.FileCache
+import ai.mantik.planner.graph.{ Graph, Link, Node, NodePort, NodePortRef }
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
-import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, DefinitionSource, Operation, PayloadSource, Pipeline, PlanFile, PlanFileReference, PlanNodeService, PlanOp, Planner, Source, TrainableAlgorithm }
+import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, DefinitionSource, MantikItemState, Operation, PayloadSource, Pipeline, PlanFile, PlanFileReference, PlanNodeService, PlanOp, Planner, Source, TrainableAlgorithm }
 import ai.mantik.testutils.TestBase
 import cats.data.State
 
 class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
 
   private trait Env {
-    val fileCache = new FileCache()
     val elements = new PlannerElements(typesafeConfig)
-    val resourcePlanBuilder = new ResourcePlanBuilder(elements, fileCache)
+    val mantikItemStateManager = new MantikItemStateManager()
+    val resourcePlanBuilder = new ResourcePlanBuilder(elements, mantikItemStateManager)
 
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
       f.run(PlanningState()).value
@@ -64,19 +63,12 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     state.files shouldBe List(
       PlanFile(PlanFileReference(1), fileId = Some("file1"), read = true)
     )
-    source shouldBe ResourcePlan(
-      graph = Graph(
-        nodes = Map(
-          "1" -> Node(
-            PlanNodeService.File(PlanFileReference(1)),
-            resources = Map(
-              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some("ContentType"))
-            )
-          )
+    source shouldBe ResourcePlan.singleNode(
+      "1", Node(
+        PlanNodeService.File(PlanFileReference(1)),
+        outputs = Vector(
+          NodePort(Some("ContentType"))
         )
-      ),
-      outputs = Seq(
-        NodeResourceRef("1", ExecutorModelDefaults.SourceResource)
       )
     )
   }
@@ -92,16 +84,14 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       pre = PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
       graph = Graph(
         nodes = Map(
-          "1" -> Node(
+          "1" -> Node.source(
             PlanNodeService.File(PlanFileReference(1)),
-            resources = Map(
-              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
-            )
+            Some(ContentTypes.MantikBundleContentType)
           )
         )
       ),
       outputs = Seq(
-        NodeResourceRef("1", ExecutorModelDefaults.SourceResource)
+        NodePortRef("1", 0)
       )
     )
   }
@@ -124,23 +114,26 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
         nodes = Map(
           "1" -> Node(
             PlanNodeService.File(PlanFileReference(1)),
-            resources = Map(
-              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+            outputs = Vector(
+              NodePort(Some(ContentTypes.MantikBundleContentType))
             )
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikHeader = TestItems.algorithm1),
-            resources = Map(
-              ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
+            inputs = Vector(
+              NodePort(Some(ContentTypes.MantikBundleContentType))
+            ),
+            outputs = Vector(
+              NodePort(Some(ContentTypes.MantikBundleContentType))
             )
           )
         ),
         links = Link.links(
-          NodeResourceRef("1", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("2", ExecutorModelDefaults.TransformationResource)
+          NodePortRef("1", 0) -> NodePortRef("2", 0)
         )
       ),
       outputs = Seq(
-        NodeResourceRef("2", ExecutorModelDefaults.TransformationResource)
+        NodePortRef("2", 0)
       )
     )
     source shouldBe expected
@@ -180,27 +173,30 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
             // this part is taken over from stream generation
             "1" -> Node(
               PlanNodeService.File(PlanFileReference(1)),
-              resources = Map(
-                ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+              outputs = Vector(
+                NodePort(Some(ContentTypes.MantikBundleContentType))
               )
             ),
             "2" -> Node(
               PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikHeader = TestItems.algorithm1),
-              resources = Map(
-                ExecutorModelDefaults.TransformationResource -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
+              inputs = Vector(
+                NodePort(Some(ContentTypes.MantikBundleContentType))
+              ),
+              outputs = Vector(
+                NodePort(Some(ContentTypes.MantikBundleContentType))
               )
             ),
             // this part is used for generating the file
             "3" -> Node(
               PlanNodeService.File(PlanFileReference(3)),
-              resources = Map(
-                ExecutorModelDefaults.SinkResource -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType))
+              inputs = Vector(
+                NodePort(Some(ContentTypes.MantikBundleContentType))
               )
             )
           ),
           links = Link.links(
-            NodeResourceRef("1", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("2", ExecutorModelDefaults.TransformationResource),
-            NodeResourceRef("2", ExecutorModelDefaults.TransformationResource) -> NodeResourceRef("3", ExecutorModelDefaults.SinkResource)
+            NodePortRef("1", 0) -> NodePortRef("2", 0),
+            NodePortRef("2", 0) -> NodePortRef("3", 0)
           )
         )
       )
@@ -221,12 +217,13 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val cache = PayloadSource.Cached(
       PayloadSource.OperationResult(
         Operation.Application(algorithm1, dataset1)
-      )
+      ),
+      Vector(ItemId.generate())
     )
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe Set(cache.cacheGroup)
+    state.cacheItems shouldBe Set(cache.siblings)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
   }
 
@@ -234,15 +231,14 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val cache = PayloadSource.Cached(
       PayloadSource.OperationResult(
         Operation.Application(algorithm1, dataset1)
-      )
+      ),
+      Vector(ItemId.generate())
     )
-    fileCache.add(
-      cache.cacheGroup.ensuring(_.size == 1).head, "file1"
-    )
+    mantikItemStateManager.set(cache.siblings.head, MantikItemState(cacheFile = Some("file1")))
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe Set(cache.cacheGroup)
+    state.cacheItems shouldBe Set(cache.siblings)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe empty
   }
 
@@ -250,12 +246,13 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val cache = PayloadSource.Cached(
       PayloadSource.OperationResult(
         Operation.Application(algorithm1, dataset1)
-      )
+      ),
+      Vector(ItemId.generate())
     )
     val (state, files) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       cache, canBeTemporary = true
     ))
-    state.cacheGroups shouldBe Set(cache.cacheGroup)
+    state.cacheItems shouldBe Set(cache.siblings)
     splitOps(files.preOp).find(_.isInstanceOf[PlanOp.MarkCached]) shouldBe defined
 
     val (state2, files2) = resourcePlanBuilder.translateItemPayloadSourceAsFiles(
@@ -273,7 +270,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val (state, filesPlan) = runWithEmptyState(resourcePlanBuilder.translateItemPayloadSourceAsFiles(
       projection, canBeTemporary = false
     ))
-    state.cacheGroups shouldBe empty
+    state.cacheItems shouldBe empty
     splitOps(filesPlan.preOp) shouldBe empty
     filesPlan.files.size shouldBe 1
   }
@@ -288,11 +285,13 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       Map(
         "1" -> Node(
           PlanNodeService.File(PlanFileReference(1)),
-          Map(ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType)))
+          outputs = Vector(
+            NodePort(Some(ContentTypes.MantikBundleContentType))
+          )
         )
       )
     )
-    sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
+    sourcePlan.outputs shouldBe Seq(NodePortRef("1", 0))
   }
 
   it should "convert a load natural source" in new Env {
@@ -309,13 +308,13 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       Map(
         "1" -> Node(
           PlanNodeService.File(PlanFileReference(1)),
-          Map(
-            ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+          outputs = Vector(
+            NodePort(Some(ContentTypes.MantikBundleContentType))
           )
         )
       )
     )
-    sourcePlan.outputs shouldBe Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
+    sourcePlan.outputs shouldBe Seq(NodePortRef("1", 0))
   }
 
   it should "manifest a simple loaded item" in new Env {
@@ -324,18 +323,12 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
-    sourcePlan shouldBe ResourcePlan(
-      graph = Graph(
-        nodes = Map(
-          "1" -> Node(
-            PlanNodeService.File(PlanFileReference(1)),
-            resources = Map(
-              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
-            )
-          )
-        )
-      ),
-      outputs = Seq(NodeResourceRef("1", ExecutorModelDefaults.SourceResource))
+    sourcePlan shouldBe ResourcePlan.singleNode(
+      "1",
+      Node.source(
+        PlanNodeService.File(PlanFileReference(1)),
+        Some(ContentTypes.MantikBundleContentType)
+      )
     )
   }
 
@@ -346,18 +339,12 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
-    sourcePlan shouldBe ResourcePlan(
-      graph = Graph(
-        nodes = Map(
-          "1" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.dataSet2),
-            resources = Map(
-              "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
-            )
-          )
-        )
-      ),
-      outputs = Seq(NodeResourceRef("1", "get"))
+    sourcePlan shouldBe ResourcePlan.singleNode(
+      "1",
+      Node.source(
+        PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.dataSet2),
+        Some(ContentTypes.MantikBundleContentType)
+      )
     )
   }
 
@@ -389,21 +376,20 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
         nodes = Map(
           "1" -> Node(
             PlanNodeService.File(PlanFileReference(1)),
-            resources = Map(
-              ExecutorModelDefaults.SourceResource -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
+            outputs = Vector(
+              NodePort(Some(ContentTypes.MantikBundleContentType))
             )
           ),
-          "2" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikHeader = algo1), resources = Map(
-              "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
-            )
+          "2" -> Node.transformer(
+            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(2)), mantikHeader = algo1),
+            Some(ContentTypes.MantikBundleContentType)
           )
         ),
         links = Link.links(
-          NodeResourceRef("1", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("2", "apply")
+          NodePortRef("1", 0) -> NodePortRef("2", 0)
         )
       ),
-      outputs = Seq(NodeResourceRef("2", "apply"))
+      outputs = Seq(NodePortRef("2", 0))
     )
 
     sourcePlan shouldBe expected
@@ -415,22 +401,19 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
-    sourcePlan shouldBe ResourcePlan(
-      graph = Graph(
-        nodes = Map(
-          "1" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_training1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.learning1), resources = Map(
-              "train" -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType)),
-              "stats" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType)),
-              "result" -> NodeResource(ResourceType.Source, Some(ContentTypes.ZipFileContentType))
-            )
+    sourcePlan shouldBe ResourcePlan.singleNode(
+      "1",
+      Node(
+        PlanNodeService.DockerContainer(Container("docker_training1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.learning1),
+        inputs = Vector(
+          NodePort(
+            Some(ContentTypes.MantikBundleContentType)
           )
+        ),
+        outputs = Vector(
+          NodePort(Some(ContentTypes.ZipFileContentType)),
+          NodePort(Some(ContentTypes.MantikBundleContentType))
         )
-      ),
-      inputs = Seq(NodeResourceRef("1", "train")),
-      outputs = Seq(
-        NodeResourceRef("1", "result"),
-        NodeResourceRef("1", "stats")
       )
     )
   }
@@ -441,19 +424,10 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     ))
 
     state.files shouldBe List(PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")))
-    sourcePlan shouldBe ResourcePlan(
-      graph = Graph(
-        nodes = Map(
-          "1" -> Node(
-            PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.algorithm1), resources = Map(
-              "apply" -> NodeResource(ResourceType.Transformer, Some(ContentTypes.MantikBundleContentType))
-            )
-          )
-        )
-      ),
-      inputs = Seq(NodeResourceRef("1", "apply")),
-      outputs = Seq(NodeResourceRef("1", "apply"))
-    )
+    sourcePlan shouldBe ResourcePlan.singleNode("1", Node.transformer(
+      PlanNodeService.DockerContainer(Container("docker_algo1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.algorithm1),
+      Some(ContentTypes.MantikBundleContentType)
+    ))
   }
 
   "manifestDataSetAsFile" should "return a literal" in new Env {
@@ -477,21 +451,17 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     val expected = PlanOp.RunGraph(
       graph = Graph(
         nodes = Map(
-          "1" -> Node(
+          "1" -> Node.source(
             PlanNodeService.DockerContainer(Container("docker_format1"), data = Some(PlanFileReference(1)), mantikHeader = TestItems.dataSet2),
-            resources = Map(
-              "get" -> NodeResource(ResourceType.Source, Some(ContentTypes.MantikBundleContentType))
-            )
+            Some(ContentTypes.MantikBundleContentType)
           ),
-          "2" -> Node(
+          "2" -> Node.sink(
             PlanNodeService.File(PlanFileReference(2)),
-            resources = Map(
-              ExecutorModelDefaults.SinkResource -> NodeResource(ResourceType.Sink, Some(ContentTypes.MantikBundleContentType))
-            )
+            Some(ContentTypes.MantikBundleContentType)
           )
         ),
         links = Link.links(
-          NodeResourceRef("1", "get") -> NodeResourceRef("2", ExecutorModelDefaults.SinkResource)
+          NodePortRef("1", 0) -> NodePortRef("2", 0)
         )
       )
     )

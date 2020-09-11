@@ -2,11 +2,11 @@ package com.example.examples
 
 import java.nio.file.Paths
 
-import ai.mantik.planner.Context
+import ai.mantik.planner.PlanningContext
 
 object ShowBinary extends ExampleBase {
 
-  override protected def run(implicit context: Context): Unit = {
+  override protected def run(implicit context: PlanningContext): Unit = {
     val binaryBridge = Paths.get("bridge/binary")
     val sampleFile = Paths.get("bridge/binary/test/mnist")
     context.pushLocalMantikItem(binaryBridge)

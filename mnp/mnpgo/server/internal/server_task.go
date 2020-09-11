@@ -3,14 +3,18 @@ package internal
 import (
 	"context"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"io"
+	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
+	"golang.org/x/sync/errgroup"
 )
 
 type ServerTask struct {
-	session     mnpgo.SessionHandler
-	ctx         context.Context
-	taskId      string
-	multiplexer *StreamMultiplexer
+	session      mnpgo.SessionHandler
+	ctx          context.Context
+	taskId       string
+	multiplexer  *StreamMultiplexer
+	forwarder    []*Forwarder
+	state        mnp.TaskState
+	errorMessage string
 }
 
 func NewServerTask(
@@ -18,42 +22,58 @@ func NewServerTask(
 	taskId string,
 	ctx context.Context,
 	configuration *mnpgo.PortConfiguration,
-	forwarders []*Forwarder,
 ) (*ServerTask, error) {
 
-	initializedForwarders := make([]io.WriteCloser, len(configuration.Outputs), len(configuration.Outputs))
-	for i := 0; i < len(configuration.Outputs); i++ {
-		if forwarders[i] != nil {
-			initalized, err := forwarders[i].RunTask(ctx, taskId)
-			if err != nil {
-				for _, c := range initializedForwarders {
-					// Close them, there was an error
-					if c != nil {
-						c.Close()
-					}
-				}
-				return nil, err
-			}
-			initializedForwarders[i] = initalized
-		}
-	}
+	var forwarders []*Forwarder
 
 	multiplexer := NewStreamMultiplexer(
 		len(configuration.Inputs),
 		len(configuration.Outputs),
-		initializedForwarders,
 	)
+
+	for i, o := range configuration.Outputs {
+		if len(o.DestinationUrl) > 0 {
+			forwarder2, err := MakeForwarder(ctx, multiplexer, i, taskId, o.DestinationUrl)
+			if err != nil {
+				return nil, err
+			}
+			forwarders = append(forwarders, forwarder2)
+		}
+	}
 
 	return &ServerTask{
 		session:     session,
 		ctx:         ctx,
 		taskId:      taskId,
 		multiplexer: multiplexer,
+		forwarder:   forwarders,
+		state:       mnp.TaskState_TS_EXISTS,
 	}, nil
 }
 
 func (t *ServerTask) Run() error {
-	return t.session.RunTask(t.ctx, t.taskId, t.multiplexer.InputReaders, t.multiplexer.OutputWrites)
+	group := errgroup.Group{}
+
+	for _, f := range t.forwarder {
+		func(f *Forwarder) {
+			group.Go(func() error {
+				err := f.Run()
+				return err
+			})
+		}(f)
+	}
+	group.Go(func() error {
+		err := t.session.RunTask(t.ctx, t.taskId, t.multiplexer.InputReaders, t.multiplexer.OutputWrites)
+		if err == nil {
+			t.state = mnp.TaskState_TS_FINISHED
+		} else {
+			t.state = mnp.TaskState_TS_FAILED
+			t.errorMessage = err.Error()
+		}
+		t.multiplexer.Finalize(err)
+		return err
+	})
+	return group.Wait()
 }
 
 func (t *ServerTask) Write(port int, data []byte) error {
@@ -70,4 +90,15 @@ func (t *ServerTask) WriteFailure(port int, err error) {
 
 func (t *ServerTask) Read(port int) ([]byte, error) {
 	return t.multiplexer.Read(port)
+}
+
+func (t *ServerTask) Query() *mnp.QueryTaskResponse {
+	inputStates, outputStates := t.multiplexer.QueryTaskPortStatus()
+
+	return &mnp.QueryTaskResponse{
+		State:   t.state,
+		Error:   t.errorMessage,
+		Inputs:  inputStates,
+		Outputs: outputStates,
+	}
 }

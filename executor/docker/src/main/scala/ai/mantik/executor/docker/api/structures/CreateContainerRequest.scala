@@ -9,8 +9,28 @@ case class CreateContainerRequest(
     Labels: Map[String, String] = Map.empty,
     Env: Vector[String] = Vector.empty, // format is key=value,
     Volumes: Map[String, CreateContainerVolumeEntry] = Map.empty,
-    HostConfig: CreateContainerHostConfig = CreateContainerHostConfig()
-)
+    HostConfig: CreateContainerHostConfig = CreateContainerHostConfig(),
+    NetworkingConfig: CreateContainerNetworkingConfig = CreateContainerNetworkingConfig()
+) {
+  /** Add a network association */
+  def withNetwork(
+    networkName: String,
+    createContainerNetworkSpecificConfig: CreateContainerNetworkSpecificConfig): CreateContainerRequest = {
+    copy(
+      NetworkingConfig = NetworkingConfig.copy(
+        EndpointsConfig = NetworkingConfig.EndpointsConfig + (networkName -> createContainerNetworkSpecificConfig)
+      )
+    )
+  }
+
+  def withNetworkId(networkName: String, networkId: String): CreateContainerRequest = {
+    withNetwork(
+      networkName, CreateContainerNetworkSpecificConfig(
+      NetworkID = Some(networkId)
+    )
+    )
+  }
+}
 
 @JsonCodec
 case class CreateContainerVolumeEntry(
@@ -39,6 +59,16 @@ case class PortBindingHost(
 case class RestartPolicy(
     Name: String,
     MaximumRetryCount: Option[Int] = None
+)
+
+@JsonCodec
+case class CreateContainerNetworkingConfig(
+    EndpointsConfig: Map[String, CreateContainerNetworkSpecificConfig] = Map.empty
+)
+
+@JsonCodec
+case class CreateContainerNetworkSpecificConfig(
+    NetworkID: Option[String] = None
 )
 
 @JsonCodec

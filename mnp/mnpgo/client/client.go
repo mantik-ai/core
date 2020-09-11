@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
+	"gl.ambrosys.de/mantik/core/mnp/mnpgo/grpchttpproxy"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"google.golang.org/grpc"
 	"io"
@@ -21,15 +22,30 @@ type Client struct {
 }
 
 func ConnectClient(address string) (*Client, error) {
-	clientCon, err := grpc.Dial(address, grpc.WithInsecure())
+	return ConnectClientWithProxy(address, nil)
+}
+
+func ConnectClientWithProxy(address string, settings *grpchttpproxy.ProxySettings) (*Client, error) {
+	var clientCon *grpc.ClientConn
+	var err error
+	if settings != nil {
+		dialer := grpchttpproxy.NewPureProxyDialer(settings)
+		clientCon, err = grpc.Dial(address, grpc.WithInsecure(), grpc.WithContextDialer(dialer))
+	} else {
+		clientCon, err = grpc.Dial(address, grpc.WithInsecure())
+	}
 	if err != nil {
 		return nil, err
 	}
+	return ClientFromConnection(clientCon), nil
+}
+
+func ClientFromConnection(clientCon *grpc.ClientConn) *Client {
 	return &Client{
 		con:           clientCon,
 		serviceClient: mnp.NewMnpServiceClient(clientCon),
 		ctx:           context.Background(),
-	}, nil
+	}
 }
 
 func (c *Client) About() (mnpgo.AboutResponse, error) {
@@ -49,28 +65,46 @@ func (c *Client) Quit() error {
 	if err != nil {
 		logrus.Warn("Error on quit call", err)
 	}
+	err = c.con.Close()
+	if err != nil {
+		logrus.Warn("Error on closing connection", err)
+	}
 	return err
+}
+
+func (c *Client) Close() error {
+	return c.con.Close()
+}
+
+// Join an existing (assumed) session
+func (c *Client) JoinSession(sessionId string, portConfiguration *mnpgo.PortConfiguration) *ClientSession {
+	return &ClientSession{
+		sessionId: sessionId,
+		ports:     portConfiguration,
+		ctx:       c.ctx,
+		service:   c.serviceClient,
+	}
 }
 
 func (c *Client) Init(
 	sessionId string,
 	configuration *any.Any,
-	contentTypes *mnpgo.PortConfiguration,
+	portConfiguration *mnpgo.PortConfiguration,
 	stateCallback func(state mnp.SessionState),
 ) (mnpgo.SessionHandler, error) {
 	request := mnp.InitRequest{
 		SessionId:     sessionId,
 		Configuration: configuration,
 	}
-	if contentTypes != nil {
-		request.Inputs = make([]*mnp.ConfigureInputPort, len(contentTypes.Inputs), len(contentTypes.Inputs))
-		for i, inputConfiguration := range contentTypes.Inputs {
+	if portConfiguration != nil {
+		request.Inputs = make([]*mnp.ConfigureInputPort, len(portConfiguration.Inputs), len(portConfiguration.Inputs))
+		for i, inputConfiguration := range portConfiguration.Inputs {
 			request.Inputs[i] = &mnp.ConfigureInputPort{
 				ContentType: inputConfiguration.ContentType,
 			}
 		}
-		request.Outputs = make([]*mnp.ConfigureOutputPort, len(contentTypes.Outputs), len(contentTypes.Outputs))
-		for i, outputConfiguration := range contentTypes.Outputs {
+		request.Outputs = make([]*mnp.ConfigureOutputPort, len(portConfiguration.Outputs), len(portConfiguration.Outputs))
+		for i, outputConfiguration := range portConfiguration.Outputs {
 			// No support for fowrading here
 			request.Outputs[i] = &mnp.ConfigureOutputPort{
 				ContentType: outputConfiguration.ContentType,
@@ -89,7 +123,7 @@ func (c *Client) Init(
 		return nil, err
 	}
 
-	return NewClientSession(sessionId, c.ctx, c.serviceClient), nil
+	return NewClientSession(sessionId, c.ctx, portConfiguration, c.serviceClient), nil
 }
 
 func waitForReady(sessionId string, initClient mnp.MnpService_InitClient, stateCallback func(state mnp.SessionState)) error {

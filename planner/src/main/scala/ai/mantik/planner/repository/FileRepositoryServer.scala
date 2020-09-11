@@ -56,9 +56,11 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
         }
       } ~
         get {
+          logger.debug(s"Requesting file ${id}")
           onComplete(fileRepository.loadFile(id)) {
             case Success((contentType, fileSource)) =>
               val mediaType = findAkkaMediaType(contentType)
+              logger.debug(s"Completing file ${id} (${contentType})")
               complete(
                 HttpEntity(mediaType, fileSource)
               )
@@ -67,7 +69,7 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
               complete(404, "File not found")
             case Failure(other) =>
               logger.error("Error on requesting file", other)
-              complete(500, "Internal servre error")
+              complete(500, "Internal server error")
           }
         }
     }, path("") {

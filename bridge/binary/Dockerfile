@@ -16,9 +16,10 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /opt/bin/run /opt/bin/run
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
+COPY --chown=bridge --from=builder /tmp /tmp
 COPY --chown=bridge --from=builder /data /data
 
 USER bridge
 EXPOSE 8502
 VOLUME ["/data"]
-ENTRYPOINT ["/opt/bin/run", "serve", "/data"]
+ENTRYPOINT ["/opt/bin/run", "mnp"]

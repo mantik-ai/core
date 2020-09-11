@@ -17,4 +17,11 @@ class ContainerSpec extends TestBase {
     Container.splitImageRepoTag("url:3000/foo") shouldBe None
     Container.splitImageRepoTag("url:3000/foo:mytag") shouldBe Some("url:3000/foo" -> "mytag")
   }
+
+  "simpleImageName" should "work" in {
+    Container("foo").simpleImageName shouldBe "foo"
+    Container("foo:mytag").simpleImageName shouldBe "foo"
+    Container("url/foo:mytag").simpleImageName shouldBe "foo"
+    Container("url:3000/foo:mytag").simpleImageName shouldBe "foo"
+  }
 }

@@ -2,7 +2,6 @@ package ai.mantik.planner
 
 import ai.mantik.ds.FundamentalType.Int32
 import ai.mantik.ds.element.{ Bundle, Primitive, SingleElement }
-import ai.mantik.executor.model.Graph
 import ai.mantik.testutils.TestBase
 
 class PlanOpSpec extends TestBase {

@@ -4,7 +4,6 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements.{ ItemId, NamedMantikId }
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.FileCache
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.testutils.TestBase
 import cats.data.State
@@ -12,8 +11,10 @@ import cats.data.State
 class PlannerImplSpec extends TestBase with PlanTestUtils {
 
   private trait Env {
-    val fileCache = new FileCache()
-    val planner = new PlannerImpl(typesafeConfig, fileCache)
+    val stateManager = new MantikItemStateManager()
+    val planner = new PlannerImpl(typesafeConfig, stateManager)
+
+    def state(item: MantikItem): MantikItemState = stateManager.getOrInit(item)
 
     def runWithEmptyState[X](f: => State[PlanningState, X]): (PlanningState, X) = {
       f.run(PlanningState()).value
@@ -53,8 +54,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     )
     result.files.head.ref shouldBe PlanFileReference(1)
     state.files.head.ref shouldBe PlanFileReference(1)
-    state.overrideState(ds).payloadAvailable.get.head.ref shouldBe PlanFileReference(1)
-    ds.state.get.itemStored shouldBe false // items are NOT updated by Planner
+    state.overrideState(ds, stateManager).payloadAvailable.get.head.ref shouldBe PlanFileReference(1)
+    state(ds).itemStored shouldBe false // items are NOT updated by Planner
   }
 
   "ensureItemStored" should "do nothing if the item is alrady stored" in new Env {
@@ -80,8 +81,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
 
   "ensureAlgorithmDeployed" should "ensure an algorithm is deployed" in new Env {
     val (state, result) = runWithEmptyState(planner.ensureAlgorithmDeployed(algorithm1))
-    algorithm1.state.get.deployment shouldBe empty // no state change
-    state.overrideState(algorithm1).deployed shouldBe Some(Right("var1"))
+    state(algorithm1).deployment shouldBe empty // no state change
+    state.overrideState(algorithm1, stateManager).deployed shouldBe Some(Right("var1"))
     val ops = splitOps(result)
     ops.size shouldBe 2
     ops(0) shouldBe an[PlanOp.DeployAlgorithm]
@@ -95,7 +96,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
   "deployPipeline" should "do nothing, if already deployed" in new Env {
     val pipe = Pipeline.build(algorithm1)
     val deploymentState = DeploymentState(name = "foo1", internalUrl = "http://url1")
-    pipe.state.update(x => x.copy(deployment = Some(deploymentState)))
+    stateManager.upsert(pipe, _.copy(deployment = Some(deploymentState)))
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
     state shouldBe PlanningState()
     result shouldBe PlanOp.Const(deploymentState)
@@ -104,13 +105,13 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
   it should "deploy a pipeline" in new Env {
     val pipe = Pipeline.build(algorithm1)
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
-    pipe.state.get.deployment shouldBe empty // no state changes
-    state.overrideState(pipe).deployed shouldBe Some(Right("var2"))
+    state(pipe).deployment shouldBe empty // no state changes
+    state.overrideState(pipe, stateManager).deployed shouldBe Some(Right("var2"))
     withClue("dependent items are also deployed") {
-      state.overrideState(algorithm1).deployed shouldBe Some(Right("var1"))
+      state.overrideState(algorithm1, stateManager).deployed shouldBe Some(Right("var1"))
     }
     withClue("It must also be stored") {
-      state.overrideState(pipe).stored shouldBe true
+      state.overrideState(pipe, stateManager).stored shouldBe true
     }
   }
 
@@ -124,8 +125,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val pipe = Pipeline.build(unstored)
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
 
-    state.overrideState(unstored).stored shouldBe true
-    state.overrideState(pipe).stored shouldBe true
+    state.overrideState(unstored, stateManager).stored shouldBe true
+    state.overrideState(pipe, stateManager).stored shouldBe true
   }
 
   "convert" should "convert a simple save action" in new Env {
@@ -302,21 +303,23 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val plan = planner.convert(c.fetch)
     val ops = splitOps(plan.op)
     ops.size shouldBe 5 // pushing, calculation, mark cached, calculation2, pulling
-    val cacheKey = b.payloadSource.asInstanceOf[PayloadSource.Cached].cacheGroup.head
+    val expectedItemId = b.payloadSource.asInstanceOf[PayloadSource.Cached].siblings.head
+    b.itemId shouldBe expectedItemId
+
     plan.files.size shouldBe 3 // push, cache, calculation
     plan.files shouldBe List(
       PlanFile(PlanFileReference(1), read = true, write = true, temporary = true),
-      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true, cacheKey = Some(cacheKey)),
+      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true, cacheItemId = Some(expectedItemId)),
       PlanFile(PlanFileReference(3), read = true, write = true, temporary = true)
     )
-    plan.cacheGroups shouldBe List(List(cacheKey))
+    plan.cachedItems shouldBe Set(Vector(expectedItemId))
 
     ops(0) shouldBe an[PlanOp.StoreBundleToFile]
     ops(1) shouldBe an[PlanOp.RunGraph]
     ops(2) shouldBe an[PlanOp.MarkCached]
 
     val cachePlan = ops(2).asInstanceOf[PlanOp.MarkCached]
-    cachePlan.files shouldBe List(cacheKey -> PlanFileReference(2))
+    cachePlan.files shouldBe List(expectedItemId -> PlanFileReference(2))
 
     withClue("It should use the same key for a 2nd invocation referring to the same data") {
       val c2 = b.select("select y as m")
@@ -324,7 +327,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       val parts = splitOps(plan.op)
       parts.size shouldBe 5 // calculation of cached, calculation 2 and pulling
       parts(2) shouldBe an[PlanOp.MarkCached]
-      parts(2).asInstanceOf[PlanOp.MarkCached].cacheGroup shouldBe List(cacheKey)
+      parts(2).asInstanceOf[PlanOp.MarkCached].siblingIds shouldBe Vector(expectedItemId)
       parts(3) shouldBe an[PlanOp.RunGraph]
       parts(4) shouldBe an[PlanOp.LoadBundleFromFile]
     }
@@ -333,14 +336,15 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
   it should "level up temporary files to non temporary ones, if the file is saved at the end" in new Env {
     val a = DataSet.literal(lit)
     val b = a.select("select x as y").cached
-    val cacheKey = b.payloadSource.asInstanceOf[PayloadSource.Cached].cacheGroup.head
+    val expectedItemId = b.payloadSource.asInstanceOf[PayloadSource.Cached].siblings.head
+    b.itemId shouldBe expectedItemId
     val action = b.tag("foo1").save()
     val plan = planner.convert(action)
     plan.files shouldBe List(
       // literal
       PlanFile(PlanFileReference(1), read = true, write = true, temporary = true),
       // cache
-      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true, cacheKey = Some(cacheKey)),
+      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true, cacheItemId = Some(expectedItemId)),
       // copied cache for saving
       PlanFile(PlanFileReference(3), read = true, write = true) // also readable, because it can be used in later invocations
     )
@@ -366,8 +370,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
 
     val trainedPlan = planner.convert(trained.save())
     val statsPlan = planner.convert(stats.save())
-    trainedPlan.cacheGroups shouldNot be(empty)
-    statsPlan.cacheGroups shouldNot be(empty)
-    trainedPlan.cacheGroups shouldBe statsPlan.cacheGroups
+    trainedPlan.cachedItems shouldNot be(empty)
+    statsPlan.cachedItems shouldNot be(empty)
+    trainedPlan.cachedItems shouldBe statsPlan.cachedItems
   }
 }

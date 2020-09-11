@@ -1,0 +1,13 @@
+kind: algorithm
+bridge: foo
+type:
+  input:
+    columns:
+      a: int32
+      b: int32
+  output:
+    columns:
+      z:
+        type: tensor
+        shape: [2,3]
+        componentType: float32

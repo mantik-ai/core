@@ -3,10 +3,12 @@ package ai.mantik.planner
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{DataType, TabularData}
 import ai.mantik.ds.element.{Bundle, SingleElementBundle}
+import ai.mantik.ds.sql.{AutoSelect, Select}
 import ai.mantik.elements
-import ai.mantik.elements.{DataSetDefinition, MantikHeader, NamedMantikId}
+import ai.mantik.elements.{DataSetDefinition, ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.planner.repository.Bridge
-import ai.mantik.planner.select.{AutoAdapt, Select}
+import ai.mantik.planner.select.AutoAdapt
+import io.circe.{Decoder, Encoder}
 
 /** A DataSet cannot be automatically converted to an expected type. */
 class ConversionNotApplicableException(msg: String) extends IllegalArgumentException(msg)
@@ -63,24 +65,28 @@ case class DataSet(
     * Conversions can only be done if they do not loose precision or cannot fail single rows.
     * @throws ConversionNotApplicableException if the conversion can not be applied. */
   def autoAdaptOrFail(targetType: DataType): DataSet = {
-    AutoAdapt.autoAdapt(this, targetType) match {
+    if (targetType == dataType) {
+      return this
+    }
+    AutoSelect.autoSelect(dataType, targetType) match {
       case Left(msg) => throw new ConversionNotApplicableException(msg)
-      case Right(adapted) => adapted
+      case Right(select) => this.select(select)
     }
   }
 
   /** Returns a dataset, which will be cached.
     * Note: caching is done lazy. */
   def cached: DataSet = {
+    val itemId = ItemId.generate()
     payloadSource match {
       case c: PayloadSource.Cached => this
       case _ =>
         val updatedSource = Source(
           DefinitionSource.Derived(source.definition),
-          PayloadSource.Cached(source.payload)
+          PayloadSource.Cached(source.payload, Vector(itemId))
         )
         copy(
-          core = core.copy(source = updatedSource)
+          core = core.copy(source = updatedSource ,itemId = itemId)
         )
     }
   }
@@ -100,7 +106,13 @@ object DataSet {
 
 
   def apply(source: Source, mantikHeader: MantikHeader[DataSetDefinition], bridge: Bridge): DataSet = {
-    DataSet(MantikItemCore(source, mantikHeader, bridge = Some(bridge)))
+    DataSet(MantikItemCore(source, mantikHeader, bridge = bridge))
+  }
+
+  implicit val encoder: Encoder[DataSet] = MantikItem.encoder.contramap(x => x: MantikItem)
+  implicit val decoder: Decoder[DataSet] = MantikItem.decoder.emap {
+    case ds: DataSet => Right(ds)
+    case somethingElse => Left(s"Expected DataSet, got ${somethingElse.getClass.getSimpleName}")
   }
 
   /** Creates a natural data source, with serialized data coming direct from a flow. */

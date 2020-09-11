@@ -1,12 +1,15 @@
 package ai.mantik.executor.kubernetes.integration
 
 import java.time.Clock
+import java.util.UUID
 
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.kubernetes.{K8sOperations, KubernetesConstants}
 import ai.mantik.testutils.tags.IntegrationTest
 import play.api.libs.json.Json
 import skuber.Pod.Phase
 import skuber.api.client.Status
+import skuber.apps.Deployment
 import skuber.batch.Job
 import skuber.json.batch.format._
 import skuber.json.format._
@@ -25,9 +28,8 @@ class K8sOperationsSpec extends KubernetesTestBase {
   val longRunningPod = Pod.Spec(
     containers = List(
       Container(
-        name = KubernetesConstants.SidecarContainerName,
-        image = config.common.sideCar.image,
-        args = config.common.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
+        name = "main",
+        image = "mantikai/bridge.select"
       )
     ),
     restartPolicy = RestartPolicy.Never
@@ -60,44 +62,13 @@ class K8sOperationsSpec extends KubernetesTestBase {
     namespaces3 should contain(myNamespace)
   }
 
-  "getNamespace" should "work" in new Env {
-    val myNamespace = config.kubernetes.namespacePrefix + "-get"
-    await(k8sOperations.getNamespace(myNamespace)) shouldBe empty
-    await(k8sOperations.ensureNamespace(myNamespace))
-    val trial2 = await(k8sOperations.getNamespace(myNamespace))
-    trial2.map(_.name) shouldBe Some(myNamespace)
-  }
-
-  "startPodAndGetIpAddress" should "work" in new Env {
-    val pod = Pod.apply(
-      "pod1", Pod.Spec(
-        containers = List(
-          Container(
-            name = "sidecar1",
-            image = config.common.sideCar.image,
-            args = config.common.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
-          )
-        ),
-        restartPolicy = RestartPolicy.Never
-      )
-    )
-    val pod2 = pod.copy(metadata = pod.metadata.copy(name = "pod2"))
-    val ns = config.kubernetes.namespacePrefix + "startpod"
-    val client = await(k8sOperations.ensureNamespace(ns))
-    val result = await(k8sOperations.startPodsAndGetIpAdresses(Some(ns), Seq(pod, pod2)))
-    result.size shouldBe 2
-    result.keys.toSet shouldBe Set("pod1", "pod2")
-    result.values.toSeq.distinct.size shouldBe 2
-  }
-
-  "cancelMantikPod" should "work" in new Env {
+  "sendKillPatch" should "work" in new Env {
     val podSpec = Pod.apply(
       "pod1", Pod.Spec(
         containers = List(
           Container(
-            name = KubernetesConstants.SidecarContainerName,
-            image = config.common.sideCar.image,
-            args = config.common.sideCar.parameters.toList ++ List("--url", "http://localhost:8042")
+            name = "main",
+            image = "mantikai/bridge.select"
           )
         ),
         restartPolicy = RestartPolicy.Never
@@ -115,81 +86,12 @@ class K8sOperationsSpec extends KubernetesTestBase {
       ) shouldBe true
       podAgain.get
     }
-    await(k8sOperations.cancelMantikPod(podAgain, "bam"))
-    eventually {
-      val podAgain = await(namespaced.getOption[Pod](pod.name))
-      podAgain.get.status.get.phase.get shouldBe Phase.Failed
-    }
-  }
-
-  "getManagedNonFinishedJobs" should "return managed jobs" in new Env {
-    val ns = config.kubernetes.namespacePrefix + "managed"
-    await(k8sOperations.ensureNamespace(ns))
-    await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
-
-    val job1 = Job(
-      metadata = ObjectMeta(
-        name = "job1",
-        labels = Map(
-          KubernetesConstants.TrackerIdLabel -> config.podTrackerId,
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
-        )
-      ),
-      spec = Some(Job.Spec(backoffLimit = Some(1)))
-    ).withTemplate(
-        Pod.Template.Spec(
-          spec = Some(longRunningPod)
-        )
-      )
-    val job2 = Job(
-      metadata = ObjectMeta(
-        name = "job2",
-        labels = Map(
-          KubernetesConstants.TrackerIdLabel -> "other_id",
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
-        )
-      ),
-      spec = Some(Job.Spec(backoffLimit = Some(1)))
-    ).withTemplate(
-        Pod.Template.Spec(
-          spec = Some(longRunningPod)
-        )
-      )
-    await(k8sOperations.create(Some(ns), job2))
-    await(k8sOperations.create(Some(ns), job1))
-    eventually {
-      await(k8sOperations.getManagedNonFinishedJobs(Some(ns))).map(_.name) shouldBe List("job1")
-    }
-    eventually {
-      await(k8sOperations.getManagedNonFinishedJobsForAllNamespaces()).filter(_.namespace == ns).map(_.name) shouldBe List("job1")
-    }
-  }
-
-  it should "not return finished jobs" in new Env {
-    val ns = config.kubernetes.namespacePrefix + "managed2"
-    await(k8sOperations.ensureNamespace(ns))
-    await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
-
-    val job1 = Job(
-      metadata = ObjectMeta(
-        name = "job1",
-        labels = Map(
-          KubernetesConstants.JobIdLabel -> "job1",
-          KubernetesConstants.TrackerIdLabel -> config.podTrackerId,
-          KubernetesConstants.ManagedLabel -> KubernetesConstants.ManagedValue
-        )
-      ),
-      spec = Some(Job.Spec(backoffLimit = Some(1)))
-    ).withTemplate(
-        Pod.Template.Spec(
-          spec = Some(shortRunningPod)
-        )
-      )
-    await(k8sOperations.create(Some(ns), job1))
-    eventually {
-      await(k8sOperations.getJobById(Some(ns), "job1")).get.status.get.succeeded.get shouldBe >(0)
-    }
-    await(k8sOperations.getManagedNonFinishedJobs(Some(ns))) shouldBe empty
+    val reason = "The pod has been marked as being killed because we don't like it."
+    await(k8sOperations.sendKillPatch[Pod](podAgain.name, Some(podAgain.namespace), reason))
+    val podAgain2 = await(namespaced.get[Pod](pod.name))
+    podAgain2.metadata.annotations.get(KubernetesConstants.KillAnnotationName) shouldBe Some(
+      reason
+    )
   }
 
   "errorHandling" should "execute a regular function" in new Env {
@@ -242,5 +144,47 @@ class K8sOperationsSpec extends KubernetesTestBase {
     val t1 = System.currentTimeMillis()
     (t1 - t0) shouldBe >=(3000L)
     count shouldBe 4 // retried 3 times.
+  }
+
+  "deploymentSetReplicas" should "work" in new Env {
+    import skuber.json.apps.format.depFormat
+    val ns = config.kubernetes.namespacePrefix + "scaletest"
+    await(k8sOperations.ensureNamespace(ns))
+
+    val labels = Map(
+      LabelConstants.InternalIdLabelName -> UUID.randomUUID().toString
+    )
+
+    val deployment = Deployment(
+      metadata = ObjectMeta(
+        generateName = "deplscaletest1",
+        labels = labels
+      ),
+      spec = Some(
+        Deployment.Spec(
+          template = Some(
+            Pod.Template.Spec(
+              metadata = ObjectMeta(
+                labels = labels
+              ),
+              spec = Some(longRunningPod.withRestartPolicy(RestartPolicy.Always))
+            )
+          )
+        )
+      )
+    )
+    deployment.spec.get.replicas.get shouldBe 1
+    val deployed = await(
+      k8sOperations.create(Some(ns), deployment)
+    )
+    deployed.spec.get.replicas.get shouldBe 1
+    val updated = await(
+      k8sOperations.deploymentSetReplicas(Some(ns), deployed.name, 2)
+    )
+    updated.spec.get.replicas.get shouldBe 2
+    val getAgain = await(
+      k8sOperations.byName[Deployment](Some(ns), deployed.name)
+    )
+    getAgain.get.spec.get.replicas.get shouldBe 2
   }
 }

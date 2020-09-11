@@ -48,83 +48,104 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
   private val apiClient = new ApiClient(req => executeRequest(req), connectSettings.asUri)
 
   val version: Unit => Future[VersionResponse] =
-    wrapError(apiClient.prepare(DockerApi.version))
+    wrapError("version", apiClient.prepare(DockerApi.version))
+
+  // Container Management
 
   val createContainer: (String, CreateContainerRequest) => Future[CreateContainerResponse] =
-    wrapError2(apiClient.prepare(DockerApi.createContainer))
+    wrapError2("createContainer", apiClient.prepare(DockerApi.createContainer))
 
   val inspectContainer: String => Future[InspectContainerResponse] =
-    wrapError(apiClient.prepare(DockerApi.inspectContainer))
+    wrapError("inspectContainer", apiClient.prepare(DockerApi.inspectContainer))
 
-  // Parameter: "all"
-  val listContainers: Boolean => Future[List[ListContainerResponseRow]] =
-    wrapError(apiClient.prepare(DockerApi.listContainers))
+  // Parameter: "all" (otherwise only running containers)
+  val listContainers: Boolean => Future[Vector[ListContainerResponseRow]] =
+    wrapError("listContainers", apiClient.prepare(DockerApi.listContainers))
 
   val listContainersFiltered: (Boolean, ListContainerRequestFilter) => Future[Vector[ListContainerResponseRow]] =
-    wrapError2(apiClient.prepare(DockerApi.listContainersFiltered))
+    wrapError2("listContainersFiltered", apiClient.prepare(DockerApi.listContainersFiltered))
 
   val killContainer: String => Future[Unit] =
-    wrapError(apiClient.prepare(DockerApi.killContainer))
+    wrapError("killContainer", apiClient.prepare(DockerApi.killContainer))
 
   val removeContainer: (String, Boolean) => Future[Unit] =
-    wrapError2(apiClient.prepare(DockerApi.removeContainer))
+    wrapError2("removeContainer", apiClient.prepare(DockerApi.removeContainer))
 
   val startContainer: String => Future[Unit] =
-    wrapError(apiClient.prepare(DockerApi.startContainer))
+    wrapError("startContainer", apiClient.prepare(DockerApi.startContainer))
 
   // Parameters: containerId, stdout, stderr
   val containerLogs: (String, Boolean, Boolean) => Future[String] = {
     case (containerId, stdout, stderr) =>
       // Workaround, Docker sends application/octet-stream
       for {
-        logSource <- errorHandler(preparedContainerLogs(containerId, stdout, stderr))
+        logSource <- errorHandler("prepareContainerLogs", preparedContainerLogs(containerId, stdout, stderr))
         collected <- logSource._2.runWith(Sink.seq)
         combined = collected.foldLeft(ByteString.empty)(_ ++ _)
       } yield combined.utf8String
   }
 
   val containerWait: String => Future[ContainerWaitResponse] = {
-    wrapError(apiClient.prepare(DockerApi.containerWait))
+    wrapError("containerWait", apiClient.prepare(DockerApi.containerWait))
   }
 
   private val preparedContainerLogs = apiClient.prepare(DockerApi.containerLogs)
 
+  // Images
+
   val pullImage: String => Future[(String, Source[ByteString, _])] =
-    wrapError(apiClient.prepare(DockerApi.pullImage))
+    wrapError("pullImage", apiClient.prepare(DockerApi.pullImage))
 
   val inspectImage: String => Future[InspectImageResult] =
-    wrapError(apiClient.prepare(DockerApi.inspectImage))
+    wrapError("inspectImage", apiClient.prepare(DockerApi.inspectImage))
 
   val removeImage: String => Future[Vector[RemoveImageRow]] =
-    wrapError(apiClient.prepare(DockerApi.removeImage))
+    wrapError("removeImage", apiClient.prepare(DockerApi.removeImage))
 
+  // Volumes
   val listVolumes: Unit => Future[ListVolumeResponse] =
-    wrapError(apiClient.prepare(DockerApi.listVolumes))
+    wrapError("listVolumes", apiClient.prepare(DockerApi.listVolumes))
 
   val inspectVolume: String => Future[InspectVolumeResponse] =
-    wrapError(apiClient.prepare(DockerApi.inspectVolume))
+    wrapError("inspectVolume", apiClient.prepare(DockerApi.inspectVolume))
 
   val createVolume: CreateVolumeRequest => Future[CreateVolumeResponse] =
-    wrapError(apiClient.prepare(DockerApi.createVolume))
+    wrapError("createVolume", apiClient.prepare(DockerApi.createVolume))
 
   val removeVolume: String => Future[Unit] =
-    wrapError(apiClient.prepare(DockerApi.removeVolume))
+    wrapError("removeVolume", apiClient.prepare(DockerApi.removeVolume))
 
-  private def wrapError[A, R](f: A => Future[Either[(Int, ErrorResponse), R]]): A => Future[R] = {
-    args => errorHandler(f(args))
+  // Networks
+  val listNetworks: Unit => Future[Vector[ListNetworkResponseRow]] =
+    wrapError("listNetworks", apiClient.prepare(DockerApi.listNetworks))
+
+  val listNetworksFiltered: ListNetworkRequestFilter => Future[Vector[ListNetworkResponseRow]] =
+    wrapError("listNetworksFiltered", apiClient.prepare(DockerApi.listNetworksFiltered))
+
+  val inspectNetwork: String => Future[InspectNetworkResult] =
+    wrapError("inspectNetwork", apiClient.prepare(DockerApi.inspectNetwork))
+
+  val createNetwork: CreateNetworkRequest => Future[CreateNetworkResponse] =
+    wrapError("createNetwork", apiClient.prepare(DockerApi.createNetwork))
+
+  val removeNetwork: String => Future[Unit] =
+    wrapError("removeNetwork", apiClient.prepare(DockerApi.removeNetwork))
+
+  private def wrapError[A, R](op: String, f: A => Future[Either[(Int, ErrorResponse), R]]): A => Future[R] = {
+    args => errorHandler(op, f(args))
   }
 
-  private def wrapError2[A1, A2, R](f: ((A1, A2)) => Future[Either[(Int, ErrorResponse), R]]): (A1, A2) => Future[R] = {
-    (a1, a2) => errorHandler(f(a1, a2))
+  private def wrapError2[A1, A2, R](op: String, f: ((A1, A2)) => Future[Either[(Int, ErrorResponse), R]]): (A1, A2) => Future[R] = {
+    (a1, a2) => errorHandler(op, f(a1, a2))
   }
 
-  private def wrapError3[A1, A2, A3, R](f: ((A1, A2, A3)) => Future[Either[(Int, ErrorResponse), R]]): (A1, A2, A3) => Future[R] = {
-    (a1, a2, a3) => errorHandler(f(a1, a2, a3))
+  private def wrapError3[A1, A2, A3, R](op: String, f: ((A1, A2, A3)) => Future[Either[(Int, ErrorResponse), R]]): (A1, A2, A3) => Future[R] = {
+    (a1, a2, a3) => errorHandler(op, f(a1, a2, a3))
   }
 
-  private def errorHandler[R](in: Future[Either[(Int, ErrorResponse), R]]): Future[R] = {
+  private def errorHandler[R](op: String, in: Future[Either[(Int, ErrorResponse), R]]): Future[R] = {
     in.flatMap {
-      case Left((code, value)) => Future.failed(DockerClient.WrappedErrorResponse(code, value))
+      case Left((code, value)) => Future.failed(DockerClient.WrappedErrorResponse(code, value, op))
       case Right(ok)           => Future.successful(ok)
     }
   }
@@ -137,7 +158,7 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
 
 object DockerClient {
   /** A docker error as wrapped message in a RuntimeException. */
-  case class WrappedErrorResponse(code: Int, error: ErrorResponse) extends RuntimeException(
-    s"Docker error: ${code} ${error.message}"
+  case class WrappedErrorResponse(code: Int, error: ErrorResponse, operation: String) extends RuntimeException(
+    s"Docker error: ${code} ${error.message} (operation=${operation})"
   )
 }

@@ -1,0 +1,65 @@
+syntax = "proto3";
+package ai.mantik.planner.protos;
+
+// Main Planning API
+service PlanningContextService {
+    // Load a Mantik Item
+    rpc Load (LoadItemRequest) returns (LoadItemResponse);
+
+    // Execute a MantikAction
+    rpc Execute (ExecuteActionRequest) returns (stream ExecuteActionResponse);
+
+    // Returns the state of an Item
+    rpc State(StateRequest) returns (StateResponse);
+
+    // Add Mantik Item directly to the local repository
+    rpc AddLocalMantikItem(stream AddLocalMantikItemRequest) returns (AddLocalMantikItemResponse);
+}
+
+message LoadItemRequest {
+    // The id of the item to load
+    string mantik_id = 1;
+    // If true, pull the item from a remote repository
+    bool pull = 2;
+}
+
+message LoadItemResponse {
+    // Serialized Mantik Item as JSON
+    string item_json = 1;
+}
+
+message ExecuteActionRequest {
+    // Serialized Mantik Action
+    string action_json = 1;
+}
+
+message ExecuteActionResponse {
+    // Serialized Mantik Action Response
+    bytes response_json = 1;
+}
+
+message StateRequest {
+    // Serialized Mantik Item as JSON
+    string item_json = 1;
+}
+
+message StateResponse {
+    // Serialized MantikItemState as JSON
+    string state_json = 1;
+}
+
+message AddLocalMantikItemRequest {
+    // Mantik Header (JSON/YAML) (in first Request)
+    string mantik_header = 1;
+    // Optional mantik Id (in first request)
+    string id = 2;
+    // Optional Content type (if data is coming)
+    string content_type = 3;
+    // Payload Content
+    bytes data = 4;
+}
+
+message AddLocalMantikItemResponse {
+    // Mantik Item Id under which the item is stored
+    string id = 1;
+}

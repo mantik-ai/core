@@ -25,7 +25,8 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
 
   it should "save and load a file" in new Env {
     val info = await(repo.requestFileStorage(false))
-    repo.storeFileSync(info.fileId, ContentTypes.MantikBundleContentType, testBytes)
+    val bytesWritten = repo.storeFileSync(info.fileId, ContentTypes.MantikBundleContentType, testBytes)
+    bytesWritten shouldBe testBytes.length
     val get = repo.getFileSync(info.fileId, false)
     get.isTemporary shouldBe false
     val (contentType, bytesAgain) = repo.getFileContentSync(info.fileId)

@@ -12,7 +12,6 @@ type:
         black:
           componentType: uint8
     label: uint8
-directory: data
 files:
   - file: train-labels-idx1-ubyte.gz
     compression: gzip

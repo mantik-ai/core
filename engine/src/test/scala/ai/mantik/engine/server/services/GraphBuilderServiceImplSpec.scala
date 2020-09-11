@@ -13,14 +13,16 @@ import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineReques
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
 import ai.mantik.engine.testutil.{ DummyComponents, TestArtifacts, TestBaseWithSessions }
+import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.repository.MantikArtifact
-import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, PayloadSource, Pipeline }
+import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, MantikItem, PayloadSource, Pipeline }
 import io.grpc.StatusRuntimeException
 
 class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
   trait PlainEnv {
-    val graphBuilder = new GraphBuilderServiceImpl(sessionManager)
+    val stateManager = new MantikItemStateManager()
+    val graphBuilder = new GraphBuilderServiceImpl(sessionManager, stateManager)
 
     val session1 = await(sessionManager.create())
   }
@@ -203,7 +205,16 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       // TODO: Error scenarios
 
       val item = session1.getItem("1").get.asInstanceOf[DataSet]
-      item shouldBe DataSet.literal(lit)
+
+      def withItemId(item: DataSet, itemId: ItemId): MantikItem = {
+        item.copy(
+          core = item.core.copy(
+            itemId = itemId
+          )
+        )
+      }
+
+      item shouldBe withItemId(DataSet.literal(lit), item.itemId)
       session2 shouldBe empty
     }
   }
@@ -216,7 +227,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
     val original1 = session1.getItem("1").get.asInstanceOf[DataSet]
     val original2 = session1.getItem("2").get.asInstanceOf[DataSet]
-    original2 shouldBe original1.cached
+    original1.mantikHeader shouldBe original2.mantikHeader
+    original2.source.payload shouldBe an[PayloadSource.Cached]
   }
 
   for {

@@ -7,6 +7,7 @@ import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMant
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_executor.{ DeployItemRequest, FetchItemRequest, SaveItemRequest }
 import ai.mantik.engine.testutil.{ TestArtifacts, TestBaseWithSessions }
+import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.repository.MantikArtifact
 import ai.mantik.planner.{ Algorithm, DataSet, DeploymentState, MantikItem, Pipeline, PlanOp, Source }
 
@@ -61,7 +62,7 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
-    val algorithm1 = MantikItem.fromMantikArtifact(algorithm1Artifact, Seq(TestArtifacts.algoBridge1)).asInstanceOf[Algorithm]
+    val algorithm1 = MantikItem.fromMantikArtifact(algorithm1Artifact, components.stateManger, Seq(TestArtifacts.algoBridge1)).asInstanceOf[Algorithm]
     val pipeline1 = Pipeline.build(
       algorithm1
     )

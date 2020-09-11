@@ -5,17 +5,19 @@ build: scala-build build-subprojects
 include scripts/ci/Makefile.core
 
 SUB_PROJECTS=\
-	go_shared\
 	mnp/mnpgo\
+	mnp/mnppython\
+	go_shared\
+	python_sdk \
 	bridge/binary\
 	bridge/bridge_debugger\
 	bridge/select\
 	bridge/sklearn/simple_learn \
 	bridge/tf/saved_model \
 	bridge/tf/train \
-	executor/coordinator \
+	executor/containers \
+	executor/tinyproxy \
 	cli \
-	python_sdk \
 	doc \
 
 

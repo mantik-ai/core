@@ -43,29 +43,6 @@ func (s *MnpServiceServer) Init(req *mnp.InitRequest, res mnp.MnpService_InitSer
 		return errors.New("Session already exists")
 	}
 
-	/*
-		forwarders := make([]*internal.Forwarder, len(req.Outputs), len(req.Outputs))
-		var forwardConnectError error
-		for i, c := range req.Outputs {
-			// TODO: Parallelize?
-			if len(c.DestinationUrl) > 0 {
-				forwarder, err := internal.ConnectForwarder(res.Context(), c.DestinationUrl)
-				if err != nil {
-					forwardConnectError = err
-					break
-				} else {
-					forwarders[i] = forwarder
-				}
-			}
-		}
-		if forwardConnectError != nil {
-			for _, f := range forwarders {
-				f.Close()
-			}
-			return errors.Wrap(forwardConnectError, "Could not connect forwarders")
-		}
-	*/
-
 	// Note: we must respond to the stream in the same goroutine, otherwise
 	// gRpc closes the connection
 
@@ -229,6 +206,29 @@ func (s *MnpServiceServer) Pull(req *mnp.PullRequest, res mnp.MnpService_PullSer
 			return err
 		}
 	}
+}
+
+func (s *MnpServiceServer) QueryTask(ctx context.Context, req *mnp.QueryTaskRequest) (*mnp.QueryTaskResponse, error) {
+	session, err := s.getSession(req.SessionId)
+	if err != nil {
+		return nil, err
+	}
+	var task *internal.ServerTask
+	if req.Ensure {
+		task, err = session.GetOrCreateTask(req.TaskId)
+	} else {
+		task, err = session.GetTask(req.TaskId)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if task == nil {
+		return &mnp.QueryTaskResponse{
+			State: mnp.TaskState_TS_UNKNOWN,
+		}, nil
+	}
+
+	return task.Query(), nil
 }
 
 func (s *MnpServiceServer) finishPull(res mnp.MnpService_PullServer) error {

@@ -13,6 +13,7 @@ trait Samples extends BeforeAndAfterAll {
 
   protected val doubleMultiplyDirectory = Paths.get("bridge/tf/saved_model/test/resources/samples/double_multiply")
   protected val kmeansDirectory = Paths.get("bridge/sklearn/simple_learn/example/kmeans")
+  protected val mnistTrainDirectory = Paths.get("bridge/binary/test/mnist_train")
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -31,6 +32,14 @@ trait Samples extends BeforeAndAfterAll {
     lazy val doubleMultiply = {
       doubleMultiplyPushed;
       context.loadAlgorithm("double_multiply")
+    }
+  }
+
+  trait EnvWithDataSet extends EnvWithBridges {
+    private lazy val mnistTrainPushed = context.pushLocalMantikItem(mnistTrainDirectory)
+    lazy val mnistTrain = {
+      mnistTrainPushed
+      context.loadDataSet("mnist_train")
     }
   }
 

@@ -19,13 +19,9 @@ import ai.mantik.engine.protos.remote_registry.RemoteRegistryServiceGrpc.RemoteR
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionService
 import ai.mantik.executor.Executor
-import ai.mantik.executor.server.{ ExecutorServer, ServerConfig }
-import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc
-import ai.mantik.planner.repository.protos.file_repository.FileRepositoryServiceGrpc.FileRepositoryService
-import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc
-import ai.mantik.planner.repository.protos.repository.RepositoryServiceGrpc.RepositoryService
-import io.grpc.netty.NettyServerBuilder
+import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.PlanningContextService
 import io.grpc.Server
+import io.grpc.netty.NettyServerBuilder
 import javax.inject.Inject
 
 import scala.concurrent.Future
@@ -38,8 +34,7 @@ class EngineServer @Inject() (
     debugService: DebugService,
     localRegistryService: LocalRegistryService,
     remoteRegistryService: RemoteRegistryService,
-    repositoryService: RepositoryService,
-    fileRepositoryService: FileRepositoryService,
+    remotePlanningContext: PlanningContextService,
     executor: Executor
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
 
@@ -47,10 +42,6 @@ class EngineServer @Inject() (
   private val interface = config.getString("mantik.engine.server.interface")
 
   private var server: Option[Server] = None
-
-  private val enableExecutorServer = config.getBoolean("mantik.engine.server.enableExecutorServer")
-
-  private var executorServer: Option[ExecutorServer] = None
 
   /** Start the server */
   def start(): Server = {
@@ -63,14 +54,6 @@ class EngineServer @Inject() (
     logger.info(s"Starting server at ${interface}:${port}")
     instance.start()
 
-    if (enableExecutorServer) {
-      logger.info("Enabling  Executor Server")
-      val es = new ExecutorServer(ServerConfig.fromTypesafe(config), executor)
-      es.start()
-      executorServer = Some(es)
-    } else {
-      logger.info("Skipping Executor Server, not enabled")
-    }
     instance
   }
 
@@ -88,7 +71,6 @@ class EngineServer @Inject() (
   }
 
   def stop(): Unit = {
-    executorServer.foreach(_.stop())
     if (this.server.isEmpty) {
       logger.info("Server not running, cancelling shutdown")
       return
@@ -113,10 +95,9 @@ class EngineServer @Inject() (
       .addService(GraphBuilderServiceGrpc.bindService(graphBuilderService, executionContext))
       .addService(GraphExecutorServiceGrpc.bindService(graphExecutorService, executionContext))
       .addService(DebugServiceGrpc.bindService(debugService, executionContext))
-      .addService(RepositoryServiceGrpc.bindService(repositoryService, executionContext))
-      .addService(FileRepositoryServiceGrpc.bindService(fileRepositoryService, executionContext))
       .addService(LocalRegistryServiceGrpc.bindService(localRegistryService, executionContext))
       .addService(RemoteRegistryServiceGrpc.bindService(remoteRegistryService, executionContext))
+      .addService(PlanningContextService.bindService(remotePlanningContext, executionContext))
       .build()
   }
 

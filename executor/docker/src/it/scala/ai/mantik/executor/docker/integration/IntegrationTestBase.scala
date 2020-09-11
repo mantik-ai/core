@@ -2,8 +2,10 @@ package ai.mantik.executor.docker.integration
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.Executor
+import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.common.test.integration.IntegrationBase
 import ai.mantik.executor.docker.api.DockerClient
+import ai.mantik.executor.docker.api.structures.ListNetworkRequestFilter
 import ai.mantik.executor.docker.{DockerConstants, DockerExecutor, DockerExecutorConfig}
 import ai.mantik.testutils.{AkkaSupport, TempDirSupport, TestBase}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -31,7 +33,7 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
   private def killOldMantikContainers(): Unit = {
     val containers = await(dockerClient.listContainers((true)))
     val mantikContainers = containers.filter(
-      _.Labels.get(DockerConstants.ManagedByLabelName).contains(DockerConstants.ManabedByLabelValue)
+      _.Labels.get(LabelConstants.ManagedByLabelName).contains(LabelConstants.ManagedByLabelValue)
     )
     if (mantikContainers.isEmpty) {
       logger.info("No old mantik containers to kill")
@@ -42,7 +44,7 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
     }
     val volumes = await(dockerClient.listVolumes(()))
     val mantikVolumes = volumes.Volumes.filter(
-      _.effectiveLabels.get(DockerConstants.ManabedByLabelValue).contains(DockerConstants.ManagedByLabelName)
+      _.effectiveLabels.get(LabelConstants.ManagedByLabelValue).contains(LabelConstants.ManagedByLabelName)
     )
     if (mantikVolumes.isEmpty) {
       logger.info("No old mantik volumes to kill")
@@ -50,6 +52,14 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
     mantikVolumes.foreach { volume =>
       logger.info(s"Killing Volume ${volume.Name}")
       await(dockerClient.removeVolume(volume.Name))
+    }
+
+    val mantikNetworks = await(dockerClient.listNetworksFiltered(
+      ListNetworkRequestFilter.forLabels(LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue))
+    )
+    mantikNetworks.foreach { network =>
+      logger.info(s"Killing network ${network.Name}")
+      await(dockerClient.removeNetwork(network.Id))
     }
   }
 

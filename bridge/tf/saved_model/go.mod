@@ -2,11 +2,9 @@ module tfbridge
 
 require (
 	github.com/buger/jsonparser v0.0.0-20181115193947-bf1c66bbce23
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/golang/protobuf v1.2.0
+	github.com/golang/protobuf v1.3.2
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.3.0
 	github.com/tensorflow/tensorflow v1.12.0
 	github.com/vmihailenco/msgpack v4.0.3+incompatible
@@ -15,5 +13,7 @@ require (
 )
 
 replace gl.ambrosys.de/mantik/go_shared => ../../../go_shared
+
+replace gl.ambrosys.de/mantik/core/mnp/mnpgo => ../../../mnp/mnpgo
 
 go 1.13

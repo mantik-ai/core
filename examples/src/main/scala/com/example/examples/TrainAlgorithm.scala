@@ -5,11 +5,11 @@ import java.io.File
 import ai.mantik.ds.FundamentalType.{ Float64, Int32 }
 import ai.mantik.ds.{ TabularData, Tensor }
 import ai.mantik.ds.element.{ Bundle, TensorElement }
-import ai.mantik.planner.{ Context, DataSet }
+import ai.mantik.planner.{ PlanningContext, DataSet }
 
 object TrainAlgorithm extends ExampleBase {
 
-  override protected def run(implicit context: Context): Unit = {
+  override protected def run(implicit context: PlanningContext): Unit = {
     val sampleFile = new File("bridge/sklearn/simple_learn/example/kmeans").toPath
     context.pushLocalMantikItem(sampleFile)
 

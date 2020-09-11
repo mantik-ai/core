@@ -22,7 +22,7 @@ object Main {
     try {
       val injector = Guice.createInjector(
         new AkkaModule(),
-        new EngineModule(clientConfig = None),
+        new EngineModule(),
         ServiceModule
       )
 

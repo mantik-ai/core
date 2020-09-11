@@ -1,12 +1,11 @@
 package ai.mantik.planner
 
-import java.util.UUID
-
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.sql.Select
 import ai.mantik.elements.{ AlgorithmDefinition, MantikHeader }
 import ai.mantik.planner.repository.Bridge
-import ai.mantik.planner.select.Select
+import ai.mantik.planner.select.SelectMantikHeaderBuilder
 
 /** Some A => B Transformation Algorithm */
 case class Algorithm(
@@ -27,12 +26,12 @@ case class Algorithm(
 object Algorithm {
 
   def apply(source: Source, mantikHeader: MantikHeader[AlgorithmDefinition], bridge: Bridge): Algorithm = {
-    Algorithm(MantikItemCore(source, mantikHeader, bridge = Some(bridge)))
+    Algorithm(MantikItemCore(source, mantikHeader, bridge))
   }
 
   /** Convert a Select statement into an algorithm. */
   def fromSelect(select: Select): Algorithm = {
-    val mantikHeader = select.compileToSelectMantikHeader() match {
+    val mantikHeader = SelectMantikHeaderBuilder.compileSelectToMantikHeader(select) match {
       case Left(error) =>
         // TODO: Better exception
         throw new FeatureNotSupported(s"Could not compile select ${error}")
@@ -42,7 +41,7 @@ object Algorithm {
       MantikItemCore(
         Source.constructed(),
         mantikHeader,
-        bridge = Some(Bridge.selectBridge)
+        bridge = Bridge.selectBridge
       ), Some(select))
   }
 }

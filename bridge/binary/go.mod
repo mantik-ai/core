@@ -8,4 +8,6 @@ require (
 
 replace gl.ambrosys.de/mantik/go_shared => ../../go_shared
 
+replace gl.ambrosys.de/mantik/core/mnp/mnpgo => ../../mnp/mnpgo
+
 go 1.13

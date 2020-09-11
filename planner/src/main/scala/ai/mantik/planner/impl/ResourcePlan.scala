@@ -5,6 +5,7 @@ import ai.mantik.planner.{ Plan, PlanNodeService, PlanOp, Planner }
 import PlannerGraphOps._
 import ai.mantik.componently.utils.Renderable
 import ai.mantik.planner
+import ai.mantik.planner.graph.{ Graph, Link, Node, NodePort, NodePortRef }
 
 /**
  * Describes a way a resource is calculated (a containing part of a graph).
@@ -19,8 +20,8 @@ import ai.mantik.planner
 private[impl] case class ResourcePlan(
     pre: PlanOp[Unit] = PlanOp.Empty,
     graph: Graph[PlanNodeService] = Graph.empty,
-    inputs: Seq[NodeResourceRef] = Nil,
-    outputs: Seq[NodeResourceRef] = Nil
+    inputs: Seq[NodePortRef] = Nil,
+    outputs: Seq[NodePortRef] = Nil
 ) {
 
   def prependOp(plan: PlanOp[_]): ResourcePlan = {
@@ -52,13 +53,13 @@ private[impl] case class ResourcePlan(
     )
   }
 
-  def outputResource(id: Int): NodeResource = {
+  def outputResource(id: Int): NodePort = {
     require(id >= 0 && id < outputs.length, "Invalid output id")
     outputResource(outputs(id))
   }
 
-  def outputResource(nodeResourceRef: NodeResourceRef): NodeResource = {
-    graph.resolveReference(nodeResourceRef).getOrElse {
+  def outputResource(nodeResourceRef: NodePortRef): NodePort = {
+    graph.resolveOutput(nodeResourceRef).getOrElse {
       throw new planner.Planner.InconsistencyException(s"Output ${nodeResourceRef} could not be resolved")
     }._2
   }
@@ -88,5 +89,23 @@ object ResourcePlan {
         "outputs" -> value.outputs
       )
     }
+  }
+
+  /** Generates a Resource plan for a single node. */
+  def singleNode(nodeId: String, node: Node[PlanNodeService]): ResourcePlan = {
+    val graph = Graph(
+      nodes = Map(
+        nodeId -> node
+      )
+    )
+    ResourcePlan(
+      graph = graph,
+      inputs = node.inputs.indices.map { port =>
+        NodePortRef(nodeId, port)
+      },
+      outputs = node.outputs.indices.map { port =>
+        NodePortRef(nodeId, port)
+      }
+    )
   }
 }

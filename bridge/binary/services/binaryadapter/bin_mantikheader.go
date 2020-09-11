@@ -36,9 +36,8 @@ type FileEntryContent struct {
 }
 
 type BinaryMantikHeader struct {
-	Type      ds.TypeReference `json:"type"`
-	Directory string           `json:"directory"`
-	Files     []FileEntry      `json:"files"`
+	Type  ds.TypeReference `json:"type"`
+	Files []FileEntry      `json:"files"`
 }
 
 func ParseBinaryMantikHeader(bytes []byte) (*BinaryMantikHeader, error) {

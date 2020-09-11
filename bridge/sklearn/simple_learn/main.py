@@ -1,4 +1,4 @@
-from mantik.bridge.bridge_app import start
+from mantik.bridge import start_mnp_bridge
 from mantik.types import MantikHeader
 from algorithm_wrapper import AlgorithmWrapper
 
@@ -9,4 +9,4 @@ def createAlgorithm(mantikheader: MantikHeader):
     return algorithm
 
 
-start(createAlgorithm)
+start_mnp_bridge(createAlgorithm, "Sklearn Bridge")

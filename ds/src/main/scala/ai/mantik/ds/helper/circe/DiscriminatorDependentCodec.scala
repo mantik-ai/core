@@ -15,7 +15,7 @@ import scala.reflect.ClassTag
  *
  * This is for circe JSON, not Play JSON.
  */
-abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") {
+abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") extends ObjectEncoder[T] with Decoder[T] {
   protected case class SubType[X <: T](
       classTag: ClassTag[X],
       encoder: ObjectEncoder[X],
@@ -53,37 +53,37 @@ abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") {
     .groupBy(_.classTag.runtimeClass)
     .mapValues(_.ensuring(_.size == 1, "Duplicate Class Detected").head)
 
-  implicit object encoder extends ObjectEncoder[T] {
-    override def encodeObject(a: T): JsonObject = {
-      classTags.get(a.getClass) match {
-        case None => throw new IllegalArgumentException(s"Object ${a.getClass.getSimpleName} is not registered")
-        case Some(subType) =>
-          subType.rawEncode(a).+:(
-            discriminator, Json.fromString(subType.kind)
-          )
-      }
+  override def encodeObject(a: T): JsonObject = {
+    classTags.get(a.getClass) match {
+      case None => throw new IllegalArgumentException(s"Object ${a.getClass.getSimpleName} is not registered")
+      case Some(subType) =>
+        subType.rawEncode(a).+:(
+          discriminator, Json.fromString(subType.kind)
+        )
     }
   }
 
-  implicit object decoder extends Decoder[T] {
-    override def apply(c: HCursor): Result[T] = {
-      val discriminatorField = c.downField(discriminator)
-      discriminatorField.as[String].toOption match {
-        case None =>
-          defaultSubType match {
-            case Some(givenDefaultSubType) =>
-              givenDefaultSubType.decoder.apply(c)
-            case None =>
-              Left(DecodingFailure(s"No kind given and no default type", Nil))
-          }
-        case Some(kind) =>
-          decoders.get(kind) match {
-            case Some(subType) =>
-              subType.decoder.apply(c)
-            case None =>
-              Left(DecodingFailure(s"Unknown kind ${kind}", Nil))
-          }
-      }
+  implicit def encoder: ObjectEncoder[T] = this
+
+  override def apply(c: HCursor): Result[T] = {
+    val discriminatorField = c.downField(discriminator)
+    discriminatorField.as[String].toOption match {
+      case None =>
+        defaultSubType match {
+          case Some(givenDefaultSubType) =>
+            givenDefaultSubType.decoder.apply(c)
+          case None =>
+            Left(DecodingFailure(s"No kind given and no default type", Nil))
+        }
+      case Some(kind) =>
+        decoders.get(kind) match {
+          case Some(subType) =>
+            subType.decoder.apply(c)
+          case None =>
+            Left(DecodingFailure(s"Unknown kind ${kind}", Nil))
+        }
     }
   }
+
+  implicit def decoder: Decoder[T] = this
 }

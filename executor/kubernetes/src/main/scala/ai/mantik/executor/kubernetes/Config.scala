@@ -8,14 +8,11 @@ import com.typesafe.config.{ Config => TypesafeConfig }
  * Configuration for the execution.
  *
  * @param common common executor settings.
- * @param podTrackerId special id, so that the executor knows which pods to track state.
- * @param enableExistingServiceNodeCollapse if true, nodes for existing services will be collapsed.
+ * @param kubernetes kubernetes specific settings
  */
 case class Config(
     common: CommonConfig,
-    podTrackerId: String,
-    kubernetes: KubernetesConfig,
-    enableExistingServiceNodeCollapse: Boolean
+    kubernetes: KubernetesConfig
 ) {
   def dockerConfig: DockerConfig = common.dockerConfig
 }
@@ -28,9 +25,7 @@ object Config {
     val commonConfig = CommonConfig.fromTypesafeConfig(c)
     Config(
       common = commonConfig,
-      podTrackerId = root.getString("behaviour.podTrackerId"),
-      kubernetes = KubernetesConfig.fromTypesafe(root.getConfig("kubernetes")),
-      enableExistingServiceNodeCollapse = root.getBoolean("behaviour.enableExistingServiceNodeCollapse")
+      kubernetes = KubernetesConfig.fromTypesafe(root.getConfig("kubernetes"))
     )
   }
 }

@@ -7,7 +7,7 @@ import ai.mantik.planner.PlanExecutor.InvalidPlanException
 import ai.mantik.planner.utils.AtomicReference
 
 /**
- * The memory of [[PlanExecutorImpl]]
+ * The memory of [[ai.mantik.planner.PlanExecutor]] implementation.
  * Each value is writable once.
  */
 private[impl] class Memory {

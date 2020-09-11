@@ -58,4 +58,5 @@ target/vendor/tensorflow_c/lib:
 target/docker_build/generated.make: $(shell find $(MANTIK_ROOT)/go_shared -name *.go)
 	mkdir -p target/docker_build
 	cp -r $(MANTIK_ROOT)/go_shared target/docker_build/
+	cp -r $(MANTIK_ROOT)/mnp target/docker_build/
 	touch $@

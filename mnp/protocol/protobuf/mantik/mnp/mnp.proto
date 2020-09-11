@@ -3,6 +3,9 @@ syntax = "proto3";
 import "google/protobuf/empty.proto";
 import "google/protobuf/any.proto";
 
+option go_package = "mantik/mnp";
+option java_package = "ai.mantik.mnp.protocol";
+
 // Mantik Node Protocol
 // Underlying protocol for communication between Network nodes
 // Design Goal: Free of mantik specific terms. Just solving the
@@ -26,8 +29,11 @@ service MnpService {
     // Push data into a port, creating a task when necessary
     rpc Push(stream PushRequest) returns (PushResponse) {};
 
-    // Pull data from a port
-    rpc Pull(PullRequest) returns (stream PullResponse) {}
+    // Pull data from a port, creating a task when necesary
+    rpc Pull(PullRequest) returns (stream PullResponse) {};
+
+    // Queries a task (can create if not existent)
+    rpc QueryTask(QueryTaskRequest) returns (QueryTaskResponse) {}
 }
 
 message AboutRequest {
@@ -151,4 +157,46 @@ message PullResponse {
     bool done = 2;
     // A data blob
     bytes data = 3;
+}
+
+message QueryTaskRequest {
+    // the id of the session
+    string session_id = 1;
+    // The id of the task
+    string task_id = 2;
+    // if true, the task will be created if not existing
+    bool ensure = 3;
+}
+
+// The state of a task
+enum TaskState {
+    TS_UNKNOWN = 0;
+    TS_EXISTS = 1;
+    TS_FINISHED = 2;
+    TS_FAILED = 3;
+}
+
+// The state of a task's port
+message TaskPortStatus {
+    // the number of transferred messages
+    int32 msg_count = 1;
+    // the amount of transferred bytes
+    int64 data = 2;
+    // if there was an error on this port
+    string error = 3;
+    // the port is finished
+    bool done = 4;
+}
+
+// Result of a Query Task call
+// Note: not all fields may be supported by all bridges yet
+message QueryTaskResponse {
+    // The status of the task
+    TaskState state = 1;
+    // An error description if known
+    string error = 2;
+    // Information about input ports
+    repeated TaskPortStatus inputs = 3;
+    // Information about output ports
+    repeated TaskPortStatus outputs = 4;
 }

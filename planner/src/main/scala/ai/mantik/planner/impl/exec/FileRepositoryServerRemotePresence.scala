@@ -33,6 +33,7 @@ private[planner] class FileRepositoryServerRemotePresence @Inject() (
    */
   private val sleepAfterPublish = 3.seconds
 
+  /** The Remote URI under which the FileServer is reachable within the Executor domain. */
   def assembledRemoteUri(): Uri = {
     Await.result(prepareKubernetesFileServiceResult, 60.seconds)
   }

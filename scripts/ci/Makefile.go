@@ -10,6 +10,7 @@ ENABLE_LINUX ?= true
 EXTRA_DEPS ?=
 MAIN_FILE ?= main.go
 APP_VERSION := $(shell git describe --always --dirty)
+GO_PATH ?= $(HOME)/go
 
 ifeq ($(ENABLE_LINUX),true)
 	LINUX_DEPENDENCY = target/${NAME}_linux
@@ -21,6 +22,12 @@ endif
 ifdef CACHE_DIR
   export GOPATH=$(CACHE_DIR)/go
 endif
+
+# Can be set, and then protobuf files will be built
+ifdef PROTOBUF_DIR
+  EXTRA_DEPS:=$(EXTRA_DEPS) protos
+endif
+
 
 build: target/${NAME} $(LINUX_DEPENDENCY)
 
@@ -39,3 +46,17 @@ target/${NAME}: $(shell find -not -path "./target/*" -name "*.go") $(EXTRA_DEPS)
 
 target/${NAME}_linux: target/${NAME} $(EXTRA_DEPS)
 	CGO_ENABLED=0 GOOS=linux go build -a -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)
+
+# If a protobuf_dir is set, it will be build extra
+ifdef PROTOBUF_DIR
+
+clean::
+	rm -rf protos
+
+protos: protos/proto.make
+
+protos/proto.make: $(shell find $(PROTOBUF_DIR) -name "*.proto")
+	@mkdir -p protos
+	PATH=$(PATH):$(GO_PATH)/bin; protoc -I $(PROTOBUF_DIR) $^ --go_out=plugins=grpc:protos
+	@touch $@
+endif

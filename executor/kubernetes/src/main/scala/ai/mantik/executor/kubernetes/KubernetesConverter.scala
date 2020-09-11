@@ -1,32 +1,339 @@
 package ai.mantik.executor.kubernetes
 
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 
-import ai.mantik.executor.common.PayloadProvider
+import ai.mantik.executor.common.LabelConstants
+import ai.mantik.executor.model.{ MnpPipelineDefinition, MnpWorkerDefinition, StartWorkerRequest }
 import ai.mantik.executor.model.docker.DockerLogin
-import ai.mantik.executor.model.{ ContainerService, DataProvider, ExistingService, NodeService }
 import io.circe.Json
-import skuber.{ Container, LocalObjectReference, ObjectMeta, Pod, PodSecurityContext, RestartPolicy, Secret, Volume }
+import skuber.apps.Deployment
+import skuber.ext.Ingress
+import skuber.{ Container, EnvVar, ObjectMeta, Pod, Secret, Service }
 
-/** Converts Graph objects into Kubernetes definitions. */
-private[kubernetes] class KubernetesConverter(
+/** Converts requests into Kubernetes Structures */
+case class KubernetesConverter(
     config: Config,
-    val id: String,
-    val extraLogins: Seq[DockerLogin],
-    val superPrefix: String,
-    val idLabel: String
+    kubernetesHost: String
 ) {
+  def convertStartWorkRequest(internalId: String, startWorkerRequest: StartWorkerRequest): Workload = {
+    val nameHintPrefix = startWorkerRequest.nameHint.map { nameHint =>
+      KubernetesNamer.escapeNodeName(nameHint) + "-"
+    }.getOrElse("")
 
-  val namer = new KubernetesNamer(id, superPrefix)
+    startWorkerRequest.definition match {
+      case wd: MnpWorkerDefinition   => createMnpWorker(internalId, nameHintPrefix, startWorkerRequest, wd)
+      case pd: MnpPipelineDefinition => createMnpPipeline(internalId, nameHintPrefix, startWorkerRequest, pd)
+    }
+  }
 
-  protected def defaultLabels = Map(
-    idLabel -> KubernetesNamer.encodeLabelValue(id),
-    KubernetesConstants.TrackerIdLabel -> KubernetesNamer.encodeLabelValue(config.podTrackerId),
-    KubernetesConstants.ManagedLabel -> KubernetesNamer.encodeLabelValue(KubernetesConstants.ManagedValue)
-  )
+  private def createMnpWorker(
+    internalId: String,
+    nameHintPrefix: String,
+    startWorkerRequest: StartWorkerRequest,
+    definition: MnpWorkerDefinition
+  ): Workload = {
+
+    val mainLabels = Map(
+      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
+      LabelConstants.RoleLabelName -> LabelConstants.role.worker,
+      LabelConstants.UserIdLabelName -> KubernetesNamer.encodeLabelValue(startWorkerRequest.id),
+      LabelConstants.InternalIdLabelName -> internalId,
+      LabelConstants.WorkerTypeLabelName -> LabelConstants.workerType.mnpWorker
+    )
+
+    val workLoad: Either[Pod, Deployment] = if (startWorkerRequest.keepRunning) {
+      Right(generateWorkerDeployment(mainLabels, nameHintPrefix, definition))
+    } else {
+      Left(generateWorkerPod(mainLabels, nameHintPrefix, definition))
+    }
+
+    val service = generateWorkerService(internalId, mainLabels, nameHintPrefix)
+    val ingress = startWorkerRequest.ingressName.map { ingressName =>
+      createPlainIngress(service, ingressName)
+    }
+
+    Workload(
+      internalId = internalId,
+      pod = workLoad.left.toOption,
+      deployment = workLoad.right.toOption,
+      service,
+      ingress = ingress
+    )
+  }
+
+  private def generateWorkerPod(
+    mainLabels: Map[String, String],
+    nameHintPrefix: String,
+    definition: MnpWorkerDefinition
+  ): Pod = {
+    val podSpec = generateMnpWorkerPodSpec(definition)
+    Pod(
+      metadata = ObjectMeta(
+        labels = mainLabels,
+        generateName = nameHintPrefix + "worker"
+      ),
+      spec = Some(
+        podSpec
+      )
+    )
+  }
+
+  private def generateWorkerDeployment(
+    mainLabels: Map[String, String],
+    nameHintPrefix: String,
+    definition: MnpWorkerDefinition
+  ): Deployment = {
+    Deployment(
+      metadata = ObjectMeta(
+        labels = mainLabels,
+        generateName = nameHintPrefix + "deployment"
+      ),
+      spec = Some(
+        Deployment.Spec(
+          template = Some(
+            Pod.Template.Spec(
+              metadata = ObjectMeta(
+                labels = mainLabels,
+                generateName = nameHintPrefix + "worker"
+              ),
+              spec = Some(generateMnpWorkerPodSpec(definition))
+            )
+          )
+        )
+      )
+    )
+  }
+
+  private def generateMnpWorkerPodSpec(
+    definition: MnpWorkerDefinition
+  ): skuber.Pod.Spec = {
+    val workerContainer = generateMnpWorkerContainer(definition)
+    val maybePreparer = generateMnpPreparer(definition)
+    Pod.Spec(
+      containers = List(workerContainer) ++ maybePreparer
+    )
+  }
+
+  private def generateMnpWorkerContainer(
+    definition: MnpWorkerDefinition
+  ): skuber.Container = {
+    val resolvedContainer = config.dockerConfig.resolveContainer(definition.container)
+    skuber.Container(
+      name = "worker",
+      image = resolvedContainer.image,
+      args = resolvedContainer.parameters.toList,
+      imagePullPolicy = KubernetesConverter.createImagePullPolicy(config.common.disablePull, resolvedContainer)
+    )
+  }
+
+  private def generateMnpPreparer(
+    definition: MnpWorkerDefinition
+  ): Option[skuber.Container] = {
+    definition.initializer.map { initRequest =>
+      val mainAddress = s"localhost:8502"
+      val parameters = Seq(
+        "--address", mainAddress, "--keepRunning", "true"
+      )
+      val allParameters = config.common.mnpPreparer.parameters ++ parameters
+      val encodedInitRequest = Base64.getEncoder.encodeToString(initRequest.toArray[Byte])
+
+      skuber.Container(
+        name = "initializer",
+        image = config.common.mnpPreparer.image,
+        args = allParameters.toList,
+        env = List(
+          EnvVar("MNP_INIT", encodedInitRequest)
+        ),
+        imagePullPolicy = KubernetesConverter.createImagePullPolicy(config.common.disablePull, config.common.mnpPreparer)
+      )
+    }
+  }
+
+  private def generateWorkerService(
+    internalId: String,
+    mainLabels: Map[String, String],
+    nameHintPrefix: String
+  ): Service = {
+    Service(
+      metadata = ObjectMeta(
+        labels = mainLabels,
+        generateName = nameHintPrefix + "worker"
+      ),
+      spec = Some(
+        Service.Spec(
+          selector = Map(
+            LabelConstants.InternalIdLabelName -> internalId
+          ),
+          ports = List(
+            Service.Port(
+              port = 8502
+            )
+          )
+        )
+      )
+    )
+  }
+
+  def createMnpPipeline(
+    internalId: String,
+    nameHintPrefix: String,
+    request: StartWorkerRequest,
+    definition: MnpPipelineDefinition
+  ): Workload = {
+
+    val mainLabels = Map(
+      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
+      LabelConstants.RoleLabelName -> LabelConstants.workerType.mnpPipeline,
+      LabelConstants.UserIdLabelName -> KubernetesNamer.encodeLabelValue(request.id),
+      LabelConstants.InternalIdLabelName -> internalId,
+      LabelConstants.WorkerTypeLabelName -> LabelConstants.workerType.mnpPipeline
+    )
+
+    val container = generatePipelineContainer(definition)
+
+    val podSpec = Pod.Spec(
+      containers = List(
+        container
+      )
+    )
+
+    val deploymentOrPod: Either[Deployment, Pod] = if (request.keepRunning) {
+      Left(
+        Deployment(
+          metadata = ObjectMeta(
+            generateName = nameHintPrefix + "deployment",
+            labels = mainLabels
+          ),
+          spec = Some(
+            Deployment.Spec(
+              template = Some(
+                Pod.Template.Spec(
+                  metadata = ObjectMeta(
+                    generateName = nameHintPrefix + "pipeline",
+                    labels = mainLabels
+                  ),
+                  spec = Some(podSpec)
+                )
+              )
+            )
+          )
+        )
+      )
+    } else {
+      Right(
+        Pod(
+          metadata = ObjectMeta(
+            generateName = nameHintPrefix + "pipeline",
+            labels = mainLabels
+          ),
+          spec = Some(podSpec)
+        )
+      )
+    }
+
+    val service = generateWorkerService(internalId, mainLabels, nameHintPrefix)
+    val ingress = request.ingressName.map { ingressName =>
+      createPlainIngress(service, ingressName)
+    }
+
+    Workload(
+      internalId = internalId,
+      pod = deploymentOrPod.right.toOption,
+      deployment = deploymentOrPod.left.toOption,
+      service = service,
+      ingress = ingress
+    )
+  }
+
+  private def generatePipelineContainer(definition: MnpPipelineDefinition): skuber.Container = {
+    val container = config.common.mnpPipelineController
+    val pipelineValue = definition.definition.noSpaces
+    val extraArgs = Vector("-port", "8502")
+    val allParameters = container.parameters ++ extraArgs
+    skuber.Container(
+      name = "pipeline-controller",
+      image = container.image,
+      args = allParameters.toList,
+      env = List(
+        EnvVar("PIPELINE", pipelineValue)
+      ),
+      imagePullPolicy = KubernetesConverter.createImagePullPolicy(config.common.disablePull, container)
+    )
+  }
+
+  /** Create an ingress. Note: the service name may be empty still if it's not defined within the service */
+  private def createPlainIngress(service: Service, ingressName: String): Ingress = {
+    val annotations = config.kubernetes.ingressAnnotations.mapValues { annotation =>
+      interpolateIngressString(annotation, ingressName)
+    }
+
+    val servicePort = (for {
+      spec <- service.spec
+      firstPort <- spec.ports.headOption
+    } yield firstPort.port).getOrElse(
+      throw new IllegalArgumentException("Could not find out port for service")
+    )
+
+    Ingress(
+      metadata = ObjectMeta(
+        name = ingressName,
+        labels = service.metadata.labels,
+        annotations = annotations
+      ),
+      spec = Some(
+        ingressSpec(service.name, ingressName, servicePort)
+      )
+    )
+  }
+
+  private def ingressSpec(serviceName: String, ingressName: String, servicePort: Int): Ingress.Spec = {
+    val backend =
+      Ingress.Backend(
+        serviceName = serviceName,
+        servicePort = servicePort
+      )
+
+    config.kubernetes.ingressSubPath match {
+      case Some(subPath) =>
+        // Allocating sub path
+        val path = interpolateIngressString(subPath, ingressName)
+        Ingress.Spec(
+          rules = List(
+            Ingress.Rule(
+              host = None,
+              http = Ingress.HttpRule(
+                paths = List(
+                  Ingress.Path(
+                    path = path,
+                    backend = backend
+                  )
+                )
+              )
+            )
+          )
+        )
+      case None =>
+        // Ingress with direct service
+        Ingress.Spec(
+          backend = Some(
+            backend
+          )
+        )
+    }
+  }
+
+  private def interpolateIngressString(in: String, ingressName: String): String = {
+    in
+      .replace("${name}", ingressName)
+      .replace("${kubernetesHost}", kubernetesHost)
+  }
+}
+
+object KubernetesConverter {
 
   /** Returns docker secrets for getting images, if needed. */
-  lazy val pullSecret: Option[Secret] = {
+  def pullSecret(config: Config, extraLogins: Seq[DockerLogin]): Option[Secret] = {
     val allLogins = (config.dockerConfig.logins ++ extraLogins).distinct
     if (allLogins.isEmpty) {
       None
@@ -44,10 +351,7 @@ private[kubernetes] class KubernetesConverter(
       )
       Some(
         Secret(
-          metadata = ObjectMeta(
-            name = namer.pullSecretName,
-            labels = defaultLabels
-          ),
+          metadata = ObjectMeta(),
           data = Map(
             ".dockerconfigjson" -> dockerConfigFile.spaces2.getBytes(StandardCharsets.UTF_8)
           ),
@@ -57,112 +361,8 @@ private[kubernetes] class KubernetesConverter(
     }
   }
 
-  def convertNode(nodeName: String, nodeService: NodeService): Pod = {
-    Pod(
-      metadata = ObjectMeta(
-        name = namer.podName(nodeName),
-        labels = defaultLabels ++ Map(
-          KubernetesConstants.RoleName -> KubernetesConstants.WorkerRole
-        )
-      ),
-      spec = Some(convertNodeSpec(nodeService, withSideCar = true))
-    )
-  }
-
-  def convertNodeSpec(nodeService: NodeService, withSideCar: Boolean): Pod.Spec = {
-    val maybeSideCar = if (withSideCar) {
-      Some(createSidecar(nodeService))
-    } else {
-      None
-    }
-
-    // TODO: IoAffinity!
-
-    val maybeMain = nodeService match {
-      case ct: ContainerService =>
-        val resolved = config.dockerConfig.resolveContainer(ct.main)
-        Some(Container(
-          name = "main",
-          image = resolved.image,
-          imagePullPolicy = createImagePullPolicy(ct.main),
-          args = resolved.parameters.toList,
-          volumeMounts = ct.dataProvider.map { dataProvider =>
-            List(Volume.Mount(name = "data", mountPath = "/data"))
-          }.getOrElse(Nil)
-        ))
-      case et: ExistingService =>
-        None
-    }
-
-    val maybePayloadPreparer = nodeService match {
-      case ct: ContainerService => ct.dataProvider.map(createPayloadPreparer)
-      case _                    => None
-    }
-
-    val dataVolume = nodeService match {
-      case ct: ContainerService => Some(Volume("data", Volume.EmptyDir()))
-      case _                    => None
-    }
-
-    val spec = Pod.Spec(
-      containers = maybeSideCar.toList ++ maybeMain.toList,
-      initContainers = maybePayloadPreparer.toList,
-      restartPolicy = RestartPolicy.Never,
-      securityContext = Some(
-        // Important, so that the container can write into the volumes created by the payload unpacker
-        PodSecurityContext(fsGroup = Some(1000))
-      ),
-      volumes = dataVolume.toList,
-      imagePullSecrets = pullSecret.toList.map { secret =>
-        LocalObjectReference(secret.name)
-      }
-    )
-    spec
-  }
-
-  private def createSidecar(nodeService: NodeService): Container = {
-    // TODO: SideCars listen per default on Port 8503
-    // But we have no mechanism to prevent clashers, if the service listens on the same port
-
-    val shutdownParameters = nodeService match {
-      case e: ExistingService => Nil
-      case _                  => List("-shutdown") // shutdown the http server after quitting the sidecar.
-    }
-
-    Container(
-      name = KubernetesConstants.SidecarContainerName,
-      image = config.common.sideCar.image,
-      args = config.common.sideCar.parameters.toList ++ List("-url", urlForSideCar(nodeService)) ++ shutdownParameters,
-      imagePullPolicy = createImagePullPolicy(config.common.sideCar)
-    )
-  }
-
-  private def urlForSideCar(nodeService: NodeService): String = {
-    nodeService match {
-      case ExistingService(url) => url
-      case c: ContainerService  => s"http://localhost:${c.port}"
-    }
-  }
-
-  /** Creates the container definition of the payload_preparer. */
-  private def createPayloadPreparer(dataProvider: DataProvider): Container = {
-    val extraArguments = PayloadProvider.createExtraArguments(
-      dataProvider
-    )
-
-    Container(
-      name = "data-provider",
-      image = config.common.payloadPreparer.image,
-      args = config.common.payloadPreparer.parameters.toList ++ extraArguments,
-      volumeMounts = List(
-        Volume.Mount(name = "data", mountPath = "/data")
-      ),
-      imagePullPolicy = createImagePullPolicy(config.common.payloadPreparer)
-    )
-  }
-
-  def createImagePullPolicy(container: ai.mantik.executor.model.docker.Container): Container.PullPolicy.Value = {
-    if (config.common.disablePull) {
+  def createImagePullPolicy(disablePull: Boolean, container: ai.mantik.executor.model.docker.Container): Container.PullPolicy.Value = {
+    if (disablePull) {
       return Container.PullPolicy.Never
     }
     // Overriding the policy to a similar behaviour to kubernetes default
@@ -171,6 +371,5 @@ private[kubernetes] class KubernetesConverter(
       case Some("latest") => Container.PullPolicy.Always
       case _              => Container.PullPolicy.IfNotPresent
     }
-
   }
 }

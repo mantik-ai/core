@@ -28,8 +28,7 @@ Requirements
 
 * Go Code
 
-    * [Go](https://golang.org/dl/). Although 1.11.x (x >= 10) should do it, new code will be using 1.13
-      and the build server will be migrated to 1.13
+    * [Go](https://golang.org/dl/). We are using Version 1.13.
     * Protobuf
 
       ```
@@ -45,11 +44,26 @@ Requirements
       
 * Python
      
+     - Python 3.7
      - pipenv
      - Python dev (gcc etc.)
      
      The python code is using generated protobuf code. After a clean checkout
-     run a full build before developing within the IDE.       
+     run a full build before developing within the IDE.
+     
+     Installing python 3.7 on Ubuntu 20.04:
+     
+     - Add [Deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
+     - `apt-get install python3.7`
+
+* Docker Images
+
+     - [Docker](https://docker.io)
+       ```
+       # Ubuntu 18.04
+       apt-get install docker.io
+       ```
+       For Mac, follow this [Installation Guide](https://docs.docker.com/docker-for-mac/)
 
 * Integration tests and running
     * [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
@@ -102,19 +116,18 @@ Open in IDE
 
 * The mantik-core directory can be opened and edited in IntelliJ
   
-  IntellIJ doesn't automatically generate gRpc stubs. You can force evaluation using `test:compile` in the SBT shell.  
+  IntellIJ doesn't automatically generate gRpc stubs. You can force evaluation using `test:compile` in the SBT shell.
   
-* All go applications can be edited in Goland, and it seems as also Visual Studio Code is working with code completion.
+  Or calling `make`  
+  
+* All go applications can be~~~~ edited in Goland, and it seems as also Visual Studio Code is working with code completion.
   (However it looks as you can only open one project, not all-at-once).
 
 
 Running Integration Tests
 -------------------------
 
-* The (Scala) integration tests are expecting a running Minikube.
 * This can be started using `scripts/dev/start_minikube.sh`
-* You can execute them directly in IntelliJ (they are annotated with `@IntegrationTest` and thus 
-  excluded from a regular test run)
-* All integration tests, including (re-)starting Minikube, can be done using `make integration-test`
+* All integration tests can be run using `make integration-test`
 
           

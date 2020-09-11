@@ -1,47 +1,43 @@
 package ai.mantik.executor.common.test.integration
 
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{ ContainerService, ExecutorModelDefaults, Graph, Job, JobState, Link, Node, NodeResourceRef }
+import ai.mantik.executor.model.{ ListWorkerRequest, MnpWorkerDefinition, StartWorkerRequest, WorkerState }
 import ai.mantik.testutils.TestBase
+
+import scala.util.{ Failure, Success, Try }
 
 trait MissingImageSpecBase {
   self: IntegrationBase with TestBase =>
 
-  it should "fail correctly for missing images." in withExecutor { executor =>
-    val job = Job(
-      "missing1",
-      graph = Graph(
-        nodes = Map(
-          "A" -> Node.source(
-            ContainerService(
-              main = Container(
-                image = "missing_image1"
-              )
-            )
-          ),
-          "B" -> Node.sink(
-            ContainerService(
-              main = Container(
-                image = "missing_image2"
-              )
-            )
-          )
-        ),
-        links = Link.links(
-          NodeResourceRef("A", ExecutorModelDefaults.SourceResource) -> NodeResourceRef("B", ExecutorModelDefaults.SinkResource)
-        )
+  val simpleStartWorker = StartWorkerRequest(
+    isolationSpace = "missing1",
+    id = "user1",
+    definition = MnpWorkerDefinition(
+      container = Container(
+        image = "missing_image1"
       )
     )
-    val jobId = await(executor.schedule(job))
-    eventually {
-      await(executor.status(job.isolationSpace, jobId)).state shouldBe JobState.Failed
-    }
-    eventually {
-      val log = await(executor.logs(job.isolationSpace, jobId)).toLowerCase()
-      val ok = log.contains("image error") || log.contains("no such image")
-      withClue(s"Log ${log} should indicate image error") {
-        ok shouldBe true
-      }
+  )
+
+  it should "fail correctly for missing images." in withExecutor { executor =>
+    // It may either fail immediately or go into error stage later
+    Try {
+      await(executor.startWorker(simpleStartWorker))
+    } match {
+      case Failure(error) if error.getMessage.toLowerCase.contains("no such image") =>
+      // ok (docker acts this way)
+      case Failure(error) =>
+        fail("Unexpected error", error)
+      case Success(_) =>
+        eventually {
+          val listing = await(executor.listWorkers(ListWorkerRequest(
+            isolationSpace = "missing1",
+            idFilter = Some("user1")
+          )))
+          listing.workers.size shouldBe 1
+          listing.workers.head.state shouldBe an[WorkerState.Failed]
+          listing.workers.head.state.asInstanceOf[WorkerState.Failed].error.get should include("image error")
+        }
     }
   }
 }

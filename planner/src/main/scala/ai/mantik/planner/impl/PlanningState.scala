@@ -21,11 +21,11 @@ private[impl] case class PlanningState(
     private val filesRev: List[PlanFile] = Nil, // reverse requested files
     private val stateOverrides: Map[ItemId, ItemStateOverride] = Map.empty,
     private val nextMemoryId: Int = 1,
-    private val evaluatedCached: Map[CacheKeyGroup, IndexedSeq[PlanFileWithContentType]] = Map.empty
+    private val evaluatedCached: Map[Vector[ItemId], IndexedSeq[PlanFileWithContentType]] = Map.empty
 ) {
 
   /** Cache groups which were evaluated in this Plan */
-  def cacheGroups: Set[CacheKeyGroup] = evaluatedCached.keySet
+  def cacheItems: Set[Vector[ItemId]] = evaluatedCached.keySet
 
   /** Returns files in request order. */
   def files: List[PlanFile] = filesRev.reverse
@@ -41,26 +41,26 @@ private[impl] case class PlanningState(
   }
 
   /** Mark files as cache files. */
-  def markCached(filesToUpdate: Map[PlanFileReference, CacheKey]): PlanningState = {
+  def markCached(filesToUpdate: Map[PlanFileReference, ItemId]): PlanningState = {
     copy(
       filesRev = filesRev.map { file =>
         filesToUpdate.get(file.ref) match {
-          case Some(cacheKey) => file.copy(cacheKey = Some(cacheKey))
-          case None           => file
+          case Some(cacheItemId) => file.copy(cacheItemId = Some(cacheItemId))
+          case None              => file
         }
       }
     )
   }
 
   /** Add a cache to evaluated values. */
-  def withEvaluatedCache(cacheKeyGroup: CacheKeyGroup, files: IndexedSeq[PlanFileWithContentType]): PlanningState = {
+  def withEvaluatedCache(cacheKeyGroup: Vector[ItemId], files: IndexedSeq[PlanFileWithContentType]): PlanningState = {
     copy(
       evaluatedCached = evaluatedCached + (cacheKeyGroup -> files)
     )
   }
 
   /** Lookup if some cacheKeyGroup is evaluated. */
-  def evaluatedCache(cacheKeyGroup: CacheKeyGroup): Option[IndexedSeq[PlanFileWithContentType]] = {
+  def evaluatedCache(cacheKeyGroup: Vector[ItemId]): Option[IndexedSeq[PlanFileWithContentType]] = {
     evaluatedCached.get(cacheKeyGroup)
   }
 
@@ -110,12 +110,12 @@ private[impl] case class PlanningState(
   }
 
   /** Returns overriding state for an item. */
-  def overrideState(item: MantikItem): ItemStateOverride = {
-    stateOverrides.getOrElse(item.itemId, initialOverrideState(item))
+  def overrideState(item: MantikItem, stateManager: MantikItemStateManager): ItemStateOverride = {
+    stateOverrides.getOrElse(item.itemId, initialOverrideState(item, stateManager))
   }
 
-  private def initialOverrideState(item: MantikItem): ItemStateOverride = {
-    val itemState = item.state.get
+  private def initialOverrideState(item: MantikItem, stateManager: MantikItemStateManager): ItemStateOverride = {
+    val itemState = stateManager.getOrInit(item)
     ItemStateOverride(
       stored = itemState.itemStored,
       storedWithName = itemState.namedMantikItem.filter(_ => itemState.nameStored),
@@ -133,8 +133,8 @@ private[impl] case class PlanningState(
   }
 
   /** Set an item override, modifying the current one. */
-  def withOverrideFunc(item: MantikItem, f: ItemStateOverride => ItemStateOverride): PlanningState = {
-    val current = overrideState(item)
+  def withOverrideFunc(item: MantikItem, stateManager: MantikItemStateManager, f: ItemStateOverride => ItemStateOverride): PlanningState = {
+    val current = overrideState(item, stateManager)
     val modified = f(current)
     withOverrideState(item, modified)
   }

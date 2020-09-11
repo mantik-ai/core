@@ -1,5 +1,5 @@
 ThisBuild / organization := "ai.mantik"
-ThisBuild / version := "0.1-SNAPSHOT"
+ThisBuild / version := "0.2-SNAPSHOT"
 ThisBuild / scalaVersion := "2.12.8"
 // ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
 ThisBuild / scalacOptions += "-feature"
@@ -19,7 +19,7 @@ val akkaHttpVersion = "10.1.7"
 val scalaTestVersion = "3.0.5"
 val circeVersion = "0.11.1"
 val slf4jVersion = "1.7.25"
-val fhttpVersion = "0.2.1"
+val fhttpVersion = "0.2.2"
 
 import scalariform.formatter.preferences._
 val scalariformSettings = {
@@ -129,6 +129,12 @@ lazy val ds = makeProject("ds")
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
 
+      // Cats
+      "org.typelevel" %% "cats-core" % "1.6.0",
+
+      // Parboiled (Parsers)
+      "org.parboiled" %% "parboiled" % "2.1.5",
+
       // https://mvnrepository.com/artifact/commons-io/commons-io
       "commons-io" % "commons-io" % "2.6",
 
@@ -163,6 +169,18 @@ lazy val util = makeProject("util")
     )
   )
 
+lazy val mnpScala = makeProject("mnp/mnpscala")
+  .dependsOn(componently)
+  .settings(
+    name := "mnpscala",
+    libraryDependencies ++= Seq(
+      "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
+    ),
+    publishSettings,
+    enableProtocolBuffer,
+    PB.protoSources in Compile := Seq(baseDirectory.value / "../protocol/protobuf")
+)
+
 lazy val elements = makeProject("elements")
   .dependsOn(ds, util)
   .settings(
@@ -196,23 +214,7 @@ lazy val componently = makeProject("componently")
 lazy val executorApi = makeProject("executor/api", "executorApi")
   .dependsOn(componently)
   .settings(
-    name := "executor-api",
-    libraryDependencies ++= Seq(
-      "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
-
-      // Akka
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      // Akka http Circe JSON,
-      "de.heikoseeberger" %% "akka-http-circe" % "1.25.2",
-
-      // Circe
-      "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
-
-      // Logging
-      "org.slf4j" % "slf4j-api" % slf4jVersion,
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-    )
+    name := "executor-api"
   )
 
 lazy val executorCommon = makeProject("executor/common", "executorCommon")
@@ -266,49 +268,20 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
   .enablePlugins(BuildInfoPlugin)
   .settings(configureBuildInfo("ai.mantik.executor.kubernetes.buildinfo"))
 
-lazy val executorApp = makeProject("executor/app", "executorApp")
-  .dependsOn(executorKubernetes, executorDocker)
-  .settings(
-    name := "executor-app"
-  )
-  .enablePlugins(BuildInfoPlugin)
-  .settings(
-    libraryDependencies ++= Seq(
-      // Logging
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-    )
-  )
-  .settings(configureBuildInfo("ai.mantik.executor.buildinfo"))
-  .enablePlugins(DockerPlugin, AshScriptPlugin)
-  .settings(
-    mainClass in Compile := Some("ai.mantik.executor.Main"),
-    packageName := "executor",
-    dockerExposedPorts := Seq(8085),
-    dockerBaseImage := "openjdk:8u191-jre-alpine3.9",
-    daemonUserUid in Docker := None,
-    daemonUser in Docker := "daemon",
-    version in Docker := "latest"
-  )
-
 lazy val planner = makeProject("planner")
-  .dependsOn(ds, elements, executorApi, componently)
-  .dependsOn(executorApp % "it")
+  .dependsOn(ds, elements, executorApi, componently, mnpScala)
+  .dependsOn(executorKubernetes % "it", executorDocker % "it")
   .settings(
     name := "planner",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % "1.6.0",
-
-      // Parboiled (Parsers)
-      "org.parboiled" %% "parboiled" % "2.1.5",
-
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "org.xerial" % "sqlite-jdbc" % "3.28.0",
       "io.getquill" %% "quill-jdbc" % "3.2.0"
     ),
     enableProtocolBuffer,
-    configureBuildInfo("ai.mantik.planner.buildinfo")
+    configureBuildInfo("ai.mantik.planner.buildinfo"),
+    PB.protoSources in Compile += baseDirectory.value / "../bridge/protocol/protobuf"
   )
   .enablePlugins(BuildInfoPlugin)
 
@@ -353,7 +326,22 @@ lazy val engineApp = makeProject("engine-app", "engineApp")
   )
 
 lazy val root = (project in file("."))
-  .aggregate(testutils, ds, elements, executorApi, executorCommon, executorKubernetes, executorDocker, executorApp, examples, planner, engine, engineApp, componently, util)
+  .aggregate(
+    testutils,
+    ds,
+    mnpScala,
+    elements,
+    executorApi,
+    executorCommon,
+    executorKubernetes,
+    executorDocker,
+    examples,
+    planner,
+    engine,
+    engineApp,
+    componently,
+    util
+  )
   .settings(
     name := "mantik-core",
     publish := {},

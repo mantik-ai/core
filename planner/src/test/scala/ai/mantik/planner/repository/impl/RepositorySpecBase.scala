@@ -204,7 +204,7 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
           artifact1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition].copy(
             bridge = "other_stack"
           )
-        ).toJson,
+        ).toJson
       )
       interceptErrorCode(ErrorCodes.MantikItemConflict) {
         await(repo.store(updated))
