@@ -23,6 +23,11 @@ func (m msgPackDeserializingBackend) StartReadingTabularValues() error {
 	return nil
 }
 
+func (m msgPackDeserializingBackend) NextIsNil() (bool, error) {
+	code, err := m.PeekCode()
+	return code == codes.Nil, err
+}
+
 func (m msgPackDeserializingBackend) DecodeJson(destination interface{}) error {
 	// Convert to JSON then parsing through regular JSON facilities in order
 	// to make it default to golang JSON structures

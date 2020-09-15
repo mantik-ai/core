@@ -179,6 +179,18 @@ object Bundle {
         case (value, (columnName, i: Tensor)) =>
           require(value.isInstanceOf[TensorElement[_]])
           value.asInstanceOf[Element]
+        case (value, (columnName, n: Nullable)) =>
+          value match {
+            case NullElement    => NullElement
+            case None           => NullElement
+            case s: SomeElement => s
+            case v if n.underlying.isInstanceOf[FundamentalType] =>
+              val encoder = PrimitiveEncoder.lookup(n.underlying.asInstanceOf[FundamentalType])
+              require(encoder.convert.isDefinedAt(v), s"Value ${value} of class ${value.getClass} must fit into ${n}")
+              SomeElement(encoder.wrap(encoder.convert(v)))
+            case unsupported =>
+              throw new IllegalArgumentException(s"Unsupported value ${unsupported} for ${n}")
+          }
         case (other, (columnName, dataType)) =>
           throw new IllegalArgumentException(s"Could not encode ${other} as ${dataType}")
       }

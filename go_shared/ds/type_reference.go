@@ -103,5 +103,14 @@ func (t *TypeReference) UnmarshalJSON(bytes []byte) error {
 		t.Underlying = &tensor
 		return nil
 	}
+	if *d.Type == "nullable" {
+		nullabe := Nullable{}
+		err := json.Unmarshal(bytes, &nullabe)
+		if err != nil {
+			return err
+		}
+		t.Underlying = &nullabe
+		return nil
+	}
 	return errors.New("Not implemented " + *d.Type)
 }

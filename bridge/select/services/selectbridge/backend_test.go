@@ -131,3 +131,23 @@ func TestComplex1(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expectedOutput, transformed)
 }
+
+func TestNullHandling(t *testing.T) {
+	model, err := LoadModel("../../examples/null")
+	assert.NoError(t, err)
+
+	input := builder.RowsAsElements(
+		builder.PrimitiveRow(int32(100), "Hello"),
+		builder.PrimitiveRow(nil, "??"),
+		builder.PrimitiveRow(int32(200), "World"),
+	)
+
+	expectedOutput := builder.RowsAsElements(
+		builder.PrimitiveRow(int32(100), "Hello"),
+		builder.PrimitiveRow(int32(200), "World"),
+	)
+
+	transformed, err := model.Execute(input)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedOutput, transformed)
+}

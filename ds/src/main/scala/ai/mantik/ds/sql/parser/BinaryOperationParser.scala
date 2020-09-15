@@ -13,16 +13,27 @@ trait BinaryOperationParser {
   /** Parses a Non-Binary Operation. */
   def BaseExpression: Rule1[ExpressionNode]
 
-  def Prio4BinaryOperation: Rule1[ExpressionNode] = rule {
+  def Prio5BinaryOperation: Rule1[ExpressionNode] = rule {
     BaseExpression ~ zeroOrMore(
-      Prio4Operator ~ BaseExpression ~> collectOperationTuple
+      Prio5Operator ~ BaseExpression ~> collectOperationTuple
+    ) ~> makeBinaryOperationNode
+  }
+
+  def Prio5Operator: Rule1[String] = rule {
+    capture("*" | "/") ~ Whitespace
+  }
+
+  def Prio4BinaryOperation: Rule1[ExpressionNode] = rule {
+    Prio5BinaryOperation ~ zeroOrMore(
+      Prio4Operator ~ Prio5BinaryOperation ~> collectOperationTuple
     ) ~> makeBinaryOperationNode
   }
 
   def Prio4Operator: Rule1[String] = rule {
-    capture("*" | "/") ~ Whitespace
+    capture("+" | "-") ~ Whitespace
   }
 
+  // IS, ISNOT
   def Prio3BinaryOperation: Rule1[ExpressionNode] = rule {
     Prio4BinaryOperation ~ zeroOrMore(
       Prio3Operator ~ Prio4BinaryOperation ~> collectOperationTuple
@@ -30,7 +41,12 @@ trait BinaryOperationParser {
   }
 
   def Prio3Operator: Rule1[String] = rule {
-    capture("+" | "-") ~ Whitespace
+    capture(
+      (ignoreCase("is") ~ Whitespace ~ ignoreCase("not")) |
+        (ignoreCase("is") ~ Whitespace)
+    ) ~ Whitespace ~> { s: String =>
+        s.trim.toLowerCase.filterNot(_.isWhitespace)
+      }
   }
 
   def Prio2BinaryOperation: Rule1[ExpressionNode] = rule {

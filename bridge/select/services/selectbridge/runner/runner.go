@@ -139,6 +139,14 @@ func locateInstruction(code ops.OpCode) (instruction, error) {
 			c.s.push(f(left, right))
 			return true
 		}, nil
+	case *ops.IsNullOp:
+		return func(c *context) bool {
+			last := c.s.last()
+			p, isPrimitive := last.(element.Primitive)
+			result := element.Primitive{X: isPrimitive && p.X == nil}
+			c.s.setLast(result)
+			return true
+		}, nil
 	}
 	t := reflect.TypeOf(code)
 	return nil, errors.Errorf("Unsupported operation %s", t.String())

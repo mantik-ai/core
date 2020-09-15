@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.converter.Cast
-import ai.mantik.ds.element.{ Element, Primitive }
+import ai.mantik.ds.element.{ Element, NullElement, Primitive }
 import ai.mantik.ds.operations.BinaryFunction
 
 import scala.collection.mutable
@@ -66,6 +66,10 @@ class Runner(program: Program) {
       case OpCode.Neg =>
         makeTransformContinueOp { e =>
           Primitive(!e.asInstanceOf[Primitive[Boolean]].x)
+        }
+      case OpCode.IsNull =>
+        makeTransformContinueOp { e =>
+          Primitive[Boolean](e == NullElement)
         }
       case OpCode.Equals(_) =>
         makeContinueOp { s =>

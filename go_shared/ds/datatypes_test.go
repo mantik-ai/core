@@ -80,6 +80,21 @@ var complexExamples = []string{
 		"shape": [1,2,3,4,5,6,7,8]
 	}
 	`,
+	`
+	{
+		"type": "nullable",
+		"underlying": "float32"
+	}
+	`,
+	`
+	{
+		"type": "nullable",
+		"underlying": {
+			"type": "tensor",
+			"componentType": "int32",
+			"shape": [2,3]
+		}
+	}`,
 }
 
 func TestFundamentalJson(t *testing.T) {

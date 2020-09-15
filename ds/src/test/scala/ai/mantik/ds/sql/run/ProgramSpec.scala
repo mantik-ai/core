@@ -55,7 +55,8 @@ class ProgramSpec extends TestBase {
         OpCode.Or,
         OpCode.Equals(FundamentalType.StringType),
         OpCode.ReturnOnFalse,
-        OpCode.BinaryOp(FundamentalType.Int32, BinaryOperation.Add)
+        OpCode.BinaryOp(FundamentalType.Int32, BinaryOperation.Add),
+        OpCode.IsNull
       )
     )
     program.asJson.as[Program] shouldBe Right(program)

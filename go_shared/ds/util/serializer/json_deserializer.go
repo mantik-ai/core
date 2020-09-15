@@ -57,6 +57,13 @@ func (j *jsonDeserializer) nextElement() (jsonsplit.JsonElement, error) {
 	return result, nil
 }
 
+func (j *jsonDeserializer) putBack() {
+	if j.pos <= 0 {
+		panic("Cannot put back last value, as we are on the first position")
+	}
+	j.pos--
+}
+
 func (j *jsonDeserializer) DecodeArrayLen() (int, error) {
 	e, err := j.nextElement()
 	if err != nil {
@@ -91,6 +98,15 @@ func (j *jsonDeserializer) StartReadingTabularValues() error {
 	}
 	j.splitter = splitter
 	return nil
+}
+
+func (j *jsonDeserializer) NextIsNil() (bool, error) {
+	e, err := j.nextElement()
+	if err != nil {
+		return false, err
+	}
+	j.putBack()
+	return e.Value.(string) == "null", nil
 }
 
 func (j *jsonDeserializer) DecodeLiteral(i interface{}) error {

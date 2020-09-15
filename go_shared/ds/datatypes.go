@@ -6,8 +6,6 @@ import (
 	"reflect"
 )
 
-// Note: this only a subset of Mantik DataSet
-
 type DataType interface {
 
 	// If true, the type is fundamental
@@ -141,4 +139,16 @@ func ToJsonString(dataType DataType) string {
 		println("Something went wrong on marshalling", err.Error())
 	}
 	return string(v)
+}
+
+type Nullable struct {
+	Underlying TypeReference `json:"underlying"`
+}
+
+func (n *Nullable) IsFundamental() bool {
+	return false
+}
+
+func (n *Nullable) TypeName() string {
+	return "nullable"
 }

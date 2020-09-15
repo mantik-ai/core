@@ -48,6 +48,14 @@ func lookupElementSerializer(dataType ds.DataType) (ElementSerializer, error) {
 		}
 		return tensorSerializer{*tensorType, codec}, nil
 	}
+	nullableType, ok := dataType.(*ds.Nullable)
+	if ok {
+		underlying, err := lookupElementSerializer(nullableType.Underlying.Underlying)
+		if err != nil {
+			return nil, err
+		}
+		return nullableSerializer{underlying}, nil
+	}
 	return nil, errors.Errorf("Unsupported type %s", dataType.TypeName())
 }
 
@@ -158,4 +166,18 @@ func (t embeddedTabularSerializer) Write(backend serializer.SerializingBackend, 
 		}
 	}
 	return nil
+}
+
+type nullableSerializer struct {
+	underlying ElementSerializer
+}
+
+func (n nullableSerializer) Write(backend serializer.SerializingBackend, e element.Element) error {
+	primitiveElement, ok := e.(element.Primitive)
+	if ok && primitiveElement.X == nil {
+		backend.EncodeNil()
+		return nil
+	} else {
+		return n.underlying.Write(backend, e)
+	}
 }

@@ -30,6 +30,9 @@ case class Cast(from: DataType, to: DataType, loosing: Boolean, canFail: Boolean
     )
   }
 
+  /** Returns true if this cast is safe to execute */
+  def isSafe: Boolean = !loosing && !canFail
+
   override def targetType: DataType = to
 
   def isIdentity: Boolean = from == to
@@ -56,6 +59,12 @@ object Cast {
         findTensorToTensorCast(from, to)
       case (from: Image, to: Image) =>
         findImageToImageCast(from, to)
+      case (from: Nullable, to: Nullable) =>
+        findNullableToNullableCast(from, to)
+      case (from: Nullable, to) =>
+        findNullableToNonNullableCast(from, to)
+      case (from, to: Nullable) =>
+        findNonNullableToNullableCast(from, to)
       case _ =>
         Left(s"Cannot cast from ${from} to ${to}")
     }
@@ -214,6 +223,54 @@ object Cast {
           val unpacked = imageUnpacker(e.asInstanceOf[ImageElement])
           val casted = unpacked.map(x => (componentCast.op(x).asInstanceOf[Primitive[_]]))
           imagePacker(casted)
+        }
+      )
+    }
+  }
+
+  private def findNullableToNullableCast(from: Nullable, to: Nullable): Either[String, Cast] = {
+    findCast(from.underlying, to.underlying).map { underlyingCast =>
+      Cast(
+        from = from,
+        to = to,
+        loosing = underlyingCast.loosing,
+        canFail = underlyingCast.canFail,
+        op = { e =>
+          e.asInstanceOf[NullableElement] match {
+            case NullElement    => NullElement
+            case SomeElement(x) => SomeElement(underlyingCast.convert(x))
+          }
+        }
+      )
+    }
+  }
+
+  private def findNullableToNonNullableCast(from: Nullable, to: DataType): Either[String, Cast] = {
+    findCast(from.underlying, to).map { underlyingCast =>
+      Cast(
+        from = from,
+        to = to,
+        loosing = underlyingCast.loosing,
+        canFail = true,
+        op = { e =>
+          e.asInstanceOf[NullableElement] match {
+            case NullElement    => throw new NoSuchElementException("Could not convert null to existing value")
+            case SomeElement(x) => underlyingCast.convert(x)
+          }
+        }
+      )
+    }
+  }
+
+  private def findNonNullableToNullableCast(from: DataType, to: Nullable): Either[String, Cast] = {
+    findCast(from, to.underlying).map { underlyingCast =>
+      Cast(
+        from = from,
+        to = to,
+        loosing = underlyingCast.loosing,
+        canFail = underlyingCast.canFail,
+        op = { e =>
+          SomeElement(underlyingCast.convert(e))
         }
       )
     }

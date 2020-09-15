@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.sql.{ CastExpression, Expression }
-import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageChannel, ImageFormat, Tensor }
+import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageChannel, ImageFormat, Nullable, Tensor }
 import ai.mantik.ds.sql.parser.AST
 
 /** Converts Casts and other type related stuff */
@@ -55,8 +55,10 @@ private[builder] object CastBuilder {
     } yield CastExpression(expression, dataType)
   }
 
-  private def findCast(input: Expression, castNode: AST.TypeNode): Either[String, DataType] = {
-    castNode match {
+  private def findCast(input: Expression, destinationType: AST.TypeNode): Either[String, DataType] = {
+    destinationType match {
+      case AST.NullableTypeNode(underlying) =>
+        findCast(input, underlying).map(Nullable(_))
       case AST.FundamentalTypeNode(dataType: DataType) =>
         // TODO: Check if we support this cast
         Right(dataType)

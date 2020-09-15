@@ -246,9 +246,20 @@ The serialization is done using an array of the flat form of the tensor, inner f
 E.g. for a tensor of Shape `[2,3]` and a value of `[[1,2,3], [4,5,6]]`
 the serialization is `[1,2,3,4,5,6]`. 
 
-### More types
+### Nullable Type
 
-More types will follow, e.g. Lists.
+For SQL Compatibility there is a nullable type, which accepts either `null` or the underlying type.
+
+It's defined like 
+
+```
+{
+    "type": "nullable",
+    "underlying": "int32"
+}
+```
+
+The underlying type can be different, of course.
 
 ## Implementation
 

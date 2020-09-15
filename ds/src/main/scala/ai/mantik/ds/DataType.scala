@@ -184,3 +184,9 @@ case class Tensor(
   }
 }
 
+/** A Nullable DataType. */
+case class Nullable(
+    underlying: DataType
+) extends DataType {
+  override def toString: String = s"nullable ${underlying}"
+}

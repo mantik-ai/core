@@ -34,6 +34,6 @@ private[builder] object ConstantBuilder {
     } else {
       Left(s"Could not convert ${bd}")
     }
-    bundle.map(ConstantExpression)
+    bundle.map(ConstantExpression(_))
   }
 }

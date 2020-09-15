@@ -1,0 +1,45 @@
+# SELECT CAST (x as INT32) as x, CAST (y as STRING NULLABLE) WHERE x IS NOT NULL
+kind: algorithm
+bridge: builtin/select
+type:
+  input:
+    type: tabular
+    columns:
+      x:
+        type: nullable
+        underlying: int32
+      y: string
+  output:
+    type: tabular
+    columns:
+      x: int32
+      y:
+        type: nullable
+        underlying: string
+selectProgram:
+  selector:
+    args: 1
+    retStackDepth: 1
+    stackInitDepth: 1
+    ops:
+    - get
+    - 0
+    - isn
+    - neg
+  projector:
+    args: 2
+    retStackDepth: 2
+    stackInitDepth: 2
+    ops:
+    - get
+    - 0
+    - cast
+    - type: nullable
+      underlying: int32
+    - int32
+    - get
+    - 1
+    - cast
+    - string
+    - type: nullable
+      underlying: string

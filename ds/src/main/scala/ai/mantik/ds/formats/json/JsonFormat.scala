@@ -136,6 +136,19 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
             )
           }
         }
+      case n: Nullable =>
+        val underlyingEncoder = createElementEncoder(n.underlying)
+        new Encoder[Element] {
+          override def apply(a: Element): Json = {
+            val value = a.asInstanceOf[NullableElement]
+            value match {
+              case NullElement =>
+                Json.Null
+              case SomeElement(x) =>
+                underlyingEncoder(x)
+            }
+          }
+        }
     }
   }
 
@@ -174,6 +187,17 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
               case None => Left(DecodingFailure("Expected array", c.history))
               case Some(values) =>
                 flatEitherApply(values, rowDecoder.decodeJson).map(EmbeddedTabularElement(_))
+            }
+          }
+        }
+      case nullable: Nullable =>
+        val underlyingDecoder = createElementDecoder(nullable.underlying)
+        new Decoder[Element] {
+          override def apply(c: HCursor): Result[Element] = {
+            if (c.value.isNull) {
+              Right(NullElement)
+            } else {
+              underlyingDecoder(c).map(SomeElement)
             }
           }
         }

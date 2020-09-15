@@ -52,6 +52,18 @@ func LookupCast(from ds.DataType, to ds.DataType) (*Cast, error) {
 	if isFromTensor && isToImage {
 		return lookupTensorToImage(fromTensor, toImage)
 	}
+
+	fromNullable, isFromNullable := from.(*ds.Nullable)
+	toNullable, isToNullable := to.(*ds.Nullable)
+	if isFromNullable && isToNullable {
+		return lookupNullableToNullable(fromNullable, toNullable)
+	}
+	if isFromNullable && !isToNullable {
+		return lookupNullableToNonNullable(fromNullable, to)
+	}
+	if !isFromNullable && isToNullable {
+		return lookupNonNullableToNullable(from, toNullable)
+	}
 	return nil, errors.New("Cast not available")
 }
 
@@ -74,6 +86,67 @@ func lookupFundamentalCast(from *ds.FundamentalType, to *ds.FundamentalType) (*C
 		return &Cast{from, to, true, false, wrapRawAdapter(lossyAdapter)}, nil
 	}
 	return nil, errors.New("Not yet implemented")
+}
+
+func lookupNullableToNullable(from *ds.Nullable, to *ds.Nullable) (*Cast, error) {
+	underlyingCast, err := LookupCast(from.Underlying.Underlying, to.Underlying.Underlying)
+	if err != nil {
+		return nil, err
+	}
+	adapter := func(in element.Element) (element.Element, error) {
+		p, isP := in.(element.Primitive)
+		if isP && p.X == nil {
+			return in, nil
+		} else {
+			return underlyingCast.Adapter(in)
+		}
+	}
+	return &Cast{
+		From:    from,
+		To:      to,
+		Loosing: underlyingCast.Loosing,
+		CanFail: underlyingCast.CanFail,
+		Adapter: adapter,
+	}, nil
+}
+
+func lookupNullableToNonNullable(from *ds.Nullable, to ds.DataType) (*Cast, error) {
+	underlyingCast, err := LookupCast(from.Underlying.Underlying, to)
+	if err != nil {
+		return nil, err
+	}
+	adapter := func(in element.Element) (element.Element, error) {
+		p, isP := in.(element.Primitive)
+		if isP && p.X == nil {
+			return nil, errors.New("Cannot cast away null into non nullable")
+		} else {
+			return underlyingCast.Adapter(in)
+		}
+	}
+	return &Cast{
+		From:    from,
+		To:      to,
+		Loosing: underlyingCast.Loosing,
+		CanFail: true,
+		Adapter: adapter,
+	}, nil
+}
+
+func lookupNonNullableToNullable(from ds.DataType, to *ds.Nullable) (*Cast, error) {
+	underlyingCast, err := LookupCast(from, to.Underlying.Underlying)
+	if err != nil {
+		return nil, err
+	}
+	adapter := func(in element.Element) (element.Element, error) {
+		return underlyingCast.Adapter(in)
+	}
+	return &Cast{
+		From:    from,
+		To:      to,
+		Loosing: underlyingCast.Loosing,
+		CanFail: underlyingCast.CanFail,
+		Adapter: adapter,
+	}, nil
 }
 
 func wrapRawAdapter(adapter RawAdapter) Adapter {

@@ -209,6 +209,13 @@ class DataTypeSpec extends TestBase {
     Tensor(
       componentType = FundamentalType.Int32,
       shape = Seq(1)
+    ),
+    Nullable(FundamentalType.Int32),
+    Nullable(
+      Tensor(
+        componentType = FundamentalType.Uint8,
+        shape = Seq(1, 2)
+      )
     )
   )
 

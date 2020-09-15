@@ -6,7 +6,7 @@ import org.parboiled2._
 trait ConstantParser {
   self: Parser =>
 
-  def Constant: Rule1[ConstantExpressionNode] = rule { StringExpression | NumberExpression | BoolExpression | VoidExpression }
+  def Constant: Rule1[ConstantExpressionNode] = rule { StringExpression | NumberExpression | BoolExpression | Null | VoidExpression }
 
   def NumberExpression: Rule1[NumberNode] = rule {
     NumericExpressionUnwrapped ~> { x: String =>
@@ -68,6 +68,8 @@ trait ConstantParser {
 
   def False: Rule1[BoolNode] = rule { keyword("false") ~ push(BoolNode(false)) }
 
+  def Null: Rule1[NullNode.type] = rule { keyword("null") ~ push(NullNode) }
+
   def VoidExpression: Rule1[VoidNode.type] = rule { keyword("void") ~ push(VoidNode) }
 
   def Whitespace: Rule0 = rule { zeroOrMore(anyOf(" \n\r\t\f")) }
@@ -75,5 +77,11 @@ trait ConstantParser {
   /** Consumes a keyword (ignoring case) plus whitespace. */
   def keyword(string: String): Rule0 = rule {
     ignoreCase(string) ~ Whitespace
+  }
+
+  def optionalKeyword(string: String): Rule1[Boolean] = rule {
+    capture(optional(keyword(string))) ~> { s: String =>
+      s.trim.nonEmpty
+    }
   }
 }

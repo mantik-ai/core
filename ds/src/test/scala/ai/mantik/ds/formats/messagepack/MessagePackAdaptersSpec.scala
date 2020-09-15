@@ -212,4 +212,15 @@ class MessagePackAdaptersSpec extends TestBase {
       testSerializationAndBack(adapter, value)
     }.getMessage should include("element count mismatch")
   }
+
+  "nullables" should "serialize well" in {
+    val base = Nullable(FundamentalType.Int32)
+    val elements = Seq(NullElement, SomeElement(Primitive(100)))
+    val adapter = MessagePackAdapters.lookupAdapter(base)
+    for {
+      e <- elements
+    } {
+      testSerializationAndBack(adapter, e)
+    }
+  }
 }

@@ -1,7 +1,7 @@
 package ai.mantik.ds.formats.json
 
-import ai.mantik.ds.{ DataType, FundamentalType, TabularData, Tensor, TypeSamples }
-import ai.mantik.ds.element.{ Bundle, Element, EmbeddedTabularElement, Primitive, SingleElementBundle, TensorElement }
+import ai.mantik.ds.{ DataType, FundamentalType, Nullable, TabularData, Tensor, TypeSamples }
+import ai.mantik.ds.element.{ Bundle, Element, EmbeddedTabularElement, NullElement, Primitive, SingleElementBundle, SomeElement, TensorElement }
 import ai.mantik.ds.testutil.TestBase
 import io.circe.Json
 import io.circe.syntax._
@@ -106,6 +106,16 @@ class JsonFormatSpec extends TestBase {
 
   it should "work for images" in {
     testAsSingleAndAsTabular(TypeSamples.image._1, TypeSamples.image._2)
+  }
+
+  it should "work for simple nullables" in {
+    val base = Nullable(FundamentalType.Int32)
+    val elements = Seq(NullElement, SomeElement(Primitive(100)))
+    for {
+      e <- elements
+    } {
+      testAsSingleAndAsTabular(base, e)
+    }
   }
 
   it should "work for embedded tables" in {

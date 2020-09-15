@@ -106,3 +106,34 @@ func TestStringConversions(t *testing.T) {
 		assert.Equal(t, sample.SingleValue(), back)
 	}
 }
+
+func TestNullCasts(t *testing.T) {
+	nullableToNullable, err := LookupCast(&ds.Nullable{ds.Ref(ds.Int32)}, &ds.Nullable{ds.Ref(ds.Int64)})
+	assert.NoError(t, err)
+	assert.False(t, nullableToNullable.CanFail)
+	assert.False(t, nullableToNullable.Loosing)
+	c, err := nullableToNullable.Adapter(element.Primitive{int32(100)})
+	assert.NoError(t, err)
+	assert.Equal(t, element.Primitive{int64(100)}, c)
+	c, err = nullableToNullable.Adapter(element.Primitive{nil})
+	assert.NoError(t, err)
+	assert.Equal(t, element.Primitive{nil}, c)
+
+	nullableToNonNullable, err := LookupCast(&ds.Nullable{ds.Ref(ds.Int32)}, ds.Int64)
+	assert.NoError(t, err)
+	assert.True(t, nullableToNonNullable.CanFail)
+	assert.False(t, nullableToNonNullable.Loosing)
+	c, err = nullableToNonNullable.Adapter(element.Primitive{int32(100)})
+	assert.NoError(t, err)
+	assert.Equal(t, element.Primitive{int64(100)}, c)
+	c, err = nullableToNonNullable.Adapter(element.Primitive{nil})
+	assert.Error(t, err)
+
+	nonNullableToNullable, err := LookupCast(ds.Int32, &ds.Nullable{ds.Ref(ds.Int64)})
+	assert.NoError(t, err)
+	assert.False(t, nonNullableToNullable.CanFail)
+	assert.False(t, nonNullableToNullable.Loosing)
+	c, err = nonNullableToNullable.Adapter(element.Primitive{int32(100)})
+	assert.NoError(t, err)
+	assert.Equal(t, element.Primitive{int64(100)}, c)
+}

@@ -54,7 +54,13 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   }
 
   def Type: Rule1[TypeNode] = rule {
-    TensorType | ImageType | FundamentalTypeN
+    ((TensorType | ImageType | FundamentalTypeN) ~ Whitespace ~ optionalKeyword("nullable")) ~> { (dt: TypeNode, nullable: Boolean) =>
+      if (nullable) {
+        NullableTypeNode(dt)
+      } else {
+        dt
+      }
+    }
   }
 
   def TensorType: Rule1[TypeNode] = rule {
