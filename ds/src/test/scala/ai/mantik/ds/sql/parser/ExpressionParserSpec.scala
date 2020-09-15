@@ -54,6 +54,28 @@ class ExpressionParserSpec extends ParserTestBase {
     "not",
     BinaryOperationNode("or", NumberNode(2), NumberNode(3))
   )))
+  expressionTest("a IS NULL", BinaryOperationNode("is", IdentifierNode("a"), NullNode))
+  expressionTest("a IS NOT NULL", BinaryOperationNode("isnot", IdentifierNode("a"), NullNode))
+  expressionTest(
+    "a is null or b is not null",
+    BinaryOperationNode(
+      "or",
+      BinaryOperationNode("is", IdentifierNode("a"), NullNode),
+      BinaryOperationNode("isnot", IdentifierNode("b"), NullNode)
+    )
+  )
+  expressionTest(
+    "a is null + 5",
+    BinaryOperationNode(
+      "is",
+      IdentifierNode("a"),
+      BinaryOperationNode(
+        "+",
+        NullNode,
+        NumberNode(5)
+      )
+    )
+  )
 
   expressionTest(
     "(1 and 2) or 3",

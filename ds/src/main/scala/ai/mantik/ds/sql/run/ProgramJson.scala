@@ -60,6 +60,7 @@ object ProgramJson {
       case OpCode.Or               => Nil
       case OpCode.ReturnOnFalse    => Nil
       case OpCode.BinaryOp(dt, op) => List(dt.asJson, op.asJson)
+      case OpCode.IsNull           => Nil
     }
     head :: extra
   }
@@ -106,6 +107,7 @@ object ProgramJson {
       case OpCode.OrCode            => get0(OpCode.Or)
       case OpCode.ReturnOnFalseCode => get0(OpCode.ReturnOnFalse)
       case OpCode.BinaryOpCode      => get2(OpCode.BinaryOp)
+      case OpCode.IsNullCode        => get0(OpCode.IsNull)
       case other =>
         Left(DecodingFailure(s"unknown op code ${other}", Nil))
     }

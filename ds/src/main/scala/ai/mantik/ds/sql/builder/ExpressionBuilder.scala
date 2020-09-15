@@ -1,9 +1,11 @@
 package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.operations.BinaryOperation
+import ai.mantik.ds.sql.Condition.IsNull
 import ai.mantik.ds.sql.{ BinaryExpression, ColumnExpression, Condition, Expression }
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.ds.sql.parser.AST
+import ai.mantik.ds.sql.parser.AST.NullNode
 
 /** Convert AST Expressions into Expressions. */
 private[builder] object ExpressionBuilder {
@@ -32,6 +34,22 @@ private[builder] object ExpressionBuilder {
             }
           case other =>
             Left(s"Unsupported unary operation ${other}")
+        }
+      case b: AST.BinaryOperationNode if b.operation == "is" =>
+        if (b.right == NullNode) {
+          convertExpression(input, b.left).map { left =>
+            Condition.IsNull(left)
+          }
+        } else {
+          Left(s"Only IS <NULL> supported, got ${b.right}")
+        }
+      case b: AST.BinaryOperationNode if b.operation == "isnot" =>
+        if (b.right == NullNode) {
+          convertExpression(input, b.left).map { left =>
+            Condition.Not(Condition.IsNull(left))
+          }
+        } else {
+          Left(s"Only IS NOT <NULL> supported, got ${b.right}")
         }
       case b: AST.BinaryOperationNode =>
         for {

@@ -58,6 +58,14 @@ func lookupElementDeserializer(dataType ds.DataType) (ElementDeserializer, error
 		}
 		return embeddedTabularDeserializer{subDeserializer}, nil
 	}
+	nullable, ok := dataType.(*ds.Nullable)
+	if ok {
+		subDeserializer, err := lookupElementDeserializer(nullable.Underlying.Underlying)
+		if err != nil {
+			return nil, err
+		}
+		return &nullableDeserializer{subDeserializer}, nil
+	}
 	return nil, errors.Errorf("Not implemented %s", dataType.TypeName())
 }
 
@@ -162,4 +170,21 @@ func (t embeddedTabularDeserializer) Read(backend serializer.DeserializingBacken
 		rows[i] = row
 	}
 	return &element.EmbeddedTabularElement{rows}, nil
+}
+
+type nullableDeserializer struct {
+	underlyingDeserializer ElementDeserializer
+}
+
+func (n nullableDeserializer) Read(backend serializer.DeserializingBackend) (element.Element, error) {
+	isNil, err := backend.NextIsNil()
+	if err != nil {
+		return nil, err
+	}
+	if isNil {
+		err = backend.DecodeNil()
+		return element.Primitive{nil}, err
+	} else {
+		return n.underlyingDeserializer.Read(backend)
+	}
 }

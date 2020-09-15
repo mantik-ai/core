@@ -183,6 +183,24 @@ func TestTensor(t *testing.T) {
 	testEncodeAndDecode(t, &bundle)
 }
 
+func TestNullablePrimitive(t *testing.T) {
+	format := ds.BuildTabular().Add(
+		"x", &ds.Nullable{
+			ds.Ref(ds.Float32),
+		},
+	).Result()
+	bundle := builder.Bundle(
+		format,
+		builder.Row(
+			element.Primitive{float32(100)},
+		),
+		builder.Row(
+			element.Primitive{nil},
+		),
+	)
+	testEncodeAndDecode(t, &bundle)
+}
+
 func TestEmbeddedTabular(t *testing.T) {
 	format, err := ds.FromJsonString(
 		`

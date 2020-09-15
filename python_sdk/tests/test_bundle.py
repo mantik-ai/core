@@ -141,3 +141,29 @@ def test_len():
     assert len(c) == 1
     d = Bundle(value=4)
     assert len(d) == 1
+
+def test_null_handling():
+    json = """
+    {
+        "type": { 
+            "columns":{
+                "a": {
+                    "type": "nullable",
+                    "underlying": "int32"
+                }
+            }
+        },
+        "value": [[1], [null],[100]]
+    }     
+    """
+    parsed = Bundle.decode_json_bundle(json)
+    assert parsed.type == DataType({"columns": {"a": {"type": "nullable", "underlying": "int32"}}})
+    assert parsed.value == [[1],[None],[100]]
+
+    serialized = parsed.encode_json_bundle()
+    parsed_again = Bundle.decode_json_bundle(serialized)
+    assert parsed_again == parsed
+
+    packed_msgpack = parsed.encode_msgpack_bundle()
+    unpacked_msgpack = Bundle.decode_msgpack_bundle(BytesIO(packed_msgpack))
+    assert unpacked_msgpack == parsed

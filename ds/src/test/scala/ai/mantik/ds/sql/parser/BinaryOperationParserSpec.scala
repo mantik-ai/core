@@ -15,7 +15,7 @@ class BinaryOperationParserSpec extends ParserTestBase {
         BinaryOperationNode("*", IdentifierNode("B"), IdentifierNode("C"))
       )
     )
-    testEquality(_.Prio3BinaryOperation, "A * B + C",
+    testEquality(_.Prio4BinaryOperation, "A * B + C",
       BinaryOperationNode(
         "+",
         BinaryOperationNode("*", IdentifierNode("A"), IdentifierNode("B")),

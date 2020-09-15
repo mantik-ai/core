@@ -96,6 +96,10 @@ object Compiler {
         } yield {
           a ++ b :+ OpCode.Or
         }
+      case isNull: Condition.IsNull =>
+        for {
+          base <- compileExpression(isNull.expression)
+        } yield base :+ OpCode.IsNull
     }
   }
 

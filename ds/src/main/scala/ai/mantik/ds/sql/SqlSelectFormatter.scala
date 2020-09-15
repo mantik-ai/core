@@ -56,12 +56,16 @@ private class SqlSelectFormatter(inputData: TabularData) {
         formatBinary(b.left, b.right, formatBinaryOperationSign(b.op))
       case e: Condition.Equals =>
         formatBinary(e.left, e.right, "=")
+      case Condition.Not(Condition.IsNull(underlying)) =>
+        s"${formatExpression(underlying)} IS NOT NULL"
       case n: Condition.Not =>
         s"NOT(${formatExpression(n.predicate)})"
       case a: Condition.And =>
         formatBinary(a.left, a.right, "AND")
       case o: Condition.Or =>
         formatBinary(o.left, o.right, "OR")
+      case isNull: Condition.IsNull =>
+        s"${formatExpression(isNull.expression)} IS NULL"
       case w: Condition.WrappedExpression =>
         formatExpression(w.expression)
     }
@@ -107,6 +111,8 @@ private class SqlSelectFormatter(inputData: TabularData) {
         "image" + maybeUnderlyingCast() + colorString
       case t: Tensor =>
         "tensor" + maybeUnderlyingCast()
+      case Nullable(underlying) =>
+        formatCastToDataType(from, underlying) + " NULLABLE"
       case _ => throw new IllegalArgumentException(s"Unsupported data type ${dataType}")
     }
   }

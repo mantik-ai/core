@@ -1,7 +1,9 @@
 package ai.mantik.ds.sql.builder
 
+import ai.mantik.ds.FundamentalType.BoolType
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
 import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.sql.Condition.WrappedExpression
 import ai.mantik.ds.sql.{ Condition, ConstantExpression, Expression }
 import ai.mantik.ds.sql.parser.AST
 import cats.implicits._
@@ -45,6 +47,13 @@ private[builder] object SelectorBuilder {
         } yield List(Condition.Not(
           eq
         ))
+      case b: AST.BinaryOperationNode =>
+        ExpressionBuilder.convertExpression(input, b).flatMap {
+          case c: Condition                            => Right(List(c))
+          case n: Expression if n.dataType == BoolType => Right(List(WrappedExpression(n)))
+          case other =>
+            Left(s"Could not convert ${b} to condition as it doesn't emit boolean")
+        }
       case AST.BoolNode(true) =>
         // special case, empty
         Right(Nil)

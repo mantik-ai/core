@@ -1,6 +1,6 @@
 package ai.mantik.ds.sql
 
-import ai.mantik.ds.element.SingleElementBundle
+import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.{ DataType, FundamentalType }
 
@@ -14,6 +14,12 @@ case class ConstantExpression(
     value: SingleElementBundle
 ) extends Expression {
   override def dataType: DataType = value.model
+}
+
+object ConstantExpression {
+  def apply[T: ValueEncoder](x: T): ConstantExpression = {
+    ConstantExpression(Bundle.fundamental(x))
+  }
 }
 
 /** A Column is selected. */
@@ -55,4 +61,6 @@ object Condition {
   case class And(left: Expression, right: Expression) extends Condition
 
   case class Or(left: Expression, right: Expression) extends Condition
+
+  case class IsNull(expression: Expression) extends Condition
 }

@@ -85,6 +85,9 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
       case t: TabularData => {
         renderEmbeddedTable(t)
       }
+      case n: Nullable => {
+        renderNullable(n)
+      }
     }
   }
 
@@ -171,6 +174,16 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
         limitToCellLength(renderTensorLike(shape, values, maxCellLength))
       case x =>
         throw new IllegalArgumentException(s"Expected embedded tabular element, got ${x.getClass.getSimpleName}")
+    }
+  }
+
+  private def renderNullable(nullable: Nullable): Element => String = {
+    val subRenderer = locateCellRenderer(nullable.`underlying`)
+
+    {
+      case NullElement    => "null"
+      case SomeElement(e) => subRenderer(e)
+      case x              => throw new IllegalArgumentException(s"Expected nullable, got ${x.getClass.getSimpleName}")
     }
   }
 

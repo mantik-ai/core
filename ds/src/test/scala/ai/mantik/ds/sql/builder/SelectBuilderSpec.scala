@@ -1,9 +1,10 @@
 package ai.mantik.ds.sql.builder
 
+import ai.mantik.ds.FundamentalType.StringType
 import ai.mantik.ds.element.{ Bundle, Primitive }
 import ai.mantik.ds.sql._
 import ai.mantik.ds.testutil.TestBase
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{ FundamentalType, Nullable, TabularData }
 
 class SelectBuilderSpec extends TestBase {
 
@@ -182,5 +183,74 @@ class SelectBuilderSpec extends TestBase {
     )
     got shouldBe Right(expected)
     testReparsable(got.forceRight)
+  }
+
+  it should "support nullable casts" in {
+    val got = SelectBuilder.buildSelect(
+      simpleInput,
+      "SELECT CAST (x as STRING NULLABLE)"
+    ).forceRight
+    val expected = Select(
+      simpleInput,
+      Some(
+        List(
+          SelectProjection(
+            "x",
+            CastExpression(
+              ColumnExpression(0, FundamentalType.Int32),
+              Nullable(StringType)
+            )
+          )
+        )
+      )
+    )
+    got shouldBe expected
+    testReparsable(got)
+  }
+
+  it should "support is null checks" in {
+    val got = SelectBuilder.buildSelect(
+      simpleInput,
+      "SELECT y WHERE x IS NULL"
+    ).forceRight
+    val expected = Select(
+      simpleInput,
+      Some(
+        List(
+          SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
+        )
+      ),
+      List(
+        Condition.IsNull(
+          ColumnExpression(0, FundamentalType.Int32)
+        )
+      )
+    )
+    got shouldBe expected
+    testReparsable(got)
+  }
+
+  it should "support is not null checks" in {
+    val got = SelectBuilder.buildSelect(
+      simpleInput,
+      "SELECT y WHERE x IS NOT NULL"
+    ).forceRight
+    val expected = Select(
+      simpleInput,
+      Some(
+        List(
+          SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
+        )
+      ),
+      List(
+        Condition.Not(
+          Condition.IsNull(
+            ColumnExpression(0, FundamentalType.Int32)
+          )
+        )
+      )
+    )
+    got shouldBe expected
+    testReparsable(got)
   }
 }

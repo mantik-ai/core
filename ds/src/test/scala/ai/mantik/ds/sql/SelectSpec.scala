@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql
 
-import ai.mantik.ds.element.{ Bundle, TensorElement }
+import ai.mantik.ds.element.{ Bundle, NullElement, TensorElement }
 import ai.mantik.ds.sql.run.{ Compiler, SelectProgram }
-import ai.mantik.ds.{ FundamentalType, TabularData, Tensor }
+import ai.mantik.ds.{ FundamentalType, Nullable, TabularData, Tensor }
 import ai.mantik.testutils.TestBase
 
 class SelectSpec extends TestBase {
@@ -103,5 +103,43 @@ class SelectSpec extends TestBase {
         "$1" -> FundamentalType.Int8
       )
     ).row(1.toByte).row(1.toByte).row(1.toByte).result
+  }
+
+  val bundleWithNulls = Bundle.build(
+    TabularData(
+      "x" -> Nullable(FundamentalType.Int32),
+      "y" -> FundamentalType.StringType
+    )
+  ).row(1, "Hello")
+    .row(NullElement, "World")
+    .result
+
+  it should "allow filtering out null values" in {
+    Select.run(
+      bundleWithNulls, "select * where x is not null"
+    ) shouldBe Bundle.build(bundleWithNulls.model).row(1, "Hello").result
+  }
+
+  it should "allow casting to nullable" in {
+    Select.run(
+      bundleWithNulls, "SELECT x, CAST(y as STRING NULLABLE) as y"
+    ) shouldBe Bundle.build(
+      TabularData(
+        "x" -> Nullable(FundamentalType.Int32),
+        "y" -> Nullable(FundamentalType.StringType)
+      )
+    ).row(1, "Hello")
+      .row(NullElement, "World")
+      .result
+  }
+
+  it should "allow casting from nullable" in {
+    Select.run(
+      bundleWithNulls, "SELECT CAST(x as int32) as x WHERE x IS NOT NULL"
+    ) shouldBe Bundle.build(
+      TabularData(
+        "x" -> FundamentalType.Int32
+      )
+    ).row(1).result
   }
 }

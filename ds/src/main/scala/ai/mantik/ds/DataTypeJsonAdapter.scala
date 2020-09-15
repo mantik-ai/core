@@ -126,13 +126,28 @@ private[ds] object DataTypeJsonAdapter {
     }
   }
 
-  implicit val tensorCodec = CirceJson.makeSimpleCodec[Tensor]
+  private implicit val tensorCodec = CirceJson.makeSimpleCodec[Tensor]
+
+  private implicit object nullableCodec extends ObjectEncoder[Nullable] with Decoder[Nullable] {
+    override def encodeObject(a: Nullable): JsonObject = {
+      JsonObject(
+        "underlying" -> typeEncoder(a.`underlying`)
+      )
+    }
+
+    override def apply(c: HCursor): Result[Nullable] = {
+      for {
+        subType <- c.downField("underlying").as[DataType]
+      } yield Nullable(subType)
+    }
+  }
 
   private val complexTypeCodec = new DiscriminatorDependentCodec[DataType]("type") {
     override val subTypes = Seq(
       makeGivenSubType[TabularData]("tabular", true),
       makeGivenSubType[Image]("image"),
-      makeGivenSubType[Tensor]("tensor")
+      makeGivenSubType[Tensor]("tensor"),
+      makeGivenSubType[Nullable]("nullable")
     )
   }
 

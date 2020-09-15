@@ -19,6 +19,7 @@ object OpCode {
   val AndCode = "and"
   val ReturnOnFalseCode = "retf"
   val BinaryOpCode = "bn"
+  val IsNullCode = "isn"
 
   /** Gets an input element and pushes it on to the stack. */
   case class Get(id: Int) extends OpCode(GetCode, consuming = 0)
@@ -47,6 +48,9 @@ object OpCode {
 
   /** Consumes two booleans, returns true if one of them is true. */
   case object Or extends OpCode(OrCode, consuming = 2)
+
+  /** Consumes one value and returns true if it was null */
+  case object IsNull extends OpCode(IsNullCode, consuming = 1)
 
   // Control Operations
   /** Returns if false is on the stack, does not consume */

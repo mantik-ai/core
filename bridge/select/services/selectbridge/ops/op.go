@@ -73,6 +73,9 @@ type BinaryOp struct {
 	Op       operations.BinaryOperation
 }
 
+type IsNullOp struct {
+}
+
 /* Parse a single opcode, returns the opcode and the remaining raw messages. */
 func ParseOpCode(in []json.RawMessage) (OpCode, []json.RawMessage, error) {
 	if len(in) == 0 {
@@ -114,6 +117,9 @@ func ParseOpCode(in []json.RawMessage) (OpCode, []json.RawMessage, error) {
 	case "bn":
 		var op BinaryOp
 		return parseOp2(in, &op, &op.DataType, &op.Op)
+	case "isn":
+		var op IsNullOp
+		return parseOp0(in, &op)
 	default:
 		return nil, nil, errors.Errorf("Unknown operation %s", code)
 	}

@@ -28,6 +28,11 @@ object AST {
     override def toString: String = "void"
   }
 
+  case object NullNode extends ConstantExpressionNode {
+    val value = None
+    override def toString: String = "null"
+  }
+
   case class IdentifierNode(name: String, ignoreCase: Boolean = true) extends ExpressionNode {
     override def toString: String = if (!ignoreCase) {
       "\"" + name + "\""
@@ -68,4 +73,6 @@ object AST {
   case class TensorTypeNode(underlying: Option[FundamentalType]) extends TypeNode
   /** Converts something to a image (with optional underlying type change). */
   case class ImageTypeNode(underlying: Option[FundamentalType], channel: Option[ImageChannel]) extends TypeNode
+  /** Marks something as nullable */
+  case class NullableTypeNode(underlying: TypeNode) extends TypeNode
 }

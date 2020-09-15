@@ -1,6 +1,7 @@
 package ai.mantik.ds.converter
 
-import ai.mantik.ds.element.{ Bundle, ImageElement, Primitive, SingleElementBundle, TensorElement, ValueEncoder }
+import ai.mantik.ds
+import ai.mantik.ds.element.{ Bundle, ImageElement, NullElement, Primitive, SingleElementBundle, SomeElement, TensorElement, ValueEncoder }
 import ai.mantik.ds._
 import ai.mantik.testutils.TestBase
 import akka.util.ByteString
@@ -187,6 +188,30 @@ class CastSpec extends TestBase {
     )
   }
 
-  it should "be directly callable" in {
+  it should "work for nulls" in {
+    val c = Cast.findCast(
+      FundamentalType.Int32,
+      Nullable(FundamentalType.Int32)
+    ).forceRight
+
+    c.loosing shouldBe false
+    c.canFail shouldBe false
+    c.isSafe shouldBe true
+
+    c.convert(Primitive(100)) shouldBe SomeElement(Primitive(100))
+
+    val c2 = Cast.findCast(
+      Nullable(FundamentalType.Int32),
+      FundamentalType.Int32
+    ).forceRight
+
+    c2.canFail shouldBe true
+    c2.loosing shouldBe false
+    c2.isSafe shouldBe false
+
+    c2.convert(SomeElement(Primitive(101))) shouldBe Primitive(101)
+    intercept[RuntimeException] {
+      c2.convert(NullElement)
+    }
   }
 }

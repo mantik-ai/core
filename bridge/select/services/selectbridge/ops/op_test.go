@@ -49,7 +49,8 @@ func TestOpList_UnmarshalJSON(t *testing.T) {
 			"mul",
 			"bn",
 			"int8",
-			"div"
+			"div",
+			"isn"
 		]
 	`
 	var l OpList
@@ -69,5 +70,6 @@ func TestOpList_UnmarshalJSON(t *testing.T) {
 		&BinaryOp{ds.Ref(ds.Float32), operations.SubCode},
 		&BinaryOp{ds.Ref(ds.Float64), operations.MulCode},
 		&BinaryOp{ds.Ref(ds.Int8), operations.DivCode},
+		&IsNullOp{},
 	}, l)
 }

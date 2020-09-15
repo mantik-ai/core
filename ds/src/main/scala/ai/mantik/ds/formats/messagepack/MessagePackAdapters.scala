@@ -219,6 +219,28 @@ private[messagepack] object MessagePackAdapters {
     }
   }
 
+  def nullableAdapter(nullable: Nullable) = new MessagePackAdapter[Nullable] {
+    private val underlyingAdapter = lookupAdapter(nullable.underlying)
+    override type ElementType = NullableElement
+
+    override def write(messagePacker: MessagePacker, elementType: NullableElement): Unit = {
+      elementType match {
+        case NullElement =>
+          messagePacker.packNil()
+        case SomeElement(e) =>
+          underlyingAdapter.elementWriter(messagePacker, e)
+      }
+    }
+
+    override def read(messageUnpacker: MessageUnpacker): NullableElement = {
+      if (messageUnpacker.tryUnpackNil()) {
+        NullElement
+      } else {
+        SomeElement(underlyingAdapter.read(messageUnpacker))
+      }
+    }
+  }
+
   /** Writes/Reads root elements to MessagePack. */
   trait RootElementContext {
     def write(messagePacker: MessagePacker, rootElement: RootElement): Unit
@@ -304,6 +326,7 @@ private[messagepack] object MessagePackAdapters {
       case _: Image       => imageAdapter
       case t: TabularData => embeddedTabularAdapter(t)
       case t: Tensor      => tensorAdapter(t)
+      case n: Nullable    => nullableAdapter(n)
       // Let the compiler warn if we have something incomplete here
     }
     result

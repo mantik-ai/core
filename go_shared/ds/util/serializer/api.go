@@ -86,6 +86,9 @@ type DeserializingBackend interface {
 	DecodeHeader() (*Header, error)
 	// Tell the backend, that's going to deserialize more than one root value
 	StartReadingTabularValues() error
+	// Check if the next value is a Nil without changing anything
+	// Returns an error if there is no next element
+	NextIsNil() (bool, error)
 	DecodeArrayLen() (int, error)
 	DecodeInt8() (int8, error)
 	DecodeUint8() (uint8, error)

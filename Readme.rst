@@ -25,6 +25,7 @@ Content
   Mantik ID <MantikId>
   Glossary <Glossary>
   Architecture <Architecture>
+  SQL Support <Sql>
 
 Code Structure
 --------------

@@ -57,3 +57,10 @@ case class EmbeddedTabularElement(rows: IndexedSeq[TabularRow]) extends Element
 object EmbeddedTabularElement {
   def apply(rows: TabularRow*): EmbeddedTabularElement = EmbeddedTabularElement(rows.toIndexedSeq)
 }
+
+/** A Nullable Element (either present or not). */
+sealed trait NullableElement extends Element
+
+case class SomeElement(x: Element) extends NullableElement
+
+case object NullElement extends NullableElement
