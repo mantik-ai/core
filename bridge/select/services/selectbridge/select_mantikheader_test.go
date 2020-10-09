@@ -7,15 +7,25 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
 	"select/services/selectbridge/ops"
+	"select/services/selectbridge/runner"
 	"testing"
 )
 
 // Note: the program doesn't make much sense
 var sampleFile string = `
-type:
-  input: int32
-  output: string
-selectProgram:
+input:
+  - int32
+  - void
+output:
+  - columns:
+      x: string
+program:
+  "type": "select"
+  "result": {
+    "columns": {
+      "x": "int32"
+    }
+  }
   "selector" : {
     "args" : 2,
     "retStackDepth" : 1,
@@ -49,9 +59,15 @@ selectProgram:
 func TestParseSelectMantikHeader(t *testing.T) {
 	mf, err := ParseSelectMantikHeader([]byte(sampleFile))
 	assert.NoError(t, err)
-	assert.Equal(t, ds.Int32, mf.Type.Input.Underlying)
-	assert.Equal(t, ds.String, mf.Type.Output.Underlying)
-	s := mf.Program.Selector
+	assert.Equal(t, 2, len(mf.Input))
+	assert.Equal(t, 1, len(mf.Output))
+	assert.Equal(t, ds.Int32, mf.Input[0].Underlying)
+	assert.Equal(t, ds.Void, mf.Input[1].Underlying)
+	assert.Equal(t, ds.BuildTabular().Add("x", ds.String).Result(), mf.Output[0].Underlying)
+
+	selectProgram := mf.Program.Underlying.(*runner.SelectProgram)
+
+	s := selectProgram.Selector
 	assert.Equal(t, 2, s.Args)
 	assert.Equal(t, 1, s.RetStackDepth)
 	assert.Equal(t, 2, s.StackInitDepth)
@@ -62,7 +78,7 @@ func TestParseSelectMantikHeader(t *testing.T) {
 		&ops.EqualsOp{ds.Ref(ds.Int32)},
 	}, s.Ops)
 
-	p := mf.Program.Projector
+	p := selectProgram.Projector
 	assert.Equal(t, 1, p.Args)
 	assert.Equal(t, 1, p.StackInitDepth)
 	assert.Equal(t, 1, p.RetStackDepth)

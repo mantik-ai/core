@@ -377,3 +377,52 @@ type:
 	err = sessionHandler.Quit()
 	assert.NoError(t, err)
 }
+
+func TestSessionTransformer(t *testing.T) {
+	transformer := test.NewTransformer()
+
+	env := makeEnv(t, transformer)
+	defer env.Stop()
+
+	mantikHeader := `
+kind: combiner
+input:
+  - columns:
+      x: int32
+  - float32
+output:
+  - float64
+`
+	portConf := mnpgo.PortConfiguration{
+		Inputs: []mnpgo.InputPortConfiguration{
+			{server2.MimeJson}, {server2.MimeJson},
+		},
+		Outputs: []mnpgo.OutputPortConfiguration{
+			{server2.MimeJson, ""},
+		},
+	}
+
+	sessionHandler := env.initWithoutPayload(
+		mantikHeader,
+		&portConf,
+	)
+
+	input1 := "[[1],[2],[3]]"
+	input2 := "4.0"
+	expected := "24"
+
+	// Testing data flow
+	result, err := mnpgo.RunTaskWithBytes(
+		sessionHandler,
+		context.Background(),
+		"task1",
+		[][]byte{[]byte(input1), []byte(input2)},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(result))
+	assert.Equal(t, expected, string(result[0]))
+
+	// Closing
+	err = sessionHandler.Quit()
+	assert.NoError(t, err)
+}

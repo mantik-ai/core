@@ -20,8 +20,9 @@ type MantikHeader interface {
 const AlgorithmKind = "algorithm"
 const DatasetKind = "dataset"
 const TrainableAlgorithmKind = "trainable"
+const CombinerKind = "combiner"
 
-// The name of the MantikHeader
+// The name of the MantikHeader (File)
 const MantikHeaderName = "MantikHeader"
 
 // The name of the optional payload file/dir inside a Mantik Bundle
@@ -56,7 +57,7 @@ func (d *DataSetMantikHeader) Meta() *MantikHeaderMeta {
 }
 
 func (d *DataSetMantikHeader) Kind() string {
-	return "dataset"
+	return DatasetKind
 }
 
 func (d *DataSetMantikHeader) Name() *string {
@@ -84,7 +85,7 @@ func (a *AlgorithmMantikHeader) Meta() *MantikHeaderMeta {
 }
 
 func (a *AlgorithmMantikHeader) Kind() string {
-	return "algorithm"
+	return AlgorithmKind
 }
 
 func (a *AlgorithmMantikHeader) Name() *string {
@@ -116,7 +117,7 @@ func (t *TrainableMantikHeader) Meta() *MantikHeaderMeta {
 }
 
 func (t *TrainableMantikHeader) Kind() string {
-	return "trainable"
+	return TrainableAlgorithmKind
 }
 
 func (t *TrainableMantikHeader) Name() *string {
@@ -129,6 +130,33 @@ func (d *TrainableMantikHeader) MetaVariables() MetaVariables {
 
 func (d *TrainableMantikHeader) Json() []byte {
 	return d.json
+}
+
+type CombinerMantikHeader struct {
+	Input  []ds.TypeReference `json:"input"`
+	Output []ds.TypeReference `json:"output"`
+	json   []byte
+	header *MantikHeaderMeta
+}
+
+func (c *CombinerMantikHeader) Kind() string {
+	return CombinerKind
+}
+
+func (c *CombinerMantikHeader) Meta() *MantikHeaderMeta {
+	return c.header
+}
+
+func (c *CombinerMantikHeader) Name() *string {
+	return c.header.Name
+}
+
+func (c *CombinerMantikHeader) MetaVariables() MetaVariables {
+	return c.header.ParsedMetaVariables
+}
+
+func (c *CombinerMantikHeader) Json() []byte {
+	return c.json
 }
 
 func ParseMantikHeader(bytes []byte) (MantikHeader, error) {
@@ -166,6 +194,12 @@ func ParseMantikHeader(bytes []byte) (MantikHeader, error) {
 		tf.json = plainJson
 		tf.header = &header
 		return &tf, err
+	case CombinerKind:
+		var cf CombinerMantikHeader
+		err := json.Unmarshal(plainJson, &cf)
+		cf.json = plainJson
+		cf.header = &header
+		return &cf, err
 	}
 	return nil, errors.Errorf("Unsupported kind %s", *header.Kind)
 }

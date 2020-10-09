@@ -1,6 +1,6 @@
 package ai.mantik.ds
 
-import io.circe.{ Decoder, Encoder }
+import io.circe.{ Decoder, Encoder, ObjectEncoder }
 import io.circe.syntax._
 
 import scala.collection.immutable.ListMap
@@ -62,6 +62,12 @@ case class TabularData(
 object TabularData {
   /** Build a tabular data from a name type list. */
   def apply(columns: (String, DataType)*): TabularData = TabularData(ListMap(columns: _*), None)
+
+  implicit val encoder: Encoder[TabularData] = DataTypeJsonAdapter.typeEncoder.contramap { x: TabularData => x: DataType }
+  implicit val decoder: Decoder[TabularData] = DataTypeJsonAdapter.typeDecoder.emap {
+    case td: TabularData => Right(td)
+    case other           => Left(s"Expected TabularData, got ${other.getClass.getSimpleName}")
+  }
 }
 
 /** Describes a fundamental type. */

@@ -127,6 +127,7 @@ type:
       componentType: float32
 `
 	parsed, err := ParseMantikHeader([]byte(file))
+	assert.NoError(t, err)
 
 	json, err := DecodeMetaYaml([]byte(file))
 	assert.NoError(t, err)
@@ -138,4 +139,31 @@ type:
 	casted := parsed.(*DataSetMantikHeader)
 	assert.Equal(t, ds.FromJsonStringOrPanic(`{"columns":{"x":{"type":"tensor","shape":[100],"componentType":"float32"}}}`), casted.Type.Underlying)
 	assert.Equal(t, "foo", parsed.MetaVariables()[0].Name)
+}
+
+func TestCombinerMantikHeader(t *testing.T) {
+	file := `
+kind: combiner
+bridge: foo
+input:
+  - int32
+  - float32
+output:
+  - string
+  - columns:
+      x: int32
+`
+	parsed, err := ParseMantikHeader([]byte(file))
+	assert.NoError(t, err)
+
+	json, err := DecodeMetaYaml([]byte(file))
+	assert.NoError(t, err)
+	assert.Equal(t, json, parsed.Json())
+	assert.Equal(t, CombinerKind, parsed.Kind())
+
+	casted := parsed.(*CombinerMantikHeader)
+	assert.Equal(t, 2, len(casted.Input))
+	assert.Equal(t, 2, len(casted.Output))
+	assert.Equal(t, ds.Int32, casted.Input[0].Underlying)
+	assert.Equal(t, ds.String, casted.Output[0].Underlying)
 }

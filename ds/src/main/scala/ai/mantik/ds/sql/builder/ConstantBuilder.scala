@@ -1,6 +1,7 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.{ FundamentalType, Nullable }
+import ai.mantik.ds.element.{ Bundle, NullElement, SingleElementBundle }
 import ai.mantik.ds.sql.{ ConstantExpression, Expression }
 import ai.mantik.ds.sql.parser.AST
 
@@ -15,6 +16,8 @@ private[builder] object ConstantBuilder {
         Right(ConstantExpression(Bundle.fundamental(b.value)))
       case AST.VoidNode =>
         Right(ConstantExpression(Bundle.void))
+      case AST.NullNode =>
+        Right(ConstantExpression(SingleElementBundle(Nullable(FundamentalType.VoidType), NullElement)))
       case n: AST.NumberNode =>
         buildBigDecimal(n.value)
     }

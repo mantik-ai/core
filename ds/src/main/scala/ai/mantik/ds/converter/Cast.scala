@@ -59,6 +59,8 @@ object Cast {
         findTensorToTensorCast(from, to)
       case (from: Image, to: Image) =>
         findImageToImageCast(from, to)
+      case (from: Nullable, to: Nullable) if from.underlying == FundamentalType.VoidType =>
+        Right(nullableVoidToAnyNullable(to))
       case (from: Nullable, to: Nullable) =>
         findNullableToNullableCast(from, to)
       case (from: Nullable, to) =>
@@ -274,5 +276,17 @@ object Cast {
         }
       )
     }
+  }
+
+  private def nullableVoidToAnyNullable(to: Nullable): Cast = {
+    Cast(
+      from = Nullable(FundamentalType.VoidType),
+      to = to,
+      loosing = true,
+      canFail = false,
+      op = { _ =>
+        NullElement
+      }
+    )
   }
 }

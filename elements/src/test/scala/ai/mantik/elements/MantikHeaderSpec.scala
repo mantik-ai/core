@@ -394,4 +394,30 @@ class MantikHeaderSpec extends TestBase {
     val bridge = MantikHeader.fromYamlWithType[BridgeDefinition](content).forceRight
     bridge.definition.payloadContentType shouldBe Some("application/text")
   }
+
+  "combiner" should "work" in {
+    val content =
+      """kind: combiner
+        |bridge: foo
+        |input:
+        |  - int32
+        |  - float32
+        |output:
+        |  - string
+        |  - columns:
+        |      x: int32
+        |""".stripMargin
+    val header = MantikHeader.fromYamlWithType[CombinerDefinition](content).forceRight
+    header.definition.bridge shouldBe MantikId.fromString("foo")
+    header.definition.input shouldBe Seq(
+      FundamentalType.Int32,
+      FundamentalType.Float32
+    )
+    header.definition.output shouldBe Seq(
+      FundamentalType.StringType,
+      TabularData(
+        "x" -> FundamentalType.Int32
+      )
+    )
+  }
 }

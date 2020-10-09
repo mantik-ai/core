@@ -4,6 +4,7 @@ import java.util.Base64
 
 import ai.mantik.executor.Errors
 import ai.mantik.executor.common.LabelConstants
+import ai.mantik.executor.common.test.integration.TestData
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
 import ai.mantik.executor.docker.{DockerConstants, DockerExecutor, DockerExecutorConfig}
 import ai.mantik.executor.model.docker.Container
@@ -90,30 +91,6 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
   }
 
   it should "be possible to initialize an MNP Node directly" in new Env {
-    // Source: SelectSpec, just dumping it out as Base64
-    val serializedInitRequest =
-      "CiY0YjU0NTk3MS0yMmY4LTRiMjItYWE4Ni1jNmY2NDk4YTI0NWVfMhLRCApDdHlwZS5nb29nbGVhcGlz" +
-      "LmNvbS9haS5tYW50aWsuYnJpZGdlLnByb3Rvcy5NYW50aWtJbml0Q29uZmlndXJhdGlvbhKJCAqGCHsK" +
-      "ICAia2luZCIgOiAiYWxnb3JpdGhtIiwKICAiYnJpZGdlIiA6ICJidWlsdGluL3NlbGVjdCIsCiAgInR5" +
-      "cGUiIDogewogICAgImlucHV0IiA6IHsKICAgICAgInR5cGUiIDogInRhYnVsYXIiLAogICAgICAiY29s" +
-      "dW1ucyIgOiB7CiAgICAgICAgIngiIDogImludDMyIiwKICAgICAgICAieSIgOiAic3RyaW5nIgogICAg" +
-      "ICB9CiAgICB9LAogICAgIm91dHB1dCIgOiB7CiAgICAgICJ0eXBlIiA6ICJ0YWJ1bGFyIiwKICAgICAg" +
-      "ImNvbHVtbnMiIDogewogICAgICAgICJhIiA6ICJpbnQzMiIsCiAgICAgICAgInkiIDogInN0cmluZyIK" +
-      "ICAgICAgfQogICAgfQogIH0sCiAgInNlbGVjdFByb2dyYW0iIDogewogICAgInNlbGVjdG9yIiA6IHsK" +
-      "ICAgICAgImFyZ3MiIDogMSwKICAgICAgInJldFN0YWNrRGVwdGgiIDogMSwKICAgICAgInN0YWNrSW5p" +
-      "dERlcHRoIiA6IDIsCiAgICAgICJvcHMiIDogWwogICAgICAgICJnZXQiLAogICAgICAgIDAsCiAgICAg" +
-      "ICAgImNudCIsCiAgICAgICAgewogICAgICAgICAgInR5cGUiIDogImludDgiLAogICAgICAgICAgInZh" +
-      "bHVlIiA6IDIKICAgICAgICB9LAogICAgICAgICJjYXN0IiwKICAgICAgICAiaW50OCIsCiAgICAgICAg" +
-      "ImludDMyIiwKICAgICAgICAiZXEiLAogICAgICAgICJpbnQzMiIsCiAgICAgICAgIm5lZyIKICAgICAg" +
-      "XQogICAgfSwKICAgICJwcm9qZWN0b3IiIDogewogICAgICAiYXJncyIgOiAyLAogICAgICAicmV0U3Rh" +
-      "Y2tEZXB0aCIgOiAyLAogICAgICAic3RhY2tJbml0RGVwdGgiIDogMiwKICAgICAgIm9wcyIgOiBbCiAg" +
-      "ICAgICAgImdldCIsCiAgICAgICAgMCwKICAgICAgICAiY250IiwKICAgICAgICB7CiAgICAgICAgICAi" +
-      "dHlwZSIgOiAiaW50OCIsCiAgICAgICAgICAidmFsdWUiIDogMQogICAgICAgIH0sCiAgICAgICAgImNh" +
-      "c3QiLAogICAgICAgICJpbnQ4IiwKICAgICAgICAiaW50MzIiLAogICAgICAgICJibiIsCiAgICAgICAg" +
-      "ImludDMyIiwKICAgICAgICAiYWRkIiwKICAgICAgICAiZ2V0IiwKICAgICAgICAxCiAgICAgIF0KICAg" +
-      "IH0KICB9Cn0aHQobYXBwbGljYXRpb24veC1tYW50aWstYnVuZGxlIh0KG2FwcGxpY2F0aW9uL3gtbWFu" +
-      "dGlrLWJ1bmRsZQ=="
-    val initRequest = ByteString(Base64.getDecoder.decode(serializedInitRequest))
     val startWorkerRequest = StartWorkerRequest (
       isolationSpace = "start_with_init",
       id = "startme",
@@ -121,7 +98,7 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
         container = Container(
           image = "mantikai/bridge.select"
         ),
-        initializer = Some(initRequest)
+        initializer = Some(TestData.selectInitRequest)
       )
     )
     val response = await(dockerExecutor.startWorker(startWorkerRequest))

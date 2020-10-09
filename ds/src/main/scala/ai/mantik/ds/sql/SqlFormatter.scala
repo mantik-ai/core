@@ -5,11 +5,19 @@ import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds._
 
-/** Formats Expressions as SQL again. */
-object SqlSelectFormatter {
+/** Formats Queries as SQL again. */
+object SqlFormatter {
 
-  def formatSql(select: Select): String = {
-    val formatter = new SqlSelectFormatter(select.inputType)
+  def formatSql(query: Query): String = {
+    query match {
+      case AnonymousInput(_, slot) => "$" + s"$slot"
+      case s: Select               => formatSelect(s)
+      case u: Union                => formatUnion(u)
+    }
+  }
+
+  def formatSelect(select: Select): String = {
+    val formatter = new SqlFormatter(select.input)
 
     val projectionString = select.projections match {
       case None         => "*"
@@ -24,13 +32,35 @@ object SqlSelectFormatter {
         }
         s"WHERE ${parts.mkString("AND")}"
     }
-    s"SELECT ${projectionString} ${selectionString}".trim
+    val fromQuery = select.input match {
+      case a: AnonymousInput => formatSql(select.input)
+      case other             => "(" + formatSql(other) + ")"
+    }
+    joinWithWhitespace("SELECT", projectionString, "FROM", fromQuery, selectionString)
+  }
+
+  def formatUnion(union: Union): String = {
+    val left = formatSql(union.left)
+    val right = formatSql(union.right)
+    val all = formatOptional(union.all, "ALL")
+    joinWithWhitespace(left, "UNION", all, right)
+  }
+
+  private def formatOptional(v: Boolean, s: String): String = {
+    if (v) {
+      s
+    } else ""
+  }
+
+  private def joinWithWhitespace(s: String*): String = {
+    s.filter(_.nonEmpty).mkString(" ")
   }
 
 }
 
-private class SqlSelectFormatter(inputData: TabularData) {
+private class SqlFormatter(input: Query) {
 
+  private def inputData = input.resultingType
   private val columnNames = inputData.columns.keys.toVector
 
   def formatSelectProjection(projection: SelectProjection): String = {

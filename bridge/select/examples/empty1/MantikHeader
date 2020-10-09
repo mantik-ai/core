@@ -1,15 +1,20 @@
 # Let everything through, SELECT *
 # Can still rename out columns
 bridge: builtin/select
-type:
-    input:
-        columns:
-            "x": int32
-            "y": string
-    output:
-        columns:
-            a: int32
-            b: string
-selectProgram:
+kind: combiner
+input:
+    - columns:
+        "x": int32
+        "y": string
+output:
+    - columns:
+        a: int32
+        b: string
+program:
+    type: "select"
+    result:
+      columns:
+        a: int32
+        b: string
     selector: null
     projector: null

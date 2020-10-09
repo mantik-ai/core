@@ -1,21 +1,16 @@
 package selectbridge
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/serving"
 	"select/services/selectbridge/runner"
 )
 
-type SelectProgram struct {
-	// Optional selector (when false, all elements go through)
-	Selector *runner.Program `json:"selector"`
-	// Optional projector (when f alse, all elements go through)
-	Projector *runner.Program `json:"projector"`
-}
-
 type SelectMantikHeader struct {
-	Type    serving.AlgorithmType `json:"type"`
-	Program SelectProgram         `json:"selectProgram"`
+	serving.CombinerMantikHeader
+	Program runner.TableGeneratorProgramRef `json:"program"`
+	// Human readable statement
+	Query *string
 }
 
 func ParseSelectMantikHeader(data []byte) (*SelectMantikHeader, error) {
@@ -24,8 +19,11 @@ func ParseSelectMantikHeader(data []byte) (*SelectMantikHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-	if mf.Type.Input.Underlying == nil || mf.Type.Output.Underlying == nil {
+	if (len(mf.Input) == 0) || (len(mf.Output) != 1) {
 		return nil, errors.New("Invalid type")
+	}
+	if mf.Program.Underlying == nil {
+		return nil, errors.New("No program found")
 	}
 	return &mf, err
 }

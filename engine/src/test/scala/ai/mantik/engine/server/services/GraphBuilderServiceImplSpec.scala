@@ -9,7 +9,7 @@ import ai.mantik.{ elements, planner }
 import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
 import ai.mantik.engine.testutil.{ DummyComponents, TestArtifacts, TestBaseWithSessions }
@@ -42,6 +42,14 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       ))).toJson,
       fileId = Some("1234"),
       namedId = Some(NamedMantikId("Dataset2")),
+      itemId = ItemId.generate()
+    )
+    val dataset3 = MantikArtifact(
+      MantikHeader.pure(elements.DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = TabularData(
+        "y" -> FundamentalType.Int32
+      ))).toJson,
+      fileId = Some("1234"),
+      namedId = Some(NamedMantikId("Dataset3")),
       itemId = ItemId.generate()
     )
     val algorithm1 = MantikArtifact(
@@ -84,6 +92,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     await(components.repository.store(TestArtifacts.trainedBridge1))
     await(components.repository.store(dataset1))
     await(components.repository.store(dataset2))
+    await(components.repository.store(dataset3))
     await(components.repository.store(algorithm1))
     await(components.repository.store(trainable1))
     await(components.repository.store(pipeline1))
@@ -274,6 +283,34 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     selected.item.get.getDataset.`type`.get.json shouldBe TabularData(
       "y" -> FundamentalType.Int64
     ).toJsonString
+  }
+
+  "autoUnion" should "create auto union statements" in new Env {
+    val ds2 = await(graphBuilder.get(GetRequest(session1.id, dataset2.mantikId.toString)))
+    val underlyingDs2 = session1.getItemAs[DataSet](ds2.itemId)
+    val ds3 = await(graphBuilder.get(GetRequest(session1.id, dataset3.mantikId.toString)))
+    val underlyingDs3 = session1.getItemAs[DataSet](ds3.itemId)
+    val union1 = await(graphBuilder.autoUnion(
+      AutoUnionRequest(
+        sessionId = session1.id,
+        ds2.itemId,
+        ds3.itemId,
+        all = false
+      )
+    ))
+    val underlying1 = session1.getItemAs[DataSet](union1.itemId)
+    underlying1 shouldBe underlyingDs2.autoUnion(underlyingDs3, all = false).withItemId(underlying1.itemId)
+
+    val union2 = await(graphBuilder.autoUnion(
+      AutoUnionRequest(
+        sessionId = session1.id,
+        ds2.itemId,
+        ds3.itemId,
+        all = true
+      )
+    ))
+    val underlying2 = session1.getItemAs[DataSet](union2.itemId)
+    underlying2 shouldBe underlyingDs2.autoUnion(underlyingDs3, all = true).withItemId(underlying2.itemId)
   }
 
   trait EnvForPipeline extends PlainEnv {

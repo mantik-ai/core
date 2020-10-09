@@ -1,29 +1,42 @@
 package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.{ TabularData, sql }
-import ai.mantik.ds.sql.{ Condition, Select, SelectProjection }
-import ai.mantik.ds.sql.parser.{ AST, SelectParser }
+import ai.mantik.ds.sql.{ AnonymousInput, Condition, Query, Select, SelectProjection, SqlContext }
+import ai.mantik.ds.sql.parser.{ AST, QueryParser, SelectParser }
 import cats.implicits._
 
 import scala.annotation.tailrec
 
+/** Build Select's from AST Nodes. */
 private[sql] object SelectBuilder {
 
   /**
-   * Builds a select statement for a given input data
+   * Builds a select statement for a given input data on slot 0
    * Returns either an error or a select statement
    */
   def buildSelect(input: TabularData, statement: String): Either[String, Select] = {
+    implicit val context = SqlContext(
+      anonymous = Vector(input)
+    )
+    buildSelect(statement)
+  }
+
+  def buildSelect(statement: String)(implicit context: SqlContext): Either[String, Select] = {
     for {
-      node <- SelectParser.parseSelectToNode(statement)
-      build <- buildSelectFromParsed(input, node)
+      node <- QueryParser.parseSelectToNode(statement)
+      build <- buildSelectFromParsed(node)
     } yield build
   }
 
-  private def buildSelectFromParsed(input: TabularData, statement: AST.SelectNode): Either[String, Select] = {
+  def buildSelectFromParsed(statement: AST.SelectNode)(implicit context: SqlContext): Either[String, Select] = {
+    val from = statement.from.getOrElse(
+      AST.AnonymousReference(0)
+    )
     for {
-      projections <- buildProjections(input, statement)
-      selectors <- buildSelectors(input, statement)
+      input <- QueryBuilder.buildQueryFromParsed(from)
+      inputType = input.resultingType
+      projections <- buildProjections(inputType, statement)
+      selectors <- buildSelectors(inputType, statement)
     } yield sql.Select(input, projections, selectors)
   }
 

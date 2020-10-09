@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.operations.{ BinaryFunction, BinaryOperation }
-import ai.mantik.ds.sql.{ BinaryExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Select, SelectProjection }
+import ai.mantik.ds.sql.{ AnonymousInput, BinaryExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Query, Select, SelectProjection, Union }
 import ai.mantik.ds.{ DataType, FundamentalType }
 import cats.implicits._
 
@@ -11,11 +11,26 @@ import scala.annotation.tailrec
 /** Compiles select statements into programs. */
 object Compiler {
 
+  def compile(query: Query): Either[String, TableGeneratorProgram] = {
+    query match {
+      case a: AnonymousInput => Right(DataSource(a.slot, query.resultingType))
+      case s: Select         => compile(s)
+      case u: Union          => compile(u)
+    }
+  }
+
   def compile(select: Select): Either[String, SelectProgram] = {
     for {
+      input <- compile(select.input)
       selector <- compileSelectors(select.selection)
       projector <- compileProjector(select.projections)
-    } yield SelectProgram(selector, projector)
+    } yield SelectProgram(Some(input), selector, projector, select.resultingType)
+  }
+
+  def compile(union: Union): Either[String, UnionProgram] = {
+    for {
+      compiledInputs <- union.flat.map(compile).sequence
+    } yield UnionProgram(compiledInputs, union.all, union.resultingType, true)
   }
 
   def compileSelectors(selection: List[Condition]): Either[String, Option[Program]] = {

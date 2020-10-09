@@ -67,23 +67,16 @@ type StreamReader interface {
 	Read() (Element, error)
 }
 
-// Create a StreamReader for an element slice
-func CreateSliceStreamReader(elements []Element) StreamReader {
-	return &sliceStreamReader{elements, 0}
+type anonymousStreamReader struct {
+	f func() (Element, error)
 }
 
-type sliceStreamReader struct {
-	elements []Element
-	pos      int
+func (a *anonymousStreamReader) Read() (Element, error) {
+	return a.f()
 }
 
-func (s *sliceStreamReader) Read() (Element, error) {
-	if s.pos >= len(s.elements) {
-		return nil, io.EOF
-	}
-	result := s.elements[s.pos]
-	s.pos += 1
-	return result, nil
+func NewStreamReader(f func() (Element, error)) StreamReader {
+	return &anonymousStreamReader{f}
 }
 
 // Read a stream reader until exhausted.

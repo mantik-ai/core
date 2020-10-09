@@ -285,7 +285,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
     val steps = pipeline.resolved.steps.zipWithIndex
     steps.collect {
       case (ResolvedPipelineStep.SelectStep(select), idx) =>
-        val node = elements.select11Node(select)
+        val node = elements.queryNode(select)
         idx.toString -> DeployPipelineSubItem(node)
     }.toMap
   }

@@ -15,6 +15,6 @@ class SelectProgramSpec extends TestBase {
     )
     val select = Select.parse(sampleData, "select x where y = 1").getOrElse(fail)
     val program = Compiler.compile(select).getOrElse(fail)
-    program.asJson.as[SelectProgram] shouldBe Right(program)
+    (program: TableGeneratorProgram).asJson.as[TableGeneratorProgram] shouldBe Right(program)
   }
 }

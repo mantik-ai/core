@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.sql.Select
+import ai.mantik.ds.sql.{ Query, Select }
 import ai.mantik.elements.ItemId
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.pipelines.ResolvedPipelineStep
@@ -257,12 +257,13 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
         } yield {
           algorithmSource.application(argumentSource)
         }
-      case Operation.SelectOperation(select, argument) =>
+      case Operation.SqlQueryOperation(query, arguments) =>
         for {
-          argumentSource <- manifestDataSet(argument)
-          selectSource <- manifest11Select(select)
+          argumentSource <- arguments.map(manifestDataSet).sequence
+          selectSource <- manifestQuery(query)
         } yield {
-          selectSource.application(argumentSource)
+          val mergedArguments = argumentSource.reduceLeft(_.merge(_))
+          selectSource.application(mergedArguments)
         }
     }
   }
@@ -303,13 +304,13 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
   def manifestPipelineStep(resolvedPipelineStep: ResolvedPipelineStep): State[PlanningState, ResourcePlan] = {
     resolvedPipelineStep match {
       case ResolvedPipelineStep.AlgorithmStep(algorithm) => manifestAlgorithm(algorithm)
-      case ResolvedPipelineStep.SelectStep(select)       => manifest11Select(select)
+      case ResolvedPipelineStep.SelectStep(select)       => manifestQuery(select)
     }
   }
 
-  /** Manifest a one-to-one select. */
-  def manifest11Select(select: Select): State[PlanningState, ResourcePlan] = {
-    elements.select11(select)
+  /** Manifest an SQL Query */
+  def manifestQuery(query: Query): State[PlanningState, ResourcePlan] = {
+    elements.query(query)
   }
 
   /** Manifest a trainable algorithm as a graph, will have one input and two outputs. */

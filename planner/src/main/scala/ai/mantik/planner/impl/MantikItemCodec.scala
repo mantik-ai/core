@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.helper.circe.DiscriminatorDependentCodec
-import ai.mantik.ds.sql.Select
+import ai.mantik.ds.sql.{ Query, Select, SqlContext }
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.elements._
 import ai.mantik.planner.pipelines.{ ResolvedPipeline, ResolvedPipelineStep }
@@ -49,7 +49,7 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     override val subTypes = Seq(
       makeSubType[Operation.Application]("application"),
       makeSubType[Operation.Training]("training"),
-      makeSubType[Operation.SelectOperation]("select")
+      makeSubType[Operation.SqlQueryOperation]("sqlQuery")
     )
   }
 
@@ -85,20 +85,30 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     semiauto.deriveDecoder[DataSet]
   }
 
-  case class EncodedSelect(
-      input: DataType,
-      select: String
+  case class EncodedQuery(
+      inputs: Vector[TabularData],
+      statement: String
   )
 
-  private implicit val selectEncoder: Encoder[Select] = semiauto.deriveEncoder[EncodedSelect].contramap { s =>
-    EncodedSelect(s.inputType, s.toSelectStatement)
+  private implicit val queryEncoder: Encoder[Query] = semiauto.deriveEncoder[EncodedQuery].contramap { s =>
+    val inputPorts = s.figureOutInputPorts match {
+      case Left(error) => throw new IllegalArgumentException(s"Invalid query input ports ${error}")
+      case Right(ok) =>
+        ok
+    }
+    EncodedQuery(inputPorts, s.toStatement)
   }
 
-  private implicit val selectDecoder: Decoder[Select] = semiauto.deriveDecoder[EncodedSelect].emap {
-    case EncodedSelect(tabularData: TabularData, s) =>
-      Select.parse(tabularData, s)
-    case _ =>
-      Left("Expected tabular data")
+  private implicit val selectEncoder: Encoder[Select] = queryEncoder.contramap { s => s: Query }
+
+  private implicit val queryDecoder: Decoder[Query] = semiauto.deriveDecoder[EncodedQuery].emap { encoded =>
+    implicit val sqlContext = SqlContext(encoded.inputs)
+    Query.parse(encoded.statement)
+  }
+
+  private implicit val selectDecoder: Decoder[Select] = queryDecoder.emap {
+    case s: Select => Right(s)
+    case other     => Left(s"Expected Select, got ${other.getClass.getSimpleName}")
   }
 
   private val pureAlgorithmEncoder: ObjectEncoder[Algorithm] = semiauto.deriveEncoder[Algorithm]

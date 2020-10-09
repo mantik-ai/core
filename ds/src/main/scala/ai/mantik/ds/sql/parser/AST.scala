@@ -5,9 +5,23 @@ import ai.mantik.ds.{ FundamentalType, ImageChannel }
 /** Abstract syntax tree for the parser. */
 object AST {
 
-  case class SelectNode(selectColumns: List[SelectColumnNode] = Nil, where: Option[ExpressionNode] = None) {
+  sealed trait QueryNode
+
+  case class AnonymousReference(id: Int) extends QueryNode
+
+  case class SelectNode(
+      selectColumns: List[SelectColumnNode] = Nil,
+      where: Option[ExpressionNode] = None,
+      from: Option[QueryNode] = None
+  ) extends QueryNode {
     def isAll: Boolean = selectColumns.isEmpty
   }
+
+  case class UnionNode(
+      left: QueryNode,
+      right: QueryNode,
+      all: Boolean
+  ) extends QueryNode
 
   case class SelectColumnNode(
       expression: ExpressionNode,

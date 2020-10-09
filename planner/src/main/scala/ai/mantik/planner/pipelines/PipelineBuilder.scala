@@ -36,7 +36,7 @@ private[planner] object PipelineBuilder {
       case Right(algorithm) => algorithm.functionType.input
     }
     val highLevelSteps = steps.map {
-      case Left(select)     => PipelineBuildStep.SelectBuildStep(select.toSelectStatement)
+      case Left(select)     => PipelineBuildStep.SelectBuildStep(select.toStatement)
       case Right(algorithm) => PipelineBuildStep.AlgorithmBuildStep(algorithm)
     }
     build(highLevelSteps, inputType)

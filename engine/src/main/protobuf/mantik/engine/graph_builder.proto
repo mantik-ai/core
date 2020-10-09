@@ -20,6 +20,8 @@ service GraphBuilderService {
     rpc Cached(CacheRequest) returns (NodeResponse) {}
     /** Run a select query on the dataset item. */
     rpc Select(SelectRequest) returns (NodeResponse) {}
+    /** Run a auto union query on two datasets. */
+    rpc AutoUnion(AutoUnionRequest) returns (NodeResponse) {}
     /** Build a pipeline from Algorithms. */
     rpc BuildPipeline(BuildPipelineRequest) returns (NodeResponse){}
     /* Returns the item using a new name. */
@@ -78,6 +80,16 @@ message SelectRequest {
     string dataset_id = 2;
     // Select query like 'select x as y'
     string select_query = 3;
+}
+
+message AutoUnionRequest {
+    string session_id = 1;
+    // left dataset
+    string dataset_id1 = 2;
+    // right dataset
+    string dataset_id2 = 3;
+    // if true, all results are emitted, otherwise duplicates are filtered (slower)
+    bool all = 4;
 }
 
 // Request for Building a Pipeline

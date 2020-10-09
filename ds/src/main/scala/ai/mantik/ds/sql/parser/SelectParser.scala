@@ -1,32 +1,19 @@
 package ai.mantik.ds.sql.parser
 
-import ai.mantik.ds.sql.parser.AST.{ ExpressionNode, SelectColumnNode, SelectNode }
+import ai.mantik.ds.sql.parser.AST.{ AnonymousReference, ExpressionNode, QueryNode, SelectColumnNode, SelectNode }
 import org.parboiled2.{ ParseError, Parser, ParserInput, Rule1 }
 
 import scala.collection.immutable
 
-object SelectParser {
-
-  def parseSelectToNode(select: String): Either[String, SelectNode] = {
-    import Parser.DeliveryScheme.Either
-    val parser = new SelectParser(select)
-    val result = parser.Select.run()
-    result match {
-      case Left(error) =>
-        val formatted = parser.formatError(error)
-        Left(formatted)
-      case Right(ok) =>
-        Right(ok)
-    }
-  }
-}
-
-private[parser] class SelectParser(val input: ParserInput) extends Parser with ExpressionParser {
-
+private[parser] trait SelectParser extends ExpressionParser with InnerQueryParser {
+  self: Parser =>
   def Select: Rule1[SelectNode] = rule {
-    (keyword("select") ~ SelectColumns ~ optional(keyword("where") ~ Expression)) ~> { (columns, where) =>
-      SelectNode(columns, where)
-    }
+    (keyword("select") ~ SelectColumns ~
+      optional(keyword("from") ~ SelectLikeInnerQuery) ~
+      optional(keyword("where") ~ Expression)
+    ) ~> { (columns, from, where) =>
+        SelectNode(columns, where, from)
+      }
   }
 
   def SelectColumns: Rule1[List[SelectColumnNode]] = rule {

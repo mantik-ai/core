@@ -218,6 +218,9 @@ object Bundle {
   /** The empty value. */
   def void: SingleElementBundle = Bundle.build(FundamentalType.VoidType, Primitive.unit)
 
+  /** A nullable void Null element value (for comparison with other nullable values) */
+  def voidNull: SingleElementBundle = Bundle.build(Nullable(FundamentalType.VoidType), NullElement)
+
   /** JSON Encoder. */
   implicit val encoder: ObjectEncoder[Bundle] = JsonFormat
   /** JSON Decoder. */

@@ -1,0 +1,85 @@
+{
+  "kind" : "combiner",
+  "bridge" : "builtin/select",
+  "input" : [
+    {
+      "type" : "tabular",
+      "columns" : {
+        "x" : "int32",
+        "y" : "string"
+      }
+    }
+  ],
+  "output" : [
+    {
+      "type" : "tabular",
+      "columns" : {
+        "a" : "int32",
+        "y" : "string"
+      }
+    }
+  ],
+  "program" : {
+    "type" : "select",
+    "result": {
+      "type": "tabular",
+      "columns": {
+        "a": "int32",
+        "y": "string"
+      }
+    },
+    "input" : {
+      "type" : "source",
+      "port" : 0,
+      "result": {
+        "type": "tabular",
+        "columns": {
+          "a": "int32",
+          "y": "string"
+        }
+      }
+    },
+    "selector" : {
+      "args" : 1,
+      "retStackDepth" : 1,
+      "stackInitDepth" : 2,
+      "ops" : [
+        "get",
+        0,
+        "cnt",
+        {
+          "type" : "int8",
+          "value" : 2
+        },
+        "cast",
+        "int8",
+        "int32",
+        "eq",
+        "int32",
+        "neg"
+      ]
+    },
+    "projector" : {
+      "args" : 2,
+      "retStackDepth" : 2,
+      "stackInitDepth" : 2,
+      "ops" : [
+        "get",
+        0,
+        "cnt",
+        {
+          "type" : "int8",
+          "value" : 1
+        },
+        "cast",
+        "int8",
+        "int32",
+        "bn",
+        "int32",
+        "add",
+        "get",
+        1
+      ]
+    }
+  }
+}

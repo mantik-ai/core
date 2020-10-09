@@ -56,10 +56,10 @@ func LookupAutoAdapter(from ds.DataType, to ds.DataType) (Adapter, error) {
 		return nil, err
 	}
 	if cast.CanFail {
-		return nil, errors.New("Cannot create automatic adapter as a cast can fail")
+		return nil, errors.Errorf("Cannot create automatic from %s to %s adapter as a cast can fail", ds.ToJsonString(from), ds.ToJsonString(to))
 	}
 	if cast.Loosing {
-		return nil, errors.New("Cannot create automatic adapter as a cast would loose precision")
+		return nil, errors.Errorf("Cannot create automatic adapter from %s to %s as a cast would loose precision", ds.ToJsonString(from), ds.ToJsonString(to))
 	}
 	return cast.Adapter, nil
 }

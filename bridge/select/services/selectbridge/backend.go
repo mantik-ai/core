@@ -2,8 +2,10 @@ package selectbridge
 
 import (
 	"github.com/pkg/errors"
+	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/serving"
+	"io"
 	"path"
 	"select/services/selectbridge/runner"
 )
@@ -15,7 +17,7 @@ func (s *SelectBackend) LoadModel(payloadDirectory *string, mantikHeader serving
 	return LoadModelFromMantikHeader(mantikHeader)
 }
 
-func LoadModel(directory string) (*SelectRunner, error) {
+func LoadModel(directory string) (*SelectBackendModel, error) {
 	mfPath := path.Join(directory, "MantikHeader")
 	mf, err := serving.LoadMantikHeader(mfPath)
 	if err != nil {
@@ -24,79 +26,78 @@ func LoadModel(directory string) (*SelectRunner, error) {
 	return LoadModelFromMantikHeader(mf)
 }
 
-func LoadModelFromMantikHeader(mantikHeader serving.MantikHeader) (*SelectRunner, error) {
+func LoadModelFromMantikHeader(mantikHeader serving.MantikHeader) (*SelectBackendModel, error) {
 	sm, err := ParseSelectMantikHeader(mantikHeader.Json())
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not decode MantikHeader")
 	}
-	var selectorRunner *runner.Runner
-	if sm.Program.Selector != nil {
-		selectorRunner, err = runner.CreateRunner(sm.Program.Selector)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not create Runner for selector")
-		}
+	runner, err := runner.NewGeneratorRunner(sm.Program)
+	if err != nil {
+		return nil, err
 	}
-	var projectorRunner *runner.Runner
-	if sm.Program.Projector != nil {
-		projectorRunner, err = runner.CreateRunner(sm.Program.Projector)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not create Runner for Projector")
-		}
-	}
-	return &SelectRunner{
-		algorithmType: &sm.Type,
-		selector:      selectorRunner,
-		projector:     projectorRunner,
+	return &SelectBackendModel{
+		header: sm,
+		runner: runner,
 	}, nil
 }
 
-type SelectRunner struct {
-	algorithmType *serving.AlgorithmType
-	selector      *runner.Runner
-	projector     *runner.Runner
+type SelectBackendModel struct {
+	header *SelectMantikHeader
+	runner runner.GeneratorRunner
 }
 
-func (s *SelectRunner) Cleanup() {
+func (s *SelectBackendModel) Cleanup() {
 	// nothing to do
 }
 
-func (s *SelectRunner) ExtensionInfo() interface{} {
+func (s *SelectBackendModel) ExtensionInfo() interface{} {
 	// nothing to do
 	return nil
 }
 
-func (s *SelectRunner) Type() *serving.AlgorithmType {
-	return s.algorithmType
+func (s *SelectBackendModel) Inputs() []ds.TypeReference {
+	return s.header.Input
 }
 
-func (s *SelectRunner) NativeType() *serving.AlgorithmType {
-	// is the same
-	return s.algorithmType
+func (s *SelectBackendModel) Outputs() []ds.TypeReference {
+	return s.header.Output
 }
 
-func (s *SelectRunner) Execute(rows []element.Element) ([]element.Element, error) {
-	result := make([]element.Element, 0)
-	for _, row := range rows {
-		tabularRow := row.(*element.TabularRow)
-		var isSelected = true
-		if s.selector != nil { // if there is no selector, we select them all
-			selectResult, err := s.selector.Run(tabularRow.Columns)
-			if err != nil {
-				return nil, err
-			}
-			isSelected = selectResult[0].(element.Primitive).X.(bool)
+func (s *SelectBackendModel) Run(input []element.StreamReader, output []element.StreamWriter) error {
+	if len(output) != 1 {
+		return errors.New("Only one output supported")
+	}
+	singleOutput := output[0]
+	result := s.runner.Run(input)
+	for {
+		element, err := result.Read()
+		if err == io.EOF {
+			// Done
+			return nil
 		}
-		if isSelected {
-			if s.projector == nil {
-				result = append(result, tabularRow)
-			} else {
-				projected, err := s.projector.Run(tabularRow.Columns)
-				if err != nil {
-					return nil, err
-				}
-				result = append(result, &element.TabularRow{projected})
-			}
+		if err != nil {
+			return err
+		}
+		err = singleOutput.Write(element)
+		if err != nil {
+			return err
 		}
 	}
-	return result, nil
+}
+
+// Run a single n:1 Model
+func (s *SelectBackendModel) Execute(inputs ...[]element.Element) ([]element.Element, error) {
+	if len(s.header.Output) != 1 {
+		return nil, errors.New("This execute method works only with n:1 models")
+	}
+	inputReaders := make([]element.StreamReader, len(inputs), len(inputs))
+	for i, input := range inputs {
+		inputReaders[i] = element.NewElementBuffer(input)
+	}
+	output := element.ElementBuffer{}
+	err := s.Run(inputReaders, []element.StreamWriter{&output})
+	if err != nil {
+		return nil, err
+	}
+	return output.Elements(), nil
 }

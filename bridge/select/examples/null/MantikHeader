@@ -1,22 +1,29 @@
 # SELECT CAST (x as INT32) as x, CAST (y as STRING NULLABLE) WHERE x IS NOT NULL
-kind: algorithm
 bridge: builtin/select
-type:
-  input:
-    type: tabular
+kind: combiner
+input:
+  - type: tabular
     columns:
       x:
         type: nullable
         underlying: int32
       y: string
-  output:
+output:
+  - type: tabular
+    columns:
+      x: int32
+      y:
+        type: nullable
+        underlying: string
+program:
+  type: "select"
+  result:
     type: tabular
     columns:
       x: int32
       y:
         type: nullable
         underlying: string
-selectProgram:
   selector:
     args: 1
     retStackDepth: 1

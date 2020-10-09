@@ -3,7 +3,7 @@ package ai.mantik.ds.sql.run
 import ai.mantik.ds.element.ValueEncoder
 import ai.mantik.ds.testutil.TestBase
 
-class RunnerSpec extends TestBase {
+class ProgramRunnerSpec extends TestBase {
 
   it should "work for a simple program" in {
     val program = Program(
@@ -15,7 +15,7 @@ class RunnerSpec extends TestBase {
         OpCode.Get(0)
       )
     )
-    val runner = new Runner(program)
+    val runner = new ProgramRunner(program)
     runner.run(IndexedSeq(ValueEncoder(1), ValueEncoder(2))) shouldBe IndexedSeq(ValueEncoder(2), ValueEncoder(1))
   }
 }

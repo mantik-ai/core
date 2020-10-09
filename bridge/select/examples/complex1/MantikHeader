@@ -1,5 +1,13 @@
 {
-  "selectProgram" : {
+  "program" : {
+    "type": "select",
+    "result": {
+      "type": "tabular",
+      "columns": {
+        "sum": "int32",
+        "s": "string"
+      }
+    },
     "selector" : {
       "args" : 1,
       "retStackDepth" : 1,
@@ -36,28 +44,25 @@
       ]
     }
   },
-  "kind" : "algorithm",
+  "kind" : "combiner",
   "author" : null,
   "authorEmail" : null,
   "name" : null,
   "version" : null,
   "bridge" : "builtin/select",
-  "type" : {
-    "kind" : "simple",
-    "input" : {
-      "type" : "tabular",
-      "columns" : {
-        "x" : "int32",
-        "y" : "int32",
-        "s" : "string"
-      }
-    },
-    "output" : {
-      "type" : "tabular",
-      "columns" : {
-        "sum" : "int32",
-        "s" : "string"
-      }
+  "input" : [{
+    "type" : "tabular",
+    "columns" : {
+      "x" : "int32",
+      "y" : "int32",
+      "s" : "string"
     }
-  }
+  }],
+  "output" : [{
+    "type" : "tabular",
+    "columns" : {
+      "sum" : "int32",
+      "s" : "string"
+    }
+  }]
 }
