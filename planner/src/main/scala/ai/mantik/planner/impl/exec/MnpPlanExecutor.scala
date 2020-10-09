@@ -15,9 +15,10 @@ import ai.mantik.planner.PlanExecutor.PlanExecutorException
 import ai.mantik.planner.graph.{ Graph, Node }
 import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{ InputPush, OutputPull }
-import ai.mantik.planner.pipelines.PipelineRuntimeDefinition
+import ai.mantik.planner.pipelines.{ PipelineRuntimeDefinition, ResolvedPipelineStep }
 import ai.mantik.planner.repository._
 import ai.mantik.planner._
+import ai.mantik.planner.repository.FileRepository.FileGetResult
 import akka.http.scaladsl.model.Uri
 import akka.util.ByteString
 import cats.implicits._
@@ -404,13 +405,14 @@ class MnpPlanExecutor(
   }
 
   private def deployAlgorithm(deployAlgorithm: PlanOp.DeployAlgorithm)(implicit files: ExecutionOpenFiles): Future[DeploymentState] = {
-    val initCall = buildInitCallForAlgorithmDeployment(deployAlgorithm)
+    val payloadData = deployAlgorithm.node.service.data.map(files.resolveFileRead)
+    val initCall = buildInitCallForDeployment(deployAlgorithm.node, payloadData)
 
     val startWorkerRequest = StartWorkerRequest(
       isolationSpace,
       id = deployAlgorithm.serviceId,
       definition = MnpWorkerDefinition(
-        container = deployAlgorithm.container.container,
+        container = deployAlgorithm.node.service.container,
         extraLogins = dockerConfig.logins,
         initializer = Some(ByteString(initCall.toByteArray))
       ),
@@ -437,24 +439,27 @@ class MnpPlanExecutor(
     }
   }
 
-  private def buildInitCallForAlgorithmDeployment(deployAlgorithm: PlanOp.DeployAlgorithm)(implicit files: ExecutionOpenFiles): InitRequest = {
-    val inputPorts: Vector[ConfigureInputPort] = Vector(
-      ConfigureInputPort(ContentTypes.MantikBundleContentType)
-    )
-    val outputPorts: Vector[ConfigureOutputPort] = Vector(
-      ConfigureOutputPort(ContentTypes.MantikBundleContentType)
-    )
-    val inputData = deployAlgorithm.container.data.map(files.resolveFileRead)
+  private def buildInitCallForDeployment(
+    node: Node[PlanNodeService.DockerContainer],
+    payloadData: Option[FileGetResult]
+  ): InitRequest = {
+    // TODO: Optional Content Types #180 should be removed
+    val inputPorts: Vector[ConfigureInputPort] = node.inputs.map { inputPort =>
+      ConfigureInputPort(inputPort.contentType.getOrElse(ContentTypes.MantikBundleContentType))
+    }
+    val outputPorts: Vector[ConfigureOutputPort] = node.outputs.map { outputPort =>
+      ConfigureOutputPort(outputPort.contentType.getOrElse(ContentTypes.MantikBundleContentType))
+    }
 
     val initConfiguration = MantikInitConfiguration(
-      header = deployAlgorithm.container.mantikHeader.toJson,
-      payloadContentType = inputData match {
+      header = node.service.mantikHeader.toJson,
+      payloadContentType = payloadData match {
         case None => "" // encoding for no content type
         case Some(present) =>
           // TODO: Content Type should be always present, see #180
           present.contentType.getOrElse(ContentTypes.ZipFileContentType)
       },
-      payload = inputData.map { data =>
+      payload = payloadData.map { data =>
         val fullUrl = Uri(data.path).resolvedAgainst(fileRepositoryServerRemotePresence.assembledRemoteUri()).toString()
         MantikInitConfiguration.Payload.Url(fullUrl)
       }.getOrElse(
@@ -471,53 +476,108 @@ class MnpPlanExecutor(
   }
 
   private def deployPipeline(dp: PlanOp.DeployPipeline): Future[DeploymentState] = {
-    val runtimeDefinition = buildPipelineRuntimeDefinition(dp)
+    deployPipelineSubNodes(dp).flatMap { subNodes =>
+      val subDeploymentStates: Map[String, SubDeploymentState] = subNodes.mapValues { subDeploymentResult =>
+        SubDeploymentState(
+          name = subDeploymentResult.nodeName,
+          internalUrl = s"mnp://${subDeploymentResult.nodeName}:8502/${DeployedSessionName}"
+        )
+      }
 
-    val startWorkerRequest = StartWorkerRequest(
-      isolationSpace,
-      id = dp.serviceId,
-      definition = MnpPipelineDefinition(
-        definition = runtimeDefinition.asJson
-      ),
-      keepRunning = true,
-      ingressName = dp.ingress,
-      nameHint = dp.serviceNameHint
-    )
+      val runtimeDefinition = buildPipelineRuntimeDefinition(dp, subDeploymentStates)
 
-    for {
-      response <- executor.startWorker(startWorkerRequest)
-      deploymentState = DeploymentState(
-        name = response.nodeName,
-        internalUrl = s"http://${response.nodeName}:8502",
-        externalUrl = response.externalUrl
+      val startWorkerRequest = StartWorkerRequest(
+        isolationSpace,
+        id = dp.serviceId,
+        definition = MnpPipelineDefinition(
+          definition = runtimeDefinition.asJson
+        ),
+        keepRunning = true,
+        ingressName = dp.ingress,
+        nameHint = dp.serviceNameHint
       )
-      deploymentInfo = DeploymentInfo(
-        name = deploymentState.name,
-        internalUrl = deploymentState.internalUrl,
-        timestamp = akkaRuntime.clock.instant()
-      )
-      _ = mantikItemStateManager.upsert(dp.item, _.copy(deployment = Some(deploymentState)))
-      _ <- repository.setDeploymentInfo(dp.item.itemId, Some(deploymentInfo))
-    } yield {
-      logger.info(s"Deployed pipeline ${dp.serviceId} to ${deploymentInfo.internalUrl} (external=${deploymentInfo.externalUrl})")
-      deploymentState
+
+      for {
+        response <- executor.startWorker(startWorkerRequest)
+        deploymentState = DeploymentState(
+          name = response.nodeName,
+          internalUrl = s"http://${response.nodeName}:8502",
+          externalUrl = response.externalUrl,
+          sub = subDeploymentStates
+        )
+        deploymentInfo = DeploymentInfo(
+          name = deploymentState.name,
+          internalUrl = deploymentState.internalUrl,
+          timestamp = akkaRuntime.clock.instant(),
+          sub = subDeploymentStates.mapValues { s =>
+            SubDeploymentInfo(
+              name = s.name,
+              internalUrl = s.internalUrl
+            )
+          }
+        )
+        _ = mantikItemStateManager.upsert(dp.item, _.copy(deployment = Some(deploymentState)))
+        _ <- repository.setDeploymentInfo(dp.item.itemId, Some(deploymentInfo))
+      } yield {
+        logger.info(s"Deployed pipeline ${dp.serviceId} to ${deploymentInfo.internalUrl} (external=${deploymentInfo.externalUrl})")
+        deploymentState
+      }
     }
   }
 
-  private def buildPipelineRuntimeDefinition(dp: PlanOp.DeployPipeline): PipelineRuntimeDefinition = {
-    def extractStep(algorithm: Algorithm): PipelineRuntimeDefinition.Step = {
-      val state = mantikItemStateManager.getOrInit(algorithm)
-      val url = state.deployment match {
-        case None    => throw new planner.Planner.InconsistencyException("Required sub algorithm not deployed")
-        case Some(d) => d.internalUrl
-      }
-      val resultType = algorithm.functionType.output
-      PipelineRuntimeDefinition.Step(
-        url,
-        resultType
-      )
+  private def deployPipelineSubNodes(dp: PlanOp.DeployPipeline): Future[Map[String, StartWorkerResponse]] = {
+    val subRequests: Map[String, Future[StartWorkerResponse]] = dp.sub.map {
+      case (key, subItem) =>
+        val initCall = buildInitCallForDeployment(subItem.node, None)
+        val nameHint = "mantik-sub-" + subItem.node.service.container.simpleImageName
+        val startWorkerRequest = StartWorkerRequest(
+          isolationSpace = isolationSpace,
+          id = dp.serviceId,
+          definition = MnpWorkerDefinition(
+            container = subItem.node.service.container,
+            extraLogins = dockerConfig.logins,
+            initializer = Some(ByteString(initCall.toByteArray))
+          ),
+          keepRunning = true,
+          nameHint = Some(nameHint),
+          ingressName = None
+        )
+        key -> executor.startWorker(startWorkerRequest)
     }
-    val steps = dp.steps.map(extractStep)
+
+    Future.sequence(subRequests.map {
+      case (key, f) =>
+        f.map(result => key -> result)
+    }).map(_.toMap)
+  }
+
+  private def buildPipelineRuntimeDefinition(dp: PlanOp.DeployPipeline, subDeployments: Map[String, SubDeploymentState]): PipelineRuntimeDefinition = {
+    def extractStep(step: ResolvedPipelineStep, stepId: Int): PipelineRuntimeDefinition.Step = {
+      step match {
+        case ResolvedPipelineStep.AlgorithmStep(algorithm) =>
+          val state = mantikItemStateManager.getOrInit(algorithm)
+          val url = state.deployment match {
+            case None    => throw new Planner.InconsistencyException("Required sub algorithm not deployed")
+            case Some(d) => d.internalUrl
+          }
+          val resultType = algorithm.functionType.output
+          PipelineRuntimeDefinition.Step(
+            url,
+            resultType
+          )
+        case other =>
+          val subState = subDeployments.getOrElse(
+            stepId.toString,
+            throw new Planner.InconsistencyException(s"Required sub step ${stepId} not deployed")
+          )
+          val resultType = other.functionType.output
+          PipelineRuntimeDefinition.Step(
+            subState.internalUrl,
+            resultType
+          )
+      }
+    }
+    val steps = dp.item.resolved.steps.zipWithIndex.map { case (step, stepId) => extractStep(step, stepId) }
     val inputType = dp.item.functionType.input
     PipelineRuntimeDefinition(
       name = dp.item.mantikId.toString,

@@ -2,7 +2,7 @@ package ai.mantik.planner.integration
 
 import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{FundamentalType, TabularData}
-import ai.mantik.planner.Algorithm
+import ai.mantik.planner.{Algorithm, Pipeline}
 
 class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
 
@@ -31,19 +31,22 @@ class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
   }
 
   it should "deploy a simple select algorithm" in {
-    val select = Algorithm.fromSelect(Select.parse(
-      TabularData(
-        "x" -> FundamentalType.Int32
-      ),
-      "select * where x = 10"
-    ).forceRight)
-    val state = context.state(select)
+    // Note: Selects are not part of Algorithm anymore
+    val pipeline = Pipeline.build(Left(
+      Select.parse(
+        TabularData(
+          "x" -> FundamentalType.Int32
+        ),
+        "select * where x = 10"
+      ).forceRight
+    ))
+    val state = context.state(pipeline)
     state.deployment shouldBe empty
     state.itemStored shouldBe false
     val deployed = context.execute(
-      select.deploy()
+      pipeline.deploy()
     )
-    val state2 = context.state(select)
+    val state2 = context.state(pipeline)
     state2.deployment shouldBe Some(deployed)
     state2.itemStored shouldBe true
   }

@@ -1,8 +1,10 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId, PipelineStep }
+import ai.mantik.planner.PlanOp.DeployPipelineSubItem
 import ai.mantik.planner.Planner.{ InconsistencyException, PlannerException }
 import ai.mantik.planner._
+import ai.mantik.planner.pipelines.ResolvedPipelineStep
 import ai.mantik.planner.repository.ContentTypes
 import cats.data.State
 import cats.implicits._
@@ -180,7 +182,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
     item match {
       case p: Pipeline =>
         p.resolved.steps.collect {
-          case a if a.select.isEmpty => a
+          case a: ResolvedPipelineStep.AlgorithmStep => a.algorithm
         }
       case _ => Nil
     }
@@ -203,10 +205,10 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
             _ <- PlanningState.modify { _.withOverrideFunc(algorithm, mantikItemStateManager, _.copy(deployed = Some(Right(memoryId)))) }
           } yield {
             val file = filePlan.files.headOption
-            val container = elements.algorithmContainer(algorithm, file.map(_.ref))
+            val node = elements.algorithmNode(algorithm, file.map(_.ref))
             val serviceId = algorithm.itemId.toString
             val op = PlanOp.DeployAlgorithm(
-              container,
+              node,
               serviceId,
               nameHint,
               algorithm
@@ -234,7 +236,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
           PlanningState.pure(PlanOp.MemoryReader(memory))
         case None =>
           for {
-            stepDeployment <- ensureStepsDeployed(pipeline)
+            stepDeployment <- ensureIndependentStepsDeployed(pipeline)
             pipelineStorage <- ensureItemStored(pipeline)
             pipeDeployment <- buildPipelineDeployment(pipeline, nameHint, ingress)
           } yield {
@@ -256,26 +258,36 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
       )))
     } yield {
       val serviceId = pipeline.itemId.toString
+      val subDeployments = dependentStepsDeployment(pipeline)
       val op1 = PlanOp.DeployPipeline(
         item = pipeline,
+        sub = subDeployments,
         serviceId = serviceId,
         serviceNameHint = nameHint,
-        ingress = ingress,
-        steps = pipeline.resolved.steps
+        ingress = ingress
       )
       val op2 = PlanOp.MemoryWriter[DeploymentState](memoryId)
       PlanOp.seq(op1, op2)
     }
   }
 
-  /** Ensure that steps of a pipeline are deployed. */
-  private def ensureStepsDeployed(pipeline: Pipeline): State[PlanningState, PlanOp[Unit]] = {
-    val algorithms = pipeline.resolved.steps
-    algorithms.map { algorithm =>
-      ensureAlgorithmDeployed(algorithm)
+  /** Ensure that independent steps of a pipeline are deployed. */
+  private def ensureIndependentStepsDeployed(pipeline: Pipeline): State[PlanningState, PlanOp[Unit]] = {
+    val steps = pipeline.resolved.steps
+    steps.collect {
+      case ResolvedPipelineStep.AlgorithmStep(algorithm) => ensureAlgorithmDeployed(algorithm)
     }.sequence.map { ops =>
       PlanOp.Sequential(ops, PlanOp.Empty)
     }
+  }
+
+  private def dependentStepsDeployment(pipeline: Pipeline): Map[String, DeployPipelineSubItem] = {
+    val steps = pipeline.resolved.steps.zipWithIndex
+    steps.collect {
+      case (ResolvedPipelineStep.SelectStep(select), idx) =>
+        val node = elements.select11Node(select)
+        idx.toString -> DeployPipelineSubItem(node)
+    }.toMap
   }
 
   /** Ensure that an algorithm is deployed. */

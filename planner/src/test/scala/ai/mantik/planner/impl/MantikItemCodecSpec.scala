@@ -1,6 +1,6 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{ Bundle, TabularBundle }
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{ FundamentalType, TabularData }
@@ -34,16 +34,20 @@ class MantikItemCodecSpec extends TestBase {
     )
   }
 
-  it should "serialize selects" in {
+  "selects" should "be serialized" in {
+    val bundle = DataSet.literal(
+      Bundle.build(
+        TabularData(
+          "x" -> FundamentalType.Int32
+        )
+      ).row(1).result
+    )
+    val withSelect = bundle.select(
+      "select x as y"
+    )
+
     serializationTest(
-      Algorithm.fromSelect(
-        Select.parse(
-          TabularData(
-            "x" -> FundamentalType.Int32
-          ),
-          "select x as y"
-        ).forceRight
-      )
+      withSelect
     )
   }
 
@@ -107,7 +111,7 @@ class MantikItemCodecSpec extends TestBase {
       "y" -> FundamentalType.Int32
     )
     val pipeline = Pipeline.build(
-      Algorithm.fromSelect(
+      Left(
         Select.parse(
           TabularData(
             "x" -> FundamentalType.Int32
@@ -115,7 +119,7 @@ class MantikItemCodecSpec extends TestBase {
           "select x as y"
         ).forceRight
       ),
-      Algorithm(
+      Right(Algorithm(
         Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)),
         MantikHeader.pure(
           AlgorithmDefinition(
@@ -126,7 +130,7 @@ class MantikItemCodecSpec extends TestBase {
             )
           )),
         TestItems.algoBridge
-      )
+      ))
     )
 
     serializationTest(pipeline)

@@ -5,7 +5,6 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.{ DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.select.AutoAdapt
 import ai.mantik.testutils.TestBase
 
 class DataSetSpec extends TestBase {

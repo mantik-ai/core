@@ -3,6 +3,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver, ResolvedPipeline }
 import ai.mantik.componently.utils.EitherExtensions._
 import ai.mantik.ds.DataType
+import ai.mantik.ds.sql.Select
 import ai.mantik.elements.{ MantikHeader, PipelineDefinition }
 
 /**
@@ -50,9 +51,16 @@ object Pipeline {
    * @throws IllegalArgumentException if data types do not match.
    */
   def build(
-    algorithms: Algorithm*
+    algorithm0: Algorithm, algorithms: Algorithm*
   ): Pipeline = {
-    PipelineBuilder.build(algorithms).force
+    PipelineBuilder.build((algorithm0 +: algorithms).map(Right(_))).force
+  }
+
+  /** Extended build operation. */
+  def build(
+    steps: Either[Select, Algorithm]*
+  ): Pipeline = {
+    PipelineBuilder.build(steps).force
   }
 
   /** A high level Step for a Pipeline during Building. */

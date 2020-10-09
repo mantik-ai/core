@@ -1,9 +1,13 @@
 package ai.mantik.planner.impl
 
+import ai.mantik.ds.Errors.FeatureNotSupported
+import ai.mantik.ds.sql.Select
 import ai.mantik.elements.ItemId
 import ai.mantik.planner.Planner.InconsistencyException
+import ai.mantik.planner.pipelines.ResolvedPipelineStep
 import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, DataSet, Operation, PayloadSource, Pipeline, PlanFileReference, PlanOp, Planner, TrainableAlgorithm }
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
+import ai.mantik.planner.select.SelectMantikHeaderBuilder
 import cats.data.State
 import cats.implicits._
 
@@ -253,6 +257,13 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
         } yield {
           algorithmSource.application(argumentSource)
         }
+      case Operation.SelectOperation(select, argument) =>
+        for {
+          argumentSource <- manifestDataSet(argument)
+          selectSource <- manifest11Select(select)
+        } yield {
+          selectSource.application(argumentSource)
+        }
     }
   }
 
@@ -280,13 +291,25 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
     val steps = pipeline.resolved.steps
     require(steps.nonEmpty, "Pipelines may not be empty")
     steps.map { step =>
-      manifestAlgorithm(step)
+      manifestPipelineStep(step)
     }.sequence.map { plans: List[ResourcePlan] =>
       val resultPlan = plans.reduce[ResourcePlan] { (c, n) =>
         n.application(c)
       }
       resultPlan
     }
+  }
+
+  def manifestPipelineStep(resolvedPipelineStep: ResolvedPipelineStep): State[PlanningState, ResourcePlan] = {
+    resolvedPipelineStep match {
+      case ResolvedPipelineStep.AlgorithmStep(algorithm) => manifestAlgorithm(algorithm)
+      case ResolvedPipelineStep.SelectStep(select)       => manifest11Select(select)
+    }
+  }
+
+  /** Manifest a one-to-one select. */
+  def manifest11Select(select: Select): State[PlanningState, ResourcePlan] = {
+    elements.select11(select)
   }
 
   /** Manifest a trainable algorithm as a graph, will have one input and two outputs. */

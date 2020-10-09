@@ -19,8 +19,8 @@ import ai.mantik.engine.protos.items.{ Pipeline => ProtoPipeline }
 import ai.mantik.engine.protos.items.{ Bridge => ProtoBridge }
 import ai.mantik.engine.protos.items.{ TrainableAlgorithm => ProtoTrainableAlgorithm }
 import ai.mantik.engine.protos.ds.{ BundleEncoding, Bundle => ProtoBundle, DataType => ProtoDataType }
-import ai.mantik.engine.protos.registry.{ DeploymentInfo => ProtoDeploymentInfo, MantikArtifact => ProtoMantikArtifact }
-import ai.mantik.planner.repository.{ Bridge, DeploymentInfo, MantikArtifact }
+import ai.mantik.engine.protos.registry.{ DeploymentInfo => ProtoDeploymentInfo, MantikArtifact => ProtoMantikArtifact, SubDeploymentInfo => ProtoSubDeploymentInfo }
+import ai.mantik.planner.repository.{ Bridge, DeploymentInfo, MantikArtifact, SubDeploymentInfo }
 import com.google.protobuf.{ ByteString => ProtoByteString }
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
@@ -207,7 +207,13 @@ private[engine] object Converters {
       externalUrl = RpcConversions.encodeOptionalString(deploymentInfo.externalUrl),
       timestamp = Some(
         encodeInstantToScalaProto(deploymentInfo.timestamp)
-      )
+      ),
+      sub = deploymentInfo.sub.mapValues { s =>
+        ProtoSubDeploymentInfo(
+          name = s.name,
+          internalUrl = s.internalUrl
+        )
+      }
     )
   }
 
@@ -218,7 +224,13 @@ private[engine] object Converters {
       externalUrl = RpcConversions.decodeOptionalString(deploymentInfo.externalUrl),
       timestamp = decodeInstantFromScalaProto(deploymentInfo.timestamp.getOrElse(
         throw new IllegalArgumentException("Expected timestamp")
-      ))
+      )),
+      sub = deploymentInfo.sub.mapValues { s =>
+        SubDeploymentInfo(
+          name = s.name,
+          internalUrl = s.internalUrl
+        )
+      }
     )
   }
 

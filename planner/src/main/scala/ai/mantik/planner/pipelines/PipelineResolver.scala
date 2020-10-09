@@ -97,7 +97,7 @@ private[planner] object PipelineResolver {
     inputDataType: DataType,
     pipelineStep: PipelineStep,
     algorithms: ReferencedAlgorithms
-  ): Algorithm = {
+  ): ResolvedPipelineStep = {
     pipelineStep match {
       case as: PipelineStep.AlgorithmStep =>
         resolveAlgorithmPipelineStep(stepNum, Some(inputDataType), as, algorithms)
@@ -106,7 +106,7 @@ private[planner] object PipelineResolver {
     }
   }
 
-  private def resolveAlgorithmPipelineStep(stepNum: Int, incomingDataType: Option[DataType], as: PipelineStep.AlgorithmStep, algorithms: ReferencedAlgorithms): Algorithm = {
+  private def resolveAlgorithmPipelineStep(stepNum: Int, incomingDataType: Option[DataType], as: PipelineStep.AlgorithmStep, algorithms: ReferencedAlgorithms): ResolvedPipelineStep.AlgorithmStep = {
     algorithms.get(as.algorithm) match {
       case None => throw new InvalidPipelineException(s"Missing element ${as.algorithm}")
       case Some(algorithm: Algorithm) =>
@@ -121,13 +121,15 @@ private[planner] object PipelineResolver {
             throw new PipelineTypeException(s"Type mismatch on step${stepNum}, input ${inputDataType} expected ${algorithmWithMetaVariables.functionType.input}")
           }
         }
-        algorithmWithMetaVariables
+        ResolvedPipelineStep.AlgorithmStep(
+          algorithmWithMetaVariables
+        )
       case Some(other) =>
         throw new InvalidPipelineException(s"${as.algorithm} references no algorithm but an ${other.getClass.getSimpleName}")
     }
   }
 
-  private def resolveSelectStep(stepNum: Int, inputDataType: DataType, s: PipelineStep.SelectStep): Algorithm = {
+  private def resolveSelectStep(stepNum: Int, inputDataType: DataType, s: PipelineStep.SelectStep): ResolvedPipelineStep.SelectStep = {
     val select = inputDataType match {
       case t: TabularData =>
         Select.parse(t, s.select) match {
@@ -137,9 +139,7 @@ private[planner] object PipelineResolver {
       case other =>
         throw new PipelineTypeException(s"Only tabular data types can be transformed via selects, got ${other}")
     }
-
-    val algorithm = Algorithm.fromSelect(select)
-    algorithm
+    ResolvedPipelineStep.SelectStep(select)
   }
 
   /**

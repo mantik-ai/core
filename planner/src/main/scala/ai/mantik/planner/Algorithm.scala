@@ -1,16 +1,12 @@
 package ai.mantik.planner
 
-import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.ds.sql.Select
 import ai.mantik.elements.{ AlgorithmDefinition, MantikHeader }
 import ai.mantik.planner.repository.Bridge
-import ai.mantik.planner.select.SelectMantikHeaderBuilder
 
 /** Some A => B Transformation Algorithm */
 case class Algorithm(
-    core: MantikItemCore[AlgorithmDefinition],
-    private[planner] val select: Option[Select] = None
+    core: MantikItemCore[AlgorithmDefinition]
 ) extends ApplicableMantikItem with BridgedMantikItem {
 
   override type DefinitionType = AlgorithmDefinition
@@ -27,21 +23,5 @@ object Algorithm {
 
   def apply(source: Source, mantikHeader: MantikHeader[AlgorithmDefinition], bridge: Bridge): Algorithm = {
     Algorithm(MantikItemCore(source, mantikHeader, bridge))
-  }
-
-  /** Convert a Select statement into an algorithm. */
-  def fromSelect(select: Select): Algorithm = {
-    val mantikHeader = SelectMantikHeaderBuilder.compileSelectToMantikHeader(select) match {
-      case Left(error) =>
-        // TODO: Better exception
-        throw new FeatureNotSupported(s"Could not compile select ${error}")
-      case Right(ok) => ok
-    }
-    Algorithm(
-      MantikItemCore(
-        Source.constructed(),
-        mantikHeader,
-        bridge = Bridge.selectBridge
-      ), Some(select))
   }
 }

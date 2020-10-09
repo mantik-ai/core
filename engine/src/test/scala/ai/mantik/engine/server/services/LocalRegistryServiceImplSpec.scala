@@ -8,7 +8,7 @@ import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId }
 import ai.mantik.engine.protos.local_registry.{ AddArtifactRequest, AddArtifactResponse, GetArtifactRequest, GetArtifactWithPayloadResponse, ListArtifactsRequest, TagArtifactRequest }
 import ai.mantik.engine.testutil.TestBaseWithSessions
-import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo, MantikArtifact }
+import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo, MantikArtifact, SubDeploymentInfo }
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.protobuf.timestamp.Timestamp
@@ -46,7 +46,13 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
           name = "abcd",
           internalUrl = "internal1",
           externalUrl = Some("external1"),
-          timestamp = Instant.parse("2019-09-19T11:18:24.123Z") // Note: database has only milliseconds precision
+          timestamp = Instant.parse("2019-09-19T11:18:24.123Z"), // Note: database has only milliseconds precision
+          sub = Map(
+            "a" -> SubDeploymentInfo(
+              name = "subA",
+              internalUrl = "subAInternal"
+            )
+          )
         )
       ),
       itemId = ItemId.generate(),
