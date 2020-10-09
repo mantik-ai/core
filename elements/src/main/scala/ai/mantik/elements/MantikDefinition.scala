@@ -23,7 +23,8 @@ object MantikDefinition extends DiscriminatorDependentCodec[MantikDefinition] {
     makeGivenSubType[BridgeDefinition]("bridge"),
     makeSubType[DataSetDefinition]("dataset"),
     makeSubType[TrainableAlgorithmDefinition]("trainable"),
-    makeSubType[PipelineDefinition]("pipeline")
+    makeSubType[PipelineDefinition]("pipeline"),
+    makeSubType[CombinerDefinition]("combiner")
   )
 
   val BridgeKind = "bridge"
@@ -31,6 +32,7 @@ object MantikDefinition extends DiscriminatorDependentCodec[MantikDefinition] {
   val DataSetKind = "dataset"
   val TrainableAlgorithmKind = "trainable"
   val PipelineKind = "pipeline"
+  val CombinerKind = "combiner"
 }
 
 /** A MantikDefinition which doesn't need a bridge. */
@@ -129,3 +131,13 @@ case class OptionalFunctionType(
 object OptionalFunctionType {
   implicit val codec: Encoder[OptionalFunctionType] with Decoder[OptionalFunctionType] = CirceJson.makeSimpleCodec[OptionalFunctionType]
 }
+
+/** Combiner Definition (e.g. for SQL Operations) */
+case class CombinerDefinition(
+    bridge: MantikId,
+    input: Seq[DataType],
+    output: Seq[DataType]
+) extends MantikDefinitionWithBridge {
+  override def kind: String = MantikDefinition.CombinerKind
+}
+

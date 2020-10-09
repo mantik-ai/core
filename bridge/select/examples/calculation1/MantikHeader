@@ -1,16 +1,21 @@
 # Does a simple calculation select (x + y) as a, (x - y) as b
 bridge: builtin/select
-type:
-    input:
-        columns:
-            "x": int32
-            "y": int32
-    output:
-        columns:
-            sum: int32
-            dif: int32
-selectProgram:
+kind: combiner
+input:
+    - columns:
+        "x": int32
+        "y": int32
+output:
+    - columns:
+        sum: int32
+        dif: int32
+program:
+    type: select
     # The selector is empty
+    result:
+      columns:
+        sum: int32
+        dif: int32
     projector:
         args: 2
         retStackDepth: 2

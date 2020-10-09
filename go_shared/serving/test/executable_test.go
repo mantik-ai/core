@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/stretchr/testify/assert"
+	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"gl.ambrosys.de/mantik/go_shared/serving"
@@ -113,4 +114,61 @@ func TestAutoAdaptDataSource(t *testing.T) {
 	assert.Equal(t, "Hello", elements[0].(*element.TabularRow).Columns[0].(element.Primitive).X)
 	assert.Equal(t, int64(1), elements[0].(*element.TabularRow).Columns[1].(element.Primitive).X)
 	assert.Equal(t, int64(2), elements[1].(*element.TabularRow).Columns[1].(element.Primitive).X)
+}
+
+func TestAutoAdaptTransformer(t *testing.T) {
+	transformer := NewTransformer()
+	mantikHeader1, err := serving.ParseMantikHeader([]byte(`
+kind: combiner
+input:
+  - columns:
+      x: int32
+  - float32
+output:
+  - float64
+`,
+	))
+	assert.NoError(t, err)
+
+	// Test1, it should return the value if there is no data type change
+	adapted, err := serving.AutoAdapt(transformer, mantikHeader1)
+	assert.NoError(t, err)
+	assert.Equal(t, transformer, adapted)
+
+	mantikHeader2, err := serving.ParseMantikHeader([]byte(`
+kind: combiner
+input:
+  - columns:
+      x: int8
+  - float32
+output:
+  - string
+`,
+	))
+	adapted2, err := serving.AutoAdapt(transformer, mantikHeader2)
+	assert.NoError(t, err)
+
+	adapted2t := adapted2.(serving.ExecutableTransformer)
+	assert.Equal(t, []ds.TypeReference{ds.Ref(ds.String)}, adapted2t.Outputs())
+	assert.Equal(t, []ds.TypeReference{
+		ds.Ref(ds.BuildTabular().Add("x", ds.Int8).Result()),
+		ds.Ref(ds.Float32),
+	}, adapted2t.Inputs())
+
+	input1 := element.NewElementBuffer(
+		[]element.Element{
+			builder.PrimitiveRow(int8(2)),
+			builder.PrimitiveRow(int8(4)),
+		},
+	)
+	input2 := element.NewElementBuffer([]element.Element{element.Primitive{float32(2.5)}})
+
+	result := element.ElementBuffer{}
+	err = adapted2t.Run(
+		[]element.StreamReader{input1, input2}, []element.StreamWriter{&result},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, []element.Element{
+		element.Primitive{"15"},
+	}, result.Elements())
 }

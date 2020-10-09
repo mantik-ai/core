@@ -123,9 +123,9 @@ class AutoSelectSpec extends TestBase {
     val s = AutoSelect.autoSelect(type3, type4).forceRight
     s.resultingType shouldBe type4
 
-    val selectStatement = s.toSelectStatement
+    val selectStatement = s.toStatement
     withClue(s"Parsing select statement ${selectStatement} should yield same type.") {
-      val parsedAgain = Select.parse(type3, s.toSelectStatement).forceRight
+      val parsedAgain = Select.parse(type3, s.toStatement).forceRight
       parsedAgain.resultingType shouldBe type4
     }
   }
@@ -141,9 +141,9 @@ class AutoSelectSpec extends TestBase {
     val s = AutoSelect.autoSelect(type3, type4).forceRight
     s.resultingType shouldBe type4
 
-    val selectStatement = s.toSelectStatement
+    val selectStatement = s.toStatement
     withClue(s"Parsing select statement ${selectStatement} should yield same type.") {
-      val parsedAgain = Select.parse(type3, s.toSelectStatement).forceRight
+      val parsedAgain = Select.parse(type3, s.toStatement).forceRight
       parsedAgain.resultingType shouldBe type4
     }
   }

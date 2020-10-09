@@ -1,0 +1,34 @@
+# Super Trivial Union of two input streams
+kind: combiner
+input:
+  - columns:
+      x: int32
+      y: string
+  - columns:
+      x: int32
+      y: string
+output:
+  - columns:
+      x: int32
+      y: string
+program:
+  type: union
+  all: false
+  inputs:
+    - type: source
+      port: 0
+      result:
+        columns:
+          x: int32
+          y: string
+    - type: source
+      result:
+        columns:
+          x: int32
+          y: string
+      port: 1
+  result:
+    columns:
+      x: int32
+      y: string
+

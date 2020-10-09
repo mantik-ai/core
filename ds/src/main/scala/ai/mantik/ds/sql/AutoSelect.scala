@@ -9,15 +9,18 @@ object AutoSelect {
 
   /** Automatically generates a select statement for converting data types. */
   def autoSelect(from: DataType, expected: DataType): Either[String, Select] = {
-    val fromTabular = from match {
-      case t: TabularData => t
-      case _              => return Left("Can only auto adapt tabular data")
+    for {
+      fromTabular <- fetchTabular(from)
+      toTabular <- fetchTabular(expected)
+      autoSelect <- autoSelect(fromTabular, toTabular)
+    } yield autoSelect
+  }
+
+  private[sql] def fetchTabular(dt: DataType): Either[String, TabularData] = {
+    dt match {
+      case t: TabularData => Right(t)
+      case _              => Left("Can only auto adapt tabular data")
     }
-    val toTabular = expected match {
-      case t: TabularData => t
-      case _              => return Left("Can only auto adapt tabular data")
-    }
-    autoSelect(fromTabular, toTabular)
   }
 
   /** Generates a select statement from a from tabular to a target tabular data type */
@@ -30,7 +33,7 @@ object AutoSelect {
       }.toList.sequence
 
       maybeProjections.map { projections =>
-        Select(from, projections = Some(projections))
+        Select(AnonymousInput(from), projections = Some(projections))
       }
     }
   }

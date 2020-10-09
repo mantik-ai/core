@@ -10,7 +10,6 @@ func TestFlip(t *testing.T) {
 	model, err := LoadModel("../../examples/flip")
 	assert.NoError(t, err)
 	assert.Nil(t, model.ExtensionInfo())
-	assert.Equal(t, model.NativeType(), model.Type())
 
 	input := builder.RowsAsElements(
 		builder.PrimitiveRow(int32(1), "Hello"),
@@ -31,7 +30,6 @@ func TestFilter1(t *testing.T) {
 	model, err := LoadModel("../../examples/filter1")
 	assert.NoError(t, err)
 	assert.Nil(t, model.ExtensionInfo())
-	assert.Equal(t, model.NativeType(), model.Type())
 
 	input := builder.RowsAsElements(
 		builder.PrimitiveRow(int32(1), "Hello"),
@@ -53,7 +51,6 @@ func TestCalculation(t *testing.T) {
 	model, err := LoadModel("../../examples/calculation1")
 	assert.NoError(t, err)
 	assert.Nil(t, model.ExtensionInfo())
-	assert.Equal(t, model.NativeType(), model.Type())
 
 	input := builder.RowsAsElements(
 		builder.PrimitiveRow(int32(4), int32(5)),
@@ -70,11 +67,31 @@ func TestCalculation(t *testing.T) {
 	assert.Equal(t, expectedOutput, transformed)
 }
 
+func TestCalculation2(t *testing.T) {
+	model, err := LoadModel("../../examples/calculation2")
+	assert.NoError(t, err)
+	assert.Nil(t, model.ExtensionInfo())
+
+	input := builder.RowsAsElements(
+		builder.PrimitiveRow(int32(1), "a"),
+		builder.PrimitiveRow(int32(2), "b"),
+		builder.PrimitiveRow(int32(3), "c"),
+	)
+
+	expectedOutput := builder.RowsAsElements(
+		builder.PrimitiveRow(int32(2), "a"),
+		builder.PrimitiveRow(int32(4), "c"),
+	)
+
+	transformed, err := model.Execute(input)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedOutput, transformed)
+}
+
 func TestFallThrough(t *testing.T) {
 	model, err := LoadModel("../../examples/empty1")
 	assert.NoError(t, err)
 	assert.Nil(t, model.ExtensionInfo())
-	assert.Equal(t, model.NativeType(), model.Type())
 
 	input := builder.RowsAsElements(
 		builder.PrimitiveRow(int32(4), "Hello"),
@@ -95,7 +112,6 @@ func TestCast(t *testing.T) {
 	model, err := LoadModel("../../examples/cast1")
 	assert.NoError(t, err)
 	assert.Nil(t, model.ExtensionInfo())
-	assert.Equal(t, model.NativeType(), model.Type())
 
 	input := builder.RowsAsElements(
 		builder.PrimitiveRow(int32(4), "100"),
@@ -116,7 +132,6 @@ func TestComplex1(t *testing.T) {
 	model, err := LoadModel("../../examples/complex1")
 	assert.NoError(t, err)
 	assert.Nil(t, model.ExtensionInfo())
-	assert.Equal(t, model.NativeType(), model.Type())
 
 	input := builder.RowsAsElements(
 		builder.PrimitiveRow(int32(100), int32(200), "Hello"),

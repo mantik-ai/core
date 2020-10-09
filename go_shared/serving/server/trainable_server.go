@@ -96,5 +96,5 @@ func (s *TrainableServer) statsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(409)
 		return
 	}
-	s.statsEncoder(element.CreateSliceStreamReader(s.statResult), w, r)
+	s.statsEncoder(element.NewElementBuffer(s.statResult), w, r)
 }

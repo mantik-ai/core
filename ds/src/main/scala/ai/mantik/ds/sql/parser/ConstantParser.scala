@@ -79,9 +79,10 @@ trait ConstantParser {
     ignoreCase(string) ~ Whitespace
   }
 
+  /** Checks for an optional keyword, returns true if it's present. */
   def optionalKeyword(string: String): Rule1[Boolean] = rule {
-    capture(optional(keyword(string))) ~> { s: String =>
-      s.trim.nonEmpty
+    optional(keyword(string) ~ push(true)) ~> { s: Option[Boolean] =>
+      s.getOrElse(false)
     }
   }
 }

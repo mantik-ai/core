@@ -1,0 +1,96 @@
+kind: combiner
+bridge: builtin/select
+input:
+  - type: tabular
+    columns:
+      x: int32
+      y: string
+  - type: tabular
+    columns:
+      a: int32
+      b: string
+output:
+  - type: tabular
+    columns:
+      a: string
+program:
+  type: union
+  inputs:
+    - type: select
+      input:
+        type: source
+        port: 0
+        result:
+          type: tabular
+          columns:
+            x: int32
+            y: string
+      selector:
+        args: 1
+        retStackDepth: 1
+        stackInitDepth: 2
+        ops:
+          - get
+          - 0
+          - cnt
+          - type: int8
+            value: 1
+          - cast
+          - int8
+          - int32
+          - eq
+          - int32
+      projector:
+        args: 2
+        retStackDepth: 1
+        stackInitDepth: 1
+        ops:
+          - get
+          - 1
+      result:
+        type: tabular
+        columns:
+          a: string
+    - type: select
+      input:
+        type: source
+        port: 1
+        result:
+          type: tabular
+          columns:
+            a: int32
+            b: string
+      selector:
+        args: 1
+        retStackDepth: 1
+        stackInitDepth: 2
+        ops:
+          - get
+          - 0
+          - cnt
+          - type: int8
+            value: 2
+          - cast
+          - int8
+          - int32
+          - eq
+          - int32
+      projector:
+        args: 2
+        retStackDepth: 1
+        stackInitDepth: 1
+        ops:
+          - get
+          - 1
+      result:
+        type: tabular
+        columns:
+          a: string
+  all: false
+  result:
+    type: tabular
+    columns:
+      a: string
+  inOrder: true
+query: SELECT ("y") AS "a" FROM $0 WHERE ("x" = CAST (1 AS int32)) UNION SELECT ("b")
+  AS "a" FROM $1 WHERE ("a" = CAST (2 AS int32))

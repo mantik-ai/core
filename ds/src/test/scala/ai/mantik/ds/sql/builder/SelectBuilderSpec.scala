@@ -17,9 +17,16 @@ class SelectBuilderSpec extends TestBase {
 
   // Test encoding to SQL and back yields the same result.
   private def testReparsable(select: Select): Unit = {
-    val selectStatement = select.toSelectStatement
+    val selectStatement = select.toStatement
+    val inputIdx = select.input match {
+      case AnonymousInput(_, n) => n
+      case _                    => 0
+    }
+    implicit val context = SqlContext(
+      anonymous = Vector.fill(inputIdx + 1)(emptyInput).updated(inputIdx, select.inputType)
+    )
     withClue(s"Re-Serialized ${selectStatement} should be parseable") {
-      val parsed = Select.parse(select.inputType, selectStatement)
+      val parsed = Select.parse(selectStatement)
       parsed shouldBe Right(select)
     }
   }
@@ -27,17 +34,73 @@ class SelectBuilderSpec extends TestBase {
   it should "support select *" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT *")
     got shouldBe Right(
-      Select(simpleInput)
+      Select(AnonymousInput(simpleInput))
     )
     got.right.get.resultingType shouldBe simpleInput
     testReparsable(got.forceRight)
+  }
+
+  it should "support selected from 0" in {
+    val got = SelectBuilder.buildSelect(simpleInput, "SELECT * FROM $0")
+    got shouldBe Right(
+      Select(AnonymousInput(simpleInput))
+    )
+    got.right.get.resultingType shouldBe simpleInput
+    testReparsable(got.forceRight)
+  }
+
+  it should "support select from 0 with where" in {
+    val got = SelectBuilder.buildSelect(simpleInput, "SELECT * FROM $0 WHERE x = 1")
+    got shouldBe Right(
+      Select(
+        AnonymousInput(simpleInput),
+        selection = List(
+          Condition.Equals(
+            ColumnExpression(0, FundamentalType.Int32),
+            // TODO: It should optimize away this cast
+            CastExpression(
+              ConstantExpression(Bundle.fundamental(1.toByte)),
+              FundamentalType.Int32
+            )
+          )
+        )
+      )
+    )
+    got.right.get.resultingType shouldBe simpleInput
+    testReparsable(got.forceRight)
+  }
+
+  it should "support select from with other input" in {
+    implicit val context = SqlContext(
+      anonymous = Vector(
+        simpleInput,
+        emptyInput
+      )
+    )
+
+    val got = SelectBuilder.buildSelect("SELECT * FROM $0")
+    got shouldBe Right(
+      Select(AnonymousInput(simpleInput))
+    )
+    got.right.get.resultingType shouldBe simpleInput
+    testReparsable(got.forceRight)
+
+    val got2 = SelectBuilder.buildSelect("SELECT 3 FROM $1")
+    got2 shouldBe Right(
+      Select(AnonymousInput(emptyInput, 1), Some(
+        List(
+          SelectProjection("$1", ConstantExpression(Bundle.build(FundamentalType.Int8, Primitive(3: Byte))))
+        )
+      ))
+    )
+    testReparsable(got2.forceRight)
   }
 
   it should "support selecting a single" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT y")
     got shouldBe Right(
       Select(
-        simpleInput,
+        AnonymousInput(simpleInput),
         Some(
           List(
             SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
@@ -55,7 +118,7 @@ class SelectBuilderSpec extends TestBase {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT y,x")
     got shouldBe Right(
       Select(
-        simpleInput,
+        AnonymousInput(simpleInput),
         Some(
           List(
             SelectProjection("y", ColumnExpression(1, FundamentalType.StringType)),
@@ -75,7 +138,7 @@ class SelectBuilderSpec extends TestBase {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT CAST(x as int64)")
     got shouldBe Right(
       Select(
-        simpleInput,
+        AnonymousInput(simpleInput),
         Some(
           List(
             SelectProjection(
@@ -98,7 +161,7 @@ class SelectBuilderSpec extends TestBase {
   it should "support simple constants" in {
     val got = SelectBuilder.buildSelect(emptyInput, "SELECT 1,true,false,2.5,void")
     val expected = Select(
-      emptyInput,
+      AnonymousInput(emptyInput),
       Some(
         List(
           SelectProjection("$1", ConstantExpression(Bundle.build(FundamentalType.Int8, Primitive(1: Byte)))),
@@ -122,7 +185,7 @@ class SelectBuilderSpec extends TestBase {
   it should "support simple filters" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE x = 5")
     val expected = Select(
-      simpleInput,
+      AnonymousInput(simpleInput),
       Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
@@ -144,7 +207,7 @@ class SelectBuilderSpec extends TestBase {
   it should "support simple filters II" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World'")
     val expected = Select(
-      simpleInput,
+      AnonymousInput(simpleInput),
       Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
@@ -162,7 +225,7 @@ class SelectBuilderSpec extends TestBase {
   it should "support simple combined filters" in {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World' and x = 1")
     val expected = Select(
-      simpleInput,
+      AnonymousInput(simpleInput),
       Some(List(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
@@ -191,7 +254,7 @@ class SelectBuilderSpec extends TestBase {
       "SELECT CAST (x as STRING NULLABLE)"
     ).forceRight
     val expected = Select(
-      simpleInput,
+      AnonymousInput(simpleInput),
       Some(
         List(
           SelectProjection(
@@ -214,7 +277,7 @@ class SelectBuilderSpec extends TestBase {
       "SELECT y WHERE x IS NULL"
     ).forceRight
     val expected = Select(
-      simpleInput,
+      AnonymousInput(simpleInput),
       Some(
         List(
           SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
@@ -236,7 +299,7 @@ class SelectBuilderSpec extends TestBase {
       "SELECT y WHERE x IS NOT NULL"
     ).forceRight
     val expected = Select(
-      simpleInput,
+      AnonymousInput(simpleInput),
       Some(
         List(
           SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))

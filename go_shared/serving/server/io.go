@@ -132,7 +132,7 @@ func GenerateTypedStreamHandler(
 			return
 		}
 		log.Printf("Handler transformed %d to %d elements", len(elements), len(applied))
-		outputEncoder(element.CreateSliceStreamReader(applied), w, r)
+		outputEncoder(element.NewElementBuffer(applied), w, r)
 	}
 	return result, nil
 }

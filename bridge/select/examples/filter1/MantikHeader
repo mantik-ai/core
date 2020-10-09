@@ -1,15 +1,20 @@
 # Filters columns, select * where x = 1
 bridge: builtin/select
-type:
-    input:
-        columns:
-            "x": int32
-            "y": string
-    output:
-        columns:
-            a: string
-            b: int32
-selectProgram:
+kind: combiner
+input:
+    - columns:
+        "x": int32
+        "y": string
+output:
+    - columns:
+        a: string
+        b: int32
+program:
+    type: select
+    result:
+      columns:
+        a: string
+        b: int32
     selector:
         args: 2
         retStackDepth: 1

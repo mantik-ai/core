@@ -1,12 +1,14 @@
 package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.sql.parser.AST._
+import org.parboiled2.{ Parser, ParserInput }
 
 class SelectParserSpec extends ParserTestBase {
 
-  override type ParserImpl = SelectParser
+  class FullParser(val input: ParserInput) extends Parser with SelectParser with AnonymousOnlyInnerQueryParser
 
-  override protected def makeParser(s: String) = new SelectParser(s)
+  override type ParserImpl = FullParser
+  override protected def makeParser(s: String) = new FullParser(s)
 
   def parseSelectTest(s: String, expected: SelectNode): Unit = {
     it should s"parse ${s}" in {
@@ -27,6 +29,8 @@ class SelectParserSpec extends ParserTestBase {
   )))
 
   parseSelectTest("select *", SelectNode())
+
+  parseSelectTest("select * from $1", SelectNode(from = Some(AnonymousReference(1))))
 
   parseSelectTest("select foo as bar", SelectNode(
     List(
@@ -51,5 +55,17 @@ class SelectParserSpec extends ParserTestBase {
     Some(
       BinaryOperationNode("=", IdentifierNode("a"), IdentifierNode("b"))
     ))
+  )
+
+  parseSelectTest("select baz,biz + 1 from $0 where a + b = c", SelectNode(
+    List(
+      SelectColumnNode(IdentifierNode("baz")),
+      SelectColumnNode(BinaryOperationNode("+", IdentifierNode("biz"), NumberNode(BigDecimal(1))))
+    ),
+    Some(
+      BinaryOperationNode("=", BinaryOperationNode("+", IdentifierNode("a"), IdentifierNode("b")), IdentifierNode("c"))
+    ),
+    Some(AnonymousReference(0))
+  )
   )
 }

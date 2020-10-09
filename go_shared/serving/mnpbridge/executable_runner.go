@@ -74,6 +74,34 @@ func NewExecutableRunner(executable serving.Executable, ports *mnpgo.PortConfigu
 			inputDecoder: inputDecoder,
 			statsEncoder: statsEncoder,
 		}, nil
+	case serving.ExecutableTransformer:
+		if len(ports.Inputs) != len(e.Inputs()) {
+			return nil, errors.Errorf("Expected %d inputs, got %d", len(e.Inputs()), len(ports.Inputs))
+		}
+		if len(ports.Outputs) != len(e.Outputs()) {
+			return nil, errors.Errorf("Expected %d outputs, got %d", len(e.Outputs()), len(ports.Outputs))
+		}
+		streamDecoders := make([]natural.StreamDecoder, len(ports.Inputs), len(ports.Inputs))
+		for i, p := range ports.Inputs {
+			decoder, err := natural.NewStreamDecoder(p.ContentType, e.Inputs()[i].Underlying)
+			if err != nil {
+				return nil, errors.Wrapf(err, "Could not build decoder for input port %d", i)
+			}
+			streamDecoders[i] = decoder
+		}
+		streamEncoders := make([]natural.StreamEncoder, len(ports.Outputs), len(ports.Outputs))
+		for i, p := range ports.Outputs {
+			encoder, err := natural.NewStreamEncoder(p.ContentType, e.Outputs()[i].Underlying)
+			if err != nil {
+				return nil, errors.Wrapf(err, "Could not build encoder for output port %d", i)
+			}
+			streamEncoders[i] = encoder
+		}
+		return &executableTransformerRunner{
+			executable:     e,
+			streamDecoders: streamDecoders,
+			streamEncoders: streamEncoders,
+		}, nil
 	default:
 		panic("Unsupported executable type")
 	}
@@ -190,4 +218,29 @@ func (e *executableTrainableAlgorithmRunner) RunTask(taskId string, inputs []io.
 		return errors.Wrap(err, "Could not close port 0")
 	}
 	return nil
+}
+
+type executableTransformerRunner struct {
+	executable     serving.ExecutableTransformer
+	streamDecoders []natural.StreamDecoder
+	streamEncoders []natural.StreamEncoder
+}
+
+func (e executableTransformerRunner) RunTask(taskId string, inputs []io.Reader, outputs []io.WriteCloser) error {
+	inputReaders := make([]element.StreamReader, len(e.streamDecoders), len(e.streamDecoders))
+	for i, r := range e.streamDecoders {
+		inputReaders[i] = r.StartDecoding(inputs[i])
+	}
+	outputWriters := make([]element.StreamWriter, len(e.streamEncoders), len(e.streamEncoders))
+	for i, e := range e.streamEncoders {
+		outputWriters[i] = e.StartEncoding(outputs[i])
+	}
+
+	err := e.executable.Run(inputReaders, outputWriters)
+
+	for _, w := range outputWriters {
+		w.Close()
+	}
+
+	return err
 }

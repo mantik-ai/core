@@ -1,16 +1,21 @@
 # Casts SELECT CAST (x as int32) as a, CAST (y as int32) as b
 # Note: the cast can fail.
 bridge: builtin/select
-type:
-    input:
-        columns:
-            "x": int32
-            "y": string
-    output:
-        columns:
-            a: int64
-            b: int32
-selectProgram:
+kind: combiner
+input:
+    - columns:
+        "x": int32
+        "y": string
+output:
+    - columns:
+        a: int64
+        b: int32
+program:
+    type: "select"
+    result:
+      columns:
+        a: int64
+        b: int32
     projector:
         args: 2
         retStackDepth: 2

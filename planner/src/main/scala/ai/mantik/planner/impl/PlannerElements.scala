@@ -1,9 +1,10 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.sql.Select
+import ai.mantik.ds.sql.{ Query, Select }
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.planner
+import ai.mantik.planner.Planner.{ InconsistencyException, PlannerException }
 import ai.mantik.planner._
 import ai.mantik.planner.graph._
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
@@ -108,25 +109,29 @@ class PlannerElements(config: Config) {
     makeSingleNodeResourcePlan(node)
   }
 
-  /** Generate the plan for a simple 1:1 select. */
-  def select11(select: Select): State[PlanningState, ResourcePlan] = {
-    val node = select11Node(select)
+  /** Generate the plan for a SQL Query */
+  def query(query: Query): State[PlanningState, ResourcePlan] = {
+    val node = queryNode(query)
     makeSingleNodeResourcePlan(node)
   }
 
-  /** Generate the docker container node for a simple 1:1 Select. */
-  def select11Node(select: Select): Node[PlanNodeService.DockerContainer] = {
-    val header = SelectMantikHeaderBuilder.compileSelectToMantikHeader(select) match {
-      case Left(error) => throw new FeatureNotSupported(s"Could not compile select statement ${select.toSelectStatement}, ${error}")
+  /** Generate the docker container node SQL Query */
+  def queryNode(query: Query): Node[PlanNodeService.DockerContainer] = {
+    val header = SelectMantikHeaderBuilder.compileToMantikHeader(query) match {
+      case Left(error) => throw new FeatureNotSupported(s"Could not compile select statement ${query.toStatement}, ${error}")
       case Right(ok)   => ok
     }
     val resolvedBridge = resolveBridge(BuiltInItems.SelectBridge)
     val container = PlanNodeService.DockerContainer(
       resolvedBridge, mantikHeader = header
     )
+    val inputs = query.figureOutInputPorts match {
+      case Left(error) => throw new InconsistencyException(s"Could not figure out input ports of query ${error}")
+      case Right(ok)   => ok
+    }
     Node(
       container,
-      inputs = Vector(NodePort(MantikBundleContentType)),
+      inputs = inputs.map { _ => NodePort(MantikBundleContentType) },
       outputs = Vector(NodePort(MantikBundleContentType))
     )
   }

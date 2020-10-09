@@ -213,5 +213,16 @@ class CastSpec extends TestBase {
     intercept[RuntimeException] {
       c2.convert(NullElement)
     }
+
+    // Special case, needed for some SQL Operations
+    val c3 = Cast.findCast(
+      Nullable(FundamentalType.VoidType),
+      Nullable(FundamentalType.Float32)
+    ).forceRight
+    c3.canFail shouldBe false
+    c3.loosing shouldBe true
+    c3.isSafe shouldBe false
+    c3.convert(NullElement) shouldBe NullElement
+    c3.convert(Primitive.unit) shouldBe NullElement
   }
 }

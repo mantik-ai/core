@@ -8,6 +8,7 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"gl.ambrosys.de/mantik/go_shared/serving"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -187,9 +188,67 @@ func (d *datasetExample) Get() element.StreamReader {
 	for i, r := range bundle.Rows {
 		elements[i] = r
 	}
-	return element.CreateSliceStreamReader(elements)
+	return element.NewElementBuffer(elements)
 }
 
 func NewDataSet() *datasetExample {
 	return &datasetExample{}
+}
+
+// multiples all inputs with a factor and returns the sum
+type transformerExample struct {
+}
+
+func (t *transformerExample) Cleanup() {
+	// empty
+}
+
+func (t *transformerExample) ExtensionInfo() interface{} {
+	return nil
+}
+
+func (t *transformerExample) Inputs() []ds.TypeReference {
+	a := ds.FromJsonStringOrPanicRef(`
+		{
+			"columns": {
+				"x": "int32"
+			}
+		}
+	`)
+	b := ds.Ref(ds.Float32)
+	return []ds.TypeReference{a, b}
+}
+
+func (t *transformerExample) Outputs() []ds.TypeReference {
+	return []ds.TypeReference{ds.Ref(ds.Float64)}
+}
+
+func (t *transformerExample) Run(input []element.StreamReader, output []element.StreamWriter) error {
+	factorElement, err := input[1].Read()
+	if err != nil {
+		return err
+	}
+	_, err = input[1].Read()
+	if err != io.EOF {
+		return errors.New("Expected EOF after one element")
+	}
+	factor := factorElement.(element.Primitive).X.(float32)
+	result := 0.0
+	for {
+		row, err := input[0].Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errors.Wrap(err, "Unexpected read error")
+		}
+		number := row.(*element.TabularRow).Columns[0].(element.Primitive).X.(int32)
+		result = result + ((float64)(number) * (float64)(factor))
+	}
+	output[0].Write(element.Primitive{result})
+	return nil
+}
+
+func NewTransformer() *transformerExample {
+	return &transformerExample{}
 }

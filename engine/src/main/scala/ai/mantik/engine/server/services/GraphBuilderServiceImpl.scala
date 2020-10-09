@@ -6,7 +6,7 @@ import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ Session, SessionManager }
 import ai.mantik.planner.impl.MantikItemStateManager
@@ -102,6 +102,17 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
     } yield {
       val selected = dataset.select(request.selectQuery)
       placeInGraph(session, selected)
+    }
+  }
+
+  override def autoUnion(request: AutoUnionRequest): Future[NodeResponse] = handleErrors {
+    for {
+      session <- sessionManager.get(request.sessionId)
+      dataset1 = session.getItemAs[DataSet](request.datasetId1)
+      dataset2 = session.getItemAs[DataSet](request.datasetId2)
+    } yield {
+      val unionized = dataset1.autoUnion(dataset2, all = request.all)
+      placeInGraph(session, unionized)
     }
   }
 

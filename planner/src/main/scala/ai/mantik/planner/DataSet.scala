@@ -3,7 +3,7 @@ package ai.mantik.planner
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
-import ai.mantik.ds.sql.{ AutoSelect, Select }
+import ai.mantik.ds.sql.{ AutoSelect, AutoUnion, Select }
 import ai.mantik.elements
 import ai.mantik.elements.{ DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.repository.Bridge
@@ -50,12 +50,31 @@ case class DataSet(
     }
 
     val payloadSource = PayloadSource.OperationResult(
-      Operation.SelectOperation(
+      Operation.SqlQueryOperation(
         select,
-        this
+        Vector(this)
       )
     )
     DataSet.natural(Source.constructed(payloadSource), select.resultingType)
+  }
+
+  /**
+   * Auto UNION this and another data set
+   * @param other the other dataset
+   * @param all if true generate UNION ALL, otherwise duplicates are omitted.
+   */
+  def autoUnion(other: DataSet, all: Boolean): DataSet = {
+    val autoUnion = AutoUnion.autoUnion(this.dataType, other.dataType, all) match {
+      case Left(error) => throw new IllegalArgumentException(s"Could not generate auto union ${error}")
+      case Right(ok)   => ok
+    }
+    val payloadSource = PayloadSource.OperationResult(
+      Operation.SqlQueryOperation(
+        autoUnion,
+        Vector(this, other)
+      )
+    )
+    DataSet.natural(Source.constructed(payloadSource), autoUnion.resultingType)
   }
 
   /**

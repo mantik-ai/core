@@ -78,3 +78,19 @@ type ExecutableDataSet interface {
 	// Returns generated elements
 	Get() element.StreamReader
 }
+
+/** Interface for a modern transformer from n input to m output data sets.
+  Can be used for algorithms, datasets and combiners.
+  Can stream data. */
+type ExecutableTransformer interface {
+	Executable
+
+	// Type of input data slots
+	Inputs() []ds.TypeReference
+	// Type of output data slots
+	Outputs() []ds.TypeReference
+
+	// Execute a single Task
+	// Closing is not necessary, done by the caller
+	Run(input []element.StreamReader, output []element.StreamWriter) error
+}

@@ -8,22 +8,21 @@ import (
 )
 
 func AutoAdapt(executable Executable, mantikHeader MantikHeader) (Executable, error) {
-	algorithm, ok := executable.(ExecutableAlgorithm)
-	if ok {
+	switch e := executable.(type) {
+	case ExecutableAlgorithm:
 		mf := mantikHeader.(*AlgorithmMantikHeader)
-		return AutoAdaptExecutableAlgorithm(algorithm, mf.Type.Input.Underlying, mf.Type.Output.Underlying)
-	}
-	trainable, ok := executable.(TrainableAlgorithm)
-	if ok {
+		return AutoAdaptExecutableAlgorithm(e, mf.Type.Input.Underlying, mf.Type.Output.Underlying)
+	case TrainableAlgorithm:
 		mf := mantikHeader.(*TrainableMantikHeader)
-		return autoAdaptTrainableAlgorithm(trainable, mf)
-	}
-	dataset, ok := executable.(ExecutableDataSet)
-	if ok {
+		return autoAdaptTrainableAlgorithm(e, mf)
+	case ExecutableDataSet:
 		mf := mantikHeader.(*DataSetMantikHeader)
-		return autoAdaptDataSet(dataset, mf)
+		return autoAdaptDataSet(e, mf)
+	case ExecutableTransformer:
+		return autoadaptTransformer(e, mantikHeader)
+	default:
+		return nil, errors.New("Executable type not supported")
 	}
-	panic("Implement me")
 }
 
 /* Auto adapt an executable algorithm, looking for matching conversion functions.
@@ -244,4 +243,125 @@ func (a *adaptedStreamReader) Read() (element.Element, error) {
 	}
 	adapted, err := a.adapter(e)
 	return adapted, err
+}
+
+type adaptedStreamWriter struct {
+	adapter  adapt.Adapter
+	original element.StreamWriter
+}
+
+func (a *adaptedStreamWriter) Write(row element.Element) error {
+	adapted, err := a.adapter(row)
+	if err != nil {
+		return err
+	}
+	return a.original.Write(adapted)
+}
+
+func (a *adaptedStreamWriter) Close() error {
+	return a.original.Close()
+}
+
+func autoadaptTransformer(transformer ExecutableTransformer, header MantikHeader) (ExecutableTransformer, error) {
+	expectedInputs, expectedOutputs, err := mantikHeaderInputOutputs(header)
+	if err != nil {
+		return nil, err
+	}
+
+	if dataTypesEqual(expectedInputs, transformer.Inputs()) && dataTypesEqual(expectedOutputs, transformer.Outputs()) {
+		// Nothing to do
+		return transformer, nil
+	}
+
+	if len(expectedInputs) != len(transformer.Inputs()) {
+		return nil, errors.New("Cannot adapt, input slot count mismatch")
+	}
+	if len(expectedOutputs) != len(transformer.Outputs()) {
+		return nil, errors.New("Cannot adapt, output slot count mismatch")
+	}
+
+	inputAdapters := make([]adapt.Adapter, len(transformer.Inputs()), len(transformer.Inputs()))
+	outputAdapters := make([]adapt.Adapter, len(transformer.Outputs()), len(transformer.Outputs()))
+	for i, inputType := range expectedInputs {
+		adapter, err := adapt.LookupAutoAdapter(inputType.Underlying, transformer.Inputs()[i].Underlying)
+		if err != nil {
+			return nil, err
+		}
+		inputAdapters[i] = adapter
+	}
+	for i, outputType := range expectedOutputs {
+		adapter, err := adapt.LookupAutoAdapter(transformer.Outputs()[i].Underlying, outputType.Underlying)
+		if err != nil {
+			return nil, err
+		}
+		outputAdapters[i] = adapter
+	}
+	return &adaptedTransformer{
+		underlying:     transformer,
+		inputs:         expectedInputs,
+		outputs:        expectedOutputs,
+		inputAdapters:  inputAdapters,
+		outputAdapters: outputAdapters,
+	}, nil
+}
+
+func mantikHeaderInputOutputs(header MantikHeader) ([]ds.TypeReference, []ds.TypeReference, error) {
+	switch e := header.(type) {
+	case *DataSetMantikHeader:
+		return nil, []ds.TypeReference{e.Type}, nil
+	case *AlgorithmMantikHeader:
+		return []ds.TypeReference{e.Type.Input}, []ds.TypeReference{e.Type.Output}, nil
+	case *CombinerMantikHeader:
+		return e.Input, e.Output, nil
+	default:
+		return nil, nil, errors.New("Unsupported header type for a transformer")
+	}
+}
+
+func dataTypesEqual(left []ds.TypeReference, right []ds.TypeReference) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for i, l := range left {
+		if !ds.DataTypeEquality(l.Underlying, right[i].Underlying) {
+			return false
+		}
+	}
+	return true
+}
+
+type adaptedTransformer struct {
+	underlying     ExecutableTransformer
+	inputs         []ds.TypeReference
+	outputs        []ds.TypeReference
+	inputAdapters  []adapt.Adapter
+	outputAdapters []adapt.Adapter
+}
+
+func (a adaptedTransformer) Cleanup() {
+	a.underlying.Cleanup()
+}
+
+func (a adaptedTransformer) ExtensionInfo() interface{} {
+	return a.underlying.ExtensionInfo()
+}
+
+func (a adaptedTransformer) Inputs() []ds.TypeReference {
+	return a.inputs
+}
+
+func (a adaptedTransformer) Outputs() []ds.TypeReference {
+	return a.outputs
+}
+
+func (a adaptedTransformer) Run(input []element.StreamReader, output []element.StreamWriter) error {
+	adaptedInput := make([]element.StreamReader, len(input), len(input))
+	for i, input := range input {
+		adaptedInput[i] = &adaptedStreamReader{a.inputAdapters[i], input}
+	}
+	adaptedOutput := make([]element.StreamWriter, len(output), len(output))
+	for i, output := range output {
+		adaptedOutput[i] = &adaptedStreamWriter{a.outputAdapters[i], output}
+	}
+	return a.underlying.Run(adaptedInput, adaptedOutput)
 }
