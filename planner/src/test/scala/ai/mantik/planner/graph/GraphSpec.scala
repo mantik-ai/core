@@ -9,17 +9,17 @@ class GraphSpec extends TestBase {
       "1" -> Node(
         "Hello",
         inputs = Vector(
-          NodePort(Some("A")),
-          NodePort(Some("B"))
+          NodePort("A"),
+          NodePort("B")
         ),
         outputs = Vector(
-          NodePort(None)
+          NodePort("C")
         )
       ),
       "2" -> Node(
         "World",
         inputs = Vector(
-          NodePort(Some("C"))
+          NodePort("C")
         )
       )
     ),
@@ -30,9 +30,9 @@ class GraphSpec extends TestBase {
 
   it should "support basic queries" in {
     graph1.resolveInput(NodePortRef("X", 0)) shouldBe None
-    graph1.resolveInput(NodePortRef("1", 1)) shouldBe Some(graph1.nodes("1"), NodePort(Some("B")))
+    graph1.resolveInput(NodePortRef("1", 1)) shouldBe Some(graph1.nodes("1"), NodePort("B"))
     graph1.resolveOutput(NodePortRef("2", 0)) shouldBe None
-    graph1.resolveOutput(NodePortRef("1", 0)) shouldBe Some(graph1.nodes("1"), NodePort(None))
+    graph1.resolveOutput(NodePortRef("1", 0)) shouldBe Some(graph1.nodes("1"), NodePort("C"))
   }
 
 }

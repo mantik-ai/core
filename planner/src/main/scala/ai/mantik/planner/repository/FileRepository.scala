@@ -12,7 +12,7 @@ import scala.concurrent.Future
 private[mantik] trait FileRepository extends Component {
 
   /** Request the storage of a new file. */
-  def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult]
+  def requestFileStorage(contentType: String, temporary: Boolean): Future[FileRepository.FileStorageResult]
 
   /**
    * Request the loading of a file.
@@ -21,7 +21,7 @@ private[mantik] trait FileRepository extends Component {
   def requestFileGet(id: String, optimistic: Boolean = false): Future[FileRepository.FileGetResult]
 
   /** Request storing a file (must be requested at first). */
-  def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Long]]]
+  def storeFile(id: String): Future[Sink[ByteString, Future[Long]]]
 
   /** Delete a file. Returns true, if the file existed. */
   def deleteFile(id: String): Future[Boolean]
@@ -44,6 +44,12 @@ object FileRepository {
     grpcCode = Some(Code.NOT_FOUND)
   )
 
+  /** Some operation can't be handled due invalid content type */
+  val InvalidContentType = ErrorCodes.RootCode.derive(
+    "InvalidContentType",
+    grpcCode = Some(Code.INVALID_ARGUMENT)
+  )
+
   /** Result of file storage request. */
   case class FileStorageResult(
       fileId: String,
@@ -58,11 +64,8 @@ object FileRepository {
       isTemporary: Boolean,
       // Relative Path under which the file is available from the server
       path: String,
-      contentType: Option[String]
+      contentType: String
   )
-
-  /** Content Type for Mantik Bundles. */
-  val MantikBundleContentType = "application/x-mantik-bundle"
 
   /**
    * Returns the path, under which the FileRepositoryServer serves files of a fileId.

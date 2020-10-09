@@ -54,7 +54,7 @@ class FileRepositoryServerSpec extends TestBaseWithAkkaRuntime with TempDirSuppo
   }
 
   it should "allow file upload and download" in new Env {
-    val s = await(repo.requestFileStorage(true))
+    val s = await(repo.requestFileStorage(ContentTypes.MantikBundleContentType, true))
     s.path shouldBe s"files/${s.fileId}"
 
     val uri = Uri(s.fileId).resolvedAgainst(fileUri)

@@ -42,8 +42,7 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
     path("files" / Remaining) { id =>
       post {
         extractRequest { req =>
-          val contentType = req.entity.contentType.value
-          val result = fileRepository.storeFile(id, contentType).flatMap { sink =>
+          val result = fileRepository.storeFile(id).flatMap { sink =>
             req.entity.dataBytes.runWith(sink)
           }
           onComplete(result) {

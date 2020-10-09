@@ -28,13 +28,13 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
         // No Support yet.
         throw new Planner.NotAvailableException("Empty Source")
       case loaded: PayloadSource.Loaded =>
-        PlanningState(_.readFile(loaded.fileId)).flatMap { file =>
+        PlanningState(_.readFile(loaded.fileId, loaded.contentType)).flatMap { file =>
           elements.loadFileNode(PlanFileWithContentType(file.ref, loaded.contentType))
         }
       case l: PayloadSource.Literal =>
         // Ugly this leads to fragmented plan.
         for {
-          fileReference <- PlanningState(_.pipeFile(temporary = true))
+          fileReference <- PlanningState(_.pipeFile(ContentTypes.MantikBundleContentType, temporary = true))
           loader <- elements.loadFileNode(PlanFileWithContentType(fileReference.ref, ContentTypes.MantikBundleContentType))
         } yield {
           val pusher = elements.literalToPushBundle(l, fileReference)
@@ -65,12 +65,12 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
         }
       case PayloadSource.Loaded(fileId, contentType) =>
         // already available as file
-        PlanningState(_.readFile(fileId)).map { fileGet =>
+        PlanningState(_.readFile(fileId, contentType)).map { fileGet =>
           FilesPlan(files = IndexedSeq(PlanFileWithContentType(fileGet.ref, contentType)))
         }
       case l: PayloadSource.Literal =>
         // We have to go via temporary file
-        PlanningState(_.pipeFile(temporary = canBeTemporary)).map { reference =>
+        PlanningState(_.pipeFile(ContentTypes.MantikBundleContentType, temporary = canBeTemporary)).map { reference =>
           val pushing = elements.literalToPushBundle(l, reference)
           FilesPlan(pushing, IndexedSeq(PlanFileWithContentType(reference.ref, ContentTypes.MantikBundleContentType)))
         }
@@ -97,8 +97,8 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
       // Generate a cached view and then copy that to real files
       for {
         filesPlan <- cachedTemporarySource(cachedSource)
-        nonTemporaries <- filesPlan.files.indices.map { _ =>
-          PlanningState(_.pipeFile(temporary = false))
+        nonTemporaries <- filesPlan.files.map { planFile =>
+          PlanningState(_.pipeFile(planFile.contentType, temporary = false))
         }.toList.sequence
         copyOperations = filesPlan.files.zip(nonTemporaries).map {
           case (temporaryFile, nontemporaryFile) =>
@@ -144,7 +144,9 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
           contentTypes <- fileContentTypes(cachedSource.source)
           fileReads <- files.zip(contentTypes).map {
             case (fileId, contentType) =>
-              PlanningState(_.readFileRefWithContentType(fileId, contentType))
+              PlanningState(_.readFile(fileId, contentType)).map { planFile =>
+                PlanFileWithContentType(planFile.ref, contentType)
+              }
           }.sequence
         } yield {
           FilesPlan(files = fileReads)
@@ -207,12 +209,10 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
     resourcePlan.outputs.toList.map { output =>
       val outputResource = resourcePlan.outputResource(output)
       for {
-        file <- PlanningState(_.pipeFile(temporary = canBeTemporary))
+        file <- PlanningState(_.pipeFile(outputResource.contentType, temporary = canBeTemporary))
         fileNode <- elements.createStoreFileNode(file, outputResource.contentType)
       } yield {
-        fileNode -> PlanFileWithContentType(file.ref, outputResource.contentType.getOrElse {
-          ContentTypes.MantikBundleContentType // Does this happen?
-        })
+        fileNode -> PlanFileWithContentType(file.ref, outputResource.contentType)
       }
     }.sequence.map { fileNodeWithFile: List[(ResourcePlan, PlanFileWithContentType)] =>
       val consumers = fileNodeWithFile.foldLeft(ResourcePlan()) {

@@ -107,8 +107,8 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
           itemState.payloadFile match {
             case Some(fileId) =>
               // request read of the file
-              val (updatedState, readFile) = planningState.readFile(fileId)
               val contentType = itemPayloadContentType(item)
+              val (updatedState, readFile) = planningState.readFile(fileId, contentType)
               val readFileWithContentType = PlanFileWithContentType(readFile.ref, contentType)
               val files = IndexedSeq(readFileWithContentType)
               val updatedState2 = updatedState.withOverrideFunc(

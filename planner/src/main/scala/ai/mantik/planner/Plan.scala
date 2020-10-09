@@ -32,6 +32,7 @@ object PlanFileReference {
 /** Defines a file which will be accessed within the plan. */
 case class PlanFile(
     ref: PlanFileReference,
+    contentType: String,
     read: Boolean = false,
     write: Boolean = false,
     fileId: Option[String] = None,
@@ -39,7 +40,7 @@ case class PlanFile(
     cacheItemId: Option[ItemId] = None
 ) {
   override def toString: String = {
-    s"File(ref=${ref},read=${read},write=${write},fileId=${fileId},temp=${temporary},cacheItemId=${cacheItemId})"
+    s"File(ref=${ref},contentType=${contentType},read=${read},write=${write},fileId=${fileId},temp=${temporary},cacheItemId=${cacheItemId})"
   }
 }
 

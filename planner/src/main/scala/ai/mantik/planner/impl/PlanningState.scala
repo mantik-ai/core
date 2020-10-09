@@ -65,9 +65,10 @@ private[impl] case class PlanningState(
   }
 
   /** Request writing a file. */
-  def writeFile(temporary: Boolean): (PlanningState, PlanFile) = {
+  def writeFile(contentType: String, temporary: Boolean): (PlanningState, PlanFile) = {
     val file = PlanFile(
       ref = PlanFileReference(nextFileReferenceId),
+      contentType = contentType,
       write = true,
       temporary = temporary,
       fileId = None
@@ -78,9 +79,10 @@ private[impl] case class PlanningState(
   }
 
   /** Request piping through a file (a file written and read in the same plan). */
-  def pipeFile(temporary: Boolean): (PlanningState, PlanFile) = {
+  def pipeFile(contentType: String, temporary: Boolean): (PlanningState, PlanFile) = {
     val file = PlanFile(
       ref = PlanFileReference(nextFileReferenceId),
+      contentType = contentType,
       read = true,
       write = true,
       temporary = temporary,
@@ -92,21 +94,16 @@ private[impl] case class PlanningState(
   }
 
   /** Request reading a file. */
-  def readFile(fileId: String): (PlanningState, PlanFile) = {
+  def readFile(fileId: String, contentType: String): (PlanningState, PlanFile) = {
     val file = PlanFile(
       ref = PlanFileReference(nextFileReferenceId),
+      contentType = contentType,
       read = true,
       fileId = Some(fileId)
     )
     copy(
       nextFileReferenceId = nextFileReferenceId + 1, filesRev = file :: filesRev
     ) -> file
-  }
-
-  def readFileRefWithContentType(fileId: String, contentType: String): (PlanningState, PlanFileWithContentType) = {
-    val (nextState, planFile) = readFile(fileId)
-    val fileRef = PlanFileWithContentType(planFile.ref, contentType)
-    nextState -> fileRef
   }
 
   /** Returns overriding state for an item. */

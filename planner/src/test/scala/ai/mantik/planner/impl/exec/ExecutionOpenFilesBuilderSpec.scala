@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.componently.ComponentBase
-import ai.mantik.planner.repository.FileRepository
+import ai.mantik.planner.repository.{ ContentTypes, FileRepository }
 import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
 import ai.mantik.planner.{ PlanFile, PlanFileReference }
@@ -18,13 +18,12 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
 
     val repo = new ComponentBase with FileRepository {
 
-      var crashingReads = 0 // increase to let reads fail
       val getResults = List.newBuilder[FileGetResult]
       val writeResults = List.newBuilder[FileStorageResult]
       var wasOptimisticRead = false
       var wasTemporaryWrite = false
 
-      override def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult] = {
+      override def requestFileStorage(contentType: String, temporary: Boolean): Future[FileRepository.FileStorageResult] = {
         val id = nextFileId
         nextFileId += 1
         wasTemporaryWrite = temporary
@@ -36,11 +35,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
       }
 
       override def requestFileGet(id: String, optimistic: Boolean): Future[FileRepository.FileGetResult] = {
-        if (crashingReads > 0) {
-          crashingReads -= 1
-          return Future.failed(new RuntimeException("Read failed"))
-        }
-        val result = FileRepository.FileGetResult(id.toString, false, "path", None)
+        val result = FileRepository.FileGetResult(id.toString, false, "path", "ContentType")
         wasOptimisticRead = optimistic
         getResults += result
         Future.successful(
@@ -48,7 +43,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
         )
       }
 
-      override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Long]]] = ???
+      override def storeFile(id: String): Future[Sink[ByteString, Future[Long]]] = ???
       override def loadFile(id: String): Future[(String, Source[ByteString, _])] = ???
       override def deleteFile(id: String): Future[Boolean] = ???
 
@@ -66,7 +61,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
 
   it should "resolve pipe patterns" in new Env {
     val files = List(
-      PlanFile(PlanFileReference(1), read = true, write = true, temporary = true)
+      PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true)
     )
     val result = await(builder.openFiles(files))
     result.readFiles shouldBe Map(PlanFileReference(1) -> repo.getResults.result().head)
@@ -78,7 +73,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
 
   it should "resolve read patterns" in new Env {
     val files = List(
-      PlanFile(PlanFileReference(1), read = true, fileId = Some("id1"))
+      PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, read = true, fileId = Some("id1"))
     )
     val result = await(builder.openFiles(files))
     result.readFiles shouldBe Map(PlanFileReference(1) -> repo.getResults.result().head)
@@ -89,7 +84,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
 
   it should "resolve writes" in new Env {
     val files = List(
-      PlanFile(PlanFileReference(1), write = true)
+      PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, write = true)
     )
     val result = await(builder.openFiles(files))
     result.readFiles shouldBe empty
@@ -100,9 +95,9 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
 
   it should "resolve all together" in new Env {
     val files = List(
-      PlanFile(PlanFileReference(1), read = true, fileId = Some("xx")),
-      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true),
-      PlanFile(PlanFileReference(3), write = true)
+      PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, read = true, fileId = Some("xx")),
+      PlanFile(PlanFileReference(2), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true),
+      PlanFile(PlanFileReference(3), ContentTypes.MantikBundleContentType, write = true)
     )
     val result = await(builder.openFiles(files))
     result.readFiles.keys shouldBe Set(PlanFileReference(1), PlanFileReference(2))

@@ -39,7 +39,6 @@ object MnpExecutionPreparation {
   case class OutputPull(
       nodeId: String,
       portId: Int,
-      contentType: String,
       fileStorageResult: FileStorageResult
   )
 
@@ -84,7 +83,7 @@ class MnpExecutionPreparer(
     val graphNode = graph.nodes(nodeId)
 
     val inputPorts = graphNode.inputs.map { input =>
-      ConfigureInputPort(input.contentType.getOrElse(""))
+      ConfigureInputPort(input.contentType)
     }
 
     val outputPorts = graphNode.outputs.zipWithIndex.map {
@@ -100,19 +99,14 @@ class MnpExecutionPreparer(
             throw new InconsistencyException(s"Only a single forwarding is allowed, broken plan? found ${multiple} as goal of ${nodeId}")
         }
         ConfigureOutputPort(
-          contentType = output.contentType.getOrElse(""),
+          contentType = output.contentType,
           destinationUrl = singleForwarding.getOrElse("")
         )
     }
 
     val initConfiguration = MantikInitConfiguration(
       header = dockerContainer.mantikHeader.toJson,
-      payloadContentType = inputData match {
-        case None => "" // encoding for no content type
-        case Some(present) =>
-          // TODO: Content Type should be always present, see #180
-          present.contentType.getOrElse(ContentTypes.ZipFileContentType)
-      },
+      payloadContentType = inputData.map(_.contentType).getOrElse(""),
       payload = inputData.map { data =>
         val fullUrl = Uri(data.path).resolvedAgainst(remoteFileRepositoryAddress).toString()
         MantikInitConfiguration.Payload.Url(fullUrl)
@@ -157,14 +151,10 @@ class MnpExecutionPreparer(
         case container: PlanNodeService.DockerContainer =>
           to.service match {
             case file: PlanNodeService.File =>
-              val contentType = fromResource.contentType.getOrElse {
-                throw new InconsistencyException(s"No content type for reference ${link.from}")
-              }
               Some(
                 OutputPull(
                   nodeId = link.from.node,
                   portId = link.from.port,
-                  contentType = contentType,
                   fileStorageResult = files.resolveFileWrite(file.fileReference)
                 )
               )

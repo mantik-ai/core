@@ -22,7 +22,7 @@ case class Node[+T](
 /** A Node Resource. */
 @JsonCodec
 case class NodePort(
-    contentType: Option[String]
+    contentType: String
 )
 
 object Node {
@@ -31,17 +31,17 @@ object Node {
   implicit def decoder[T: Decoder]: Decoder[Node[T]] = semiauto.deriveDecoder[Node[T]]
 
   /** Generates a Default Sink with one input port*/
-  def sink[T](service: T, contentType: Option[String] = None): Node[T] = Node[T](
+  def sink[T](service: T, contentType: String): Node[T] = Node[T](
     service, inputs = Vector(NodePort(contentType)), outputs = Vector.empty
   )
 
   /** Generates a Default Source with one output port */
-  def source[T](service: T, contentType: Option[String] = None): Node[T] = Node[T](
+  def source[T](service: T, contentType: String): Node[T] = Node[T](
     service, outputs = Vector(NodePort(contentType)), inputs = Vector.empty
   )
 
   /** Generates a node with a single input and output of the same content type. */
-  def transformer[T](service: T, contentType: Option[String] = None): Node[T] = Node[T](
+  def transformer[T](service: T, contentType: String): Node[T] = Node[T](
     service, inputs = Vector(NodePort(contentType)), outputs = Vector(NodePort(contentType))
   )
 

@@ -45,7 +45,7 @@ private[impl] class ExecutionOpenFilesBuilder(
     // File write has precedence, as we have scenarios were we read and then write.
     val fileWrite: Future[Option[FileStorageResult]] = if (file.write) {
       require(file.fileId.isEmpty, "Overwriting existing files not yet supported")
-      fileRepository.requestFileStorage(file.temporary).map(Some(_))
+      fileRepository.requestFileStorage(file.contentType, file.temporary).map(Some(_))
     } else Future.successful(None)
 
     val fileRead: Future[Option[FileGetResult]] = if (file.read) {
