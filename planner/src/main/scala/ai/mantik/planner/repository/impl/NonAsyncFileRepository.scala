@@ -11,18 +11,18 @@ import scala.concurrent.duration._
 /** Helper which converts the async API into a sync API for testcases. */
 trait NonAsyncFileRepository extends FileRepository {
 
-  def requestFileStorageSync(temp: Boolean): FileRepository.FileStorageResult = {
-    await(this.requestFileStorage(temp))
+  def requestFileStorageSync(contentType: String, temp: Boolean): FileRepository.FileStorageResult = {
+    await(this.requestFileStorage(contentType, temp))
   }
 
-  def storeFileSync(id: String, contentType: String, bytes: ByteString)(implicit materializer: Materializer): Long = {
-    val sink = await(this.storeFile(id, contentType))
+  def storeFileSync(id: String, bytes: ByteString)(implicit materializer: Materializer): Long = {
+    val sink = await(this.storeFile(id))
     await(Source.single(bytes).runWith(sink))
   }
 
   def requestAndStoreSync(temp: Boolean, contentType: String, bytes: ByteString)(implicit materializer: Materializer): FileRepository.FileStorageResult = {
-    val storageResult = requestFileStorageSync(temp)
-    storeFileSync(storageResult.fileId, contentType, bytes)
+    val storageResult = requestFileStorageSync(contentType, temp)
+    storeFileSync(storageResult.fileId, bytes)
     storageResult
   }
 

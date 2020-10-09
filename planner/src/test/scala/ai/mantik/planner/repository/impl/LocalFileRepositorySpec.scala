@@ -30,7 +30,7 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
   }
 
   "listFiles" should "work" in new Env {
-    val req1 = repo.requestFileStorageSync(true)
+    val req1 = repo.requestFileStorageSync(ContentTypes.MantikBundleContentType, true)
     val req2 = repo.requestAndStoreSync(true, ContentTypes.MantikBundleContentType, testBytes)
     val req3 = repo.requestAndStoreSync(false, ContentTypes.MantikBundleContentType, testBytes)
     repo.listFiles().toIndexedSeq should contain theSameElementsAs Seq(req1.fileId, req2.fileId, req3.fileId)
@@ -50,7 +50,7 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
   }
 
   it should "automatically clean up files without content" in new Env {
-    val storeResult = await(repo.requestFileStorage(true))
+    val storeResult = await(repo.requestFileStorage("ContentType", true))
     clock.setTimeOffset(repo.cleanupTimeout.minus(1.seconds))
     repo.removeTimeoutedFiles()
 
@@ -61,7 +61,7 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
     repo.listFiles().toSet should not(contain(storeResult.fileId))
 
     intercept[MantikException] {
-      await(repo.storeFile(storeResult.fileId, "somecontenttype"))
+      await(repo.storeFile(storeResult.fileId))
     }.code.isA(FileRepository.NotFoundCode) shouldBe true
   }
 

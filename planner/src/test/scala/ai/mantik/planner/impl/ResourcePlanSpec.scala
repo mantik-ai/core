@@ -20,7 +20,7 @@ class ResourcePlanSpec extends TestBase {
       Map(
         "1" -> Node.transformer(
           PlanNodeService.DockerContainer(Container("foo"), None, TestItems.algorithm1),
-          Some("SomeType")
+          "SomeType"
         )
       )
     ),
@@ -38,7 +38,7 @@ class ResourcePlanSpec extends TestBase {
       Map(
         "2" -> Node.transformer(
           PlanNodeService.DockerContainer(Container("bar"), None, TestItems.algorithm1),
-          Some("SomeType")
+          "SomeType"
         )
       )
     ),
@@ -56,8 +56,8 @@ class ResourcePlanSpec extends TestBase {
       Map(
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
-          inputs = Vector(NodePort(None)),
-          outputs = Vector(NodePort(None), NodePort(None))
+          inputs = Vector(NodePort("1i1")),
+          outputs = Vector(NodePort("1o1"), NodePort("1o2"))
         )
       )
     ),
@@ -77,11 +77,11 @@ class ResourcePlanSpec extends TestBase {
         "1" -> Node(
           PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
           inputs = Vector(
-            NodePort(None),
-            NodePort(None)
+            NodePort("1i1"),
+            NodePort("1i2")
           ),
           outputs = Vector(
-            NodePort(None)
+            NodePort("1o1")
           )
         )
       )
@@ -101,7 +101,7 @@ class ResourcePlanSpec extends TestBase {
       Map(
         "2" -> Node.source(
           PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-          None
+          "2o1"
         )
       )
     ),
@@ -159,16 +159,16 @@ class ResourcePlanSpec extends TestBase {
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
             inputs = Vector(
-              NodePort(None),
-              NodePort(None)
+              NodePort("1i1"),
+              NodePort("1i2")
             ),
             outputs = Vector(
-              NodePort(None)
+              NodePort("1o1")
             )
           ),
           "2" -> Node.source(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
-            None
+            "2o1"
           )
         ),
         links = Seq(
@@ -188,17 +188,17 @@ class ResourcePlanSpec extends TestBase {
           "1" -> Node(
             PlanNodeService.DockerContainer(Container("learner"), None, TestItems.learning1),
             inputs = Vector(
-              NodePort(None)
+              NodePort("1i1")
             ),
             outputs = Vector(
-              NodePort(None),
-              NodePort(None)
+              NodePort("1o1"),
+              NodePort("1o2")
             )
           ),
           "2" -> Node(
             PlanNodeService.DockerContainer(Container("bar"), None, TestItems.dataSet1),
             outputs = Vector(
-              NodePort(None)
+              NodePort("2o1")
             )
           )
         ),

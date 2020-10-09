@@ -33,8 +33,8 @@ class LocalMantikRegistryImpl @Inject() (
     val fileStorage: Future[Option[(String, Future[Long])]] = payload.map {
       case (contentType, source) =>
         for {
-          storage <- fileRepository.requestFileStorage(temporary = false)
-          sink <- fileRepository.storeFile(storage.fileId, contentType)
+          storage <- fileRepository.requestFileStorage(contentType, temporary = false)
+          sink <- fileRepository.storeFile(storage.fileId)
         } yield {
           Some(storage.fileId -> source.runWith(sink))
         }

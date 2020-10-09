@@ -5,7 +5,7 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.planner.PlanOp
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.impl.MantikItemStateManager
-import ai.mantik.planner.repository.{ FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
+import ai.mantik.planner.repository.{ ContentTypes, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
 import akka.stream.Materializer
 import com.typesafe.scalalogging.Logger
 
@@ -28,7 +28,7 @@ class BasicOpExecutor(
       case PlanOp.StoreBundleToFile(bundle, fileRef) =>
         val fileId = files.resolveFileId(fileRef)
         FutureHelper.time(logger, s"Bundle Push $fileId") {
-          fileRepository.storeFile(fileId, FileRepository.MantikBundleContentType).flatMap { sink =>
+          fileRepository.storeFile(fileId).flatMap { sink =>
             val source = bundle.encode(withHeader = true)
             source.runWith(sink).map(_ => ())
           }

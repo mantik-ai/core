@@ -37,7 +37,7 @@ class PlannerElements(config: Config) {
   }
 
   /** Creates a [[ResourcePlan]] which saves data from it's sink to a file. */
-  def createStoreFileNode(fileReference: PlanFile, contentType: Option[String]): State[PlanningState, ResourcePlan] = {
+  def createStoreFileNode(fileReference: PlanFile, contentType: String): State[PlanningState, ResourcePlan] = {
     val node = Node.sink(PlanNodeService.File(fileReference.ref), contentType)
     PlanningState.stateChange(_.withNextNodeId) { nodeId =>
       ResourcePlan(
@@ -54,7 +54,7 @@ class PlannerElements(config: Config) {
 
   /** Creates a [[ResourcePlan]] which loads a file and represents it as output. */
   def loadFileNode(fileReference: PlanFileWithContentType): State[PlanningState, ResourcePlan] = {
-    val node = Node.source(PlanNodeService.File(fileReference.ref), Some(fileReference.contentType))
+    val node = Node.source(PlanNodeService.File(fileReference.ref), fileReference.contentType)
     PlanningState.stateChange(_.withNextNodeId) { nodeId =>
       val graph = Graph(
         nodes = Map(
@@ -90,7 +90,7 @@ class PlannerElements(config: Config) {
         PlanNodeService.DockerContainer(
           container, data = file, dataSet.mantikHeader
         ),
-        Some(MantikBundleContentType)
+        MantikBundleContentType
       )
       makeSingleNodeResourcePlan(node)
     }
@@ -126,8 +126,8 @@ class PlannerElements(config: Config) {
     )
     Node(
       container,
-      inputs = Vector(NodePort(Some(MantikBundleContentType))),
-      outputs = Vector(NodePort(Some(MantikBundleContentType)))
+      inputs = Vector(NodePort(MantikBundleContentType)),
+      outputs = Vector(NodePort(MantikBundleContentType))
     )
   }
 
@@ -138,8 +138,8 @@ class PlannerElements(config: Config) {
       PlanNodeService.DockerContainer(
         container, data = file, algorithm.mantikHeader
       ),
-      inputs = Vector(NodePort(Some(MantikBundleContentType))),
-      outputs = Vector(NodePort(Some(MantikBundleContentType)))
+      inputs = Vector(NodePort(MantikBundleContentType)),
+      outputs = Vector(NodePort(MantikBundleContentType))
     )
   }
 
@@ -152,13 +152,13 @@ class PlannerElements(config: Config) {
         container, data = file, mantikHeader = trainableAlgorithm.mantikHeader
       ),
       inputs = Vector(
-        NodePort(Some(MantikBundleContentType))
+        NodePort(MantikBundleContentType)
       ),
       outputs = Vector(
         // result
-        NodePort(Some(ZipFileContentType)),
+        NodePort(ZipFileContentType),
         // stats
-        NodePort(Some(MantikBundleContentType))
+        NodePort(MantikBundleContentType)
       )
     )
     makeSingleNodeResourcePlan(node)

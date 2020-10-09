@@ -228,7 +228,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       )
     )
     plan.files shouldBe List(
-      PlanFile(PlanFileReference(1), read = true, write = true, temporary = true)
+      PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true)
     )
     plan.op shouldBe PlanOp.seq(
       PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
@@ -244,8 +244,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       )
     )
     plan.files shouldBe List(
-      PlanFile(PlanFileReference(1), read = true, fileId = Some("file1")),
-      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true)
+      PlanFile(PlanFileReference(1), ContentTypes.ZipFileContentType, read = true, fileId = Some("file1")),
+      PlanFile(PlanFileReference(2), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true)
     )
     val (_, opFiles) = runWithEmptyState(planner.resourcePlanBuilder.manifestDataSetAsFile(inner, true))
     plan.op shouldBe PlanOp.seq(
@@ -308,9 +308,9 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
 
     plan.files.size shouldBe 3 // push, cache, calculation
     plan.files shouldBe List(
-      PlanFile(PlanFileReference(1), read = true, write = true, temporary = true),
-      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true, cacheItemId = Some(expectedItemId)),
-      PlanFile(PlanFileReference(3), read = true, write = true, temporary = true)
+      PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true),
+      PlanFile(PlanFileReference(2), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true, cacheItemId = Some(expectedItemId)),
+      PlanFile(PlanFileReference(3), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true)
     )
     plan.cachedItems shouldBe Set(Vector(expectedItemId))
 
@@ -342,11 +342,11 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val plan = planner.convert(action)
     plan.files shouldBe List(
       // literal
-      PlanFile(PlanFileReference(1), read = true, write = true, temporary = true),
+      PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true),
       // cache
-      PlanFile(PlanFileReference(2), read = true, write = true, temporary = true, cacheItemId = Some(expectedItemId)),
+      PlanFile(PlanFileReference(2), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true, cacheItemId = Some(expectedItemId)),
       // copied cache for saving
-      PlanFile(PlanFileReference(3), read = true, write = true) // also readable, because it can be used in later invocations
+      PlanFile(PlanFileReference(3), ContentTypes.MantikBundleContentType, read = true, write = true) // also readable, because it can be used in later invocations
     )
     val parts = splitOps(plan.op)
     parts.size shouldBe 5

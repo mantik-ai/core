@@ -386,7 +386,7 @@ class MnpPlanExecutor(
 
   private def runOutputPull(taskId: String, session: MnpSession, outputPull: OutputPull): Future[Unit] = {
     logger.debug(s"Starting pull from ${session.mnpUrl}/${taskId}/${outputPull.portId} to ${outputPull.fileStorageResult.fileId}")
-    fileRepository.storeFile(outputPull.fileStorageResult.fileId, outputPull.contentType).flatMap { fileSink =>
+    fileRepository.storeFile(outputPull.fileStorageResult.fileId).flatMap { fileSink =>
       val runTask = session.task(taskId)
       val source = runTask.pull(outputPull.portId)
       source.runWith(fileSink)
@@ -443,22 +443,16 @@ class MnpPlanExecutor(
     node: Node[PlanNodeService.DockerContainer],
     payloadData: Option[FileGetResult]
   ): InitRequest = {
-    // TODO: Optional Content Types #180 should be removed
     val inputPorts: Vector[ConfigureInputPort] = node.inputs.map { inputPort =>
-      ConfigureInputPort(inputPort.contentType.getOrElse(ContentTypes.MantikBundleContentType))
+      ConfigureInputPort(inputPort.contentType)
     }
     val outputPorts: Vector[ConfigureOutputPort] = node.outputs.map { outputPort =>
-      ConfigureOutputPort(outputPort.contentType.getOrElse(ContentTypes.MantikBundleContentType))
+      ConfigureOutputPort(outputPort.contentType)
     }
 
     val initConfiguration = MantikInitConfiguration(
       header = node.service.mantikHeader.toJson,
-      payloadContentType = payloadData match {
-        case None => "" // encoding for no content type
-        case Some(present) =>
-          // TODO: Content Type should be always present, see #180
-          present.contentType.getOrElse(ContentTypes.ZipFileContentType)
-      },
+      payloadContentType = payloadData.map(_.contentType).getOrElse(""),
       payload = payloadData.map { data =>
         val fullUrl = Uri(data.path).resolvedAgainst(fileRepositoryServerRemotePresence.assembledRemoteUri()).toString()
         MantikInitConfiguration.Payload.Url(fullUrl)

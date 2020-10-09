@@ -76,9 +76,10 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
 
   private def makeNewId(): String = UUID.randomUUID().toString
 
-  override def requestFileStorage(temporary: Boolean): Future[FileRepository.FileStorageResult] = {
+  override def requestFileStorage(contentType: String, temporary: Boolean): Future[FileRepository.FileStorageResult] = {
     Future {
       val meta = FileMetaData(
+        contentType = contentType,
         temporary = temporary,
         requestTime = akkaRuntime.clock.instant()
       )
@@ -109,7 +110,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     }
   }
 
-  override def storeFile(id: String, contentType: String): Future[Sink[ByteString, Future[Long]]] = {
+  override def storeFile(id: String): Future[Sink[ByteString, Future[Long]]] = {
     for {
       meta <- Future(loadMeta(id))
       part = partFileName(id)
@@ -120,8 +121,6 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
         writeResult.map { ioResult =>
           logger.debug(s"Written ${ioResult.count} bytes to ${part}, moving to ${file}")
           Files.move(part, file, StandardCopyOption.ATOMIC_MOVE)
-          val newMeta = meta.copy(contentType = Some(contentType))
-          saveMeta(id, newMeta)
           ioResult.count
         }
       }
@@ -136,10 +135,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       if (!exists) {
         FileRepository.NotFoundCode.throwIt(s"File ${id} doesn't exist")
       }
-      val contentType = meta.contentType.getOrElse {
-        FileRepository.NotFoundCode.throwIt(s"FIle ${id} has no content type")
-      }
-      contentType -> FileIO.fromPath(name)
+      meta.contentType -> FileIO.fromPath(name)
     }
   }
 
@@ -152,6 +148,9 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       val exists = Files.isRegularFile(fromName)
       if (!exists) {
         FileRepository.NotFoundCode.throwIt(s"File ${from} doesn't exist")
+      }
+      if (fromMeta.contentType != toMeta.contentType) {
+        FileRepository.InvalidContentType.throwIt(s"Content Type from=${fromMeta.contentType} to=${toMeta.contentType} mismatch")
       }
       Files.copy(fromName, toName)
       val newMeta = toMeta.copy(
@@ -274,7 +273,7 @@ object LocalFileRepository {
 
   /** Meta data which is stored for each file. */
   case class FileMetaData(
-      contentType: Option[String] = None,
+      contentType: String,
       temporary: Boolean = false,
       requestTime: Instant
   )
