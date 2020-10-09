@@ -4,9 +4,10 @@ import ai.mantik.ds.helper.circe.DiscriminatorDependentCodec
 import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.elements._
-import ai.mantik.planner.pipelines.ResolvedPipeline
+import ai.mantik.planner.pipelines.{ ResolvedPipeline, ResolvedPipelineStep }
 import ai.mantik.planner.repository.Bridge
 import ai.mantik.planner._
+import ai.mantik.planner.pipelines.ResolvedPipelineStep.{ AlgorithmStep, SelectStep }
 import io.circe.generic.semiauto
 import io.circe.{ Decoder, Encoder, ObjectEncoder }
 
@@ -47,7 +48,8 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
 
     override val subTypes = Seq(
       makeSubType[Operation.Application]("application"),
-      makeSubType[Operation.Training]("training")
+      makeSubType[Operation.Training]("training"),
+      makeSubType[Operation.SelectOperation]("select")
     )
   }
 
@@ -117,13 +119,22 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     semiauto.deriveDecoder[Bridge]
   }
 
-  implicit private val resolvedPipelineDefinitionEncoder: Encoder[ResolvedPipeline] = {
+  implicit val resolvedPipelineStep: ObjectEncoder[ResolvedPipelineStep] with Decoder[ResolvedPipelineStep] = new DiscriminatorDependentCodec[ResolvedPipelineStep]() {
     implicit val algoEncoder = pureAlgorithmEncoder
+    implicit val algoDecoder = pureAlgorithmDecoder
+    implicit val algorithmStepEncoder = semiauto.deriveEncoder[AlgorithmStep]
+    implicit val algorithmStepDecoder = semiauto.deriveDecoder[AlgorithmStep]
+    override val subTypes = Seq(
+      makeGivenSubType[AlgorithmStep]("algorithm"),
+      makeSubType[SelectStep]("select")
+    )
+  }
+
+  implicit private val resolvedPipelineDefinitionEncoder: Encoder[ResolvedPipeline] = {
     semiauto.deriveEncoder[ResolvedPipeline]
   }
 
   implicit private val resolvedPipelineDefinitionDecoder: Decoder[ResolvedPipeline] = {
-    implicit val algoDecoder = pureAlgorithmDecoder
     semiauto.deriveDecoder[ResolvedPipeline]
   }
 

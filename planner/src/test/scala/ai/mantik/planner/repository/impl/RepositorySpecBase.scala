@@ -10,7 +10,7 @@ import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId }
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository
-import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository }
+import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository, SubDeploymentInfo }
 import ai.mantik.planner.util.{ ErrorCodeTestUtils, TestBaseWithAkkaRuntime }
 import ai.mantik.testutils.FakeClock
 
@@ -52,7 +52,17 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
   val deploymentInfo2 = DeploymentInfo(
     name = "name2",
     internalUrl = "url2",
-    timestamp = FakeClock.DefaultTime.plus(1, ChronoUnit.HOURS)
+    timestamp = FakeClock.DefaultTime.plus(1, ChronoUnit.HOURS),
+    sub = Map(
+      "A" -> SubDeploymentInfo(
+        name = "subA",
+        internalUrl = "mnp://subA"
+      ),
+      "B" -> SubDeploymentInfo(
+        name = "subB",
+        internalUrl = "mnp://subB"
+      )
+    )
   )
 
   val artifact1DifferentVersion = artifact1.copy(

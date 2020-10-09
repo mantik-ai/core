@@ -6,9 +6,9 @@ import java.sql.Timestamp
 
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
-import ai.mantik.elements.{ ItemId, MantikId, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{ ItemId, MantikHeader, MantikId, NamedMantikId }
 import ai.mantik.planner.repository.impl.LocalRepository.DirectoryConfigKey
-import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository }
+import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository, SubDeploymentInfo }
 import ai.mantik.planner.repository.impl.LocalRepositoryDb._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -44,7 +44,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   case class DbArtifact(
       name: Option[DbMantikName],
       item: DbMantikItem,
-      depl: Option[DbDeploymentInfo]
+      depl: Option[DbDeploymentInfo],
+      subd: Vector[DbSubDeploymentInfo]
   )
 
   override def get(id: MantikId): Future[MantikArtifact] = {
@@ -71,7 +72,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       } yield (name, item, depl)
     }.headOption.map {
       case (name, item, depl) =>
-        DbArtifact(Some(name), item, depl)
+        val subDeployments = getSubDeployments(item.itemId)
+        DbArtifact(Some(name), item, depl, subDeployments)
     }
   }
 
@@ -83,8 +85,15 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       } yield (item, depl)
     }.headOption.map {
       case (item, depl) =>
-        DbArtifact(None, item, depl)
+        val subDeployments = getSubDeployments(item.itemId)
+        DbArtifact(None, item, depl, subDeployments)
     }
+  }
+
+  private def getSubDeployments(itemId: String): Vector[DbSubDeploymentInfo] = {
+    run {
+      db.subDeployments.filter(_.itemId == lift(itemId))
+    }.toVector
   }
 
   override def store(mantikArtifact: MantikArtifact): Future[Unit] = {
@@ -179,12 +188,19 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
 
   private def updateDeploymentStateOp(itemId: ItemId, maybeDeployed: Option[DeploymentInfo]): Boolean = {
     maybeDeployed match {
-      case None => run {
-        db.deployments.filter(_.itemId == lift(itemId.toString)).delete
-      } > 0
+      case None =>
+        transaction()
+        val deleted = run {
+          db.deployments.filter(_.itemId == lift(itemId.toString)).delete
+        }
+        run {
+          db.subDeployments.filter(_.itemId == lift(itemId.toString)).delete
+        }
+        deleted > 0
       case Some(info) =>
+        val itemIdString = itemId.toString
         val converted = DbDeploymentInfo(
-          itemId = itemId.toString,
+          itemId = itemIdString,
           name = info.name,
           internalUrl = info.internalUrl,
           externalUrl = info.externalUrl,
@@ -193,8 +209,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
 
         // upsert hasn't worked (error [SQLITE_ERROR] SQL error or missing database (near "AS": syntax error) )
 
-        val updateTrial = run(db.deployments.filter(_.itemId == lift(converted.itemId)).update(lift(converted))) > 0
-        if (updateTrial) {
+        val updateTrial = run(db.deployments.filter(_.itemId == lift(itemIdString)).update(lift(converted))) > 0
+        val updateResponse = if (updateTrial) {
           // ok
           updateTrial
         } else {
@@ -208,6 +224,25 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
           }
 
         }
+
+        val convertedSubDeployments = info.sub.map {
+          case (key, value) =>
+            DbSubDeploymentInfo(
+              itemId = itemIdString,
+              subId = key,
+              name = value.name,
+              internalUrl = value.internalUrl
+            )
+        }
+
+        run(db.subDeployments.filter(_.itemId == lift(itemIdString)).delete)
+        run {
+          liftQuery(convertedSubDeployments).foreach { s =>
+            db.subDeployments.insert(s)
+          }
+        }
+
+        updateResponse
     }
   }
 
@@ -234,7 +269,10 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
             val existingDeployments = run {
               db.deployments.filter(_.itemId == lift(i.toString))
             }
-            if (existingDeployments.nonEmpty) {
+            val existingSubDeployments = run {
+              db.subDeployments.filter(_.itemId == lift(i.toString))
+            }
+            if (existingDeployments.nonEmpty || existingSubDeployments.nonEmpty) {
               ErrorCodes.MantikItemConflict.throwIt("There are existing deployments for this item")
             }
             run {
@@ -272,7 +310,13 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
           name = depl.name,
           internalUrl = depl.internalUrl,
           externalUrl = depl.externalUrl,
-          timestamp = depl.timestamp.toInstant
+          timestamp = depl.timestamp.toInstant,
+          sub = dbArtifact.subd.map { dbSubDeployment =>
+            dbSubDeployment.subId -> SubDeploymentInfo(
+              name = dbSubDeployment.name,
+              internalUrl = dbSubDeployment.internalUrl
+            )
+          }.toMap
         )
       }
     )
@@ -328,7 +372,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
         // TODO: This filtering should be done on database side
         // but getquill makes it really complicated to push that down without writing multiple database calls
         case (item, name, depl) if !deployedOnly || depl.isDefined =>
-          decodeDbArtifact(DbArtifact(name, item, depl))
+          val subDeployments = getSubDeployments(item.itemId)
+          decodeDbArtifact(DbArtifact(name, item, depl, subDeployments))
       }
 
       artifacts.toIndexedSeq

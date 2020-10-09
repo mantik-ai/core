@@ -1,11 +1,14 @@
 package ai.mantik.planner.impl
 
+import ai.mantik.ds.Errors.FeatureNotSupported
+import ai.mantik.ds.sql.Select
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.planner
 import ai.mantik.planner._
 import ai.mantik.planner.graph._
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
-import cats.data.State
+import ai.mantik.planner.select.SelectMantikHeaderBuilder
+import cats.data.{ IRWST, State }
 import com.typesafe.config.Config
 
 /**
@@ -101,20 +104,42 @@ class PlannerElements(config: Config) {
 
   /** Generates the plan for an algorithm which runtime data may come from a file. */
   def algorithm(algorithm: Algorithm, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
-    val container = algorithmContainer(algorithm, file)
-    val node = Node(
+    val node = algorithmNode(algorithm, file)
+    makeSingleNodeResourcePlan(node)
+  }
+
+  /** Generate the plan for a simple 1:1 select. */
+  def select11(select: Select): State[PlanningState, ResourcePlan] = {
+    val node = select11Node(select)
+    makeSingleNodeResourcePlan(node)
+  }
+
+  /** Generate the docker container node for a simple 1:1 Select. */
+  def select11Node(select: Select): Node[PlanNodeService.DockerContainer] = {
+    val header = SelectMantikHeaderBuilder.compileSelectToMantikHeader(select) match {
+      case Left(error) => throw new FeatureNotSupported(s"Could not compile select statement ${select.toSelectStatement}, ${error}")
+      case Right(ok)   => ok
+    }
+    val resolvedBridge = resolveBridge(BuiltInItems.SelectBridge)
+    val container = PlanNodeService.DockerContainer(
+      resolvedBridge, mantikHeader = header
+    )
+    Node(
       container,
       inputs = Vector(NodePort(Some(MantikBundleContentType))),
       outputs = Vector(NodePort(Some(MantikBundleContentType)))
     )
-    makeSingleNodeResourcePlan(node)
   }
 
-  /** Generates the algorithm container for an Algorithm. */
-  def algorithmContainer(algorithm: Algorithm, file: Option[PlanFileReference]): PlanNodeService.DockerContainer = {
+  /** Generates the algorithm container node for an Algorithm. */
+  def algorithmNode(algorithm: Algorithm, file: Option[PlanFileReference]): Node[PlanNodeService.DockerContainer] = {
     val container = resolveBridge(algorithm.bridge)
-    PlanNodeService.DockerContainer(
-      container, data = file, algorithm.mantikHeader
+    Node(
+      PlanNodeService.DockerContainer(
+        container, data = file, algorithm.mantikHeader
+      ),
+      inputs = Vector(NodePort(Some(MantikBundleContentType))),
+      outputs = Vector(NodePort(Some(MantikBundleContentType)))
     )
   }
 

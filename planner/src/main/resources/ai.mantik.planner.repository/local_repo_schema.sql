@@ -1,7 +1,7 @@
 -- Database Schema for LocalRepository
 
 -- Database is sqlite
--- Note: MUST be compatible to evoltions in evolution folder
+-- Note: MUST be compatible to evolutions in evolution folder
 
 -- Holds the content of mantik items
 CREATE TABLE IF NOT EXISTS mantik_item (
@@ -27,6 +27,22 @@ CREATE TABLE IF NOT EXISTS mantik_deployment_info (
     timestamp TIMESTAMP,
     FOREIGN KEY (item_id) REFERENCES mantik_item(item_id)
 );
+
+CREATE TABLE IF NOT EXISTS mantik_sub_deployment_info (
+    item_id VARCHAR NOT NULL,
+    -- Name of  the Sub deployment info
+    sub_id VARCHAR NOT NULL,
+
+    -- Name of the service
+    name VARCHAR NOT NULL,
+    -- URL inside the execution context
+    internal_url VARCHAR NOT NULL,
+
+    PRIMARY KEY (item_id, sub_id),
+    FOREIGN KEY (item_id) REFERENCES mantik_item (item_id)
+);
+
+CREATE INDEX IF NOT EXISTS mantik_sub_deployment_info_item_id ON mantik_sub_deployment_info(item_id);
 
 -- Maps Mantik ids to Item ids.
 CREATE TABLE IF NOT EXISTS mantik_name (

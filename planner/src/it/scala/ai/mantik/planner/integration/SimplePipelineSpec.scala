@@ -11,13 +11,13 @@ class SimplePipelineSpec extends IntegrationTestBase with Samples {
     context.pushLocalMantikItem(doubleMultiplyDirectory)
 
     val doubleMultiply = context.loadAlgorithm("double_multiply")
-    val toStringConversion = Algorithm.fromSelect(
+    val toStringConversion =
       Select.parse(doubleMultiply.functionType.output.asInstanceOf[TabularData], "select CAST (y as int32) AS z").right.get
-    )
+
 
     val pipeline = Pipeline.build(
-      doubleMultiply,
-      toStringConversion
+      Right(doubleMultiply),
+      Left(toStringConversion)
     )
 
     val input = Bundle.buildColumnWise

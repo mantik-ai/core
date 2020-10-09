@@ -41,24 +41,26 @@ class PipelineBuilderSpec extends TestBase {
     TestItems.algoBridge
   )
 
-  val selectAlgorithm = Algorithm.fromSelect(
+  val select =
     Select.parse(
       TabularData(
         "x" -> FundamentalType.Int32
       ), "select cast (x as string) as y"
     ).forceRight
-  )
 
   it should "build pipelines" in {
-    val pipeline = PipelineBuilder.build(Seq(algorithm1, algorithm2)).forceRight
+    val pipeline = PipelineBuilder.build(Seq(Right(algorithm1), Right(algorithm2))).forceRight
     pipeline.definitionSource shouldBe DefinitionSource.Constructed()
     pipeline.payloadSource shouldBe PayloadSource.Empty
-    pipeline.resolved.steps shouldBe Seq(algorithm1, algorithm2)
+    pipeline.resolved.steps shouldBe Seq(
+      ResolvedPipelineStep.AlgorithmStep(algorithm1),
+      ResolvedPipelineStep.AlgorithmStep(algorithm2)
+    )
 
     withClue("Algorithms which are loaded are using their real ids") {
-      val algo1 = pipeline.resolved.steps.head
+      val algo1 = pipeline.resolved.steps.head.asInstanceOf[ResolvedPipelineStep.AlgorithmStep].algorithm
       algo1.mantikId shouldBe an[NamedMantikId]
-      val algo2 = pipeline.resolved.steps(1)
+      val algo2 = pipeline.resolved.steps(1).asInstanceOf[ResolvedPipelineStep.AlgorithmStep].algorithm
       algo2.mantikId shouldBe an[ItemId]
 
       pipeline.mantikHeader.definition.referencedItems.size shouldBe 2
@@ -66,16 +68,12 @@ class PipelineBuilderSpec extends TestBase {
   }
 
   it should "insert select steps, if possible" in {
-    val pipeline = PipelineBuilder.build(Seq(selectAlgorithm, algorithm2)).forceRight
+    val pipeline = PipelineBuilder.build(Seq(Left(select), Right(algorithm2))).forceRight
     val step1 = pipeline.resolved.steps.head
     val encodedStep = step1
-    // TODO: the itemId is lost when going through the PipelineBuilder
-    // However we should think about, if we want an itemId in SELECTs anyway ?!
-    encodedStep shouldBe selectAlgorithm.copy(
-      core = selectAlgorithm.core.copy(itemId = encodedStep.itemId)
-    )
+    encodedStep shouldBe ResolvedPipelineStep.SelectStep(select)
     val step2 = pipeline.resolved.steps(1)
-    step2.select shouldBe empty
+    step2 shouldBe an[ResolvedPipelineStep.AlgorithmStep]
 
     pipeline.mantikHeader.definition.referencedItems.size shouldBe 1 // select is not referenced
   }

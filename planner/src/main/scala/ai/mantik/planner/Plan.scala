@@ -3,9 +3,9 @@ package ai.mantik.planner
 import ai.mantik.componently.utils.Renderable
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ ItemId, MantikDefinition, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{ItemId, MantikDefinition, MantikHeader, NamedMantikId}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.planner.graph.Graph
+import ai.mantik.planner.graph.{Graph, Node}
 
 /**
  * A plan is something which can be executed. They are created by the [[Planner]]
@@ -114,7 +114,7 @@ object PlanOp {
 
   /** Deploy an algorithm. */
   case class DeployAlgorithm(
-      container: PlanNodeService.DockerContainer,
+      node: Node[PlanNodeService.DockerContainer],
       serviceId: String,
       serviceNameHint: Option[String],
       item: Algorithm
@@ -123,11 +123,16 @@ object PlanOp {
   /** Deploy a Pipeline. */
   case class DeployPipeline(
       item: Pipeline,
+      sub: Map[String, DeployPipelineSubItem],
       serviceId: String,
       serviceNameHint: Option[String],
       ingress: Option[String],
-      steps: Seq[Algorithm]
   ) extends PlanOp[DeploymentState]
+
+  /** A Dependent sub item of the pipeline */
+  case class DeployPipelineSubItem(
+    node: Node[PlanNodeService.DockerContainer]
+  )
 
   /** Mark files as being cached. */
   case class MarkCached(files: Vector[(ItemId, PlanFileReference)]) extends ProceduralPlanOp with BasicOp[Unit] {

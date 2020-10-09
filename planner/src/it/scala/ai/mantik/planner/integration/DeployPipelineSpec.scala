@@ -11,33 +11,35 @@ class DeployPipelineSpec extends IntegrationTestBase with Samples with HttpSuppo
 
   it should "be possible to deploy a pipeline" in new EnvWithAlgorithm {
 
-    val inputAdaptor = Algorithm.fromSelect(Select.parse(
+    val inputAdaptor = Select.parse(
       TabularData(
         "x" -> FundamentalType.Int32
       ),
       "select CAST(x as float64)"
-    ).forceRight)
+    ).forceRight
 
-    val outputAdapter = Algorithm.fromSelect(
+    val outputAdapter =
       Select.parse(doubleMultiply.functionType.output.asInstanceOf[TabularData], "select CAST (y as int32)").forceRight
-    )
+
 
     val pipeline = Pipeline.build(
-      inputAdaptor,
-      doubleMultiply,
-      outputAdapter
+      Left(inputAdaptor),
+      Right(doubleMultiply),
+      Left(outputAdapter)
     )
 
     context.state(pipeline).deployment shouldBe empty
     context.state(doubleMultiply).deployment shouldBe empty
 
-    val deploymentState = context.execute(pipeline.deploy(ingressName = Some("pipe1")))
+    val deploymentState = context.execute(pipeline.deploy(ingressName = Some("pipe1"), nameHint = Some("pipe1")))
 
     context.state(pipeline).deployment shouldBe Some(deploymentState)
     deploymentState.externalUrl shouldNot be(empty)
 
     // Sub algorithms are now also deployed
     context.state(doubleMultiply).deployment shouldBe 'defined
+
+    context.state(pipeline).deployment.get.sub.size shouldBe 2 // SQLs are deployed as sub steps
 
     val applyUrl = s"${deploymentState.externalUrl.get}/apply"
     val sampleData = ByteString("[[4],[5]]")

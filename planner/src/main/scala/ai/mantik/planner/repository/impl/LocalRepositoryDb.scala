@@ -40,6 +40,16 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
     )
   }
 
+  val subDeployments = quote {
+    querySchema[DbSubDeploymentInfo](
+      "mantik_sub_deployment_info",
+      _.itemId -> "item_id",
+      _.subId -> "sub_id",
+      _.name -> "name",
+      _.internalUrl -> "internal_url"
+    )
+  }
+
   /** Quill Query Schema for accessing artifacts. */
   val items = quote {
     querySchema[DbMantikItem](
@@ -81,5 +91,12 @@ private[impl] object LocalRepositoryDb {
       internalUrl: String,
       externalUrl: Option[String],
       timestamp: java.util.Date
+  )
+
+  case class DbSubDeploymentInfo(
+      itemId: String,
+      subId: String,
+      name: String,
+      internalUrl: String
   )
 }

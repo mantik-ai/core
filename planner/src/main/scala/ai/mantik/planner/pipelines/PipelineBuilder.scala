@@ -1,8 +1,9 @@
 package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.DataType
+import ai.mantik.ds.sql.Select
 import ai.mantik.elements
-import ai.mantik.elements.{ MantikId, MantikHeader, NamedMantikId, OptionalFunctionType, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{ MantikHeader, MantikId, NamedMantikId, OptionalFunctionType, PipelineDefinition, PipelineStep }
 import ai.mantik.planner.Pipeline.PipelineBuildStep
 import ai.mantik.planner.{ Algorithm, DefinitionSource, MantikItem, Pipeline, Source }
 
@@ -29,13 +30,14 @@ private[planner] object PipelineBuilder {
   }
 
   /** Build a Pipeline from algorithms writing an artifical mantik header. */
-  def build(algorithms: Seq[Algorithm]): Either[PipelineException, Pipeline] = {
-    val inputType = algorithms.headOption.map(_.functionType.input)
-    val highLevelSteps = algorithms.map { algorithm =>
-      algorithm.select match {
-        case Some(select) => PipelineBuildStep.SelectBuildStep(select.toSelectStatement)
-        case None         => PipelineBuildStep.AlgorithmBuildStep(algorithm)
-      }
+  def build(steps: Seq[Either[Select, Algorithm]]): Either[PipelineException, Pipeline] = {
+    val inputType = steps.headOption.map {
+      case Left(select)     => select.inputType
+      case Right(algorithm) => algorithm.functionType.input
+    }
+    val highLevelSteps = steps.map {
+      case Left(select)     => PipelineBuildStep.SelectBuildStep(select.toSelectStatement)
+      case Right(algorithm) => PipelineBuildStep.AlgorithmBuildStep(algorithm)
     }
     build(highLevelSteps, inputType)
   }

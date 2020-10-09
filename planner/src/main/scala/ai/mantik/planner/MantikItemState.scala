@@ -45,10 +45,19 @@ object MantikItemState {
 case class DeploymentState(
     name: String,
     internalUrl: String,
-    externalUrl: Option[String] = None
+    externalUrl: Option[String] = None,
+    sub: Map[String, SubDeploymentState] = Map.empty
+)
+
+/** Sub Deployment state (e.g. Query Nodes) */
+case class SubDeploymentState(
+    name: String,
+    internalUrl: String
 )
 
 object DeploymentState {
+  implicit val subEncoder: Encoder[SubDeploymentState] = semiauto.deriveEncoder[SubDeploymentState]
+  implicit val subDecoder: Decoder[SubDeploymentState] = semiauto.deriveDecoder[SubDeploymentState]
   implicit val encoder: Encoder[DeploymentState] = semiauto.deriveEncoder[DeploymentState]
   implicit val decoder: Decoder[DeploymentState] = semiauto.deriveDecoder[DeploymentState]
 }

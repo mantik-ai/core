@@ -1,8 +1,10 @@
 package com.example.examples
 import java.io.File
 
+import ai.mantik.ds.TabularData
+import ai.mantik.ds.sql.Select
 import ai.mantik.elements.NamedMantikId
-import ai.mantik.planner.{ PlanningContext, Pipeline }
+import ai.mantik.planner.{ Pipeline, PlanningContext }
 
 object PipelineExample extends ExampleBase {
 
@@ -12,9 +14,11 @@ object PipelineExample extends ExampleBase {
     context.pushLocalMantikItem(mnistAnnotated, id = Some("mnist_annotated"))
 
     val mnist = context.loadAlgorithm("mnist_annotated").tag("nob/mnist_annotated") //otherwise it can't be pushed
+    val select = Select.parse(mnist.functionType.output.asInstanceOf[TabularData], "SELECT y AS x").right.get
 
     val pipeline = Pipeline.build(
-      mnist
+      Right(mnist),
+      Left(select)
     )
 
     val result = pipeline.deploy(ingressName = Some("mnist")).run()

@@ -1,6 +1,7 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.sql.Select
 import ai.mantik.elements.{ ItemId, NamedMantikId }
 
 /** Defines where a MantikItem comes from. */
@@ -76,6 +77,9 @@ case object Operation {
   case class Training(algorithm: TrainableAlgorithm, trainingData: DataSet) extends Operation {
     override def resultCount: Int = 2 // stats, trained algorithm
   }
+
+  /** A Simple select operation with one input */
+  case class SelectOperation(select: Select, argument: DataSet) extends Operation
 }
 
 /** Represents the way [[MantikItem]](s) gets their Payload Data from. */

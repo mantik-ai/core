@@ -44,11 +44,26 @@ object MantikArtifact {
   }
 }
 
-/** Deployment Information as being stored in the [[Repository]]. */
+/**
+ * Deployment Information as being stored in the [[Repository]].
+ *
+ * @param name of the node in the Executor
+ * @param internalUrl MNP Url under which its reachable.
+ * @param externalUrl optional external HTTP Url
+ * @param timestamp timestamp
+ * @param sub sub deployment infos for sub nodes.
+ */
 case class DeploymentInfo(
     name: String,
     internalUrl: String,
     externalUrl: Option[String] = None,
-    timestamp: Instant
+    timestamp: Instant,
+    sub: Map[String, SubDeploymentInfo] = Map.empty
+)
+
+/** Sub Part deployment infos (e.g. for embedded SQL Nodes) */
+case class SubDeploymentInfo(
+    name: String,
+    internalUrl: String
 )
 
