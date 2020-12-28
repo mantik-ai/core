@@ -1,0 +1,101 @@
+kind: combiner
+bridge: builtin/select
+input:
+- type: tabular
+  columns:
+    x: int32
+    y: int32
+- type: tabular
+  columns:
+    x: int32
+    z: string
+output:
+- type: tabular
+  columns:
+    x: int32
+    x0: int32
+program:
+  type: select
+  input:
+    type: join
+    left:
+      type: select
+      input:
+        type: source
+        port: 0
+        result:
+          type: tabular
+          columns:
+            x: int32
+            y: int32
+      selector: null
+      projector:
+        args: 2
+        retStackDepth: 2
+        stackInitDepth: 2
+        ops:
+        - get
+        - 0
+        - get
+        - 1
+      result:
+        type: tabular
+        columns:
+          _0: int32
+          _1: int32
+    right:
+      type: select
+      input:
+        type: source
+        port: 1
+        result:
+          type: tabular
+          columns:
+            x: int32
+            z: string
+      selector: null
+      projector:
+        args: 2
+        retStackDepth: 2
+        stackInitDepth: 2
+        ops:
+        - get
+        - 0
+        - get
+        - 1
+      result:
+        type: tabular
+        columns:
+          _0: int32
+          _1: string
+    groupSize: 0
+    joinType: inner
+    filter: null
+    selector:
+    - 0
+    - 1
+    - 2
+    - 3
+    result:
+      type: tabular
+      columns:
+        x: int32
+        y: int32
+        x0: int32
+        z: string
+  selector: null
+  projector:
+    args: 3
+    retStackDepth: 2
+    stackInitDepth: 2
+    ops:
+    - get
+    - 0
+    - get
+    - 2
+  result:
+    type: tabular
+    columns:
+      x: int32
+      x0: int32
+query: SELECT (l.x) AS "l.x", (r.x) AS "r.x" FROM ($0 AS l CROSS INNER $1 AS r)

@@ -5,7 +5,6 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
-	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
 )
 
 // A Special set of elements which are all from the same type
@@ -30,7 +29,7 @@ func NewElementSet(dt ds.DataType) (*ElementSet, error) {
 
 // Returns true if element was added, false if already existing
 func (e *ElementSet) Add(element element.Element) (bool, error) {
-	encoded, err := e.encode(element)
+	encoded, err := natural.SerializeToBytes(e.serializer, element)
 	if err != nil {
 		return false, err
 	}
@@ -48,17 +47,6 @@ func (e *ElementSet) Size() int {
 func (e *ElementSet) Clear() {
 	e.size = 0
 	e.exists = newByteSliceSet()
-}
-
-func (e *ElementSet) encode(element element.Element) ([]byte, error) {
-	buf := bytes.Buffer{}
-	backend, err := serializer.CreateSerializingBackend(serializer.BACKEND_MSGPACK, &buf)
-	if err != nil {
-		return nil, err
-	}
-	err = e.serializer.Write(backend, element)
-	backend.Flush()
-	return buf.Bytes(), err
 }
 
 // A Simple set for byteSlices

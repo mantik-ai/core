@@ -30,6 +30,18 @@ func testEncodeAndDecode(t *testing.T, bundle *element.Bundle) {
 	assert.Equal(t, bundle, jsonBack)
 }
 
+func testComparator(t *testing.T, bundle *element.Bundle) {
+	comparator, err := LookupComparator(bundle.Type)
+	assert.NoError(t, err)
+	if bundle.IsTabular() {
+		for _, row := range bundle.Rows {
+			assert.Equal(t, 0, comparator.Compare(row, row))
+		}
+	} else {
+		assert.Equal(t, 0, comparator.Compare(bundle.SingleValue(), bundle.SingleValue()))
+	}
+}
+
 func TestEmptyReadWrite(t *testing.T) {
 	format, err := ds.FromJsonString(
 		`
@@ -127,6 +139,7 @@ func TestAllPrimitiveTypes(t *testing.T) {
 		),
 	)
 	testEncodeAndDecode(t, &bundle)
+	testComparator(t, &bundle)
 }
 
 func TestImage(t *testing.T) {
@@ -156,6 +169,7 @@ func TestImage(t *testing.T) {
 		),
 	)
 	testEncodeAndDecode(t, &bundle)
+	testComparator(t, &bundle)
 }
 
 func TestTensor(t *testing.T) {
@@ -181,6 +195,7 @@ func TestTensor(t *testing.T) {
 		),
 	)
 	testEncodeAndDecode(t, &bundle)
+	testComparator(t, &bundle)
 }
 
 func TestNullablePrimitive(t *testing.T) {
@@ -199,6 +214,7 @@ func TestNullablePrimitive(t *testing.T) {
 		),
 	)
 	testEncodeAndDecode(t, &bundle)
+	testComparator(t, &bundle)
 }
 
 func TestEmbeddedTabular(t *testing.T) {
@@ -238,6 +254,7 @@ func TestEmbeddedTabular(t *testing.T) {
 		),
 	)
 	testEncodeAndDecode(t, &bundle)
+	testComparator(t, &bundle)
 }
 
 func TestJsonEncodingForPrimitives(t *testing.T) {

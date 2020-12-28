@@ -68,6 +68,24 @@ func (d *SelectProgram) TabularResult() *ds.TabularData {
 	return d.Result
 }
 
+type JoinProgram struct {
+	Left      TableGeneratorProgramRef `json:"left"`
+	Right     TableGeneratorProgramRef `json:"right"`
+	GroupSize int                      `json:"groupSize"`
+	JoinType  string                   `json:"joinType"`
+	Filter    *Program                 `json:"filter"`
+	Selector  []int                    `json:"selector"`
+	Result    *ds.TabularData          `json:"result"`
+}
+
+func (j *JoinProgram) Type() string {
+	return "join"
+}
+
+func (j *JoinProgram) TabularResult() *ds.TabularData {
+	return j.Result
+}
+
 type discriminator struct {
 	Type string `json:"type"`
 }
@@ -91,6 +109,10 @@ func (p *TableGeneratorProgramRef) UnmarshalJSON(bytes []byte) error {
 		var source DataSource
 		err = json.Unmarshal(bytes, &source)
 		p.Underlying = &source
+	case "join":
+		var joinProgram JoinProgram
+		err = json.Unmarshal(bytes, &joinProgram)
+		p.Underlying = &joinProgram
 	default:
 		err = errors.Errorf("Unknown program type %s", d.Type)
 	}

@@ -1,6 +1,7 @@
 package natural
 
 import (
+	"bytes"
 	"github.com/pkg/errors"
 	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
@@ -9,6 +10,21 @@ import (
 
 type ElementSerializer interface {
 	Write(backend serializer.SerializingBackend, element element.Element) error
+}
+
+/** Encode into internal representation. (Also see DeserializeFromBytes)*/
+func SerializeToBytes(es ElementSerializer, element element.Element) ([]byte, error) {
+	buf := bytes.Buffer{}
+	backend, err := serializer.CreateSerializingBackend(serializer.BACKEND_MSGPACK, &buf)
+	if err != nil {
+		return nil, err
+	}
+	err = es.Write(backend, element)
+	if err != nil {
+		return nil, err
+	}
+	backend.Flush()
+	return buf.Bytes(), err
 }
 
 type nilSerializer struct{}

@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.FundamentalType
-import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
-import ai.mantik.ds.sql.{ CastExpression, ColumnExpression, ConstantExpression }
+import ai.mantik.ds.{FundamentalType, Nullable}
+import ai.mantik.ds.element.{Bundle, SingleElementBundle}
+import ai.mantik.ds.sql.{CastExpression, ColumnExpression, ConstantExpression}
 import ai.mantik.testutils.TestBase
 
 class CastBuilderSpec extends TestBase {
@@ -22,6 +22,11 @@ class CastBuilderSpec extends TestBase {
     CastBuilder.comparisonType(FundamentalType.Int8, FundamentalType.Float32) shouldBe Right(FundamentalType.Float32)
     CastBuilder.comparisonType(FundamentalType.Int32, FundamentalType.Float32) shouldBe Right(FundamentalType.Float64)
     CastBuilder.comparisonType(FundamentalType.Int64, FundamentalType.Float64) shouldBe 'left
+  }
+
+  it should "handle nullable values" in {
+    CastBuilder.comparisonType(Nullable(FundamentalType.Int32), FundamentalType.Int8) shouldBe Right(Nullable(FundamentalType.Int32))
+    CastBuilder.comparisonType(FundamentalType.Int32, Nullable(FundamentalType.Int8)) shouldBe Right(Nullable(FundamentalType.Int32))
   }
 
   "wrapType" should "wrap a type in a cast" in {

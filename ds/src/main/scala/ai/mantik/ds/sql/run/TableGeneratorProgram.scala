@@ -6,6 +6,8 @@ import ai.mantik.ds.sql.JoinType
 import io.circe.{ Decoder, Encoder, Json, ObjectEncoder }
 import io.circe.generic.semiauto
 
+import java.util.Locale
+
 /**
  * A Program for genearting (temporary tables)
  * Note: this is part of the API to the Select Bridge.
@@ -58,7 +60,7 @@ case class UnionProgram(
  * @param left source for the left side, usually a select which also creates grouping
  * @param right source for the right side, usually a select which also creates grouping
  * @param groupSize prefix size of the groups, if 0 no grouping is performed.
- * @param joinType the join type
+ * @param joinType the join type. Encoding "inner", "left", "right", "outer"
  * @param filter the filter applied to each possible left/right possible row.
  * @param selector selected columns to return (from concatenated left and right side, including groups)
  * @param result result tabular type
@@ -74,11 +76,23 @@ case class JoinProgram(
 ) extends TableGeneratorProgram
 
 object TableGeneratorProgram {
-  implicit val joinTypeEncoder: Encoder[JoinType] = Encoder { x: JoinType => Json.fromString(x.sqlName) }
-  implicit val joinTypeDecoder: Decoder[JoinType] = Decoder.decodeString.emap { x =>
-    JoinType.All.find(_.sqlName == x) match {
-      case None     => Left(s"Unexpected join type ${x}")
-      case Some(ok) => Right(ok)
+
+  val joinTypeMapping = Seq(
+    JoinType.Inner -> "inner",
+    JoinType.Left -> "left",
+    JoinType.Right -> "right",
+    JoinType.Outer -> "outer"
+  )
+
+  implicit val joinTypeEncoder: Encoder[JoinType] = Encoder.encodeString.contramap { jt =>
+    joinTypeMapping.find(_._1 == jt).map(_._2).getOrElse {
+      throw new RuntimeException(s"Not implemented encoder for join type ${jt}")
+    }
+  }
+
+  implicit val joinTypeDecoder: Decoder[JoinType] = Decoder.decodeString.emap { s =>
+    joinTypeMapping.find(_._2 == s).map(x => Right(x._1)).getOrElse {
+      Left(s"Decoder not found for ${s}")
     }
   }
 
@@ -86,7 +100,8 @@ object TableGeneratorProgram {
     override val subTypes = Seq(
       makeSubType[UnionProgram]("union"),
       makeSubType[SelectProgram]("select", true),
-      makeSubType[DataSource]("source")
+      makeSubType[DataSource]("source"),
+      makeSubType[JoinProgram]("join")
     )
   }
 }

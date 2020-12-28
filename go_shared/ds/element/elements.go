@@ -61,7 +61,7 @@ type StreamWriter interface {
 	io.Closer
 }
 
-// Interface for something which reads streams
+// Interface for something which reads element streams
 type StreamReader interface {
 	// Error may be EOF.
 	Read() (Element, error)
@@ -79,6 +79,12 @@ func NewStreamReader(f func() (Element, error)) StreamReader {
 	return &anonymousStreamReader{f}
 }
 
+func NewFailedReader(err error) StreamReader {
+	return NewStreamReader(func() (Element, error) {
+		return nil, err
+	})
+}
+
 // Read a stream reader until exhausted.
 func ReadAllFromStreamReader(reader StreamReader) ([]Element, error) {
 	var buf []Element
@@ -92,4 +98,48 @@ func ReadAllFromStreamReader(reader StreamReader) ([]Element, error) {
 		}
 		buf = append(buf, e)
 	}
+}
+
+/*
+Returns an object which implements Reader and Writer
+In contrast to ElementBuffer this piped reader blocks
+on each read until something has been written.
+*/
+func NewPipeReaderWriter(size int) *PipeReaderWriter {
+	pipe := &PipeReaderWriter{
+		channel: make(chan Element, size),
+	}
+	return pipe
+}
+
+type PipeReaderWriter struct {
+	channel chan Element
+	err     error
+}
+
+func (p *PipeReaderWriter) Read() (Element, error) {
+	element := <-p.channel
+	if element == nil {
+		close(p.channel)
+		if p.err == nil {
+			return nil, io.ErrUnexpectedEOF
+		}
+		return nil, p.err
+	}
+	return element, nil
+}
+
+func (p *PipeReaderWriter) Write(row Element) error {
+	p.channel <- row
+	return nil
+}
+
+func (p *PipeReaderWriter) Fail(err error) {
+	p.err = err
+	p.channel <- nil
+}
+
+func (p *PipeReaderWriter) Close() error {
+	p.Fail(io.EOF)
+	return nil
 }
