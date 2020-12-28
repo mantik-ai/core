@@ -42,6 +42,12 @@ private[sql] object CastBuilder {
           Right(FundamentalType.Float64)
         case (a: FundamentalType.IntegerType, b: FundamentalType.FloatingPoint) =>
           comparisonType(b, a)
+        case (a: Nullable, b: Nullable) =>
+          comparisonType(a.underlying, b.underlying).map(Nullable.makeNullable)
+        case (a: Nullable, b) =>
+          comparisonType(a.underlying, b).map(Nullable.makeNullable)
+        case (a, b: Nullable) =>
+          comparisonType(a, b.underlying).map(Nullable.makeNullable)
         case (a, b) =>
           Left(s"Could not unify ${left} with ${right}")
       }

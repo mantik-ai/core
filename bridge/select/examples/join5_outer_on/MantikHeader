@@ -1,0 +1,165 @@
+kind: combiner
+bridge: builtin/select
+input:
+- type: tabular
+  columns:
+    x: int32
+    y: int32
+- type: tabular
+  columns:
+    x: int32
+    z: string
+output:
+- type: tabular
+  columns:
+    x:
+      type: nullable
+      underlying: int32
+    z:
+      type: nullable
+      underlying: string
+program:
+  type: select
+  input:
+    type: join
+    left:
+      type: select
+      input:
+        type: source
+        port: 0
+        result:
+          type: tabular
+          columns:
+            x: int32
+            y: int32
+      selector: null
+      projector:
+        args: 2
+        retStackDepth: 4
+        stackInitDepth: 4
+        ops:
+        - get
+        - 0
+        - get
+        - 0
+        - get
+        - 0
+        - cast
+        - int32
+        - type: nullable
+          underlying: int32
+        - get
+        - 1
+        - cast
+        - int32
+        - type: nullable
+          underlying: int32
+      result:
+        type: tabular
+        columns:
+          _0:
+            type: nullable
+            underlying: int32
+          _1:
+            type: nullable
+            underlying: int32
+          _2:
+            type: nullable
+            underlying: int32
+          _3:
+            type: nullable
+            underlying: int32
+    right:
+      type: select
+      input:
+        type: source
+        port: 1
+        result:
+          type: tabular
+          columns:
+            x: int32
+            z: string
+      selector: null
+      projector:
+        args: 2
+        retStackDepth: 4
+        stackInitDepth: 4
+        ops:
+        - get
+        - 0
+        - cnt
+        - type:
+            type: nullable
+            underlying: int32
+          value: 1
+        - get
+        - 0
+        - cast
+        - int32
+        - type: nullable
+          underlying: int32
+        - get
+        - 1
+        - cast
+        - string
+        - type: nullable
+          underlying: string
+      result:
+        type: tabular
+        columns:
+          _0:
+            type: nullable
+            underlying: int32
+          _1:
+            type: nullable
+            underlying: int32
+          _2:
+            type: nullable
+            underlying: int32
+          _3:
+            type: nullable
+            underlying: string
+    groupSize: 2
+    joinType: outer
+    filter: null
+    selector:
+    - 2
+    - 3
+    - 6
+    - 7
+    result:
+      type: tabular
+      columns:
+        x:
+          type: nullable
+          underlying: int32
+        y:
+          type: nullable
+          underlying: int32
+        x0:
+          type: nullable
+          underlying: int32
+        z:
+          type: nullable
+          underlying: string
+  selector: null
+  projector:
+    args: 4
+    retStackDepth: 2
+    stackInitDepth: 2
+    ops:
+    - get
+    - 0
+    - get
+    - 3
+  result:
+    type: tabular
+    columns:
+      x:
+        type: nullable
+        underlying: int32
+      z:
+        type: nullable
+        underlying: string
+query: SELECT (l.x) AS "l.x", (r.z) AS "r.z" FROM ($0 AS l FULL OUTER JOIN $1 AS r
+  ON ((l.x = r.x) AND (l.x = 1)))

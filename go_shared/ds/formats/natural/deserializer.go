@@ -11,6 +11,15 @@ type ElementDeserializer interface {
 	Read(backend serializer.DeserializingBackend) (element.Element, error)
 }
 
+/** Read from internal representation. (Also see SerializeToBytes) */
+func DeserializeFromBytes(ed ElementDeserializer, bytes []byte) (element.Element, error) {
+	backend, err := serializer.CreateDeserializingBackendForBytes(serializer.BACKEND_MSGPACK, bytes)
+	if err != nil {
+		return nil, err
+	}
+	return ed.Read(backend)
+}
+
 type nilDeserializer struct{}
 
 func (n *nilDeserializer) Read(backend serializer.DeserializingBackend) (element.Element, error) {

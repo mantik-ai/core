@@ -100,6 +100,36 @@ func (int8Codec) ReadArray(backend serializer.DeserializingBackend) (interface{}
 	return result, nil
 }
 
+func (int8Codec) Compare(left interface{}, right interface{}) int {
+	lc := left.(int8)
+	rc := right.(int8)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c int8Codec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]int8)
+	rc := right.([]int8)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
+
 type uint8Codec struct{}
 
 func (uint8Codec) Write(backend serializer.SerializingBackend, value interface{}) error {
@@ -146,6 +176,36 @@ func (uint8Codec) ReadArray(backend serializer.DeserializingBackend) (interface{
 		result[i] = v
 	}
 	return result, nil
+}
+
+func (uint8Codec) Compare(left interface{}, right interface{}) int {
+	lc := left.(uint8)
+	rc := right.(uint8)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c uint8Codec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]uint8)
+	rc := right.([]uint8)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
 }
 
 type int32Codec struct{}
@@ -196,6 +256,36 @@ func (int32Codec) ReadArray(backend serializer.DeserializingBackend) (interface{
 	return result, nil
 }
 
+func (int32Codec) Compare(left interface{}, right interface{}) int {
+	lc := left.(int32)
+	rc := right.(int32)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c int32Codec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]int32)
+	rc := right.([]int32)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
+
 type uint32Codec struct{}
 
 func (uint32Codec) Write(backend serializer.SerializingBackend, value interface{}) error {
@@ -242,6 +332,36 @@ func (uint32Codec) ReadArray(backend serializer.DeserializingBackend) (interface
 		result[i] = v
 	}
 	return result, nil
+}
+
+func (uint32Codec) Compare(left interface{}, right interface{}) int {
+	lc := left.(uint32)
+	rc := right.(uint32)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c uint32Codec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]uint32)
+	rc := right.([]uint32)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
 }
 
 type int64Codec struct{}
@@ -292,6 +412,36 @@ func (int64Codec) ReadArray(backend serializer.DeserializingBackend) (interface{
 	return result, nil
 }
 
+func (int64Codec) Compare(left interface{}, right interface{}) int {
+	lc := left.(int64)
+	rc := right.(int64)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c int64Codec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]int64)
+	rc := right.([]int64)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
+
 type uint64Codec struct{}
 
 func (uint64Codec) Write(backend serializer.SerializingBackend, value interface{}) error {
@@ -338,6 +488,36 @@ func (uint64Codec) ReadArray(backend serializer.DeserializingBackend) (interface
 		result[i] = v
 	}
 	return result, nil
+}
+
+func (uint64Codec) Compare(left interface{}, right interface{}) int {
+	lc := left.(uint64)
+	rc := right.(uint64)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c uint64Codec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]uint64)
+	rc := right.([]uint64)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
 }
 
 type stringCodec struct{}
@@ -388,6 +568,36 @@ func (stringCodec) ReadArray(backend serializer.DeserializingBackend) (interface
 	return result, nil
 }
 
+func (stringCodec) Compare(left interface{}, right interface{}) int {
+	lc := left.(string)
+	rc := right.(string)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c stringCodec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]string)
+	rc := right.([]string)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
+
 type float32Codec struct{}
 
 func (float32Codec) Write(backend serializer.SerializingBackend, value interface{}) error {
@@ -434,6 +644,36 @@ func (float32Codec) ReadArray(backend serializer.DeserializingBackend) (interfac
 		result[i] = v
 	}
 	return result, nil
+}
+
+func (float32Codec) Compare(left interface{}, right interface{}) int {
+	lc := left.(float32)
+	rc := right.(float32)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c float32Codec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]float32)
+	rc := right.([]float32)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
 }
 
 type float64Codec struct{}
@@ -484,6 +724,36 @@ func (float64Codec) ReadArray(backend serializer.DeserializingBackend) (interfac
 	return result, nil
 }
 
+func (float64Codec) Compare(left interface{}, right interface{}) int {
+	lc := left.(float64)
+	rc := right.(float64)
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func (c float64Codec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]float64)
+	rc := right.([]float64)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
+
 type boolCodec struct{}
 
 func (boolCodec) Write(backend serializer.SerializingBackend, value interface{}) error {
@@ -530,4 +800,22 @@ func (boolCodec) ReadArray(backend serializer.DeserializingBackend) (interface{}
 		result[i] = v
 	}
 	return result, nil
+}
+
+func (c boolCodec) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]bool)
+	rc := right.([]bool)
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
 }

@@ -7,24 +7,25 @@ import (
 )
 
 type generatorType struct {
-	DsTypeName string
-	CodecName  string
-	GoTypeName string
-	EncodeName string
-	DecodeName string
+	DsTypeName  string
+	CodecName   string
+	GoTypeName  string
+	EncodeName  string
+	DecodeName  string
+	SkipCompare bool
 }
 
 var types = []generatorType{
-	{"Int8", "int8Codec", "int8", "EncodeInt8", "DecodeInt8"},
-	{"Uint8", "uint8Codec", "uint8", "EncodeUint8", "DecodeUint8"},
-	{"Int32", "int32Codec", "int32", "EncodeInt32", "DecodeInt32"},
-	{"Uint32", "uint32Codec", "uint32", "EncodeUint32", "DecodeUint32"},
-	{"Int64", "int64Codec", "int64", "EncodeInt64", "DecodeInt64"},
-	{"Uint64", "uint64Codec", "uint64", "EncodeUint64", "DecodeUint64"},
-	{"String", "stringCodec", "string", "EncodeString", "DecodeString"},
-	{"Float32", "float32Codec", "float32", "EncodeFloat32", "DecodeFloat32"},
-	{"Float64", "float64Codec", "float64", "EncodeFloat64", "DecodeFloat64"},
-	{"Bool", "boolCodec", "bool", "EncodeBool", "DecodeBool"},
+	{"Int8", "int8Codec", "int8", "EncodeInt8", "DecodeInt8", false},
+	{"Uint8", "uint8Codec", "uint8", "EncodeUint8", "DecodeUint8", false},
+	{"Int32", "int32Codec", "int32", "EncodeInt32", "DecodeInt32", false},
+	{"Uint32", "uint32Codec", "uint32", "EncodeUint32", "DecodeUint32", false},
+	{"Int64", "int64Codec", "int64", "EncodeInt64", "DecodeInt64", false},
+	{"Uint64", "uint64Codec", "uint64", "EncodeUint64", "DecodeUint64", false},
+	{"String", "stringCodec", "string", "EncodeString", "DecodeString", false},
+	{"Float32", "float32Codec", "float32", "EncodeFloat32", "DecodeFloat32", false},
+	{"Float64", "float64Codec", "float64", "EncodeFloat64", "DecodeFloat64", false},
+	{"Bool", "boolCodec", "bool", "EncodeBool", "DecodeBool", true},
 }
 
 func main() {
@@ -68,7 +69,7 @@ func GetFundamentalCodec(dataType ds.DataType) (FundamentalCodec, error) {
 	switch dataType {
 	{{ range $key, $value := . }}
     case ds.{{ $value.DsTypeName }}:
-      result = {{ $value.CodecName }} {}
+    	result = {{ $value.CodecName }} {}
     {{ end }}
 	default:
 		return nil, errors.Errorf("Implementation missing for %s", dataType.TypeName())
@@ -81,7 +82,7 @@ var codeTemplate = `
 type {{.CodecName}} struct {}
 
 func ({{.CodecName}}) Write(backend serializer.SerializingBackend, value interface{}) error {
-	i, ok :=  value.({{.GoTypeName}})
+	i, ok := value.({{.GoTypeName}})
 	if !ok {
 		return badType
 	}
@@ -125,5 +126,40 @@ func ({{.CodecName}}) ReadArray(backend serializer.DeserializingBackend) (interf
 	}
 	return result, nil
 }
+
+{{if .SkipCompare}}
+{{else}}
+
+func ({{.CodecName}}) Compare(left interface{}, right interface{}) int {
+	lc := left.({{.GoTypeName}})
+	rc := right.({{.GoTypeName}})
+	if lc < rc {
+		return -1
+	} else if lc > rc {
+		return +1
+	} else {
+		return 0
+	}
+}
+{{end}}
+
+func (c {{.CodecName}}) CompareArray(left interface{}, right interface{}) int {
+	lc := left.([]{{.GoTypeName}})
+	rc := right.([]{{.GoTypeName}})
+	if len(lc) < len(rc) {
+		return -1
+	}
+	if len(lc) > len(rc) {
+		return 1
+	}
+	for i, lv := range lc {
+		cmp := c.Compare(lv, rc[i])
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
+
 
 `

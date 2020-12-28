@@ -2,15 +2,10 @@ package selectbridge
 
 import (
 	"github.com/stretchr/testify/assert"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
+	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
-	"sort"
 	"testing"
 )
-
-func firstIdx32(in []element.Element, idx int) int32 {
-	return in[idx].(*element.TabularRow).Columns[0].(element.Primitive).X.(int32)
-}
 
 var unionTestInput1 = builder.RowsAsElements(
 	builder.PrimitiveRow(int32(1), "Hello"),
@@ -35,9 +30,7 @@ func TestUnion1(t *testing.T) {
 	)
 
 	transformed, err := model.Execute(unionTestInput1, unionTestInput2)
-	sort.Slice(transformed, func(i, j int) bool {
-		return firstIdx32(transformed, i) < firstIdx32(transformed, j)
-	})
+	sortByElement(transformed, 0, ds.Int32)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedOutput, transformed)
@@ -73,9 +66,7 @@ func TestUnionDistinct(t *testing.T) {
 	)
 
 	transformed, err := model.Execute(unionTestInput1, unionTestInput2)
-	sort.Slice(transformed, func(i, j int) bool {
-		return firstIdx32(transformed, i) < firstIdx32(transformed, j)
-	})
+	sortByElement(transformed, 0, ds.Int32)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedOutput, transformed)

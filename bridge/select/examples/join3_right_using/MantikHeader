@@ -1,0 +1,117 @@
+kind: combiner
+bridge: builtin/select
+input:
+- type: tabular
+  columns:
+    x: int32
+    y: int32
+- type: tabular
+  columns:
+    x: int32
+    z: string
+output:
+- type: tabular
+  columns:
+    y:
+      type: nullable
+      underlying: int32
+    x: int32
+    z: string
+program:
+  type: select
+  input:
+    type: join
+    left:
+      type: select
+      input:
+        type: source
+        port: 0
+        result:
+          type: tabular
+          columns:
+            x: int32
+            y: int32
+      selector: null
+      projector:
+        args: 2
+        retStackDepth: 3
+        stackInitDepth: 3
+        ops:
+        - get
+        - 0
+        - get
+        - 0
+        - cast
+        - int32
+        - type: nullable
+          underlying: int32
+        - get
+        - 1
+        - cast
+        - int32
+        - type: nullable
+          underlying: int32
+      result:
+        type: tabular
+        columns:
+          _0: int32
+          _1:
+            type: nullable
+            underlying: int32
+          _2:
+            type: nullable
+            underlying: int32
+    right:
+      type: select
+      input:
+        type: source
+        port: 1
+        result:
+          type: tabular
+          columns:
+            x: int32
+            z: string
+      selector: null
+      projector:
+        args: 2
+        retStackDepth: 3
+        stackInitDepth: 3
+        ops:
+        - get
+        - 0
+        - get
+        - 0
+        - get
+        - 1
+      result:
+        type: tabular
+        columns:
+          _0: int32
+          _1: int32
+          _2: string
+    groupSize: 1
+    joinType: right
+    filter: null
+    selector:
+    - 2
+    - 3
+    - 5
+    result:
+      type: tabular
+      columns:
+        y:
+          type: nullable
+          underlying: int32
+        x: int32
+        z: string
+  selector: null
+  projector: null
+  result:
+    type: tabular
+    columns:
+      y:
+        type: nullable
+        underlying: int32
+      x: int32
+      z: string
+query: SELECT * FROM ($0 RIGHT JOIN $1 USING x)

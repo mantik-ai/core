@@ -224,5 +224,13 @@ class CastSpec extends TestBase {
     c3.isSafe shouldBe false
     c3.convert(NullElement) shouldBe NullElement
     c3.convert(Primitive.unit) shouldBe NullElement
+
+    val c4 = Cast.findCast(
+      FundamentalType.Int8,
+      Nullable(FundamentalType.Int32)
+    ).forceRight
+    c4.canFail shouldBe false
+    c4.loosing shouldBe false
+    c4.convert(Primitive(8: Byte)) shouldBe SomeElement(Primitive(8))
   }
 }
