@@ -18,12 +18,13 @@ class SelectBuilderSpec extends TestBase {
   // Test encoding to SQL and back yields the same result.
   private def testReparsable(select: Select): Unit = {
     val selectStatement = select.toStatement
-    val inputIdx = select.input match {
-      case AnonymousInput(_, n) => n
-      case _                    => 0
+    val anonymousInputs = select.input match {
+      case AnonymousInput(td, idx) => Vector.fill(idx + 1)(emptyInput).updated(idx, td)
+      case _                       => Vector(emptyInput)
     }
+
     implicit val context = SqlContext(
-      anonymous = Vector.fill(inputIdx + 1)(emptyInput).updated(inputIdx, select.inputType)
+      anonymous = anonymousInputs
     )
     withClue(s"Re-Serialized ${selectStatement} should be parseable") {
       val parsed = Select.parse(selectStatement)
@@ -36,7 +37,7 @@ class SelectBuilderSpec extends TestBase {
     got shouldBe Right(
       Select(AnonymousInput(simpleInput))
     )
-    got.right.get.resultingType shouldBe simpleInput
+    got.right.get.resultingTabularType shouldBe simpleInput
     testReparsable(got.forceRight)
   }
 
@@ -45,7 +46,7 @@ class SelectBuilderSpec extends TestBase {
     got shouldBe Right(
       Select(AnonymousInput(simpleInput))
     )
-    got.right.get.resultingType shouldBe simpleInput
+    got.right.get.resultingTabularType shouldBe simpleInput
     testReparsable(got.forceRight)
   }
 
@@ -54,19 +55,15 @@ class SelectBuilderSpec extends TestBase {
     got shouldBe Right(
       Select(
         AnonymousInput(simpleInput),
-        selection = List(
+        selection = Vector(
           Condition.Equals(
             ColumnExpression(0, FundamentalType.Int32),
-            // TODO: It should optimize away this cast
-            CastExpression(
-              ConstantExpression(Bundle.fundamental(1.toByte)),
-              FundamentalType.Int32
-            )
+            ConstantExpression(1)
           )
         )
       )
     )
-    got.right.get.resultingType shouldBe simpleInput
+    got.right.get.resultingTabularType shouldBe simpleInput
     testReparsable(got.forceRight)
   }
 
@@ -82,13 +79,13 @@ class SelectBuilderSpec extends TestBase {
     got shouldBe Right(
       Select(AnonymousInput(simpleInput))
     )
-    got.right.get.resultingType shouldBe simpleInput
+    got.right.get.resultingTabularType shouldBe simpleInput
     testReparsable(got.forceRight)
 
     val got2 = SelectBuilder.buildSelect("SELECT 3 FROM $1")
     got2 shouldBe Right(
       Select(AnonymousInput(emptyInput, 1), Some(
-        List(
+        Vector(
           SelectProjection("$1", ConstantExpression(Bundle.build(FundamentalType.Int8, Primitive(3: Byte))))
         )
       ))
@@ -102,13 +99,13 @@ class SelectBuilderSpec extends TestBase {
       Select(
         AnonymousInput(simpleInput),
         Some(
-          List(
+          Vector(
             SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
           )
         )
       )
     )
-    got.right.get.resultingType shouldBe TabularData(
+    got.right.get.resultingTabularType shouldBe TabularData(
       "y" -> FundamentalType.StringType
     )
     testReparsable(got.forceRight)
@@ -120,14 +117,14 @@ class SelectBuilderSpec extends TestBase {
       Select(
         AnonymousInput(simpleInput),
         Some(
-          List(
+          Vector(
             SelectProjection("y", ColumnExpression(1, FundamentalType.StringType)),
             SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
           )
         )
       )
     )
-    got.right.get.resultingType shouldBe TabularData(
+    got.right.get.resultingTabularType shouldBe TabularData(
       "y" -> FundamentalType.StringType,
       "x" -> FundamentalType.Int32
     )
@@ -140,7 +137,7 @@ class SelectBuilderSpec extends TestBase {
       Select(
         AnonymousInput(simpleInput),
         Some(
-          List(
+          Vector(
             SelectProjection(
               "x",
               CastExpression(
@@ -152,7 +149,7 @@ class SelectBuilderSpec extends TestBase {
         )
       )
     )
-    got.right.get.resultingType shouldBe TabularData(
+    got.right.get.resultingTabularType shouldBe TabularData(
       "x" -> FundamentalType.Int64
     )
     testReparsable(got.forceRight)
@@ -163,7 +160,7 @@ class SelectBuilderSpec extends TestBase {
     val expected = Select(
       AnonymousInput(emptyInput),
       Some(
-        List(
+        Vector(
           SelectProjection("$1", ConstantExpression(Bundle.build(FundamentalType.Int8, Primitive(1: Byte)))),
           SelectProjection("$2", ConstantExpression(Bundle.build(FundamentalType.BoolType, Primitive(true)))),
           SelectProjection("$3", ConstantExpression(Bundle.build(FundamentalType.BoolType, Primitive(false)))),
@@ -186,17 +183,13 @@ class SelectBuilderSpec extends TestBase {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE x = 5")
     val expected = Select(
       AnonymousInput(simpleInput),
-      Some(List(
+      Some(Vector(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
-      List(
+      Vector(
         Condition.Equals(
           ColumnExpression(0, FundamentalType.Int32),
-          // TODO: It should optimize away this cast
-          CastExpression(
-            ConstantExpression(Bundle.fundamental(5.toByte)),
-            FundamentalType.Int32
-          )
+          ConstantExpression(5)
         )
       )
     )
@@ -208,10 +201,10 @@ class SelectBuilderSpec extends TestBase {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World'")
     val expected = Select(
       AnonymousInput(simpleInput),
-      Some(List(
+      Some(Vector(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
-      List(
+      Vector(
         Condition.Equals(
           ColumnExpression(1, FundamentalType.StringType),
           ConstantExpression(Bundle.fundamental("Hello World"))
@@ -226,21 +219,17 @@ class SelectBuilderSpec extends TestBase {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World' and x = 1")
     val expected = Select(
       AnonymousInput(simpleInput),
-      Some(List(
+      Some(Vector(
         SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
       )),
-      List(
+      Vector(
         Condition.Equals(
           ColumnExpression(1, FundamentalType.StringType),
           ConstantExpression(Bundle.fundamental("Hello World"))
         ),
         Condition.Equals(
           ColumnExpression(0, FundamentalType.Int32),
-          // TODO: It should optimize away this cast
-          CastExpression(
-            ConstantExpression(Bundle.fundamental(1.toByte)),
-            FundamentalType.Int32
-          )
+          ConstantExpression(1)
         )
       )
     )
@@ -256,7 +245,7 @@ class SelectBuilderSpec extends TestBase {
     val expected = Select(
       AnonymousInput(simpleInput),
       Some(
-        List(
+        Vector(
           SelectProjection(
             "x",
             CastExpression(
@@ -279,11 +268,11 @@ class SelectBuilderSpec extends TestBase {
     val expected = Select(
       AnonymousInput(simpleInput),
       Some(
-        List(
+        Vector(
           SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
         )
       ),
-      List(
+      Vector(
         Condition.IsNull(
           ColumnExpression(0, FundamentalType.Int32)
         )
@@ -301,11 +290,11 @@ class SelectBuilderSpec extends TestBase {
     val expected = Select(
       AnonymousInput(simpleInput),
       Some(
-        List(
+        Vector(
           SelectProjection("y", ColumnExpression(1, FundamentalType.StringType))
         )
       ),
-      List(
+      Vector(
         Condition.Not(
           Condition.IsNull(
             ColumnExpression(0, FundamentalType.Int32)

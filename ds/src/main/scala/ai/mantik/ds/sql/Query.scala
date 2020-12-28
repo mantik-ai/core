@@ -1,30 +1,35 @@
 package ai.mantik.ds.sql
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.TabularData
+import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.{ Bundle, TabularBundle }
-import ai.mantik.ds.sql.builder.{ QueryBuilder, SelectBuilder }
+import ai.mantik.ds.sql.builder.{ JoinBuilder, QueryBuilder, SelectBuilder }
 import ai.mantik.ds.sql.run.{ Compiler, TableGeneratorProgramRunner }
+import cats.implicits._
 
 import scala.collection.immutable.ListMap
-import cats.implicits._
+import scala.util.control.NonFatal
 
 /** Base trait for a Query. */
 sealed trait Query {
-  def resultingType: TabularData
+  def resultingQueryType: QueryTabularType
+
+  /** Resulting tabular type, shadowing if necessary. */
+  lazy val resultingTabularType: TabularData = resultingQueryType.forceToTabularType
 
   def toStatement: String = SqlFormatter.formatSql(this)
 
   /** Execute this query on a number of bundles */
   def run(inputs: TabularBundle*): Either[String, TabularBundle] = {
-    Compiler.compile(this).flatMap { tabularGenerator =>
-      val runner = new TableGeneratorProgramRunner(tabularGenerator)
-      try {
-        Right(runner.run(inputs.toVector, resultingType))
+    for {
+      tabularGenerator <- Compiler.compile(this)
+      result <- try {
+        val runner = new TableGeneratorProgramRunner(tabularGenerator)
+        Right(runner.run(inputs.toVector, resultingTabularType))
       } catch {
-        case i: IllegalArgumentException => Left(i.getMessage)
+        case NonFatal(e) => Left(s"Query Executon failed ${e}")
       }
-    }
+    } yield result
   }
 
   /** Figure out input port assignment. */
@@ -33,9 +38,12 @@ sealed trait Query {
       query match {
         case u: Union          => sub(u.left) ++ sub(u.right)
         case s: Select         => sub(s.input)
+        case j: Join           => sub(j.left) ++ sub(j.right)
         case i: AnonymousInput => Map(i.slot -> i.inputType)
+        case a: Alias          => sub(a.query)
       }
     }
+
     val asMap = sub(this)
     val size = asMap.size
     (0 until size).map { idx =>
@@ -55,14 +63,15 @@ object Query {
 
 /**
  * Anonymous input (e.g. plain select on given TabularType)
+ *
  * @param inputType type of input
- * @param slot the anonymous slot (for multiple inputs)
+ * @param slot      the anonymous slot (for multiple inputs)
  */
 case class AnonymousInput(
     inputType: TabularData,
     slot: Int = 0
 ) extends Query {
-  override def resultingType: TabularData = inputType
+  override def resultingQueryType: QueryTabularType = QueryTabularType.fromTabularData(inputType)
 }
 
 /**
@@ -74,26 +83,26 @@ case class AnonymousInput(
  * SQL if applicable.
  *
  * @param projections the columns which are returned, if None all are returned.
- * @param selection AND-concatenated filters
+ * @param selection   AND-concatenated filters
  */
 case class Select(
     input: Query,
-    projections: Option[List[SelectProjection]] = None,
-    selection: List[Condition] = Nil
+    projections: Option[Vector[SelectProjection]] = None,
+    selection: Vector[Condition] = Vector.empty
 ) extends Query {
 
-  def inputType: TabularData = input.resultingType
+  def inputType: QueryTabularType = input.resultingQueryType
 
-  def resultingType: TabularData = {
+  def inputTabularType: TabularData = inputType.forceToTabularType
+
+  def resultingQueryType: QueryTabularType = {
     projections match {
-      case None => input.resultingType
+      case None => input.resultingQueryType
       case Some(projections) =>
-        TabularData(
-          ListMap(
-            projections.map { column =>
-              column.columnName -> column.expression.dataType
-            }: _*
-          )
+        QueryTabularType(
+          projections.map { column =>
+            QueryColumn(column.columnName, column.expression.dataType)
+          }
         )
     }
   }
@@ -112,8 +121,9 @@ object Select {
 
   /**
    * Parse and run a select statement.
+   *
    * @throws IllegalArgumentException on invalid select statements or non tabular bundles
-   * @throws FeatureNotSupported when the statement can be parsed, but not executed.
+   * @throws FeatureNotSupported      when the statement can be parsed, but not executed.
    */
   def run(input: TabularBundle, statement: String): Bundle = {
     val tabularData = input.model
@@ -141,7 +151,7 @@ case class Union(
     all: Boolean
 ) extends Query {
 
-  override def resultingType: TabularData = left.resultingType
+  override def resultingQueryType: QueryTabularType = left.resultingQueryType
 
   /** Gives a flat representation of this union. */
   def flat: Vector[Query] = {
@@ -152,4 +162,88 @@ case class Union(
         Vector(left, right)
     }
   }
+}
+
+/** Different Jon Types. */
+sealed abstract class JoinType(val sqlName: String)
+
+object JoinType {
+
+  case object Inner extends JoinType("INNER")
+
+  case object Left extends JoinType("LEFT")
+
+  case object Right extends JoinType("RIGHT")
+
+  case object Outer extends JoinType("FULL OUTER")
+
+}
+
+/**
+ * A Join Query
+ *
+ * @param left                      left query
+ * @param right                     right query
+ * @param joinType                  kind of join
+ * @param condition                 condition Join Condition
+ */
+case class Join(
+    left: Query,
+    right: Query,
+    joinType: JoinType,
+    condition: JoinCondition
+) extends Query {
+
+  /** The tabular data used within join conditions. */
+  lazy val innerType: QueryTabularType = JoinBuilder.innerTabularData(left, right, joinType)
+
+  override lazy val resultingQueryType: QueryTabularType = {
+    val idDrops = condition match {
+      case JoinCondition.Using(columns) => columns.map(_.dropId)
+      case _                            => Vector.empty
+    }
+    innerType.dropByIds(idDrops: _*)
+  }
+}
+
+/** Join Conditions. */
+sealed trait JoinCondition
+
+object JoinCondition {
+
+  case class On(
+      expression: Condition
+  ) extends JoinCondition
+
+  case class Using(
+      columns: Vector[UsingColumn]
+  ) extends JoinCondition
+
+  /**
+   * Defines a column used in Using-Comparison.
+   * @param name name of the column
+   * @param caseSensitive if true the column name is case sensitive
+   * @param leftId resolved id on the left side
+   * @param rightId resolved id on the right side
+   * @param dropId which id of the inner model is dropped in the result
+   * @param dataType comparison datatype
+   */
+  case class UsingColumn(
+      name: String,
+      caseSensitive: Boolean = false,
+      leftId: Int,
+      rightId: Int,
+      dropId: Int,
+      dataType: DataType
+  )
+
+  case object Cross extends JoinCondition
+}
+
+/** A Name alias. */
+case class Alias(
+    query: Query,
+    name: String
+) extends Query {
+  override lazy val resultingQueryType: QueryTabularType = query.resultingQueryType.withAlias(name)
 }

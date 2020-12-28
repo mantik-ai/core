@@ -1,9 +1,11 @@
 package ai.mantik.ds.sql
 
+import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.element.Primitive
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds._
+import ai.mantik.ds.sql.builder.JoinBuilder
 
 /** Formats Queries as SQL again. */
 object SqlFormatter {
@@ -13,19 +15,21 @@ object SqlFormatter {
       case AnonymousInput(_, slot) => "$" + s"$slot"
       case s: Select               => formatSelect(s)
       case u: Union                => formatUnion(u)
+      case j: Join                 => formatJoin(j)
+      case a: Alias                => formatAlias(a)
     }
   }
 
   def formatSelect(select: Select): String = {
-    val formatter = new SqlFormatter(select.input)
+    val formatter = new SqlFormatter(select.input.resultingQueryType)
 
     val projectionString = select.projections match {
       case None         => "*"
       case Some(values) => values.map(formatter.formatSelectProjection).mkString(", ")
     }
     val selectionString = select.selection match {
-      case Nil               => ""
-      case List(singleValue) => s"WHERE ${formatter.formatExpression(singleValue)}"
+      case e if e.isEmpty      => ""
+      case Vector(singleValue) => s"WHERE ${formatter.formatExpression(singleValue)}"
       case multiples =>
         val parts = multiples.map { x =>
           s"(${formatter.formatExpression(x)})"
@@ -56,18 +60,42 @@ object SqlFormatter {
     s.filter(_.nonEmpty).mkString(" ")
   }
 
+  def formatJoin(join: Join): String = {
+    val left = formatSql(join.left)
+    val right = formatSql(join.right)
+    if (join.condition == JoinCondition.Cross) {
+      return joinWithWhitespace(left, "CROSS", join.joinType.sqlName, right)
+    }
+    val condition = join.condition match {
+      case JoinCondition.Cross => "" // should not come here but we want the check for exhaustive patterns
+      case JoinCondition.On(condition) =>
+        val formatter = new SqlFormatter(join.innerType)
+        joinWithWhitespace("ON", formatter.formatExpression(condition))
+      case JoinCondition.Using(columns) =>
+        val formattedColumns = columns.map { column =>
+          if (column.caseSensitive) {
+            "\"" + column.name + "\""
+          } else {
+            column.name
+          }
+        }.mkString(", ")
+        joinWithWhitespace("USING", formattedColumns)
+    }
+    joinWithWhitespace(left, join.joinType.sqlName, "JOIN", right, condition)
+  }
+
+  def formatAlias(alias: Alias): String = {
+    joinWithWhitespace(formatSql(alias.query), "AS", alias.name)
+  }
 }
 
-private class SqlFormatter(input: Query) {
-
-  private def inputData = input.resultingType
-  private val columnNames = inputData.columns.keys.toVector
+private[sql] class SqlFormatter(inputData: QueryTabularType) {
 
   def formatSelectProjection(projection: SelectProjection): String = {
     val exp = formatExpression(projection.expression)
-    val as = formatColumnName(projection.columnName)
+    val as = "\"" + projection.columnName + "\""
     if (exp == as) {
-      return exp
+      exp
     } else {
       s"(${exp}) AS ${as}"
     }
@@ -77,12 +105,12 @@ private class SqlFormatter(input: Query) {
     expression match {
       case c: ConstantExpression => formatConstant(c)
       case c: ColumnExpression =>
-        require(c.columnId >= 0 && c.columnId < columnNames.length, "Columns id out of range")
-        val columnName = columnNames(c.columnId)
-        formatColumnName(columnName)
+        require(c.columnId >= 0 && c.columnId < inputData.columns.length, "Columns id out of range")
+        val column = inputData.columns(c.columnId)
+        formatColumnName(column)
       case c: CastExpression =>
         s"CAST (${formatExpression(c.expression)} AS ${formatCastToDataType(c.expression.dataType, c.dataType)})"
-      case b: BinaryExpression =>
+      case b: BinaryOperationExpression =>
         formatBinary(b.left, b.right, formatBinaryOperationSign(b.op))
       case e: Condition.Equals =>
         formatBinary(e.left, e.right, "=")
@@ -101,9 +129,11 @@ private class SqlFormatter(input: Query) {
     }
   }
 
-  def formatColumnName(name: String): String = {
-    require(!name.contains("\""))
-    "\"" + name + "\""
+  def formatColumnName(column: QueryColumn): String = {
+    column.alias match {
+      case Some(alias) => alias + "." + column.name
+      case None        => "\"" + column.name + "\""
+    }
   }
 
   def formatBinary(left: Expression, right: Expression, sign: String): String = {

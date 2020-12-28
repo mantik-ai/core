@@ -16,14 +16,14 @@ class SelectParserSpec extends ParserTestBase {
     }
   }
 
-  parseSelectTest("select 1234", SelectNode(List(SelectColumnNode(NumberNode(1234)))))
+  parseSelectTest("select 1234", SelectNode(Vector(SelectColumnNode(NumberNode(1234)))))
 
-  parseSelectTest("select 1234, false", SelectNode(List(
+  parseSelectTest("select 1234, false", SelectNode(Vector(
     SelectColumnNode(NumberNode(1234)),
     SelectColumnNode(BoolNode(false))))
   )
 
-  parseSelectTest("select foo,\"bar\"", SelectNode(List(
+  parseSelectTest("select foo,\"bar\"", SelectNode(Vector(
     SelectColumnNode(IdentifierNode("foo")),
     SelectColumnNode(IdentifierNode("bar", ignoreCase = false))
   )))
@@ -33,32 +33,32 @@ class SelectParserSpec extends ParserTestBase {
   parseSelectTest("select * from $1", SelectNode(from = Some(AnonymousReference(1))))
 
   parseSelectTest("select foo as bar", SelectNode(
-    List(
+    Vector(
       SelectColumnNode(IdentifierNode("foo"), as = Some(IdentifierNode("bar")))
     )
   ))
 
-  parseSelectTest("select foo as bar, baz", SelectNode(List(
+  parseSelectTest("select foo as bar, baz", SelectNode(Vector(
     SelectColumnNode(IdentifierNode("foo"), as = Some(IdentifierNode("bar"))),
     SelectColumnNode(IdentifierNode("baz"))
   )))
 
   parseSelectTest("select foo where a", SelectNode(
-    List(SelectColumnNode(IdentifierNode("foo"))),
+    Vector(SelectColumnNode(IdentifierNode("foo"))),
     Some(
       IdentifierNode("a")
     ))
   )
 
   parseSelectTest("select foo where a = b", SelectNode(
-    List(SelectColumnNode(IdentifierNode("foo"))),
+    Vector(SelectColumnNode(IdentifierNode("foo"))),
     Some(
       BinaryOperationNode("=", IdentifierNode("a"), IdentifierNode("b"))
     ))
   )
 
   parseSelectTest("select baz,biz + 1 from $0 where a + b = c", SelectNode(
-    List(
+    Vector(
       SelectColumnNode(IdentifierNode("baz")),
       SelectColumnNode(BinaryOperationNode("+", IdentifierNode("biz"), NumberNode(BigDecimal(1))))
     ),

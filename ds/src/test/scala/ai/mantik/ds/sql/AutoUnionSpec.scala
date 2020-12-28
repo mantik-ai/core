@@ -33,7 +33,7 @@ class AutoUnionSpec extends TestBase {
         Select(
           AnonymousInput(type1, 0),
           Some(
-            List(
+            Vector(
               SelectProjection("x", ColumnExpression(0, FundamentalType.Int32)),
               SelectProjection("y", CastExpression(
                 ColumnExpression(1, FundamentalType.StringType), Nullable(FundamentalType.StringType))
@@ -49,7 +49,7 @@ class AutoUnionSpec extends TestBase {
         Select(
           AnonymousInput(type2, 1),
           Some(
-            List(
+            Vector(
               SelectProjection("x", CastExpression(
                 ColumnExpression(0, FundamentalType.Int8), FundamentalType.Int32)
               ),

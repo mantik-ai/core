@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.operations.{ BinaryFunction, BinaryOperation }
-import ai.mantik.ds.sql.{ AnonymousInput, BinaryExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Query, Select, SelectProjection, Union }
+import ai.mantik.ds.sql.{ Alias, AnonymousInput, BinaryOperationExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Join, Query, Select, SelectProjection, Union }
 import ai.mantik.ds.{ DataType, FundamentalType }
 import cats.implicits._
 
@@ -13,9 +13,11 @@ object Compiler {
 
   def compile(query: Query): Either[String, TableGeneratorProgram] = {
     query match {
-      case a: AnonymousInput => Right(DataSource(a.slot, query.resultingType))
+      case a: AnonymousInput => Right(DataSource(a.slot, query.resultingTabularType))
       case s: Select         => compile(s)
       case u: Union          => compile(u)
+      case a: Alias          => compile(a.query) // alias is not present program
+      case j: Join           => Left("Joins not yet supported")
     }
   }
 
@@ -24,16 +26,16 @@ object Compiler {
       input <- compile(select.input)
       selector <- compileSelectors(select.selection)
       projector <- compileProjector(select.projections)
-    } yield SelectProgram(Some(input), selector, projector, select.resultingType)
+    } yield SelectProgram(Some(input), selector, projector, select.resultingTabularType)
   }
 
   def compile(union: Union): Either[String, UnionProgram] = {
     for {
       compiledInputs <- union.flat.map(compile).sequence
-    } yield UnionProgram(compiledInputs, union.all, union.resultingType, true)
+    } yield UnionProgram(compiledInputs, union.all, union.resultingTabularType, true)
   }
 
-  def compileSelectors(selection: List[Condition]): Either[String, Option[Program]] = {
+  def compileSelectors(selection: Vector[Condition]): Either[String, Option[Program]] = {
     if (selection.isEmpty) {
       return Right(None)
     }
@@ -48,7 +50,7 @@ object Compiler {
   }
 
   /** Add an early return between multiple conditions. */
-  private def combineConditions(subLists: List[Vector[OpCode]]): Vector[OpCode] = {
+  private def combineConditions(subLists: Vector[Vector[OpCode]]): Vector[OpCode] = {
     val resultBuilder = Vector.newBuilder[OpCode]
     @tailrec
     def add(pending: List[Vector[OpCode]]): Unit = {
@@ -64,11 +66,11 @@ object Compiler {
           resultBuilder ++= Vector(OpCode.Constant(Bundle.fundamental(true)))
       }
     }
-    add(subLists)
+    add(subLists.toList)
     resultBuilder.result()
   }
 
-  def compileProjector(projections: Option[List[SelectProjection]]): Either[String, Option[Program]] = {
+  def compileProjector(projections: Option[Vector[SelectProjection]]): Either[String, Option[Program]] = {
     val usedProjections = projections match {
       case None              => return Right(None)
       case Some(projections) => projections
@@ -133,7 +135,7 @@ object Compiler {
         for {
           base <- compileExpression(c.expression)
         } yield base :+ castOp
-      case c: BinaryExpression =>
+      case c: BinaryOperationExpression =>
         for {
           leftOps <- compileExpression(c.left)
           rightOps <- compileExpression(c.right)

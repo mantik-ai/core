@@ -142,4 +142,16 @@ class SelectSpec extends TestBase {
       )
     ).row(1).result
   }
+
+  it should "run aliases" in {
+    val result = Select.run(
+      bundleWithNulls, "SELECT table.x FROM $0 AS table WHERE x IS NOT NULL"
+    )
+
+    result shouldBe Bundle.build(
+      TabularData(
+        "x" -> Nullable(FundamentalType.Int32)
+      )
+    ).row(1).result
+  }
 }

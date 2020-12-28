@@ -31,22 +31,32 @@ object QueryParser {
 private[parser] class QueryParser(val input: ParserInput) extends Parser
   with SelectParser
   with UnionParser
+  with JoinParser
+  with AliasParser
   with AnonymousOnlyInnerQueryParser {
 
   def FullQuery: Rule1[AST.QueryNode] = rule {
-    Query ~ EOI
+    Query ~ optional(ParseAsAlias) ~ EOI ~> { withOptionalAlias(_, _) }
   }
 
   def Query: Rule1[AST.QueryNode] = rule {
-    Union | AnonymousFrom | Select
+    Union | Join | AnonymousFrom | Select
   }
 
   override def SelectLikeInnerQuery: Rule1[QueryNode] = rule {
-    AnonymousFrom | BracketInnerQuery
+    Join | AnonymousFromMaybeAliases | BracketInnerQuery
   }
 
   override def UnionLikeInnerQuery: Rule1[QueryNode] = rule {
-    AnonymousFrom | Select
+    AnonymousFromMaybeAliases | Select | BracketInnerQuery
+  }
+
+  override def JoinLikeInnerQuery: Rule1[QueryNode] = rule {
+    AnonymousFromMaybeAliases | BracketInnerQuery
+  }
+
+  private def AnonymousFromMaybeAliases: Rule1[QueryNode] = rule {
+    AnonymousFrom ~ optional(ParseAsAlias) ~> { withOptionalAlias(_, _) }
   }
 
   def BracketInnerQuery: Rule1[QueryNode] = rule {

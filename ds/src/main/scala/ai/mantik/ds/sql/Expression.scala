@@ -4,15 +4,47 @@ import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.{ DataType, FundamentalType }
 
-/** A expression (e.g. Inside Select). */
+/** An expression (e.g. Inside Select). */
 sealed trait Expression {
   def dataType: DataType
+
+  /** Returns direct dependencies. */
+  def dependencies: List[Expression]
+
+  /** Convert this Expression to a condition. */
+  def asCondition: Option[Condition] = {
+    this match {
+      case c: Condition => Some(c)
+      case e if e.dataType == FundamentalType.BoolType => Some(Condition.WrappedExpression(e))
+      case _ => None
+    }
+  }
+}
+
+/** An expression which is not build from other expressions*/
+sealed trait LeafExpression extends Expression {
+  override final def dependencies: List[Expression] = Nil
+}
+
+/** An expression built from one expression. */
+sealed trait UnaryExpression extends Expression {
+  def expression: Expression
+
+  override final def dependencies: List[Expression] = List(expression)
+}
+
+/** An expression built from two expressions */
+sealed trait BinaryExpression extends Expression {
+  def left: Expression
+  def right: Expression
+
+  override final def dependencies: List[Expression] = List(left, right)
 }
 
 /** A Constant Expression. */
 case class ConstantExpression(
     value: SingleElementBundle
-) extends Expression {
+) extends LeafExpression {
   override def dataType: DataType = value.model
 }
 
@@ -26,20 +58,20 @@ object ConstantExpression {
 case class ColumnExpression(
     columnId: Int,
     dataType: DataType
-) extends Expression
+) extends LeafExpression
 
 /** An expression is casted. */
 case class CastExpression(
     expression: Expression,
     dataType: DataType
-) extends Expression
+) extends UnaryExpression
 
 /** A Simple binary expression which works on the same type. */
-case class BinaryExpression(
+case class BinaryOperationExpression(
     op: BinaryOperation,
     left: Expression,
     right: Expression
-) extends Expression {
+) extends BinaryExpression {
   require(left.dataType == right.dataType)
   override def dataType: DataType = left.dataType
 }
@@ -50,17 +82,19 @@ sealed trait Condition extends Expression {
 }
 
 object Condition {
-  case class WrappedExpression(expression: Expression) extends Condition {
+  case class WrappedExpression(expression: Expression) extends Condition with UnaryExpression {
     require(expression.dataType == FundamentalType.BoolType)
   }
 
-  case class Equals(left: Expression, right: Expression) extends Condition
+  case class Equals(left: Expression, right: Expression) extends Condition with BinaryExpression
 
-  case class Not(predicate: Condition) extends Condition
+  case class Not(predicate: Condition) extends Condition with UnaryExpression {
+    def expression: Expression = predicate
+  }
 
-  case class And(left: Expression, right: Expression) extends Condition
+  case class And(left: Condition, right: Condition) extends Condition with BinaryExpression
 
-  case class Or(left: Expression, right: Expression) extends Condition
+  case class Or(left: Condition, right: Condition) extends Condition with BinaryExpression
 
-  case class IsNull(expression: Expression) extends Condition
+  case class IsNull(expression: Expression) extends Condition with UnaryExpression
 }

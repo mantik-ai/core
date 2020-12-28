@@ -16,8 +16,8 @@ class AutoSelectSpec extends TestBase {
 
   "autoSelect" should "select single renamings" in {
     val s = AutoSelect.autoSelect(type1, type2).right.getOrElse(fail)
-    s.inputType shouldBe type1
-    s.resultingType shouldBe type2
+    s.inputTabularType shouldBe type1
+    s.resultingTabularType shouldBe type2
     s.selection shouldBe empty
     s.projections shouldBe Some(
       List(SelectProjection("y", ColumnExpression(0, FundamentalType.Int32)))
@@ -36,9 +36,9 @@ class AutoSelectSpec extends TestBase {
       "a" -> FundamentalType.StringType
     )
     val s = AutoSelect.autoSelect(type3, type4).right.getOrElse(fail)
-    s.inputType shouldBe type3
+    s.inputTabularType shouldBe type3
     s.selection shouldBe empty
-    s.resultingType shouldBe type4
+    s.resultingTabularType shouldBe type4
     s.projections shouldBe Some(
       List(
         SelectProjection("b", ColumnExpression(2, FundamentalType.Int32)),
@@ -58,9 +58,9 @@ class AutoSelectSpec extends TestBase {
       "a" -> FundamentalType.StringType
     )
     val s = AutoSelect.autoSelect(type3, type4).right.getOrElse(fail)
-    s.inputType shouldBe type3
+    s.inputTabularType shouldBe type3
     s.selection shouldBe empty
-    s.resultingType shouldBe type4
+    s.resultingTabularType shouldBe type4
     s.projections shouldBe Some(
       List(
         SelectProjection("b", ColumnExpression(1, FundamentalType.Int32)),
@@ -78,9 +78,9 @@ class AutoSelectSpec extends TestBase {
       "a" -> FundamentalType.Int64
     )
     val s = AutoSelect.autoSelect(type3, type4).right.getOrElse(fail)
-    s.inputType shouldBe type3
+    s.inputTabularType shouldBe type3
     s.selection shouldBe empty
-    s.resultingType shouldBe type4
+    s.resultingTabularType shouldBe type4
     s.projections shouldBe Some(
       List(
         SelectProjection("a", CastExpression(ColumnExpression(0, FundamentalType.Int32), FundamentalType.Int64))
@@ -121,12 +121,12 @@ class AutoSelectSpec extends TestBase {
     )
     // Note: this conversions is not easily writeable with SQL
     val s = AutoSelect.autoSelect(type3, type4).forceRight
-    s.resultingType shouldBe type4
+    s.resultingTabularType shouldBe type4
 
     val selectStatement = s.toStatement
     withClue(s"Parsing select statement ${selectStatement} should yield same type.") {
       val parsedAgain = Select.parse(type3, s.toStatement).forceRight
-      parsedAgain.resultingType shouldBe type4
+      parsedAgain.resultingTabularType shouldBe type4
     }
   }
 
@@ -139,12 +139,12 @@ class AutoSelectSpec extends TestBase {
     )
     // Note: this conversions is not easily writeable with SQL
     val s = AutoSelect.autoSelect(type3, type4).forceRight
-    s.resultingType shouldBe type4
+    s.resultingTabularType shouldBe type4
 
     val selectStatement = s.toStatement
     withClue(s"Parsing select statement ${selectStatement} should yield same type.") {
       val parsedAgain = Select.parse(type3, s.toStatement).forceRight
-      parsedAgain.resultingType shouldBe type4
+      parsedAgain.resultingTabularType shouldBe type4
     }
   }
 

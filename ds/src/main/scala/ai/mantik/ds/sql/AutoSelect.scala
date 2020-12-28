@@ -30,7 +30,7 @@ object AutoSelect {
         case (toColumn, targetType) =>
           val fromColumn = columnMapping(toColumn)
           buildColumnSelector(from, fromColumn, toColumn, targetType)
-      }.toList.sequence
+      }.toVector.sequence
 
       maybeProjections.map { projections =>
         Select(AnonymousInput(from), projections = Some(projections))

@@ -37,6 +37,6 @@ private[planner] object ResolvedPipelineStep {
   }
 
   case class SelectStep(select: Select) extends ResolvedPipelineStep {
-    override def functionType: FunctionType = FunctionType(select.inputType, select.resultingType)
+    override def functionType: FunctionType = FunctionType(select.inputTabularType, select.resultingTabularType)
   }
 }
