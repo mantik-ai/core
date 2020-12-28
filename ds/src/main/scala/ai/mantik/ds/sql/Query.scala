@@ -6,6 +6,7 @@ import ai.mantik.ds.element.{ Bundle, TabularBundle }
 import ai.mantik.ds.sql.builder.{ JoinBuilder, QueryBuilder, SelectBuilder }
 import ai.mantik.ds.sql.run.{ Compiler, TableGeneratorProgramRunner }
 import cats.implicits._
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.ListMap
 import scala.util.control.NonFatal
@@ -27,7 +28,9 @@ sealed trait Query {
         val runner = new TableGeneratorProgramRunner(tabularGenerator)
         Right(runner.run(inputs.toVector, resultingTabularType))
       } catch {
-        case NonFatal(e) => Left(s"Query Executon failed ${e}")
+        case NonFatal(e) =>
+          Query.logger.warn(s"Could not execute query", e)
+          Left(s"Query Execution failed ${e}")
       }
     } yield result
   }
@@ -56,6 +59,7 @@ sealed trait Query {
 }
 
 object Query {
+  private val logger = LoggerFactory.getLogger(getClass)
   def parse(statement: String)(implicit context: SqlContext): Either[String, Query] = {
     QueryBuilder.buildQuery(statement)
   }
@@ -177,6 +181,7 @@ object JoinType {
 
   case object Outer extends JoinType("FULL OUTER")
 
+  val All: Seq[JoinType] = Seq(Inner, Left, Right, Outer)
 }
 
 /**

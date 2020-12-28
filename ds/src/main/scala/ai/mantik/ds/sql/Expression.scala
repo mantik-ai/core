@@ -97,4 +97,9 @@ object Condition {
   case class Or(left: Condition, right: Condition) extends Condition with BinaryExpression
 
   case class IsNull(expression: Expression) extends Condition with UnaryExpression
+
+  /** A Bool value as Condition. */
+  def boolValue(x: Boolean): Condition = WrappedExpression(
+    ConstantExpression(x)
+  )
 }

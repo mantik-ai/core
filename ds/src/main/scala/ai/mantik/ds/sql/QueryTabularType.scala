@@ -45,6 +45,9 @@ case class QueryTabularType(
     }
   }
 
+  /** Returns the number of columns. */
+  def size: Int = columns.size
+
   /** Append new columns */
   def ++(queryTabularType: QueryTabularType): QueryTabularType = {
     QueryTabularType(columns ++ queryTabularType.columns)
@@ -60,7 +63,7 @@ case class QueryTabularType(
 
   /** Shadow name/alias duplicates */
   @throws[FeatureNotSupported]("If it can't find a new shadowed name")
-  def shadow(fromLeft: Boolean = true): QueryTabularType = {
+  def shadow(fromLeft: Boolean = true, ignoreAlias: Boolean = false): QueryTabularType = {
     if (!fromLeft) {
       return QueryTabularType(
         QueryTabularType(columns.reverse)
@@ -75,17 +78,28 @@ case class QueryTabularType(
 
     val MaxTrials = 100
 
+    def key(column: QueryColumn): (String, Option[String]) = {
+      if (ignoreAlias) {
+        (column.name, None)
+      } else {
+        (column.name, column.alias)
+      }
+    }
+
     columns.foreach { column =>
-      val newName = if (existingKeys.contains((column.name, column.alias))) {
-        (0 until MaxTrials).map(column.name + _).find { x => !existingKeys.contains((x, column.alias)) } match {
+      val newName = if (existingKeys.contains(key(column))) {
+        (0 until MaxTrials).map(column.name + _).find { x =>
+          !existingKeys.contains(key(column.copy(name = x)))
+        } match {
           case None     => throw new FeatureNotSupported(s"Could not find a shadow name for ${column.name}, tried ${MaxTrials}")
           case Some(ok) => ok
         }
       } else {
         column.name
       }
-      existingKeys += ((newName, column.alias))
-      builder += column.copy(name = newName)
+      val using = column.copy(name = newName)
+      existingKeys += key(using)
+      builder += using
     }
     QueryTabularType(builder.result())
   }
@@ -112,7 +126,7 @@ case class QueryTabularType(
 
   /** Force conversion to tabular type, columns may be renamed. */
   def forceToTabularType: TabularData = {
-    shadow().toTabularType match {
+    shadow(ignoreAlias = true).toTabularType match {
       case Left(error) =>
         // This should not happen
         throw new IllegalStateException(s"Could not create tabular type, even after shadowing: ${error}")

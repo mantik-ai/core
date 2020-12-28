@@ -8,7 +8,7 @@ import ai.mantik.ds.sql.parser.AST
 import ai.mantik.ds.sql.parser.AST.NullNode
 
 /** Convert AST Expressions into Expressions. */
-private[builder] object ExpressionBuilder {
+private[sql] object ExpressionBuilder {
 
   /** Convert an AST Expression into a Expression. */
   def convertExpression(input: QueryTabularType, node: AST.ExpressionNode): Either[String, Expression] = {

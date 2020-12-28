@@ -10,7 +10,7 @@ import ai.mantik.ds.sql.parser.AST
 import scala.util.control.NonFatal
 
 /** Converts Casts and other type related stuff */
-private[builder] object CastBuilder {
+private[sql] object CastBuilder {
 
   /** Returns the data typ,e which ban be used for comparing left and right. */
   def comparisonType(left: Expression, right: Expression): Either[String, DataType] = {
