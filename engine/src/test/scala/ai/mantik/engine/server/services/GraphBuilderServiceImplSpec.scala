@@ -9,7 +9,7 @@ import ai.mantik.{ elements, planner }
 import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, QueryRequest, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
 import ai.mantik.engine.testutil.{ DummyComponents, TestArtifacts, TestBaseWithSessions }
@@ -311,6 +311,26 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     ))
     val underlying2 = session1.getItemAs[DataSet](union2.itemId)
     underlying2 shouldBe underlyingDs2.autoUnion(underlyingDs3, all = true).withItemId(underlying2.itemId)
+  }
+
+  "sqlQuery" should "work" in new Env {
+    val ds2 = await(graphBuilder.get(GetRequest(session1.id, dataset2.mantikId.toString)))
+    val underlyingDs2 = session1.getItemAs[DataSet](ds2.itemId)
+
+    val ds3 = await(graphBuilder.get(GetRequest(session1.id, dataset3.mantikId.toString)))
+    val underlyingDs3 = session1.getItemAs[DataSet](ds3.itemId)
+
+    // Note: this statement doesn't make much sense
+    val statement = "SELECT l.x, r.y FROM $0 AS l LEFT JOIN $1 AS r ON l.x = r.y"
+    val joined = await(graphBuilder.sqlQuery(
+      QueryRequest(
+        sessionId = session1.id,
+        statement = statement,
+        datasetIds = Seq(ds2.itemId, ds3.itemId)
+      )
+    ))
+    val underlying = session1.getItemAs[DataSet](joined.itemId)
+    underlying shouldBe DataSet.query(statement, underlyingDs2, underlyingDs3).withItemId(underlying.itemId)
   }
 
   trait EnvForPipeline extends PlainEnv {

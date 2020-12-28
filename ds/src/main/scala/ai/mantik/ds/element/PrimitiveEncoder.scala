@@ -15,6 +15,8 @@ trait PrimitiveEncoder[T <: FundamentalType] {
 
   def wrap(s: ScalaType): Primitive[ScalaType]
 
+  def ordering: Ordering[ScalaType]
+
   def unwrap(p: Primitive[_]): ScalaType = p.asInstanceOf[Primitive[ScalaType]].x
 
   /** Try to auto convert into the matching type. */
@@ -28,10 +30,12 @@ object PrimitiveEncoder {
     type ScalaType = B0
   }
 
-  private def makePrimitiveEncoder[T <: FundamentalType, ST](convertPf: PartialFunction[Any, ST]) = new PrimitiveEncoder[T] {
+  private def makePrimitiveEncoder[T <: FundamentalType, ST](convertPf: PartialFunction[Any, ST])(implicit ord: Ordering[ST]) = new PrimitiveEncoder[T] {
     override final type ScalaType = ST
 
     override def wrap(s: ScalaType): Primitive[ScalaType] = Primitive(s)
+
+    override def ordering: Ordering[ST] = ord
 
     val convert = convertPf
   }

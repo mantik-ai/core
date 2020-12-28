@@ -1,5 +1,6 @@
 package ai.mantik.ds.sql.builder
 
+import ai.mantik.ds.TabularData
 import ai.mantik.ds.sql._
 import ai.mantik.ds.sql.parser.AST
 import cats.implicits._
@@ -14,6 +15,19 @@ private[sql] object JoinBuilder {
       innerModel = innerTabularData(leftQuery, rightQuery, joinType)
       condition <- buildJoinCondition(leftQuery, rightQuery, joinType, innerModel, parsed.condition)
     } yield Join(leftQuery, rightQuery, joinType, condition)
+  }
+
+  def buildAnonymousUsing(left: TabularData, right: TabularData, using: Seq[String], joinType: JoinType): Either[String, Join] = {
+    val condition = AST.JoinCondition.Using(
+      using.map { name =>
+        AST.IdentifierNode(name)
+      }.toVector
+    )
+    val leftQuery = AnonymousInput(left, 0)
+    val rightQuery = AnonymousInput(right, 1)
+    buildUsingCondition(leftQuery, rightQuery, joinType, condition).map { condition =>
+      Join(leftQuery, rightQuery, joinType = joinType, condition = condition)
+    }
   }
 
   private def convertJoinType(joinType: AST.JoinType): JoinType = {

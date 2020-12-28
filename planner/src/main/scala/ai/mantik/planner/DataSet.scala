@@ -3,7 +3,7 @@ package ai.mantik.planner
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
-import ai.mantik.ds.sql.{ AutoSelect, AutoUnion, Select }
+import ai.mantik.ds.sql.{ AutoSelect, AutoUnion, Join, JoinType, Query, Select, SqlContext }
 import ai.mantik.elements
 import ai.mantik.elements.{ DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.repository.Bridge
@@ -31,12 +31,7 @@ case class DataSet(
    * @throws IllegalArgumentException on illegal selects.
    */
   def select(statement: String): DataSet = {
-    val tabularData = dataType match {
-      case tabularData: TabularData => tabularData
-      case other =>
-        throw new FeatureNotSupported("Select statements are only supported for tabular data")
-    }
-    val parsedSelect = Select.parse(tabularData, statement) match {
+    val parsedSelect = Select.parse(forceDataTypeTabular(), statement) match {
       case Left(error) => throw new IllegalArgumentException(s"Could not parse select ${error}")
       case Right(ok)   => ok
     }
@@ -58,6 +53,33 @@ case class DataSet(
     DataSet.natural(Source.constructed(payloadSource), select.resultingTabularType)
   }
 
+  @throws[FeatureNotSupported]("If data type is not tabular")
+  private[planner] def forceDataTypeTabular(): TabularData = {
+    dataType match {
+      case td: TabularData => td
+      case _               => throw new FeatureNotSupported(s"Operation only supported for tabular data")
+    }
+  }
+
+  /** Performs inner join with other dataset */
+  def join(other: DataSet, columns: Seq[String]): DataSet = {
+    join(other, columns, JoinType.Inner)
+  }
+
+  /** Performs join with other dataset. */
+  def join(other: DataSet, columns: Seq[String], joinType: JoinType): DataSet = {
+    val joinOp = Join.anonymousFromUsing(forceDataTypeTabular(), other.forceDataTypeTabular(), columns, joinType) match {
+      case Left(error) => throw new IllegalArgumentException(s"Illegal join ${error}")
+      case Right(ok)   => ok
+    }
+    join(other, joinOp)
+  }
+
+  /** Performs a custom join with other dataset */
+  private def join(other: DataSet, join: Join): DataSet = {
+    DataSet.query(join, Vector(this, other))
+  }
+
   /**
    * Auto UNION this and another data set
    * @param other the other dataset
@@ -68,13 +90,7 @@ case class DataSet(
       case Left(error) => throw new IllegalArgumentException(s"Could not generate auto union ${error}")
       case Right(ok)   => ok
     }
-    val payloadSource = PayloadSource.OperationResult(
-      Operation.SqlQueryOperation(
-        autoUnion,
-        Vector(this, other)
-      )
-    )
-    DataSet.natural(Source.constructed(payloadSource), autoUnion.resultingTabularType)
+    DataSet.query(autoUnion, Vector(this, other))
   }
 
   /**
@@ -126,6 +142,50 @@ object DataSet {
 
   def apply(source: Source, mantikHeader: MantikHeader[DataSetDefinition], bridge: Bridge): DataSet = {
     DataSet(MantikItemCore(source, mantikHeader, bridge = bridge))
+  }
+
+  /**
+   * Execute an SQL Query on Datasets.
+   * @param query SQL Query
+   * @param arguments arguments to be used within SQL query. They are accessible as $0, $1, ...
+   */
+  def query(
+    statement: String,
+    arguments: DataSet*
+  ): DataSet = {
+    implicit val sqlContext = SqlContext(arguments.map { ds =>
+      ds.forceDataTypeTabular()
+    }.toVector)
+    val parsedQuery = Query.parse(statement) match {
+      case Left(error) => throw new IllegalArgumentException(s"Could not parse query ${error}")
+      case Right(ok)   => ok
+    }
+    query(parsedQuery, arguments.toVector)
+  }
+
+  private def query(
+    query: Query,
+    arguments: Vector[DataSet]
+  ): DataSet = {
+    val inputs = query.figureOutInputPorts.getOrElse {
+      throw new IllegalArgumentException(s"Illegal input ports")
+    }
+    if (inputs.length != arguments.length) {
+      throw new IllegalArgumentException(s"Wrong count of inputs, expected ${inputs.length}, got ${arguments.length}")
+    }
+    inputs.zip(arguments).foreach {
+      case (input, arg) =>
+        if (input != arg.forceDataTypeTabular()) {
+          throw new IllegalArgumentException(s"Bad input type, expected ${input}, got ${arg.forceDataTypeTabular()}")
+        }
+    }
+    val payloadSource = PayloadSource.OperationResult(
+      Operation.SqlQueryOperation(
+        query,
+        arguments
+      )
+    )
+    DataSet.natural(Source.constructed(payloadSource), query.resultingTabularType)
   }
 
   implicit val encoder: Encoder[DataSet] = MantikItem.encoder.contramap(x => x: MantikItem)

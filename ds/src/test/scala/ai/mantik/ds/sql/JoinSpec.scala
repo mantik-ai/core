@@ -8,7 +8,7 @@ import ai.mantik.testutils.{ AkkaSupport, TestBase }
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 
-class JoinSpec extends TestBase with AkkaSupport {
+class JoinSpec extends TestBase {
 
   "resultingTabularType" should "work" in {
     val left = AnonymousInput(
@@ -75,37 +75,13 @@ class JoinSpec extends TestBase with AkkaSupport {
 
   private implicit val sqlContext = SqlContext(Vector(example1.model, example2.model, example3.model))
 
-  /**
-   * Sort a bundle by their message pack serialization.
-   * Note: this is a hack with horrible performance
-   */
-  private def sortBundle(tabularBundle: TabularBundle): TabularBundle = {
-    val rows = collectSource(tabularBundle.encode(false))
-    val sortedRows = rows.sorted
-    val back = await(Source(sortedRows.toVector).runWith(Bundle.fromStreamWithoutHeader(tabularBundle.model)))
-    back.asInstanceOf[TabularBundle]
-  }
-
-  private implicit val byteStringOrdering: Ordering[ByteString] = Ordering.fromLessThan { (left, right) =>
-    (left.length, right.length) match {
-      case (a, b) if a < b => true
-      case (a, b) if a > b => false
-      case (_, _) => left.zipWithIndex.collectFirst {
-        case (byte, n) if byte != right(n) => (byte, right(n))
-      } match {
-        case None                        => false
-        case Some((leftByte, rightByte)) => leftByte < rightByte
-      }
-    }
-  }
-
   private def joinTest(sql: String)(expected: TabularBundle): Unit = {
     sql should "work" in {
       val built = Query.parse(sql).forceRight
       val result = built.run(example1, example2, example3).forceRight
       result.model shouldBe expected.model
-      val orderedGot = sortBundle(result)
-      val orderedExpected = sortBundle(expected)
+      val orderedGot = result.sorted
+      val orderedExpected = expected.sorted
       orderedGot shouldBe orderedExpected
     }
   }

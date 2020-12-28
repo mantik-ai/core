@@ -6,15 +6,15 @@ import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, QueryRequest, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ Session, SessionManager }
 import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, BuiltInItems, DataSet, MantikItem, MantikItemState, Pipeline, TrainableAlgorithm }
 import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
-import javax.inject.Inject
 
+import javax.inject.Inject
 import scala.concurrent.{ ExecutionContext, Future }
 
 class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateManager: MantikItemStateManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService with RpcServiceBase {
@@ -113,6 +113,18 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
     } yield {
       val unionized = dataset1.autoUnion(dataset2, all = request.all)
       placeInGraph(session, unionized)
+    }
+  }
+
+  override def sqlQuery(request: QueryRequest): Future[NodeResponse] = handleErrors {
+    for {
+      session <- sessionManager.get(request.sessionId)
+      datasets = request.datasetIds.map { datasetId =>
+        session.getItemAs[DataSet](datasetId)
+      }
+    } yield {
+      val result = DataSet.query(request.statement, datasets: _*)
+      placeInGraph(session, result)
     }
   }
 
