@@ -1,7 +1,7 @@
 package ai.mantik.planner.integration
 
 import ai.mantik.ds.TabularData
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{Bundle, TabularBundle}
 import ai.mantik.ds.sql.Select
 import ai.mantik.planner.{Algorithm, DataSet, Pipeline}
 
@@ -20,13 +20,13 @@ class SimplePipelineSpec extends IntegrationTestBase with Samples {
       Left(toStringConversion)
     )
 
-    val input = Bundle.buildColumnWise
+    val input = TabularBundle.buildColumnWise
       .withPrimitives("x", 1.0, 2.0)
       .result
 
     val inputDataSet = DataSet.literal(input)
 
-    val expectedOutput = Bundle.buildColumnWise
+    val expectedOutput = TabularBundle.buildColumnWise
       .withPrimitives("z", 2, 4)
       .result
   }

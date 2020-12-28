@@ -33,7 +33,7 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
       val response = await(graphExecutor.fetchDataSet(
         FetchItemRequest(session1.id, dataset1Id, encoding)
       ))
-      val bundleDecoded = await(Converters.decodeBundle(response.bundle.get))
+      val bundleDecoded = Converters.decodeBundle(response.bundle.get)
       bundleDecoded shouldBe lit
       components.lastPlan shouldBe components.planner.convert(dataset.fetch)
     }

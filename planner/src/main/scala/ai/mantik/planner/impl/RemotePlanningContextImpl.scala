@@ -2,11 +2,11 @@ package ai.mantik.planner.impl
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{ Files, Path }
-
 import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.helper.ZipUtils
+import ai.mantik.elements.errors.MantikAsyncException
 import ai.mantik.elements.{ MantikId, NamedMantikId }
 import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.PlanningContextService
 import ai.mantik.planner.protos.planning_context.{ AddLocalMantikItemRequest, ExecuteActionRequest, ExecuteActionResponse, LoadItemRequest, StateRequest }
@@ -19,11 +19,13 @@ import io.circe.{ Decoder, Json }
 import io.circe.syntax._
 import io.circe.parser
 import io.grpc.stub.StreamObserver
+
 import javax.inject.Inject
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration.{ Duration, _ }
 import scala.concurrent.{ Await, Future }
+import scala.util.control.NonFatal
 
 /** Implements a [[PlanningContext]] on top of a gRpc [[PlanningContextService]] */
 class RemotePlanningContextImpl @Inject() (planningContext: PlanningContextService)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanningContext {
@@ -143,7 +145,11 @@ class RemotePlanningContextImpl @Inject() (planningContext: PlanningContextServi
   }
 
   private def await[T](future: Future[T]): T = {
-    Await.result(future, Duration.Inf)
+    try {
+      Await.result(future, Duration.Inf)
+    } catch {
+      case NonFatal(e) => throw new MantikAsyncException(e)
+    }
   }
 
 }

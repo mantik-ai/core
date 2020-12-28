@@ -1,8 +1,8 @@
 package com.example.examples
 
 import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.element.Bundle
-import ai.mantik.planner.{ PlanningContext, DataSet }
+import ai.mantik.ds.element.{ Bundle, TabularBundle }
+import ai.mantik.planner.{ DataSet, PlanningContext }
 
 object ShowDataSet extends ExampleBase {
 
@@ -10,7 +10,7 @@ object ShowDataSet extends ExampleBase {
     val id = "sample1"
 
     val ds = DataSet.literal(
-      Bundle.build(
+      TabularBundle.build(
         TabularData(
           "x" -> FundamentalType.Int32,
           "y" -> FundamentalType.StringType

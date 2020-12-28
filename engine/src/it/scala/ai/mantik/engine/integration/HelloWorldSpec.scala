@@ -1,8 +1,7 @@
 package ai.mantik.engine.integration
 
 import java.nio.file.Paths
-
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{Bundle, TabularBundle}
 import ai.mantik.elements.errors.{ErrorCodes, MantikException}
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.{ApplyRequest, GetRequest, LiteralRequest}
@@ -31,10 +30,10 @@ class HelloWorldSpec extends IntegrationTestBase {
   it should "support a simple calculation" in {
     val session = engineClient.sessionService.createSession(CreateSessionRequest())
     val algorithm = engineClient.graphBuilder.get(GetRequest(sessionId = session.sessionId, name = "double_multiply"))
-    val myBundle = ai.mantik.ds.element.Bundle.buildColumnWise
+    val myBundle = ai.mantik.ds.element.TabularBundle.buildColumnWise
       .withPrimitives("x", 1.0, 2.0)
       .result
-    val encodeBundle = await(Converters.encodeBundle(myBundle, BundleEncoding.ENCODING_JSON))
+    val encodeBundle = Converters.encodeBundle(myBundle, BundleEncoding.ENCODING_JSON)
     val dataset = engineClient.graphBuilder.literal(
       LiteralRequest(
         sessionId = session.sessionId,
@@ -53,8 +52,8 @@ class HelloWorldSpec extends IntegrationTestBase {
         encoding = BundleEncoding.ENCODING_JSON
       )
     )
-    val decoded = await(Converters.decodeBundle(evaluated.bundle.get))
-    decoded shouldBe Bundle.buildColumnWise
+    val decoded = Converters.decodeBundle(evaluated.bundle.get)
+    decoded shouldBe TabularBundle.buildColumnWise
       .withPrimitives("y", 2.0, 4.0)
       .result
   }

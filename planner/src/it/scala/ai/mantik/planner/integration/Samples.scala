@@ -1,10 +1,9 @@
 package ai.mantik.planner.integration
 
 import java.nio.file.Paths
-
 import ai.mantik.ds.FundamentalType.Float64
 import ai.mantik.ds.Tensor
-import ai.mantik.ds.element.{Bundle, TensorElement}
+import ai.mantik.ds.element.{Bundle, TabularBundle, TensorElement}
 import ai.mantik.planner.DataSet
 import org.scalatest.BeforeAndAfterAll
 
@@ -49,7 +48,7 @@ trait Samples extends BeforeAndAfterAll {
     private def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 
     val learningData = DataSet.literal(
-      Bundle.buildColumnWise.withColumn(
+      TabularBundle.buildColumnWise.withColumn(
         "coordinates", Tensor(componentType = Float64, shape = List(2)),
         IndexedSeq(
           makeTensor(1, 1),

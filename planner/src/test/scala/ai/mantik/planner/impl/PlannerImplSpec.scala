@@ -1,6 +1,6 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{ Bundle, TabularBundle }
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.elements.{ ItemId, NamedMantikId }
 import ai.mantik.planner._
@@ -38,7 +38,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     }
   }
 
-  private val lit = Bundle.build(
+  private val lit = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32
     )

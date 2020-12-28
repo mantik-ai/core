@@ -2,10 +2,9 @@ package com.example.examples
 
 import java.io.File
 import java.nio.file.Paths
-
 import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.element.Bundle
-import ai.mantik.planner.{ PlanningContext, DataSet }
+import ai.mantik.ds.element.{ Bundle, TabularBundle }
+import ai.mantik.planner.{ DataSet, PlanningContext }
 
 object DataSetTransformation extends ExampleBase {
 
@@ -16,7 +15,7 @@ object DataSetTransformation extends ExampleBase {
     context.pushLocalMantikItem(sampleFile)
 
     val dataset = DataSet.literal(
-      Bundle.build(
+      TabularBundle.build(
         TabularData(
           "x" -> FundamentalType.Float64
         )

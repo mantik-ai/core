@@ -2,8 +2,7 @@ package ai.mantik.planner.integration
 
 import java.net.InetSocketAddress
 import java.nio.file.{Path, Paths}
-
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{Bundle, TabularBundle}
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.elements.errors.{ErrorCodes, MantikException}
 import ai.mantik.planner.impl.{RemotePlanningContextImpl, RemotePlanningContextServerImpl}
@@ -53,13 +52,13 @@ abstract class PlanningContextSpecBase extends IntegrationTestBase  {
 
   "execute" should "execute an operation" in {
     val simpleInput = DataSet.literal(
-      Bundle.buildColumnWise.withPrimitives(
+      TabularBundle.buildColumnWise.withPrimitives(
         "x", 1, 2, 3
       ).result
     )
     val increased = simpleInput.select("select x + 1 as y")
     val got = planningContext.execute(increased.fetch)
-    got shouldBe Bundle.buildColumnWise.withPrimitives(
+    got shouldBe TabularBundle.buildColumnWise.withPrimitives(
       "y", 2, 3, 4
     ).result
   }

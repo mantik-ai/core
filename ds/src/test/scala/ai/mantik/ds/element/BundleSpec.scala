@@ -33,6 +33,12 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     val sink: Sink[ByteString, Future[Bundle]] = Bundle.fromStreamWithoutHeader(sampleBundle.model)
     val back = await(dataAsSource.runWith(sink))
     back shouldBe sampleBundle
+
+    val data2 = sampleBundle.encodeAsByteString(withHeader = false)
+    data2 shouldBe data.reduce(_ ++ _)
+
+    val back2 = Bundle.fromByteStringWithoutHeader(sampleBundle.model, data2)
+    back2 shouldBe sampleBundle
   }
 
   it should "be encodable into a stream with header and back" in {
@@ -41,10 +47,16 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     val sink: Sink[ByteString, Future[Bundle]] = Bundle.fromStreamWithHeader()
     val back = await(dataAsSource.runWith(sink))
     back shouldBe sampleBundle
+
+    val data2 = sampleBundle.encodeAsByteString(true)
+    data2 shouldBe data.reduce(_ ++ _)
+
+    val back2 = Bundle.fromByteStringWithHeader(data2)
+    back2 shouldBe sampleBundle
   }
 
   it should "be constructable" in {
-    val bundle = Bundle.build(
+    val bundle = TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "b" -> FundamentalType.BoolType,
@@ -76,7 +88,7 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
 
   it should "work with single element bundles" in {
     for ((dataType, sample) <- TypeSamples.fundamentalSamples) {
-      val bundle = Bundle.build(dataType, sample)
+      val bundle = SingleElementBundle(dataType, sample)
       val encoded = collectByteSource(bundle.encode(true))
       val decoded = await(Source.single(encoded).runWith(Bundle.fromStreamWithHeader()))
       decoded shouldBe bundle
@@ -84,7 +96,7 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
   }
 
   "fundamental" should "build fundamental bundles" in {
-    Bundle.fundamental(5) shouldBe Bundle.build(
+    Bundle.fundamental(5) shouldBe SingleElementBundle(
       FundamentalType.Int32, Primitive(5)
     )
   }
@@ -95,7 +107,7 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
   }
 
   "toString" should "render the bundle" in {
-    Bundle.build(FundamentalType.Int32, Primitive(3)).toString shouldBe "3"
+    SingleElementBundle(FundamentalType.Int32, Primitive(3)).toString shouldBe "3"
     withClue("It should not crash on illegal values") {
       val badBundle = SingleElementBundle(
         FundamentalType.Int32,
@@ -157,31 +169,31 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
   "sorted" should "work" in {
     Bundle.fundamental(100).sorted shouldBe Bundle.fundamental(100)
 
-    val simple = Bundle.build(
+    val simple = TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32
       )
     ).row(2).row(1).result
 
-    simple.sorted shouldBe Bundle.build(
+    simple.sorted shouldBe TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32
       )
     ).row(1).row(2).result
 
-    val complex = Bundle.buildColumnWise.withPrimitives(
+    val complex = TabularBundle.buildColumnWise.withPrimitives(
       "a", 3, 1, 1
     ).withPrimitives(
         "b", "0", "a", "b"
       ).result
 
-    val complexSorted = Bundle.buildColumnWise.withPrimitives(
+    val complexSorted = TabularBundle.buildColumnWise.withPrimitives(
       "a", 1, 1, 3
     ).withPrimitives(
         "b", "a", "b", "0"
       ).result
 
-    complex.sorted shouldBe Bundle.buildColumnWise.withPrimitives(
+    complex.sorted shouldBe TabularBundle.buildColumnWise.withPrimitives(
       "a", 1, 1, 3
     ).withPrimitives(
         "b", "a", "b", "0"

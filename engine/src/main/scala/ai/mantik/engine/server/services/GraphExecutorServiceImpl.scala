@@ -21,7 +21,7 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
       fetchAction = dataset.fetch
       fetchPlan = session.components.planner.convert(fetchAction)
       result <- session.components.planExecutor.execute(fetchPlan)
-      encodedBundle <- Converters.encodeBundle(result, request.encoding)
+      encodedBundle = Converters.encodeBundle(result, request.encoding)
     } yield {
       FetchItemResponse(
         Some(encodedBundle)

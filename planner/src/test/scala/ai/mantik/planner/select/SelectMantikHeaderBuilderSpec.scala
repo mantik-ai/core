@@ -1,14 +1,14 @@
 package ai.mantik.planner.select
 
 import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{ Bundle, TabularBundle }
 import ai.mantik.ds.sql.{ Query, Select, SqlContext }
 import ai.mantik.ds.sql.run.{ Compiler, SelectProgram, TableGeneratorProgram }
 import ai.mantik.planner.repository.Bridge
 import ai.mantik.testutils.TestBase
 
 class SelectMantikHeaderBuilderSpec extends TestBase {
-  val simpleBundle = Bundle.build(
+  val simpleBundle = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32,
       "y" -> FundamentalType.Int32,
