@@ -86,4 +86,31 @@ class MessagePackReaderWriterSpec extends TestBase with GlobalAkkaSupport with T
 
     await(futureData) shouldBe sampleBundle.rows
   }
+
+  "byte encoding" should "be possible to directly encode and decode bundles" in {
+    val readerWriter = new MessagePackReaderWriter(sampleBundle.model, true)
+    val bytes = readerWriter.encodeToByteString(sampleBundle.rows)
+    val decoded = readerWriter.decodeFromByteString(bytes)
+    decoded shouldBe sampleBundle
+
+    val otherDecoded = await(Source.single(bytes)
+      .via(readerWriter.decoder())
+      .runWith(Sink.seq))
+    otherDecoded shouldBe sampleBundle.rows
+
+    val directlyDecoded = MessagePackReaderWriter.autoFormatDecoderFromByteString(bytes)
+    directlyDecoded shouldBe sampleBundle
+  }
+
+  it should "work without header" in {
+    val readerWriter = new MessagePackReaderWriter(sampleBundle.model, false)
+    val bytes = readerWriter.encodeToByteString(sampleBundle.rows)
+    val decoded = readerWriter.decodeFromByteString(bytes)
+    decoded shouldBe sampleBundle
+
+    val otherDecoded = await(Source.single(bytes)
+      .via(readerWriter.decoder())
+      .runWith(Sink.seq))
+    otherDecoded shouldBe sampleBundle.rows
+  }
 }

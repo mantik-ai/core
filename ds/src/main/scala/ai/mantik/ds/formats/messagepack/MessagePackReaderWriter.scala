@@ -4,14 +4,16 @@ import ai.mantik.ds.DataType
 import ai.mantik.ds.Errors.{ EncodingException, FormatDefinitionException }
 import ai.mantik.ds.helper.akka.MessagePackFramer
 import ai.mantik.ds.helper.circe.MessagePackJsonSupport
-import ai.mantik.ds.element.RootElement
+import ai.mantik.ds.element.{ Bundle, RootElement }
 import akka.stream._
 import akka.stream.scaladsl.{ FileIO, Flow, Keep, Sink, Source }
 import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
 import akka.util.ByteString
-import org.msgpack.core.MessagePack
+import org.msgpack.core.{ MessagePack, MessageUnpacker }
 import io.circe.syntax._
+import org.msgpack.core.buffer.{ MessageBuffer, MessageBufferInput }
 
+import scala.collection.JavaConverters._
 import scala.concurrent.{ Future, Promise }
 
 /**
@@ -52,6 +54,32 @@ class MessagePackReaderWriter(dataType: DataType, withHeader: Boolean = true) {
     unpacked
   }
 
+  /** Decode directly from a bytestring. */
+  def decodeFromByteString(byteString: ByteString): Bundle = {
+    val input = new ByteStringMessageBufferInput(byteString)
+    val unpacker = MessagePack.newDefaultUnpacker(input)
+    decodeFromMessageUnpacker(unpacker)
+  }
+
+  /** Decode directly from Message Buffer input */
+  private[messagepack] def decodeFromMessageUnpacker(unpacker: MessageUnpacker): Bundle = {
+    if (withHeader) {
+      val json = MessagePackJsonSupport.readJsonToMessagePack(unpacker)
+      val header = json.as[Header].right.getOrElse {
+        throw new EncodingException(s"Could not decode header")
+      }
+      if (header.format != dataType) {
+        throw new EncodingException(s"Format mismatch, expected: ${dataType}, got ${header.format}")
+      }
+    }
+    val context = MessagePackAdapters.createRootElementContext(dataType)
+    val resultBuilder = Vector.newBuilder[RootElement]
+    while (unpacker.hasNext) {
+      resultBuilder += context.read(unpacker)
+    }
+    Bundle(dataType, resultBuilder.result())
+  }
+
   /** Generate a pure encoder for RootElemensts. */
   def encoder(): Flow[RootElement, ByteString, _] = {
     // Row Writer
@@ -71,6 +99,30 @@ class MessagePackReaderWriter(dataType: DataType, withHeader: Boolean = true) {
     // Prepending header
     val prepended: Flow[RootElement, ByteString, _] = naturalTabularRowWriter.prepend(Source(Vector(prefix)))
     prepended
+  }
+
+  /** Encode elements to bytestring. */
+  def encodeToByteString(elements: Seq[RootElement]): ByteString = {
+    val context = MessagePackAdapters.createRootElementContext(dataType)
+
+    val header = if (withHeader) {
+      MessagePackJsonSupport.toMessagePackBytes(Header(dataType).asJson)
+    } else {
+      ByteString.empty
+    }
+
+    val packer = MessagePack.newDefaultBufferPacker()
+    elements.foreach { element =>
+      context.write(packer, element)
+    }
+
+    val buffers = packer.toBufferList
+
+    var result = header
+    buffers.asScala.foreach { messageBuffer =>
+      result = result ++ ByteString.fromArrayUnsafe(messageBuffer.array(), 0, messageBuffer.size())
+    }
+    result
   }
 }
 
@@ -111,6 +163,18 @@ object MessagePackReaderWriter {
     }
 
     decoded.mapMaterializedValue(_ => result.future)
+  }
+
+  /** Decodes from a bytestring with type deduction from header */
+  def autoFormatDecoderFromByteString(byteString: ByteString): Bundle = {
+    val input = new ByteStringMessageBufferInput(byteString)
+    val unpacker = MessagePack.newDefaultUnpacker(input)
+    val json = MessagePackJsonSupport.readJsonToMessagePack(unpacker)
+    val header = json.as[Header].right.getOrElse {
+      throw new EncodingException(s"Could not decode header")
+    }
+    new MessagePackReaderWriter(header.format, withHeader = false)
+      .decodeFromMessageUnpacker(unpacker)
   }
 }
 

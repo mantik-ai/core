@@ -196,7 +196,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   } {
     "literal" should s"place a literal in the graph with ${encoding}" in new Env {
       val lit = Bundle.fundamental("Hello World")
-      val encoded = await(Converters.encodeBundle(lit, encoding))
+      val encoded = Converters.encodeBundle(lit, encoding)
       val element = await(
         graphBuilder.literal(
           LiteralRequest(
@@ -445,7 +445,7 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       itemId = algorithm.itemId,
       values = Seq(
         // type1: directly use JSON
-        MetaVariableValue("b", MetaVariableValue.Value.Bundle(await(Converters.encodeBundle(Bundle.fundamental(100), BundleEncoding.ENCODING_MSG_PACK)))
+        MetaVariableValue("b", MetaVariableValue.Value.Bundle(Converters.encodeBundle(Bundle.fundamental(100), BundleEncoding.ENCODING_MSG_PACK))
         )
       ))))
     val intChangedBack = session1.getItemAs[Algorithm](intChanged.itemId)
@@ -456,8 +456,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       itemId = algorithm.itemId,
       values = Seq(
         // type1: directly use JSON
-        MetaVariableValue("b", MetaVariableValue.Value.Bundle(await(Converters.encodeBundle(Bundle.fundamental(123), BundleEncoding.ENCODING_MSG_PACK)))),
-        MetaVariableValue("a", MetaVariableValue.Value.Bundle(await(Converters.encodeBundle(Bundle.fundamental("Bam"), BundleEncoding.ENCODING_JSON))))
+        MetaVariableValue("b", MetaVariableValue.Value.Bundle(Converters.encodeBundle(Bundle.fundamental(123), BundleEncoding.ENCODING_MSG_PACK))),
+        MetaVariableValue("a", MetaVariableValue.Value.Bundle(Converters.encodeBundle(Bundle.fundamental("Bam"), BundleEncoding.ENCODING_JSON)))
       ))))
     val bothChangedBack = session1.getItemAs[Algorithm](bothChanged.itemId)
     bothChangedBack.mantikHeader.metaJson.metaVariables.map { x => x.name -> x.value }.toMap shouldBe Map(

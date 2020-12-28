@@ -36,7 +36,7 @@ class MantikItemCodecSpec extends TestBase {
 
   "selects" should "be serialized" in {
     val bundle = DataSet.literal(
-      Bundle.build(
+      TabularBundle.build(
         TabularData(
           "x" -> FundamentalType.Int32
         )
@@ -74,7 +74,7 @@ class MantikItemCodecSpec extends TestBase {
   }
 
   it should "serialize random itemIds" in {
-    val bundle = Bundle.buildColumnWise
+    val bundle = TabularBundle.buildColumnWise
       .withPrimitives("x", 1, 2, 3)
       .withPrimitives("s", "Hello", "World", "How")
       .result

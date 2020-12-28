@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.FundamentalType.StringType
-import ai.mantik.ds.element.{ Bundle, Primitive }
+import ai.mantik.ds.element.{ Bundle, Primitive, SingleElementBundle, TabularBundle }
 import ai.mantik.ds.sql._
 import ai.mantik.ds.testutil.TestBase
 import ai.mantik.ds.{ FundamentalType, Nullable, TabularData }
@@ -86,7 +86,7 @@ class SelectBuilderSpec extends TestBase {
     got2 shouldBe Right(
       Select(AnonymousInput(emptyInput, 1), Some(
         Vector(
-          SelectProjection("$1", ConstantExpression(Bundle.build(FundamentalType.Int8, Primitive(3: Byte))))
+          SelectProjection("$1", ConstantExpression(SingleElementBundle(FundamentalType.Int8, Primitive(3: Byte))))
         )
       ))
     )
@@ -161,11 +161,11 @@ class SelectBuilderSpec extends TestBase {
       AnonymousInput(emptyInput),
       Some(
         Vector(
-          SelectProjection("$1", ConstantExpression(Bundle.build(FundamentalType.Int8, Primitive(1: Byte)))),
-          SelectProjection("$2", ConstantExpression(Bundle.build(FundamentalType.BoolType, Primitive(true)))),
-          SelectProjection("$3", ConstantExpression(Bundle.build(FundamentalType.BoolType, Primitive(false)))),
-          SelectProjection("$4", ConstantExpression(Bundle.build(FundamentalType.Float32, Primitive(2.5f)))),
-          SelectProjection("$5", ConstantExpression(Bundle.build(FundamentalType.VoidType, Primitive.unit)))
+          SelectProjection("$1", ConstantExpression(1: Byte)),
+          SelectProjection("$2", ConstantExpression(true)),
+          SelectProjection("$3", ConstantExpression(false)),
+          SelectProjection("$4", ConstantExpression(2.5f)),
+          SelectProjection("$5", ConstantExpression(SingleElementBundle(FundamentalType.VoidType, Primitive.unit)))
         )
       )
     )

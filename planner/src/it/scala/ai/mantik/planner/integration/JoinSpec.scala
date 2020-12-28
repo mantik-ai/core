@@ -6,19 +6,19 @@ import ai.mantik.ds.sql.{Join, JoinType, Query}
 import ai.mantik.planner.DataSet
 
 class JoinSpec extends IntegrationTestBase {
-  val sample1 = Bundle.buildColumnWise
+  val sample1 = TabularBundle.buildColumnWise
     .withPrimitives("x", 1, 2, 3)
     .withPrimitives("y", "a", "b", "c")
     .result
 
-  val sample2 = Bundle.buildColumnWise
+  val sample2 = TabularBundle.buildColumnWise
     .withPrimitives("x", 1, 2, 4)
     .withPrimitives("z", "Hello", "World", "!")
     .result
 
   it should "do a simple inner join" in {
     val result = DataSet.literal(sample1).join(DataSet.literal(sample2), Seq("x")).fetch.run()
-    result.sorted shouldBe Bundle.buildColumnWise
+    result.sorted shouldBe TabularBundle.buildColumnWise
       .withPrimitives("x", 1, 2)
       .withPrimitives("y", "a", "b")
       .withPrimitives("z", "Hello", "World")
@@ -28,7 +28,7 @@ class JoinSpec extends IntegrationTestBase {
 
   it should "do a simple left join" in {
     val result = DataSet.literal(sample1).join(DataSet.literal(sample2), Seq("x"), JoinType.Left).fetch.run()
-    result.sorted shouldBe Bundle.build(
+    result.sorted shouldBe TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.StringType,
@@ -43,7 +43,7 @@ class JoinSpec extends IntegrationTestBase {
 
   it should "do a simple right join" in {
     val result = DataSet.literal(sample1).join(DataSet.literal(sample2), Seq("x"), JoinType.Right).fetch.run()
-    result.sorted shouldBe Bundle.build(
+    result.sorted shouldBe TabularBundle.build(
       TabularData(
         "y" -> Nullable(FundamentalType.StringType),
         "x" -> FundamentalType.Int32,
@@ -78,7 +78,7 @@ class JoinSpec extends IntegrationTestBase {
     )
     val fetched = result.fetch.run()
 
-    fetched.sorted shouldBe Bundle.build(
+    fetched.sorted shouldBe TabularBundle.build(
       result.forceDataTypeTabular()
     ).row(1, "Hello")
       .row(2, "World")

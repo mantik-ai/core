@@ -1,7 +1,7 @@
 package ai.mantik.ds.formats.json
 
 import ai.mantik.ds.{ DataType, FundamentalType, Nullable, TabularData, Tensor, TypeSamples }
-import ai.mantik.ds.element.{ Bundle, Element, EmbeddedTabularElement, NullElement, Primitive, SingleElementBundle, SomeElement, TensorElement }
+import ai.mantik.ds.element.{ Bundle, Element, EmbeddedTabularElement, NullElement, Primitive, SingleElementBundle, SomeElement, TabularBundle, TensorElement }
 import ai.mantik.ds.testutil.TestBase
 import io.circe.Json
 import io.circe.syntax._
@@ -10,7 +10,7 @@ class JsonFormatSpec extends TestBase {
 
   val valueSample = Bundle.fundamental(100)
 
-  val tableSample = Bundle.build(
+  val tableSample = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32,
       "s" -> FundamentalType.StringType
@@ -85,7 +85,7 @@ class JsonFormatSpec extends TestBase {
     val deserialized = JsonFormat.deserializeBundle(serialized)
     deserialized shouldBe Right(single)
 
-    val tabular = Bundle.build(
+    val tabular = TabularBundle.build(
       TabularData(
         "x" -> t,
         "y" -> FundamentalType.StringType
@@ -127,7 +127,7 @@ class JsonFormatSpec extends TestBase {
     val decoded = JsonFormat.deserializeBundle(encoded)
     decoded shouldBe Right(tableSample) // it decodes not to a single bundle, as the encoding is the same.
 
-    val sample2 = Bundle.build(
+    val sample2 = TabularBundle.build(
       TabularData(
         "x" -> tableSample.model,
         "s" -> FundamentalType.StringType

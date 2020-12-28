@@ -52,7 +52,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
       algorithm = session.getItemAs[ApplicableMantikItem](request.algorithmId)
       dataset = session.getItemAs[DataSet](request.datasetId)
     } yield {
-      val result = algorithm.apply(dataset) // TODO: This can fail, catch me!
+      val result = algorithm.apply(dataset)
       placeInGraph(session, result)
     }
   }
@@ -60,7 +60,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
   override def literal(request: LiteralRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
-      bundle <- Converters.decodeBundle(request.bundle.getOrElse(
+      bundle = Converters.decodeBundle(request.bundle.getOrElse(
         throw new IllegalArgumentException("Missing Bundle")
       ))
     } yield {
@@ -160,16 +160,14 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
     for {
       session <- sessionManager.get(request.sessionId)
       item = session.getItemAs[MantikItem](request.itemId)
-      values <- decodeMetaVariableBundles(item, request)
+      values = decodeMetaVariableBundles(item, request)
       applied = item.withMetaValues(values: _*)
     } yield {
       placeInGraph(session, applied)
     }
   }
 
-  private def decodeMetaVariableBundles(item: MantikItem, request: SetMetaVariableRequest): Future[Seq[(String, SingleElementBundle)]] = {
-    import FastFuture._
-
+  private def decodeMetaVariableBundles(item: MantikItem, request: SetMetaVariableRequest): Seq[(String, SingleElementBundle)] = {
     def toSingle(bundle: Bundle): SingleElementBundle = {
       bundle match {
         case s: SingleElementBundle => s
@@ -177,7 +175,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
       }
     }
 
-    val decodeRequests: Seq[Future[(String, SingleElementBundle)]] = request.values.map { value =>
+    val decodeRequests: Seq[(String, SingleElementBundle)] = request.values.map { value =>
       val metaVariable = item.core.mantikHeader.metaJson.metaVariable(value.name).getOrElse {
         throw new IllegalArgumentException(s"Meta variable ${value.name} not found")
       }
@@ -187,15 +185,13 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
           val parsedMetaValue = JsonFormat.deserializeBundleValue(metaVariable.value.model, parsedJson).fold(error =>
             { throw new IllegalArgumentException("Could not parse value", error) }, { x => x }
           )
-          FastFuture.successful(toSingle(parsedMetaValue))
+          toSingle(parsedMetaValue)
         case b: MetaVariableValue.Value.Bundle =>
-          Converters.decodeBundle(b.value).fast.map(toSingle)
+          toSingle(Converters.decodeBundle(b.value))
         case _ => throw new IllegalArgumentException(s"Missing value for ${value.name}")
       }
-      decodedValue.fast.map { value =>
-        metaVariable.name -> value
-      }
+      metaVariable.name -> decodedValue
     }
-    Future.sequence(decodeRequests)
+    decodeRequests
   }
 }

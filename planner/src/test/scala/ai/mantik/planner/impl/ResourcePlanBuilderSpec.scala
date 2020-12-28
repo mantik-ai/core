@@ -42,7 +42,7 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
     }
   }
 
-  private val lit = Bundle.build(
+  private val lit = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32
     )
@@ -142,13 +142,13 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
   }
 
   it should "translate SQL Queries" in new Env {
-    val bundle1 = Bundle.build(
+    val bundle1 = TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32
       )
     ).row(1).result
     val ds1 = DataSet.literal(bundle1)
-    val bundle2 = Bundle.build(
+    val bundle2 = TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.StringType

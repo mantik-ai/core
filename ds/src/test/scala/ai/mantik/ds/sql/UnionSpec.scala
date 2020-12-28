@@ -38,7 +38,7 @@ class UnionSpec extends TestBase {
     parsedAgain shouldBe query
   }
 
-  val bundle1 = Bundle.build(
+  val bundle1 = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32,
       "y" -> FundamentalType.StringType,
@@ -47,7 +47,7 @@ class UnionSpec extends TestBase {
     .row(2, "World")
     .result
 
-  val bundle2 = Bundle.build(
+  val bundle2 = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32,
       "z" -> FundamentalType.Float32
@@ -56,7 +56,7 @@ class UnionSpec extends TestBase {
     .row(2, 6.12f)
     .result
 
-  val bundle3 = Bundle.build(
+  val bundle3 = TabularBundle.build(
     bundle1.model
   ).row(1, "Hello")
     .row(3, "Do you hear me")
@@ -67,7 +67,7 @@ class UnionSpec extends TestBase {
       AnonymousInput(bundle1.model),
       AnonymousInput(bundle3.model, 1),
       all = true
-    ).run(bundle1, bundle3).forceRight shouldBe Bundle.build(
+    ).run(bundle1, bundle3).forceRight shouldBe TabularBundle.build(
       bundle1.model
     ) .row(1, "Hello")
       .row(2, "World")
@@ -79,7 +79,7 @@ class UnionSpec extends TestBase {
       AnonymousInput(bundle1.model),
       AnonymousInput(bundle3.model, 1),
       all = false
-    ).run(bundle1, bundle3).forceRight shouldBe Bundle.build(
+    ).run(bundle1, bundle3).forceRight shouldBe TabularBundle.build(
       bundle1.model
     ) .row(1, "Hello")
       .row(2, "World")
@@ -88,7 +88,7 @@ class UnionSpec extends TestBase {
   }
 
   it should "run auto unions" in {
-    autoUnion(bundle1, bundle2, true) shouldBe Bundle.build(
+    autoUnion(bundle1, bundle2, true) shouldBe TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> Nullable(FundamentalType.StringType),
@@ -100,7 +100,7 @@ class UnionSpec extends TestBase {
       .row(2, NullElement, 6.12f)
       .result
 
-    autoUnion(bundle1, bundle1, true) shouldBe Bundle.build(
+    autoUnion(bundle1, bundle1, true) shouldBe TabularBundle.build(
       bundle1.model
     ).row(1, "Hello")
       .row(2, "World")
@@ -112,7 +112,7 @@ class UnionSpec extends TestBase {
   }
 
   it should "drop duplicates" in {
-    autoUnion(bundle1, bundle3, false) shouldBe Bundle.build(
+    autoUnion(bundle1, bundle3, false) shouldBe TabularBundle.build(
       bundle1.model
     ).row(1, "Hello")
       .row(2, "World")
@@ -121,7 +121,7 @@ class UnionSpec extends TestBase {
   }
 
   it should "run complex select based unions" in {
-    sql("SELECT y FROM $0 WHERE x = 1 UNION SELECT y FROM $1 WHERE x = 3", bundle1, bundle3) shouldBe Bundle.build(
+    sql("SELECT y FROM $0 WHERE x = 1 UNION SELECT y FROM $1 WHERE x = 3", bundle1, bundle3) shouldBe TabularBundle.build(
       TabularData(
         "y" -> FundamentalType.StringType
       )
@@ -131,7 +131,7 @@ class UnionSpec extends TestBase {
   }
 
   it should "allow multiple parameters" in {
-    sql("SELECT x FROM $0 UNION SELECT x FROM $1 UNION SELECT x FROM $2", bundle1, bundle2, bundle3) shouldBe Bundle.build(
+    sql("SELECT x FROM $0 UNION SELECT x FROM $1 UNION SELECT x FROM $2", bundle1, bundle2, bundle3) shouldBe TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32
       )

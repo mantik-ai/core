@@ -1,13 +1,13 @@
 package ai.mantik.planner.integration
 
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{Bundle, TabularBundle}
 import ai.mantik.planner.DataSet
 
 class SimpleAlgorithmSpec extends IntegrationTestBase with Samples {
 
   it should "calculate a transformation" in new EnvWithAlgorithm {
     val dataset = DataSet.literal(
-      Bundle.buildColumnWise
+      TabularBundle.buildColumnWise
         .withPrimitives("x", 1.0, 2.0)
         .result
     )
@@ -16,7 +16,7 @@ class SimpleAlgorithmSpec extends IntegrationTestBase with Samples {
       doubleMultiply(dataset).fetch
     )
 
-    result shouldBe Bundle.buildColumnWise
+    result shouldBe TabularBundle.buildColumnWise
       .withPrimitives("y", 2.0, 4.0)
       .result
   }

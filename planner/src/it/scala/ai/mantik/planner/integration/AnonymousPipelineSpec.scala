@@ -12,7 +12,7 @@ class AnonymousPipelineSpec extends IntegrationTestBase with Samples {
   it should "save and load a pipeline with anonymous elements in it" in new EnvWithBridges {
     context.pushLocalMantikItem(kmeansDirectory)
 
-    val learningData = Bundle.buildColumnWise
+    val learningData = TabularBundle.buildColumnWise
       .withColumn(
         "coordinates",
         Tensor(componentType = Float64, shape = List(2)),
@@ -34,7 +34,7 @@ class AnonymousPipelineSpec extends IntegrationTestBase with Samples {
     val pipeline = Pipeline.build(trained).tag("pipeline1234")
     context.execute(pipeline.save())
 
-    val sampleData = Bundle.build(learningData.model)
+    val sampleData = TabularBundle.build(learningData.model)
       .row(makeTensor(1.0, 2.0))
       .row(makeTensor(0.0, 3.0))
       .result

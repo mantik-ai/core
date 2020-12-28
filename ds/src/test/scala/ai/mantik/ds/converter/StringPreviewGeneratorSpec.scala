@@ -14,7 +14,7 @@ class StringPreviewGeneratorSpec extends TestBase {
     }
   }
 
-  val simpleBundle = Bundle.build(
+  val simpleBundle = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32,
       "y" -> FundamentalType.StringType
@@ -57,7 +57,7 @@ class StringPreviewGeneratorSpec extends TestBase {
 
   it should "render tensors" in {
     def test(shape: List[Int], flatValue: Seq[Int], expected: String, renderer: StringPreviewGenerator = StringPreviewGenerator()): Unit = {
-      val got = renderer.render(Bundle.build(Tensor(componentType = Int32, shape = shape), TensorElement(flatValue.toIndexedSeq)))
+      val got = renderer.render(SingleElementBundle(Tensor(componentType = Int32, shape = shape), TensorElement(flatValue.toIndexedSeq)))
       got shouldBe expected
     }
 
@@ -71,17 +71,17 @@ class StringPreviewGeneratorSpec extends TestBase {
 
   it should "fail on too-depth-tensors" in {
     val brutalShape = (1 to 100).toList
-    val bundle = Bundle.build(Tensor(componentType = Int32, shape = brutalShape), TensorElement(IndexedSeq.empty))
+    val bundle = SingleElementBundle(Tensor(componentType = Int32, shape = brutalShape), TensorElement(IndexedSeq.empty))
     // It won't even read the elements to avoid stack overflow
     StringPreviewGenerator(maxCellLength = 25).render(bundle) shouldBe "Complex Tensor [1,2,3,..."
   }
 
   it should "render images" in {
-    StringPreviewGenerator(maxCellLength = 15).render(Bundle.build(TypeSamples.image._1, TypeSamples.image._2)) shouldBe "Image(2x3, [..."
+    StringPreviewGenerator(maxCellLength = 15).render(SingleElementBundle(TypeSamples.image._1, TypeSamples.image._2)) shouldBe "Image(2x3, [..."
   }
 
   it should "render embedded tables" in {
-    val sample = Bundle.build(
+    val sample = TabularBundle.build(
       TabularData(
         "x" -> TabularData(
           "z" -> FundamentalType.Int32,

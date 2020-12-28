@@ -31,6 +31,11 @@ sealed trait Bundle {
     source.via(encoder)
   }
 
+  /** Encode as ByteString. */
+  def encodeAsByteString(withHeader: Boolean): ByteString = {
+    new MessagePackReaderWriter(model, withHeader).encodeToByteString(rows)
+  }
+
   /** Renders the Bundle. */
   def render(maxLines: Int = 20): String = {
     new StringPreviewGenerator(maxLines).render(this)
@@ -111,6 +116,16 @@ case class TabularBundle(
   }
 }
 
+object TabularBundle {
+
+  /** Builder for tabular data. */
+  def build(tabularData: TabularData): TabularBuilder = new TabularBuilder(tabularData)
+
+  /** Builder for tabular data (column wise). */
+  def buildColumnWise: ColumnWiseBundleBuilder = ColumnWiseBundleBuilder()
+
+}
+
 object Bundle {
 
   /**
@@ -147,6 +162,11 @@ object Bundle {
     }
   }
 
+  /** Deserializes the bundle from a stream without header (as ByteString) */
+  def fromByteStringWithoutHeader(dataType: DataType, bytes: ByteString): Bundle = {
+    new MessagePackReaderWriter(dataType, withHeader = false).decodeFromByteString(bytes)
+  }
+
   /** Deserializes from a Stream including Header. */
   def fromStreamWithHeader()(implicit ec: ExecutionContext): Sink[ByteString, Future[Bundle]] = {
     val decoder = MessagePackReaderWriter.autoFormatDecoder()
@@ -161,15 +181,9 @@ object Bundle {
     }
   }
 
-  /** Experimental builder for tabular data. */
-  def build(tabularData: TabularData): TabularBuilder = new TabularBuilder(tabularData)
-
-  def buildColumnWise: ColumnWiseBundleBuilder = ColumnWiseBundleBuilder()
-
-  /** Build a non-tabular value. */
-  def build(nonTabular: DataType, value: Element): SingleElementBundle = {
-    require(!nonTabular.isInstanceOf[TabularData], "Builder can only be used for nontabular data")
-    SingleElementBundle(nonTabular, value)
+  /** Deserializes from ByteString including header */
+  def fromByteStringWithHeader(bytes: ByteString): Bundle = {
+    MessagePackReaderWriter.autoFormatDecoderFromByteString(bytes)
   }
 
   /** Wrap a single primitive non tabular value. */
@@ -178,10 +192,10 @@ object Bundle {
   }
 
   /** The empty value. */
-  def void: SingleElementBundle = Bundle.build(FundamentalType.VoidType, Primitive.unit)
+  def void: SingleElementBundle = SingleElementBundle(FundamentalType.VoidType, Primitive.unit)
 
   /** A nullable void Null element value (for comparison with other nullable values) */
-  def voidNull: SingleElementBundle = Bundle.build(Nullable(FundamentalType.VoidType), NullElement)
+  def voidNull: SingleElementBundle = SingleElementBundle(Nullable(FundamentalType.VoidType), NullElement)
 
   /** JSON Encoder. */
   implicit val encoder: ObjectEncoder[Bundle] = JsonFormat

@@ -49,7 +49,7 @@ class JoinSpec extends TestBase {
     )
   }
 
-  val example1 = Bundle.build(
+  val example1 = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32,
       "y" -> FundamentalType.Int32
@@ -59,7 +59,7 @@ class JoinSpec extends TestBase {
     .row(3, 2)
     .result
 
-  val example2 = Bundle.build(
+  val example2 = TabularBundle.build(
     TabularData(
       "x" -> FundamentalType.Int32,
       "z" -> FundamentalType.StringType
@@ -69,7 +69,7 @@ class JoinSpec extends TestBase {
     .row(4, "Boo!")
     .result
 
-  val example3 = Bundle.build(
+  val example3 = TabularBundle.build(
     example2.model
   ).row(1, "Hello").row(4, "Boo").result
 
@@ -87,7 +87,7 @@ class JoinSpec extends TestBase {
   }
 
   joinTest("SELECT * FROM $0 JOIN $1 USING x") {
-    Bundle.build(
+    TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.Int32,
@@ -99,7 +99,7 @@ class JoinSpec extends TestBase {
   }
 
   joinTest("SELECT l.x, l.y, r.z FROM $0 AS l JOIN $1 AS r ON l.x = r.x") {
-    Bundle.build(
+    TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.Int32,
@@ -111,7 +111,7 @@ class JoinSpec extends TestBase {
   }
 
   joinTest("SELECT l.x, l.y, r.z FROM $0 AS l JOIN $1 AS r ON l.x = 1 AND l.x = r.x") {
-    Bundle.build(
+    TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.Int32,
@@ -122,7 +122,7 @@ class JoinSpec extends TestBase {
   }
 
   joinTest("SELECT l.x, l.y, r.z FROM $0 AS l JOIN $1 AS r ON r.x = 1 AND l.x = r.x") {
-    Bundle.build(
+    TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.Int32,
@@ -133,7 +133,7 @@ class JoinSpec extends TestBase {
   }
 
   joinTest("SELECT * FROM $0 LEFT JOIN $1 USING x") {
-    Bundle.build(
+    TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.Int32,
@@ -146,7 +146,7 @@ class JoinSpec extends TestBase {
   }
 
   joinTest("SELECT * FROM $0 RIGHT JOIN $1 USING x") {
-    Bundle.build(
+    TabularBundle.build(
       TabularData(
         "y" -> Nullable(FundamentalType.Int32),
         "x" -> FundamentalType.Int32,
@@ -159,7 +159,7 @@ class JoinSpec extends TestBase {
   }
 
   joinTest("SELECT * FROM $0 FULL OUTER JOIN $1 USING x") {
-    Bundle.build(
+    TabularBundle.build(
       TabularData(
         "x" -> Nullable(FundamentalType.Int32),
         "y" -> Nullable(FundamentalType.Int32),
@@ -173,7 +173,7 @@ class JoinSpec extends TestBase {
   }
 
   joinTest("SELECT * FROM $0 CROSS JOIN $2") {
-    Bundle.build(
+    TabularBundle.build(
       TabularData(
         "x" -> FundamentalType.Int32,
         "y" -> FundamentalType.Int32,

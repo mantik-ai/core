@@ -95,29 +95,23 @@ private[engine] object Converters {
 
   /**
    * Decodes a Bundle.
-   * TODO: Performance is bad, as this is done async, but doesn't need to be.
    */
-  def decodeBundle(protoBundle: ProtoBundle)(implicit ec: ExecutionContext, materializer: Materializer): Future[Bundle] = {
+  def decodeBundle(protoBundle: ProtoBundle)(implicit ec: ExecutionContext, materializer: Materializer): Bundle = {
     val dataType = protoBundle.dataType.map(decodeDataType).getOrElse {
       throw new IllegalArgumentException("Missing Datatype")
     }
     protoBundle.encoding match {
       case BundleEncoding.ENCODING_MSG_PACK =>
         val bytes = RpcConversions.decodeByteString(protoBundle.encoded)
-        val sink = Bundle.fromStreamWithoutHeader(dataType)
-        Source.single(bytes).runWith(sink)
+        Bundle.fromByteStringWithoutHeader(dataType, bytes)
       case BundleEncoding.ENCODING_JSON =>
         val decoded = for {
           json <- parser.parse(protoBundle.encoded.toStringUtf8)
           decoded <- JsonFormat.deserializeBundleValue(dataType, json)
         } yield decoded
         decoded match {
-          case Left(error) => Future.failed(
-            new IllegalArgumentException("Could not decode json", error)
-          )
-          case Right(ok) => Future.successful(
-            ok
-          )
+          case Left(error) => throw new IllegalArgumentException("Could not decode json", error)
+          case Right(ok)   => ok
         }
       case other =>
         throw new IllegalArgumentException(s"Unknown encoding ${other}")
@@ -126,34 +120,30 @@ private[engine] object Converters {
 
   /**
    * Encode a Bundle
-   * TODO: Performance is bad, as this is done async, but doesn't need to be.
    */
-  def encodeBundle(bundle: Bundle, encoding: BundleEncoding)(implicit ec: ExecutionContext, materializer: Materializer): Future[ProtoBundle] = {
+  def encodeBundle(bundle: Bundle, encoding: BundleEncoding)(implicit ec: ExecutionContext, materializer: Materializer): ProtoBundle = {
     encoding match {
       case BundleEncoding.ENCODING_MSG_PACK =>
         encodeBundleMsgPack(bundle)
       case BundleEncoding.ENCODING_JSON =>
         val jsonValue = JsonFormat.serializeBundleValue(bundle).noSpaces
-        Future.successful(
-          ProtoBundle(
-            Some(encodeDataType(bundle.model)),
-            encoding = BundleEncoding.ENCODING_JSON,
-            encoded = ProtoByteString.copyFrom(jsonValue, StandardCharsets.UTF_8)
-          )
+        ProtoBundle(
+          Some(encodeDataType(bundle.model)),
+          encoding = BundleEncoding.ENCODING_JSON,
+          encoded = ProtoByteString.copyFrom(jsonValue, StandardCharsets.UTF_8)
         )
       case other =>
         throw new IllegalArgumentException(s"Unknown encoding ${other}")
     }
   }
 
-  private def encodeBundleMsgPack(bundle: Bundle)(implicit ec: ExecutionContext, materializer: Materializer): Future[ProtoBundle] = {
-    bundle.encode(false).runWith(Sink.seq).map { byteBlobs =>
-      ProtoBundle(
-        Some(encodeDataType(bundle.model)),
-        encoding = BundleEncoding.ENCODING_MSG_PACK,
-        encoded = RpcConversions.encodeByteString(byteBlobs)
-      )
-    }
+  private def encodeBundleMsgPack(bundle: Bundle)(implicit ec: ExecutionContext, materializer: Materializer): ProtoBundle = {
+    val bytes = bundle.encodeAsByteString(false)
+    ProtoBundle(
+      Some(encodeDataType(bundle.model)),
+      encoding = BundleEncoding.ENCODING_MSG_PACK,
+      encoded = RpcConversions.encodeByteString(bytes)
+    )
   }
 
   def encodeDataType(dataType: DataType): ProtoDataType = {
