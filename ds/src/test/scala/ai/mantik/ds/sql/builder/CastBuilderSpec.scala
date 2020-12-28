@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.{FundamentalType, Nullable}
-import ai.mantik.ds.element.{Bundle, SingleElementBundle}
-import ai.mantik.ds.sql.{CastExpression, ColumnExpression, ConstantExpression}
+import ai.mantik.ds.{ FundamentalType, Nullable }
+import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
+import ai.mantik.ds.sql.{ CastExpression, ColumnExpression, ConstantExpression }
 import ai.mantik.testutils.TestBase
 
 class CastBuilderSpec extends TestBase {

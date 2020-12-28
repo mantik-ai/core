@@ -3,7 +3,7 @@ package ai.mantik.ds.sql.parser
 import ai.mantik.ds.{ FundamentalType, ImageChannel }
 
 /** Abstract syntax tree for the parser. */
-object AST {
+private[sql] object AST {
 
   sealed trait QueryNode
 

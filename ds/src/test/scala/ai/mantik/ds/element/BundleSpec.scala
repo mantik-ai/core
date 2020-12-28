@@ -153,4 +153,38 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     Bundle.fundamental(100).cast(FundamentalType.Float32, allowLoosing = true) shouldBe Right(Bundle.fundamental(100.0f))
     Bundle.fundamental("Hello").cast(FundamentalType.Int32).left.getOrElse(fail) should include("Cast failed")
   }
+
+  "sorted" should "work" in {
+    Bundle.fundamental(100).sorted shouldBe Bundle.fundamental(100)
+
+    val simple = Bundle.build(
+      TabularData(
+        "x" -> FundamentalType.Int32
+      )
+    ).row(2).row(1).result
+
+    simple.sorted shouldBe Bundle.build(
+      TabularData(
+        "x" -> FundamentalType.Int32
+      )
+    ).row(1).row(2).result
+
+    val complex = Bundle.buildColumnWise.withPrimitives(
+      "a", 3, 1, 1
+    ).withPrimitives(
+        "b", "0", "a", "b"
+      ).result
+
+    val complexSorted = Bundle.buildColumnWise.withPrimitives(
+      "a", 1, 1, 3
+    ).withPrimitives(
+        "b", "a", "b", "0"
+      ).result
+
+    complex.sorted shouldBe Bundle.buildColumnWise.withPrimitives(
+      "a", 1, 1, 3
+    ).withPrimitives(
+        "b", "a", "b", "0"
+      ).result
+  }
 }

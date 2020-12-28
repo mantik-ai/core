@@ -55,6 +55,9 @@ sealed trait Bundle {
    * SingleElementBundles are not touched.
    */
   def toSingleElementBundle: SingleElementBundle
+
+  /** Sort the bundle (noop for SingleElementBundle) */
+  def sorted: Bundle
 }
 
 /** A Bundle which contains a single element. */
@@ -88,6 +91,8 @@ case class SingleElementBundle(
   }
 
   override def toSingleElementBundle: SingleElementBundle = this
+
+  override def sorted: SingleElementBundle = this
 }
 
 /** A  Bundle which contains tabular data. */
@@ -98,6 +103,12 @@ case class TabularBundle(
   override def single: Option[Element] = None
 
   override def toSingleElementBundle: SingleElementBundle = SingleElementBundle(model, EmbeddedTabularElement(rows))
+
+  override def sorted: TabularBundle = {
+    val ordering = ElementOrdering.tableRowOrdering(model)
+    val sortedRows = rows.sorted(ordering)
+    copy(rows = sortedRows)
+  }
 }
 
 object Bundle {
@@ -150,57 +161,8 @@ object Bundle {
     }
   }
 
-  /** Experimental Builder for Natural types. */
-  class Builder(tabularData: TabularData) {
-    private val rowBuilder = Vector.newBuilder[TabularRow]
-
-    /** Add a row (just use the pure Scala Types, no Primitives or similar. */
-    def row(values: Any*): Builder = {
-      addCheckedRow(values)
-      this
-    }
-
-    def result: TabularBundle = TabularBundle(
-      tabularData, rowBuilder.result()
-    )
-
-    private def addCheckedRow(values: Seq[Any]): Unit = {
-      require(values.length == tabularData.columns.size)
-      val converted = values.zip(tabularData.columns).map {
-        case (value, (columnName, pt: FundamentalType)) =>
-          val encoder = PrimitiveEncoder.lookup(pt)
-          require(encoder.convert.isDefinedAt(value), s"Value  ${value} of class ${value.getClass} must fit to ${pt}")
-          encoder.wrap(encoder.convert(value))
-        case (value, (columnName, i: Image)) =>
-          require(value.isInstanceOf[ImageElement])
-          value.asInstanceOf[ImageElement]
-        case (value: EmbeddedTabularElement, (columnName, d: TabularData)) =>
-          value
-        case (value, (columnName, i: Tensor)) =>
-          require(value.isInstanceOf[TensorElement[_]])
-          value.asInstanceOf[Element]
-        case (value, (columnName, n: Nullable)) =>
-          value match {
-            case NullElement    => NullElement
-            case None           => NullElement
-            case s: SomeElement => s
-            case v if n.underlying.isInstanceOf[FundamentalType] =>
-              val encoder = PrimitiveEncoder.lookup(n.underlying.asInstanceOf[FundamentalType])
-              require(encoder.convert.isDefinedAt(v), s"Value ${value} of class ${value.getClass} must fit into ${n}")
-              SomeElement(encoder.wrap(encoder.convert(v)))
-            case unsupported =>
-              throw new IllegalArgumentException(s"Unsupported value ${unsupported} for ${n}")
-          }
-        case (other, (columnName, dataType)) =>
-          throw new IllegalArgumentException(s"Could not encode ${other} as ${dataType}")
-      }
-      rowBuilder += TabularRow(converted.toVector)
-    }
-
-  }
-
   /** Experimental builder for tabular data. */
-  def build(tabularData: TabularData): Builder = new Builder(tabularData)
+  def build(tabularData: TabularData): TabularBuilder = new TabularBuilder(tabularData)
 
   def buildColumnWise: ColumnWiseBundleBuilder = ColumnWiseBundleBuilder()
 

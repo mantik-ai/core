@@ -22,6 +22,8 @@ service GraphBuilderService {
     rpc Select(SelectRequest) returns (NodeResponse) {}
     /** Run a auto union query on two datasets. */
     rpc AutoUnion(AutoUnionRequest) returns (NodeResponse) {}
+    /** Run a SQL Query on datasets. */
+    rpc SqlQuery(QueryRequest) returns (NodeResponse) {}
     /** Build a pipeline from Algorithms. */
     rpc BuildPipeline(BuildPipelineRequest) returns (NodeResponse){}
     /* Returns the item using a new name. */
@@ -90,6 +92,14 @@ message AutoUnionRequest {
     string dataset_id2 = 3;
     // if true, all results are emitted, otherwise duplicates are filtered (slower)
     bool all = 4;
+}
+
+message QueryRequest {
+    string session_id = 1;
+    // SQL Query
+    string statement = 2;
+    // Dataset ids
+    repeated string dataset_ids = 3;
 }
 
 // Request for Building a Pipeline

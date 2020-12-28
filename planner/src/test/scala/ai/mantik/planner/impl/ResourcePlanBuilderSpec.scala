@@ -1,12 +1,14 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.element.Bundle
+import ai.mantik.ds.element.{ Bundle, TabularBundle }
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.executor.model.docker.Container
+import ai.mantik.planner.Operation.SqlQueryOperation
 import ai.mantik.planner.graph.{ Graph, Link, Node, NodePort, NodePortRef }
 import ai.mantik.planner.repository.{ Bridge, ContentTypes }
+import ai.mantik.planner.select.SelectMantikHeaderBuilder
 import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, DefinitionSource, MantikItemState, Operation, PayloadSource, Pipeline, PlanFile, PlanFileReference, PlanNodeService, PlanOp, Planner, Source, TrainableAlgorithm }
 import ai.mantik.testutils.TestBase
 import cats.data.State
@@ -137,6 +139,74 @@ class ResourcePlanBuilderSpec extends TestBase with PlanTestUtils {
       )
     )
     source shouldBe expected
+  }
+
+  it should "translate SQL Queries" in new Env {
+    val bundle1 = Bundle.build(
+      TabularData(
+        "x" -> FundamentalType.Int32
+      )
+    ).row(1).result
+    val ds1 = DataSet.literal(bundle1)
+    val bundle2 = Bundle.build(
+      TabularData(
+        "x" -> FundamentalType.Int32,
+        "y" -> FundamentalType.StringType
+      )
+    ).row(1, "Hello").result
+    val ds2 = DataSet.literal(bundle2)
+    val joined = ds1.join(ds2, Seq("x"))
+    val (state, source) = runWithEmptyState(resourcePlanBuilder.manifestDataSet(joined))
+    state.files shouldBe Seq(
+      PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, write = true, read = true, temporary = true),
+      PlanFile(PlanFileReference(2), ContentTypes.MantikBundleContentType, write = true, read = true, temporary = true)
+    )
+    val header = SelectMantikHeaderBuilder.compileToMantikHeader(
+      joined.payloadSource.asInstanceOf[PayloadSource.OperationResult].op.asInstanceOf[SqlQueryOperation].query
+    ).forceRight
+    source shouldBe ResourcePlan(
+      pre = PlanOp.seq(
+        PlanOp.StoreBundleToFile(bundle1, PlanFileReference(1)),
+        PlanOp.StoreBundleToFile(bundle2, PlanFileReference(2))
+      ),
+      graph = Graph(
+        nodes = Map(
+          "1" -> Node(
+            PlanNodeService.File(PlanFileReference(1)),
+            outputs = Vector(
+              NodePort(ContentTypes.MantikBundleContentType)
+            )
+          ),
+          "2" -> Node(
+            PlanNodeService.File(PlanFileReference(2)),
+            outputs = Vector(
+              NodePort(ContentTypes.MantikBundleContentType)
+            )
+          ),
+          "3" -> Node(
+            PlanNodeService.DockerContainer(
+              Container(BuiltInItems.SelectBridge.mantikHeader.definition.dockerImage),
+              data = None,
+              mantikHeader = header
+            ),
+            inputs = Vector(
+              NodePort(ContentTypes.MantikBundleContentType),
+              NodePort(ContentTypes.MantikBundleContentType)
+            ),
+            outputs = Vector(
+              NodePort(ContentTypes.MantikBundleContentType)
+            )
+          )
+        ),
+        links = Link.links(
+          NodePortRef("1", 0) -> NodePortRef("3", 0),
+          NodePortRef("2", 0) -> NodePortRef("3", 1)
+        )
+      ),
+      outputs = Seq(
+        NodePortRef("3", 0)
+      )
+    )
   }
 
   "translateItemPayloadSourceAsFiles" should "convert a file load" in new Env {

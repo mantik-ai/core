@@ -63,6 +63,15 @@ object Query {
   def parse(statement: String)(implicit context: SqlContext): Either[String, Query] = {
     QueryBuilder.buildQuery(statement)
   }
+
+  /** Run a statement on tabular arguments which can be referenced by $0, $1, ...  */
+  def run(statement: String, arguments: TabularBundle*): Either[String, TabularBundle] = {
+    implicit val context = SqlContext(arguments.map(_.model).toVector)
+    for {
+      parsed <- QueryBuilder.buildQuery(statement)
+      result <- parsed.run(arguments: _*)
+    } yield result
+  }
 }
 
 /**
@@ -208,6 +217,19 @@ case class Join(
       case _                            => Vector.empty
     }
     innerType.dropByIds(idDrops: _*)
+  }
+}
+
+object Join {
+
+  /** Build an anonymous join using given columns from two anonymous data sources. */
+  def anonymousFromUsing(
+    left: TabularData,
+    right: TabularData,
+    using: Seq[String],
+    joinType: JoinType
+  ): Either[String, Join] = {
+    JoinBuilder.buildAnonymousUsing(left, right, using, joinType)
   }
 }
 
