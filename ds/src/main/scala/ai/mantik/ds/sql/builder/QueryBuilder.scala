@@ -1,6 +1,6 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.sql.{ AnonymousInput, Query, SqlContext, Union }
+import ai.mantik.ds.sql.{ Alias, AnonymousInput, Query, SqlContext, Union }
 import ai.mantik.ds.sql.parser.{ AST, QueryParser }
 
 /** Builds queries from AST Nodes */
@@ -23,6 +23,12 @@ private[sql] object QueryBuilder {
         SelectBuilder.buildSelectFromParsed(s)
       case u: AST.UnionNode =>
         buildUnionFromParsed(u)
+      case j: AST.JoinNode =>
+        JoinBuilder.buildJoinFromParsed(j)
+      case a: AST.AliasNode =>
+        buildQueryFromParsed(a.query).map { inner =>
+          Alias(inner, a.name)
+        }
     }
   }
 
@@ -44,10 +50,10 @@ private[sql] object QueryBuilder {
   }
 
   private def validateSameType(left: Query, right: Query): Either[String, Unit] = {
-    if (left.resultingType == right.resultingType) {
+    if (left.resultingQueryType == right.resultingQueryType) {
       Right(())
     } else {
-      Left(s"Type mismatch, left: ${left.resultingType}, right: ${right.resultingType}")
+      Left(s"Type mismatch, left: ${left.resultingQueryType}, right: ${right.resultingQueryType}")
     }
   }
 }

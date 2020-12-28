@@ -60,8 +60,8 @@ object AutoUnion {
   private def findCommonType(left: Option[DataType], right: Option[DataType]): Option[DataType] = {
     (left, right) match {
       case (None, None)        => None
-      case (None, Some(right)) => Some(makeNullable(right))
-      case (Some(left), None)  => Some(makeNullable(left))
+      case (None, Some(right)) => Some(Nullable.makeNullable(right))
+      case (Some(left), None)  => Some(Nullable.makeNullable(left))
       case (Some(left), Some(right)) if left == right =>
         Some(left)
       case (Some(left), Some(right)) =>
@@ -76,7 +76,7 @@ object AutoUnion {
     }
   }
 
-  private def buildSelectors(columnNames: Vector[String], from: TabularData, commonTypes: Vector[DataType]): List[SelectProjection] = {
+  private def buildSelectors(columnNames: Vector[String], from: TabularData, commonTypes: Vector[DataType]): Vector[SelectProjection] = {
     columnNames.zip(commonTypes).map {
       case (columnName, commonType) =>
         val fromIdType = for {
@@ -87,7 +87,7 @@ object AutoUnion {
           columnName,
           buildExpression(fromIdType, commonType)
         )
-    }.toList
+    }
   }
 
   private def buildExpression(from: Option[(Int, DataType)], to: DataType): Expression = {
@@ -105,13 +105,6 @@ object AutoUnion {
           ColumnExpression(id, dataType),
           to
         )
-    }
-  }
-
-  private def makeNullable(dataType: DataType): DataType = {
-    dataType match {
-      case Nullable(_) => dataType
-      case other       => Nullable(other)
     }
   }
 }

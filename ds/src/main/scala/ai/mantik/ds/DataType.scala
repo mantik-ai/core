@@ -38,6 +38,16 @@ case class TabularData(
     }
   }
 
+  def columnByIndex(index: Int): Option[(String, DataType)] = {
+    // Perhaps it's better to store Vectors at the first place #3
+    val asVector = columns.toVector
+    if (asVector.isDefinedAt(index)) {
+      Some(asVector(index))
+    } else {
+      None
+    }
+  }
+
   override def toString: String = {
     val builder = StringBuilder.newBuilder
     var first = true
@@ -93,9 +103,9 @@ object FundamentalType {
   case object Uint32 extends UnsignedInteger(32)
   case object Uint64 extends UnsignedInteger(64)
 
-  sealed abstract class FloatingPoint(val bits: Int) extends FundamentalType
-  case object Float32 extends FloatingPoint(32)
-  case object Float64 extends FloatingPoint(64)
+  sealed abstract class FloatingPoint(val bits: Int, val fraction: Int) extends FundamentalType
+  case object Float32 extends FloatingPoint(32, 23)
+  case object Float64 extends FloatingPoint(64, 52)
 
   case object StringType extends FundamentalType
 
@@ -195,4 +205,18 @@ case class Nullable(
     underlying: DataType
 ) extends DataType {
   override def toString: String = s"nullable ${underlying}"
+}
+
+object Nullable {
+
+  /**
+   * If already nullable, returns the dataType, otherwise wrap it inside
+   * a Nullable
+   */
+  def makeNullable(dataType: DataType): Nullable = {
+    dataType match {
+      case n: Nullable => n
+      case otherwise   => Nullable(otherwise)
+    }
+  }
 }

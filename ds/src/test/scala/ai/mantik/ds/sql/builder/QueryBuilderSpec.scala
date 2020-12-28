@@ -2,8 +2,8 @@ package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.operations.BinaryOperation
-import ai.mantik.ds.sql.{ AnonymousInput, BinaryExpression, CastExpression, ColumnExpression, ConstantExpression, Query, Select, SelectProjection, SqlContext, Union }
-import ai.mantik.ds.sql.parser.AST.AnonymousReference
+import ai.mantik.ds.sql.JoinCondition.UsingColumn
+import ai.mantik.ds.sql.{ Alias, AnonymousInput, BinaryOperationExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Join, JoinCondition, JoinType, Query, Select, SelectProjection, SqlContext, Union }
 import ai.mantik.ds.{ FundamentalType, TabularData }
 import ai.mantik.testutils.TestBase
 
@@ -14,13 +14,19 @@ class QueryBuilderSpec extends TestBase {
     "y" -> FundamentalType.StringType
   )
 
+  val otherInput = TabularData(
+    "x" -> FundamentalType.Int32,
+    "z" -> FundamentalType.StringType
+  )
+
   val emptyInput = TabularData()
 
   implicit val context = SqlContext(
     Vector(
       emptyInput,
       emptyInput,
-      simpleInput
+      simpleInput,
+      otherInput
     )
   )
 
@@ -69,7 +75,7 @@ class QueryBuilderSpec extends TestBase {
       Select(
         AnonymousInput(emptyInput, 0),
         Some(
-          List(
+          Vector(
             SelectProjection("$1", ConstantExpression(2: Byte))
           )
         )
@@ -77,7 +83,7 @@ class QueryBuilderSpec extends TestBase {
       Select(
         AnonymousInput(emptyInput, 1),
         Some(
-          List(
+          Vector(
             SelectProjection("$1", ConstantExpression(3: Byte))
           )
         )
@@ -96,7 +102,7 @@ class QueryBuilderSpec extends TestBase {
         Select(
           AnonymousInput(emptyInput, 0),
           Some(
-            List(
+            Vector(
               SelectProjection("$1", ConstantExpression(1: Byte))
             )
           )
@@ -104,7 +110,7 @@ class QueryBuilderSpec extends TestBase {
         Select(
           AnonymousInput(emptyInput, 1),
           Some(
-            List(
+            Vector(
               SelectProjection("$1", ConstantExpression(2: Byte))
             )
           )
@@ -114,7 +120,7 @@ class QueryBuilderSpec extends TestBase {
       Select(
         AnonymousInput(emptyInput, 1),
         Some(
-          List(
+          Vector(
             SelectProjection("$1", ConstantExpression(3: Byte))
           )
         )
@@ -129,15 +135,11 @@ class QueryBuilderSpec extends TestBase {
     result shouldBe Select(
       AnonymousInput(simpleInput, 2),
       projections = Some(
-        List(
-          SelectProjection("y", BinaryExpression(
+        Vector(
+          SelectProjection("y", BinaryOperationExpression(
             BinaryOperation.Add,
             ColumnExpression(0, FundamentalType.Int32),
-            // TODO: Can we get rid of this cast ?!
-            CastExpression(
-              ConstantExpression(1: Byte),
-              FundamentalType.Int32
-            )
+            ConstantExpression(1)
           ))
         )
       )
@@ -151,7 +153,7 @@ class QueryBuilderSpec extends TestBase {
       Select(
         AnonymousInput(simpleInput, 2),
         Some(
-          List(
+          Vector(
             SelectProjection(
               "b",
               ColumnExpression(0, FundamentalType.Int32)
@@ -159,21 +161,59 @@ class QueryBuilderSpec extends TestBase {
           ))
       ),
       Some(
-        List(
+        Vector(
           SelectProjection(
             "c",
-            BinaryExpression(
+            BinaryOperationExpression(
               BinaryOperation.Add,
               ColumnExpression(0, FundamentalType.Int32),
-              CastExpression(
-                ConstantExpression(Bundle.fundamental(1: Byte)),
-                FundamentalType.Int32
-              )
+              ConstantExpression(1)
             )
           )
         )
       )
     )
     reparseableTest(result)
+  }
+
+  it should "parse simple joins" in {
+    val result = QueryBuilder.buildQuery("SELECT * FROM $2 LEFT JOIN $3 USING x").forceRight
+    result shouldBe Select(
+      Join(
+        AnonymousInput(simpleInput, 2),
+        AnonymousInput(otherInput, 3),
+        JoinType.Left,
+        JoinCondition.Using(Vector(UsingColumn("x", leftId = 0, rightId = 0, dropId = 2, dataType = FundamentalType.Int32)))
+      )
+    )
+    reparseableTest(result)
+  }
+
+  it should "parse simple joins with aliases" in {
+    val result = QueryBuilder.buildQuery("SELECT l.x, r.z FROM $2 AS l JOIN $3 AS r ON l.x = r.x").forceRight
+    result shouldBe Select(
+      Join(
+        Alias(AnonymousInput(simpleInput, 2), "l"),
+        Alias(AnonymousInput(otherInput, 3), "r"),
+        JoinType.Inner,
+        JoinCondition.On(
+          Condition.Equals(
+            ColumnExpression(0, FundamentalType.Int32),
+            ColumnExpression(2, FundamentalType.Int32)
+          )
+        )
+      ),
+      Some(
+        Vector(
+          SelectProjection("l.x", ColumnExpression(0, FundamentalType.Int32)),
+          SelectProjection("r.z", ColumnExpression(3, FundamentalType.StringType))
+        )
+      )
+    )
+    reparseableTest(result)
+    result.resultingTabularType shouldBe TabularData(
+      "x" -> FundamentalType.Int32,
+      "z" -> FundamentalType.StringType
+    )
   }
 }

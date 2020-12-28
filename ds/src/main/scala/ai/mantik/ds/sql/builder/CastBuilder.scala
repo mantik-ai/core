@@ -1,19 +1,29 @@
 package ai.mantik.ds.sql.builder
 
+import ai.mantik.ds.converter.Cast
+import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.operations.BinaryOperation
-import ai.mantik.ds.sql.{ CastExpression, Expression }
+import ai.mantik.ds.sql.{ CastExpression, ConstantExpression, Expression }
 import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageChannel, ImageFormat, Nullable, Tensor }
 import ai.mantik.ds.sql.parser.AST
+
+import scala.util.control.NonFatal
 
 /** Converts Casts and other type related stuff */
 private[builder] object CastBuilder {
 
   /** Returns the data typ,e which ban be used for comparing left and right. */
   def comparisonType(left: Expression, right: Expression): Either[String, DataType] = {
-    if (left.dataType == right.dataType) {
-      Right(left.dataType)
+    comparisonType(left.dataType, right.dataType).left.map { error =>
+      s"Error finding comparison type for ${left}/${right} ${error}"
+    }
+  }
+
+  def comparisonType(left: DataType, right: DataType): Either[String, DataType] = {
+    if (left == right) {
+      Right(left)
     } else {
-      (left.dataType, right.dataType) match {
+      (left, right) match {
         case (a: FundamentalType.IntegerType, b: FundamentalType.IntegerType) =>
           if (a.bits > b.bits) {
             Right(a)
@@ -26,8 +36,14 @@ private[builder] object CastBuilder {
           } else {
             Right(b)
           }
+        case (a: FundamentalType.FloatingPoint, b: FundamentalType.IntegerType) if a.fraction >= b.bits =>
+          Right(a)
+        case (FundamentalType.Float32, b: FundamentalType.IntegerType) if FundamentalType.Float64.fraction >= b.bits =>
+          Right(FundamentalType.Float64)
+        case (a: FundamentalType.IntegerType, b: FundamentalType.FloatingPoint) =>
+          comparisonType(b, a)
         case (a, b) =>
-          Left(s"Could not unify data type of ${left}:${a} and ${right}:${b}")
+          Left(s"Could not unify ${left} with ${right}")
       }
     }
   }
@@ -43,9 +59,21 @@ private[builder] object CastBuilder {
     if (in.dataType == expectedType) {
       Right(in)
     } else {
-      // assumming that all is good
-      // TODO: Should have further checking
-      Right(CastExpression(in, expectedType))
+      Cast.findCast(in.dataType, expectedType).flatMap { cast =>
+        in match {
+          case c: ConstantExpression =>
+            // directly execute the cast
+            try {
+              val casted = cast.convert(c.value.element)
+              Right(ConstantExpression(SingleElementBundle(cast.to, casted)))
+            } catch {
+              case NonFatal(e) =>
+                Left(s"Cast from ${in.dataType} to ${expectedType} for constant failed ${e}")
+            }
+          case otherwise =>
+            Right(CastExpression(otherwise, expectedType))
+        }
+      }
     }
   }
 

@@ -37,8 +37,7 @@ class CompilerSpec extends TestBase {
         Some(DataSource(0, simpleInput)),
         selector = Some(Program(
           OpCode.Get(0),
-          OpCode.Constant(Bundle.fundamental(1.toByte)),
-          OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
+          OpCode.Constant(Bundle.fundamental(1)),
           OpCode.Equals(FundamentalType.Int32)
         )),
         projector = None,
@@ -53,8 +52,7 @@ class CompilerSpec extends TestBase {
         Some(DataSource(0, simpleInput)),
         selector = Some(Program(
           OpCode.Get(0),
-          OpCode.Constant(Bundle.fundamental(1.toByte)),
-          OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
+          OpCode.Constant(Bundle.fundamental(1)),
           OpCode.Equals(FundamentalType.Int32),
           OpCode.ReturnOnFalse,
           OpCode.Pop,
@@ -74,8 +72,7 @@ class CompilerSpec extends TestBase {
         Some(DataSource(0, simpleInput)),
         selector = Some(Program(
           OpCode.Get(0),
-          OpCode.Constant(Bundle.fundamental(1.toByte)),
-          OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
+          OpCode.Constant(Bundle.fundamental(1)),
           OpCode.Equals(FundamentalType.Int32),
           OpCode.Get(1),
           OpCode.Constant(Bundle.fundamental("boom")),
@@ -111,8 +108,7 @@ class CompilerSpec extends TestBase {
         selector = None,
         projector = Some(Program(
           OpCode.Get(0),
-          OpCode.Constant(Bundle.fundamental(1.toByte)),
-          OpCode.Cast(FundamentalType.Int8, FundamentalType.Int32),
+          OpCode.Constant(Bundle.fundamental(1)),
           OpCode.BinaryOp(FundamentalType.Int32, BinaryOperation.Add),
           OpCode.Cast(FundamentalType.Int32, FundamentalType.Float64)
         )),

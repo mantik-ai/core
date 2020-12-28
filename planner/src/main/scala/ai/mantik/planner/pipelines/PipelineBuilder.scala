@@ -32,7 +32,7 @@ private[planner] object PipelineBuilder {
   /** Build a Pipeline from algorithms writing an artifical mantik header. */
   def build(steps: Seq[Either[Select, Algorithm]]): Either[PipelineException, Pipeline] = {
     val inputType = steps.headOption.map {
-      case Left(select)     => select.inputType
+      case Left(select)     => select.inputTabularType
       case Right(algorithm) => algorithm.functionType.input
     }
     val highLevelSteps = steps.map {

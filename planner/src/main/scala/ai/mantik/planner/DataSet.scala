@@ -45,7 +45,7 @@ case class DataSet(
 
   /** Derives a data set, as the result of applying a select to this dataset. */
   def select(select: Select): DataSet = {
-    if (select.inputType != dataType) {
+    if (select.inputTabularType != dataType) {
       throw new IllegalArgumentException("Select statement is for a different data type and not applicable")
     }
 
@@ -55,7 +55,7 @@ case class DataSet(
         Vector(this)
       )
     )
-    DataSet.natural(Source.constructed(payloadSource), select.resultingType)
+    DataSet.natural(Source.constructed(payloadSource), select.resultingTabularType)
   }
 
   /**
@@ -74,7 +74,7 @@ case class DataSet(
         Vector(this, other)
       )
     )
-    DataSet.natural(Source.constructed(payloadSource), autoUnion.resultingType)
+    DataSet.natural(Source.constructed(payloadSource), autoUnion.resultingTabularType)
   }
 
   /**

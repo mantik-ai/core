@@ -16,17 +16,17 @@ private[parser] trait SelectParser extends ExpressionParser with InnerQueryParse
       }
   }
 
-  def SelectColumns: Rule1[List[SelectColumnNode]] = rule {
+  def SelectColumns: Rule1[Vector[SelectColumnNode]] = rule {
     SelectAllColumns | SelectSomeColumns
   }
 
-  def SelectAllColumns: Rule1[List[SelectColumnNode]] = rule {
-    symbolw('*') ~ push(Nil: List[SelectColumnNode])
+  def SelectAllColumns: Rule1[Vector[SelectColumnNode]] = rule {
+    symbolw('*') ~ push(Vector.empty[SelectColumnNode])
   }
 
-  def SelectSomeColumns: Rule1[List[SelectColumnNode]] = rule {
+  def SelectSomeColumns: Rule1[Vector[SelectColumnNode]] = rule {
     oneOrMore(SelectColumn).separatedBy(symbolw(',')) ~> { elements: immutable.Seq[SelectColumnNode] =>
-      elements.toList
+      elements.toVector
     }
   }
 

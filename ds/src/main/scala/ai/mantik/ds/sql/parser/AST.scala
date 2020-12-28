@@ -10,7 +10,7 @@ object AST {
   case class AnonymousReference(id: Int) extends QueryNode
 
   case class SelectNode(
-      selectColumns: List[SelectColumnNode] = Nil,
+      selectColumns: Vector[SelectColumnNode] = Vector.empty,
       where: Option[ExpressionNode] = None,
       from: Option[QueryNode] = None
   ) extends QueryNode {
@@ -21,6 +21,33 @@ object AST {
       left: QueryNode,
       right: QueryNode,
       all: Boolean
+  ) extends QueryNode
+
+  sealed trait JoinType
+  object JoinType {
+    case object Inner extends JoinType
+    case object Left extends JoinType
+    case object Right extends JoinType
+    case object Outer extends JoinType
+  }
+
+  sealed trait JoinCondition
+  object JoinCondition {
+    case class On(expression: ExpressionNode) extends JoinCondition
+    case class Using(columns: Vector[IdentifierNode]) extends JoinCondition
+    case object Cross extends JoinCondition
+  }
+
+  case class JoinNode(
+      left: QueryNode,
+      right: QueryNode,
+      joinType: JoinType,
+      condition: JoinCondition
+  ) extends QueryNode
+
+  case class AliasNode(
+      query: QueryNode,
+      name: String
   ) extends QueryNode
 
   case class SelectColumnNode(
