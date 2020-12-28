@@ -17,7 +17,7 @@ object Compiler {
       case s: Select         => compile(s)
       case u: Union          => compile(u)
       case a: Alias          => compile(a.query) // alias is not present program
-      case j: Join           => Left("Joins not yet supported")
+      case j: Join           => JoinCompiler.compile(j)
     }
   }
 

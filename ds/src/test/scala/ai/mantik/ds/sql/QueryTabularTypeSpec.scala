@@ -37,4 +37,18 @@ class QueryTabularTypeSpec extends TestBase {
       ).shadow()
     }
   }
+
+  it should "respect ignoreAlias" in {
+    val sample = QueryTabularType(
+      "x" -> FundamentalType.Int32,
+      "a.x" -> FundamentalType.Int32,
+      "b.x" -> FundamentalType.Int32
+    )
+    sample.shadow() shouldBe sample
+    sample.shadow(ignoreAlias = true) shouldBe QueryTabularType(
+      "x" -> FundamentalType.Int32,
+      "a.x0" -> FundamentalType.Int32,
+      "b.x1" -> FundamentalType.Int32
+    )
+  }
 }

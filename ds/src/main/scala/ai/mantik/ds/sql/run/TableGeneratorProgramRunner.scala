@@ -23,6 +23,8 @@ class TableGeneratorProgramRunner(tableGeneratorProgram: TableGeneratorProgram) 
         u.inputs.map(maxInputSource).max
       case s: SelectProgram =>
         s.input.map(maxInputSource).getOrElse(0)
+      case j: JoinProgram =>
+        maxInputSource(j.left).max(maxInputSource(j.right))
     }
   }
 
@@ -33,6 +35,8 @@ class TableGeneratorProgramRunner(tableGeneratorProgram: TableGeneratorProgram) 
         makeSelectRunner(s)
       case u: UnionProgram =>
         makeUnionRunner(u)
+      case j: JoinProgram =>
+        makeJoinRunner(j)
     }
   }
 
@@ -58,6 +62,17 @@ class TableGeneratorProgramRunner(tableGeneratorProgram: TableGeneratorProgram) 
           withoutDuplicates(concatenated)
         }
       }
+    }
+  }
+
+  private def makeJoinRunner(join: JoinProgram): QueryRunner = {
+    val leftInputRunner = makeQueryRunner(join.left)
+    val rightInputRunner = makeQueryRunner(join.right)
+    val joinRunner = new JoinRunner(join)
+    inputs => {
+      val leftIterator = leftInputRunner(inputs)
+      val rightIterator = rightInputRunner(inputs)
+      joinRunner.run(leftIterator, rightIterator)
     }
   }
 

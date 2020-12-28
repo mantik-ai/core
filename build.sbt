@@ -142,7 +142,10 @@ lazy val ds = makeProject("ds")
       "org.msgpack" % "msgpack-core" % "0.8.16",
 
       // SLF4J Api
-      "org.slf4j" % "slf4j-api" % slf4jVersion
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+
+      // Guava
+      "com.google.guava" % "guava" % "30.0-jre"
     )
   )
 

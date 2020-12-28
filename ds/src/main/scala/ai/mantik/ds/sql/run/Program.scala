@@ -17,7 +17,10 @@ case class Program(
     retStackDepth: Int,
     stackInitDepth: Int,
     ops: Vector[OpCode]
-)
+) {
+  /** Concatenates two programs, recalculating stack-depth */
+  def ++(other: Program): Program = Program.fromOps(ops ++ other.ops)
+}
 
 object Program {
 
