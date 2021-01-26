@@ -10,6 +10,7 @@ import akka.util.ByteString
 import io.circe.Decoder.Result
 import io.circe._
 import io.circe.syntax._
+import cats.implicits._
 
 /**
  * Bundle JSON Serializer.
@@ -94,15 +95,19 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
   }
 
   private def createRowEncoder(tabularData: TabularData): Encoder[TabularRow] = {
-    val columnEncoders = tabularData.columns.map {
-      case (_, dataType) =>
-        createElementEncoder(dataType)
-    }
-    new Encoder[TabularRow] {
-      override def apply(a: TabularRow): Json = Json.fromValues(
-        a.columns.zip(columnEncoders).map {
+    createTupleEncoder(tabularData.columns.values)
+      .contramap[TabularRow](_.columns)
+  }
+
+  private def createTupleEncoder(fields: Iterable[DataType]): Encoder[IndexedSeq[Element]] = {
+    val subEncoders = fields.map {
+      createElementEncoder
+    }.toVector
+    Encoder { data: IndexedSeq[Element] =>
+      Json.fromValues(
+        data.zip(subEncoders).map {
           case (cell, encoder) =>
-            encoder.apply(cell)
+            encoder(cell)
         }
       )
     }
@@ -149,24 +154,45 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
             }
           }
         }
+      case t: ArrayT =>
+        val underlyingEncoder = createElementEncoder(t.underlying)
+        new Encoder[Element] {
+          override def apply(a: Element): Json = {
+            val value = a.asInstanceOf[ArrayElement]
+            Json.arr(
+              value.elements.map { element =>
+                underlyingEncoder(element)
+              }: _*
+            )
+          }
+        }
+      case n: Struct =>
+        val underlyingEncoder = createTupleEncoder(n.fields.values)
+        underlyingEncoder.contramap[Element] { e =>
+          e.asInstanceOf[StructElement].elements
+        }
     }
   }
 
   private def createRowDecoder(tabularData: TabularData): Decoder[TabularRow] = {
-    val cellDecoders = tabularData.columns.map {
-      case (_, dataType) =>
-        createElementDecoder(dataType).decodeJson(_)
-    }
+    createStructDecoder(tabularData.columns.values).map(TabularRow(_))
+  }
+
+  private def createStructDecoder(dataTypes: Iterable[DataType]): Decoder[Vector[Element]] = {
+    val cellDecoders: Vector[Decoder[Element]] = dataTypes.map {
+      createElementDecoder
+    }.toVector
     val size = cellDecoders.size
-    new Decoder[TabularRow] {
-      override def apply(c: HCursor): Result[TabularRow] = {
+    new Decoder[Vector[Element]] {
+      override def apply(c: HCursor): Result[Vector[Element]] = {
         c.values match {
-          case None => Left(DecodingFailure.apply("Expected array", c.history))
+          case None                                => Left(DecodingFailure.apply("Expected array", c.history))
+          case Some(values) if values.size != size => Left(DecodingFailure.apply(s"Expected array of size ${size}, got ${values.size}", c.history))
           case Some(values) =>
-            flatEitherApply(size, values, cellDecoders, DecodingFailure(s"Expected ${size} elements", c.history)) match {
-              case Left(error) => Left(error)
-              case Right(row)  => Right(TabularRow(row))
-            }
+            values.toVector.zip(cellDecoders).map {
+              case (value, decoder) =>
+                decoder.decodeJson(value)
+            }.sequence
         }
       }
     }
@@ -201,6 +227,14 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
             }
           }
         }
+      case t: ArrayT =>
+        val underlyingDecoder = createElementDecoder(t.underlying)
+        Decoder.decodeVector[Element](underlyingDecoder).map { elements =>
+          ArrayElement(elements)
+        }
+      case nt: Struct =>
+        val underlying = createStructDecoder(nt.fields.values)
+        underlying.map(StructElement(_))
     }
   }
 
@@ -251,33 +285,6 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
         }
       }
     }
-  }
-
-  /**
-   * Returns each function in f to each element of in (similar to in.zip(f).map { (a,f) => f(a) })
-   * but also returns on the first left result of f.
-   *
-   * @param sizeHint the size of elements (as a hint)
-   * @param in input elements
-   * @param f the functions to apply
-   * @param sizeError the error to return if the size doesn't match
-   * @return the first left values returned by one of the functions in f or all results
-   */
-  private def flatEitherApply[A, B, E](sizeHint: Int, in: Iterable[A], f: Iterable[A => Either[E, B]], sizeError: => E): Either[E, Vector[B]] = {
-    val resultBuilder = Vector.newBuilder[B]
-    resultBuilder.sizeHint(sizeHint)
-    val inIt = in.iterator
-    val fIt = f.iterator
-    while (inIt.hasNext && fIt.hasNext) {
-      fIt.next()(inIt.next()) match {
-        case Left(e)  => return Left(e)
-        case Right(v) => resultBuilder += v
-      }
-    }
-    if (inIt.hasNext != fIt.hasNext) {
-      return Left(sizeError)
-    }
-    Right(resultBuilder.result())
   }
 
   /** Applies the function f to each element of in, returns Left on the first error. */

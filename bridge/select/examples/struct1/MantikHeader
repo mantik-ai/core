@@ -1,0 +1,62 @@
+kind: combiner
+bridge: builtin/select
+input:
+- type: tabular
+  columns:
+    id: int32
+    person:
+      type: struct
+      fields:
+        name: string
+        age:
+          type: nullable
+          underlying: int32
+output:
+- type: tabular
+  columns:
+    id: int32
+    name: string
+    age:
+      type: nullable
+      underlying: int32
+program:
+  type: select
+  input:
+    type: source
+    port: 0
+    result:
+      type: tabular
+      columns:
+        id: int32
+        person:
+          type: struct
+          fields:
+            name: string
+            age:
+              type: nullable
+              underlying: int32
+  selector: null
+  projector:
+    args: 2
+    retStackDepth: 3
+    stackInitDepth: 3
+    ops:
+    - get
+    - 0
+    - get
+    - 1
+    - structget
+    - 0
+    - get
+    - 1
+    - structget
+    - 1
+  result:
+    type: tabular
+    columns:
+      id: int32
+      name: string
+      age:
+        type: nullable
+        underlying: int32
+query: SELECT "id", (("person").name) AS "name", (("person").age) AS "age" FROM $0

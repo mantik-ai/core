@@ -137,3 +137,65 @@ func TestNullCasts(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, element.Primitive{int64(100)}, c)
 }
+
+func TestArrayCast(t *testing.T) {
+	differentContentCast, err := LookupCast(
+		&ds.Array{ds.Ref(ds.Int32)}, &ds.Array{ds.Ref(ds.Int8)},
+	)
+	assert.NoError(t, err)
+	assert.False(t, differentContentCast.CanFail)
+	assert.True(t, differentContentCast.Loosing)
+	c, err := differentContentCast.Adapter(&element.ArrayElement{[]element.Element{element.Primitive{int32(1)}, element.Primitive{int32(2)}}})
+	assert.NoError(t, err)
+	assert.Equal(t,
+		&element.ArrayElement{[]element.Element{element.Primitive{int8(1)}, element.Primitive{int8(2)}}},
+		c,
+	)
+}
+
+func TestStructCast(t *testing.T) {
+	structCast, err := LookupCast(
+		&ds.Struct{[]ds.NamedType{{"a", ds.Ref(ds.Int32)}, {"b", ds.Ref(ds.String)}}},
+		&ds.Struct{[]ds.NamedType{{"x", ds.Ref(ds.Int64)}, {"y", ds.Ref(ds.Float64)}}},
+	)
+	assert.NoError(t, err)
+	assert.True(t, structCast.CanFail)
+	assert.False(t, structCast.Loosing)
+	c, err := structCast.Adapter(&element.StructElement{[]element.Element{element.Primitive{int32(1)}, element.Primitive{"3.14"}}})
+	assert.NoError(t, err)
+	assert.Equal(t,
+		&element.StructElement{[]element.Element{element.Primitive{int64(1)}, element.Primitive{float64(3.14)}}},
+		c,
+	)
+}
+
+func TestStructPack(t *testing.T) {
+	structCast, err := LookupCast(
+		ds.Int32,
+		&ds.Struct{[]ds.NamedType{{"x", ds.Ref(ds.Int64)}}},
+	)
+	assert.NoError(t, err)
+	assert.False(t, structCast.CanFail)
+	assert.False(t, structCast.Loosing)
+	c, err := structCast.Adapter(element.Primitive{int32(100)})
+	assert.Equal(t,
+		&element.StructElement{[]element.Element{element.Primitive{int64(100)}}},
+		c,
+	)
+}
+
+func TestStructUnpack(t *testing.T) {
+	structCast, err := LookupCast(
+		&ds.Struct{[]ds.NamedType{{"x", ds.Ref(ds.Int64)}}},
+		ds.Int32,
+	)
+	assert.NoError(t, err)
+	assert.False(t, structCast.CanFail)
+	assert.True(t, structCast.Loosing)
+	c, err := structCast.Adapter(&element.StructElement{[]element.Element{element.Primitive{int64(100)}}})
+	assert.NoError(t, err)
+	assert.Equal(t,
+		element.Primitive{int32(100)},
+		c,
+	)
+}

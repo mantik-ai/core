@@ -20,6 +20,11 @@ object OpCode {
   val ReturnOnFalseCode = "retf"
   val BinaryOpCode = "bn"
   val IsNullCode = "isn"
+  val UnpackNullableJumpCode = "unj"
+  val PackNullableCode = "pn"
+  val ArraySizeCode = "arraysize"
+  val ArrayGetCode = "arrayget"
+  val StructGetCode = "structget"
 
   /** Gets an input element and pushes it on to the stack. */
   case class Get(id: Int) extends OpCode(GetCode, consuming = 0)
@@ -59,4 +64,20 @@ object OpCode {
   /** Executes a binary operation. */
   case class BinaryOp(dataType: DataType, op: BinaryOperation) extends OpCode(BinaryOpCode, consuming = 2, producing = 1)
 
+  /**
+   * Unpack a nullable value, if it's a null then emits a null and jump for a given offset
+   * @param drop if not null, then additional n elements are dropped from the stack
+   */
+  case class UnpackNullableJump(offset: Int, drop: Int = 0) extends OpCode(UnpackNullableJumpCode, consuming = 1 + drop)
+  /**
+   * Wraps a value into a Nullable.
+   * (Note: some platforms may do nothing here, if they dont distinguish between Nullable and Value itself.
+   */
+  case object PackNullable extends OpCode(PackNullableCode)
+
+  case object ArrayGet extends OpCode(ArrayGetCode, consuming = 2)
+  case object ArraySize extends OpCode(ArraySizeCode)
+
+  /** Fetch an element from a struct. */
+  case class StructGet(idx: Int) extends OpCode(StructGetCode)
 }

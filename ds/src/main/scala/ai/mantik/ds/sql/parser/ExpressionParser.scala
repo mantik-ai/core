@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.Errors.TypeNotFoundException
-import ai.mantik.ds.{ FundamentalType, ImageChannel }
+import ai.mantik.ds.{ ArrayT, FundamentalType, ImageChannel }
 import org.parboiled2._
 
 /** Parser for Expressions. */
@@ -18,7 +18,17 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   def BaseExpression: Rule1[ExpressionNode] = rule { BracketExpression | Cast | Constant | UnaryExpression | Identifier }
 
   private def BracketExpression: Rule1[ExpressionNode] = rule {
-    symbolw('(') ~ Expression ~ symbolw(')')
+    symbolw('(') ~ Expression ~ symbolw(')') ~ optional(StructAccess) ~> {
+      (expression: ExpressionNode, access: Option[String]) =>
+        access match {
+          case Some(access) => AST.StructAccessNode(expression, access)
+          case None         => expression
+        }
+    }
+  }
+
+  private def StructAccess: Rule1[String] = rule {
+    "." ~ capture(oneOrMore(IdentifierChar))
   }
 
   def Identifier: Rule1[IdentifierNode] = rule {
@@ -46,7 +56,7 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   }
 
   def IdentifierChar: Rule0 = rule {
-    noneOf("\", ()<>=!+-")
+    noneOf("\", ()<>=!+-[]")
   }
 
   def Cast: Rule1[CastNode] = rule {
@@ -54,12 +64,19 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   }
 
   def Type: Rule1[TypeNode] = rule {
-    ((TensorType | ImageType | FundamentalTypeN) ~ Whitespace ~ optionalKeyword("nullable")) ~> { (dt: TypeNode, nullable: Boolean) =>
+    (TensorType | ImageType | FundamentalTypeN) ~ Whitespace ~ ArrayNesting ~ Whitespace ~ optionalKeyword("nullable") ~> { (dt: TypeNode, arrayNesting: Int, nullable: Boolean) =>
+      val arrayIfNecessary = (0 until arrayNesting).foldLeft(dt) { (c, _) => ArrayTypeNode(c) }
       if (nullable) {
-        NullableTypeNode(dt)
+        NullableTypeNode(arrayIfNecessary)
       } else {
-        dt
+        arrayIfNecessary
       }
+    }
+  }
+
+  def ArrayNesting: Rule1[Int] = rule {
+    zeroOrMore("[]" ~ push(1)) ~> { elements: scala.collection.immutable.Seq[Int] =>
+      elements.sum
     }
   }
 

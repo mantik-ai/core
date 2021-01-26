@@ -16,6 +16,12 @@ sealed trait DataType {
   def toJsonString: String = {
     (this: DataType).asJson(DataType.encoder).noSpaces
   }
+
+  /** Returns true if this data type is nullable. */
+  def isNullable: Boolean = this match {
+    case Nullable(_) => true
+    case _           => false
+  }
 }
 
 object DataType {
@@ -218,5 +224,68 @@ object Nullable {
       case n: Nullable => n
       case otherwise   => Nullable(otherwise)
     }
+  }
+
+  /**
+   * If in is nullable, call f on underlying and wrap in Nullable, otherwise
+   * call f on in.
+   * (Can be useful on functions which map values to nullable, if nullable given)
+   */
+  def mapIfNullable(in: DataType, f: DataType => DataType): DataType = {
+    in match {
+      case n: Nullable => Nullable.makeNullable(f(n.underlying))
+      case otherwise   => f(otherwise)
+    }
+  }
+
+  /** Unpack if it's a nullable. */
+  def unwrap(in: DataType): DataType = {
+    in match {
+      case Nullable(underlying) => underlying
+      case somethingElse        => somethingElse
+    }
+  }
+}
+
+/**
+ * A Array type.
+ * Note: called ArrayT to make it distinguishable with Scala's Array.
+ */
+case class ArrayT(
+    underlying: DataType
+) extends DataType {
+  override def toString: String = s"Array(${underlying})"
+}
+
+/** A Tuple whose elements have names. */
+case class Struct(
+    fields: ListMap[String, DataType]
+) extends DataType {
+
+  /** Arity of tuple */
+  def arity: Int = fields.size
+
+  /** Returns the index of a field with a given name. */
+  def lookupFieldIndex(name: String): Option[Int] = {
+    val it = fields.iterator
+    it.indexWhere(_._1 == name) match {
+      case -1 => None
+      case n  => Some(n)
+    }
+  }
+
+  override def toString: String = {
+    s"Struct" + fields.map {
+      case (name, dt) =>
+        s"${name}:${dt}"
+    }.mkString("(", ",", ")")
+  }
+}
+
+object Struct {
+
+  /** Convenience constructor. */
+  def apply(nameColumns: (String, DataType)*): Struct = {
+    Struct(ListMap(nameColumns: _*))
   }
 }

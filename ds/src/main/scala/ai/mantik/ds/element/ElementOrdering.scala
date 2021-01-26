@@ -1,6 +1,6 @@
 package ai.mantik.ds.element
 
-import ai.mantik.ds.{ DataType, FundamentalType, Image, Nullable, TabularData, Tensor }
+import ai.mantik.ds.{ DataType, FundamentalType, Image, ArrayT, Struct, Nullable, TabularData, Tensor }
 
 import Ordering.Implicits._
 
@@ -13,6 +13,8 @@ object ElementOrdering {
       case id: Image           => castToElement(imageOrdering(id))
       case td: Tensor          => castToElement(tensorOrdering(td))
       case na: Nullable        => castToElement(nullableOrdering(na))
+      case at: ArrayT          => castToElement(arrayOrdering(at))
+      case st: Struct          => castToElement(structOrdering(st))
     }
   }
 
@@ -22,13 +24,16 @@ object ElementOrdering {
 
   /** Returns an ordering for rows matching given TabularData's rows. */
   def tableRowOrdering(tabularData: TabularData): Ordering[TabularRow] = {
-    val subOrderings = tabularData.columns.map {
-      case (_, dataType) =>
-        elementOrdering(dataType)
+    tupleOrdering(tabularData.columns.values).on(_.columns)
+  }
+
+  def tupleOrdering(dataTypes: Iterable[DataType]): Ordering[IndexedSeq[Element]] = {
+    val subOrderings = dataTypes.map {
+      elementOrdering
     }.toVector
-    new Ordering[TabularRow] {
-      override def compare(x: TabularRow, y: TabularRow): Int = {
-        elementWiseCompare(x.columns, y.columns, subOrderings)
+    new Ordering[IndexedSeq[Element]] {
+      override def compare(x: IndexedSeq[Element], y: IndexedSeq[Element]): Int = {
+        elementWiseCompare(x, y, subOrderings)
       }
     }
   }
@@ -87,6 +92,16 @@ object ElementOrdering {
       case (SomeElement(a), SomeElement(b)) =>
         underlying.lt(a, b)
     }
+  }
+
+  private def arrayOrdering(list: ArrayT): Ordering[ArrayElement] = {
+    implicit val underlying = elementOrdering(list.underlying)
+    val indexedSeqOrdering: Ordering[IndexedSeq[Element]] = implicitly
+    indexedSeqOrdering.on(_.elements)
+  }
+
+  private def structOrdering(namedTuple: Struct): Ordering[StructElement] = {
+    tupleOrdering(namedTuple.fields.values).on(_.elements)
   }
 
   private def fundamentalOrdering[_](primitiveEncoder: PrimitiveEncoder[_]): Ordering[Primitive[_]] = {

@@ -21,19 +21,24 @@ private[messagepack] object MessagePackAdapters {
     def read(messageUnpacker: MessageUnpacker): Element
   }
 
-  /** Type class which adapts between MessagePack driver and data type incarnations. */
-  trait MessagePackAdapter[T <: DataType] extends AnonymousMessagePackAdapter {
-    type ElementType <: Element
+  /** Message Pack Adapter without type contraints. */
+  trait RawMessagePackAdapter {
+    type ElementType
 
     /** Write an element. */
     def write(messagePacker: MessagePacker, elementType: ElementType): Unit
 
+    /** Read an element. */
+    def read(messageUnpacker: MessageUnpacker): ElementType
+  }
+
+  /** Type class which adapts between MessagePack driver and data type incarnations. */
+  trait MessagePackAdapter[T <: DataType] extends AnonymousMessagePackAdapter with RawMessagePackAdapter {
+    override type ElementType <: Element
+
     override def elementWriter(messagePacker: MessagePacker, value: Element): Unit = {
       write(messagePacker, value.asInstanceOf[ElementType])
     }
-
-    /** Read an element. */
-    def read(messageUnpacker: MessageUnpacker): ElementType
   }
 
   /**
@@ -241,6 +246,40 @@ private[messagepack] object MessagePackAdapters {
     }
   }
 
+  def arrayAdapter(array: ArrayT): MessagePackAdapter[ArrayT] = new MessagePackAdapter[ArrayT] {
+    private val underlying = lookupAdapter(array.underlying)
+    override type ElementType = ArrayElement
+
+    override def write(messagePacker: MessagePacker, elementType: ArrayElement): Unit = {
+      messagePacker.packArrayHeader(elementType.elements.size)
+      elementType.elements.foreach { e =>
+        underlying.elementWriter(messagePacker, e)
+      }
+    }
+
+    override def read(messageUnpacker: MessageUnpacker): ArrayElement = {
+      val length = messageUnpacker.unpackArrayHeader()
+      val resultBuilder = IndexedSeq.newBuilder[Element]
+      for (i <- 0 until length) {
+        resultBuilder += underlying.read(messageUnpacker)
+      }
+      ArrayElement(resultBuilder.result())
+    }
+  }
+
+  def structAdapter(nt: Struct): MessagePackAdapter[Struct] = new MessagePackAdapter[Struct] {
+    override type ElementType = StructElement
+    val context = new TupleContext(nt.fields.values)
+
+    override def write(messagePacker: MessagePacker, elementType: StructElement): Unit = {
+      context.write(messagePacker, elementType.elements)
+    }
+
+    override def read(messageUnpacker: MessageUnpacker): StructElement = {
+      StructElement(context.read(messageUnpacker))
+    }
+  }
+
   /** Writes/Reads root elements to MessagePack. */
   trait RootElementContext {
     def write(messagePacker: MessagePacker, rootElement: RootElement): Unit
@@ -259,19 +298,33 @@ private[messagepack] object MessagePackAdapters {
 
   /** Reads/Writes tabular Rows. */
   private class TabularContext(tabularData: TabularData) extends RootElementContext {
-    val subAdapters = tabularData.columns.values.map(lookupAdapter).toIndexedSeq
+    val tupleAdapter = new TupleContext(tabularData.columns.values)
 
     override def write(messagePacker: MessagePacker, rootElement: RootElement): Unit = {
-      val tabularRow = rootElement.asInstanceOf[TabularRow]
-      require(tabularRow.columns.size == subAdapters.length)
-      messagePacker.packArrayHeader(tabularRow.columns.size)
-      tabularRow.columns.zip(subAdapters).foreach {
+      tupleAdapter.write(messagePacker, rootElement.asInstanceOf[TabularRow].columns)
+    }
+
+    override def read(messageUnpacker: MessageUnpacker): TabularRow = {
+      val elements = tupleAdapter.read(messageUnpacker)
+      TabularRow(elements)
+    }
+  }
+
+  private class TupleContext(dataTypes: Iterable[DataType]) extends RawMessagePackAdapter {
+    val subAdapters = dataTypes.map(lookupAdapter).toIndexedSeq
+
+    override type ElementType = IndexedSeq[Element]
+
+    override def write(messagePacker: MessagePacker, rootElement: IndexedSeq[Element]): Unit = {
+      require(rootElement.size == subAdapters.length)
+      messagePacker.packArrayHeader(rootElement.size)
+      rootElement.zip(subAdapters).foreach {
         case (element, adapter) =>
           adapter.elementWriter(messagePacker, element)
       }
     }
 
-    override def read(messageUnpacker: MessageUnpacker): TabularRow = {
+    override def read(messageUnpacker: MessageUnpacker): IndexedSeq[Element] = {
       try {
         val length = messageUnpacker.unpackArrayHeader()
         require(length == subAdapters.length)
@@ -280,9 +333,7 @@ private[messagepack] object MessagePackAdapters {
         subAdapters.foreach { adapter =>
           builder += adapter.read(messageUnpacker)
         }
-        TabularRow(
-          builder.result()
-        )
+        builder.result()
       } catch {
         case e: MessagePackException =>
           throw new EncodingException("Error on decoding", e)
@@ -327,6 +378,8 @@ private[messagepack] object MessagePackAdapters {
       case t: TabularData => embeddedTabularAdapter(t)
       case t: Tensor      => tensorAdapter(t)
       case n: Nullable    => nullableAdapter(n)
+      case l: ArrayT      => arrayAdapter(l)
+      case nt: Struct     => structAdapter(nt)
       // Let the compiler warn if we have something incomplete here
     }
     result

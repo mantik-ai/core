@@ -1,0 +1,134 @@
+kind: combiner
+bridge: builtin/select
+input:
+- type: tabular
+  columns:
+    x:
+      type: nullable
+      underlying:
+        type: array
+        underlying: string
+    y:
+      type: array
+      underlying:
+        type: nullable
+        underlying: string
+    z:
+      type: nullable
+      underlying:
+        type: array
+        underlying:
+          type: nullable
+          underlying: string
+output:
+- type: tabular
+  columns:
+    $1:
+      type: nullable
+      underlying: string
+    $2:
+      type: nullable
+      underlying: int32
+    $3:
+      type: nullable
+      underlying: string
+    $4: int32
+    $5:
+      type: nullable
+      underlying: string
+    $6:
+      type: nullable
+      underlying: int32
+program:
+  type: select
+  input:
+    type: source
+    port: 0
+    result:
+      type: tabular
+      columns:
+        x:
+          type: nullable
+          underlying:
+            type: array
+            underlying: string
+        y:
+          type: array
+          underlying:
+            type: nullable
+            underlying: string
+        z:
+          type: nullable
+          underlying:
+            type: array
+            underlying:
+              type: nullable
+              underlying: string
+  selector: null
+  projector:
+    args: 3
+    retStackDepth: 6
+    stackInitDepth: 6
+    ops:
+    - get
+    - 0
+    - unj
+    - 2
+    - 0
+    - cnt
+    - type: int32
+      value: 2
+    - arrayget
+    - get
+    - 0
+    - unj
+    - 2
+    - 0
+    - arraysize
+    - pn
+    - get
+    - 1
+    - cnt
+    - type: int32
+      value: 2
+    - arrayget
+    - get
+    - 1
+    - arraysize
+    - get
+    - 2
+    - unj
+    - 2
+    - 0
+    - cnt
+    - type: int32
+      value: 2
+    - arrayget
+    - get
+    - 2
+    - unj
+    - 2
+    - 0
+    - arraysize
+    - pn
+  result:
+    type: tabular
+    columns:
+      $1:
+        type: nullable
+        underlying: string
+      $2:
+        type: nullable
+        underlying: int32
+      $3:
+        type: nullable
+        underlying: string
+      $4: int32
+      $5:
+        type: nullable
+        underlying: string
+      $6:
+        type: nullable
+        underlying: int32
+query: SELECT ("x"[2]) AS "$1", (SIZE("x")) AS "$2", ("y"[2]) AS "$3", (SIZE("y"))
+  AS "$4", ("z"[2]) AS "$5", (SIZE("z")) AS "$6" FROM $0

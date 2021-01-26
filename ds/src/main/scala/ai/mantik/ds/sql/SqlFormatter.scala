@@ -126,6 +126,12 @@ private[sql] class SqlFormatter(inputData: QueryTabularType) {
         s"${formatExpression(isNull.expression)} IS NULL"
       case w: Condition.WrappedExpression =>
         formatExpression(w.expression)
+      case s: SizeExpression =>
+        s"SIZE(${formatExpression(s.expression)})"
+      case g: ArrayGetExpression =>
+        formatExpression(g.array) + "[" + formatExpression(g.index) + "]"
+      case s: StructAccessExpression =>
+        "(" + formatExpression(s.expression) + ")." + s.name
     }
   }
 
@@ -173,6 +179,8 @@ private[sql] class SqlFormatter(inputData: QueryTabularType) {
         "tensor" + maybeUnderlyingCast()
       case Nullable(underlying) =>
         formatCastToDataType(from, underlying) + " NULLABLE"
+      case ArrayT(underlying) =>
+        formatCastToDataType(from, underlying) + "[]"
       case _ => throw new IllegalArgumentException(s"Unsupported data type ${dataType}")
     }
   }

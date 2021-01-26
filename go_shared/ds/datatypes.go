@@ -152,3 +152,49 @@ func (n *Nullable) IsFundamental() bool {
 func (n *Nullable) TypeName() string {
 	return "nullable"
 }
+
+type Struct struct {
+	Fields OrderedMap `json:"fields"`
+}
+
+func (t *Struct) GetField(name string) DataType {
+	for _, value := range t.Fields {
+		if value.Name == name {
+			return value.SubType.Underlying
+		}
+	}
+	return nil
+}
+
+func (t *Struct) IndexOfField(name string) int {
+	for i, value := range t.Fields {
+		if value.Name == name {
+			return i
+		}
+	}
+	return -1
+}
+
+func (t *Struct) Arity() int {
+	return len(t.Fields)
+}
+
+func (t *Struct) IsFundamental() bool {
+	return false
+}
+
+func (t *Struct) TypeName() string {
+	return "struct"
+}
+
+type Array struct {
+	Underlying TypeReference `json:"underlying"`
+}
+
+func (a *Array) IsFundamental() bool {
+	return false
+}
+
+func (a *Array) TypeName() string {
+	return "array"
+}

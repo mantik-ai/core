@@ -2,6 +2,7 @@ package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.sql.parser.AST._
 import org.parboiled2._
+import scala.collection.immutable
 
 /** Handles parsing of Binary Operations, including precedence. */
 trait BinaryOperationParser {
@@ -13,9 +14,19 @@ trait BinaryOperationParser {
   /** Parses a Non-Binary Operation. */
   def BaseExpression: Rule1[ExpressionNode]
 
+  def Prio6BinaryOperation: Rule1[ExpressionNode] = rule {
+    BaseExpression ~ zeroOrMore(SquareBracketExpression) ~> { (a: ExpressionNode, brackets: immutable.Seq[ExpressionNode]) =>
+      makeBinaryOperationNode(a, brackets.map(x => ("[]", x)))
+    }
+  }
+
+  private def SquareBracketExpression: Rule1[ExpressionNode] = rule {
+    '[' ~ Whitespace ~ Expression ~ ']' ~ Whitespace
+  }
+
   def Prio5BinaryOperation: Rule1[ExpressionNode] = rule {
-    BaseExpression ~ zeroOrMore(
-      Prio5Operator ~ BaseExpression ~> collectOperationTuple
+    Prio6BinaryOperation ~ zeroOrMore(
+      Prio5Operator ~ Prio6BinaryOperation ~> collectOperationTuple
     ) ~> makeBinaryOperationNode
   }
 
@@ -72,7 +83,7 @@ trait BinaryOperationParser {
   // Helps the type checker to collect a operation tuple, how can we avoid that?
   private val collectOperationTuple: (String, ExpressionNode) => (String, ExpressionNode) = { (a, b) => (a, b) }
 
-  val makeBinaryOperationNode: (ExpressionNode, scala.collection.immutable.Seq[(String, ExpressionNode)]) => ExpressionNode = { (b, e) =>
+  val makeBinaryOperationNode: (ExpressionNode, immutable.Seq[(String, ExpressionNode)]) => ExpressionNode = { (b, e) =>
     // Left-Associative
     e.foldLeft(b) {
       case (current, (op, next)) =>

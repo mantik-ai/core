@@ -19,7 +19,7 @@ def train(bundle: mantik.types.Bundle, meta: mantik.types.MetaVariables) -> mant
     model = KMeans(**meta).fit(learn_data)
     with open(MODEL_FILE, "wb") as f:
         pickle.dump(model, f)
-    value = [[model.cluster_centers_.reshape(-1).tolist(), model.inertia_, model.n_iter_]]
+    value = [[model.cluster_centers_.tolist(), model.inertia_, model.n_iter_]]
     return mantik.types.Bundle(value=value)
 
 

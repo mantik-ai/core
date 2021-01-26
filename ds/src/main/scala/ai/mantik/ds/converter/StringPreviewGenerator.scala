@@ -88,6 +88,11 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
       case n: Nullable => {
         renderNullable(n)
       }
+      case a: ArrayT =>
+        renderList(a)
+      case s: Struct =>
+        renderStruct(s)
+
     }
   }
 
@@ -184,6 +189,38 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
       case NullElement    => "null"
       case SomeElement(e) => subRenderer(e)
       case x              => throw new IllegalArgumentException(s"Expected nullable, got ${x.getClass.getSimpleName}")
+    }
+  }
+
+  private def renderList(list: ArrayT): Element => String = {
+    val subRenderer = locateCellRenderer(list.underlying)
+
+    {
+      case ArrayElement(elements) =>
+        elements.map(subRenderer).mkString("[", ",", "]")
+      case x =>
+        throw new IllegalArgumentException(s"Expected ListElement, got ${x.getClass.getSimpleName}")
+    }
+  }
+
+  private def renderStruct(tuple: Struct): Element => String = {
+    val columnRenderers = tuple.fields.map {
+      case (_, dataType) =>
+        locateCellRenderer(dataType)
+    }.toSeq
+
+    {
+      case t: StructElement =>
+        val result = t.elements
+          .zip(tuple.fields)
+          .zip(columnRenderers)
+          .map {
+            case ((value, field), subRenderer) =>
+              field._1 + ":" + subRenderer(value)
+          }.mkString(",")
+        limitToCellLength(result)
+      case x =>
+        throw new IllegalArgumentException(s"Expected embedded tabular element, got ${x.getClass.getSimpleName}")
     }
   }
 

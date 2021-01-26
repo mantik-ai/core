@@ -223,4 +223,14 @@ class MessagePackAdaptersSpec extends TestBase {
       testSerializationAndBack(adapter, e)
     }
   }
+
+  "lists" should "serialize well" in {
+    val adapter = MessagePackAdapters.lookupAdapter(TypeSamples.array._1)
+    testSerializationAndBack(adapter, TypeSamples.array._2)
+  }
+
+  "named tuples" should "serialize well" in {
+    val adapter = MessagePackAdapters.lookupAdapter(TypeSamples.namedTuple._1)
+    testSerializationAndBack(adapter, TypeSamples.namedTuple._2)
+  }
 }

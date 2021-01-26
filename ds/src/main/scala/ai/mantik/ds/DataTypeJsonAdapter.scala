@@ -142,12 +142,44 @@ private[ds] object DataTypeJsonAdapter {
     }
   }
 
+  private implicit object arrayCodec extends ObjectEncoder[ArrayT] with Decoder[ArrayT] {
+    override def encodeObject(a: ArrayT): JsonObject = {
+      JsonObject(
+        "underlying" -> typeEncoder(a.underlying)
+      )
+    }
+
+    override def apply(c: HCursor): Result[ArrayT] = {
+      for {
+        underlying <- c.downField("underlying").as[DataType]
+      } yield ArrayT(underlying)
+    }
+  }
+
+  private implicit object structCodec extends ObjectEncoder[Struct] with Decoder[Struct] {
+    override def encodeObject(a: Struct): JsonObject = {
+      JsonObject(
+        "fields" -> a.fields.asJson
+      )
+    }
+
+    override def apply(c: HCursor): Result[Struct] = {
+      for {
+        fields <- c.downField("fields").as[ListMap[String, DataType]]
+      } yield {
+        Struct(fields)
+      }
+    }
+  }
+
   private val complexTypeCodec = new DiscriminatorDependentCodec[DataType]("type") {
     override val subTypes = Seq(
       makeGivenSubType[TabularData]("tabular", true),
       makeGivenSubType[Image]("image"),
       makeGivenSubType[Tensor]("tensor"),
-      makeGivenSubType[Nullable]("nullable")
+      makeGivenSubType[Nullable]("nullable"),
+      makeGivenSubType[ArrayT]("array"),
+      makeGivenSubType[Struct]("struct")
     )
   }
 

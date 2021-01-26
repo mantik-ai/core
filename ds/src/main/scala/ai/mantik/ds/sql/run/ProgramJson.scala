@@ -50,17 +50,22 @@ object ProgramJson {
   def opCodeToJson(opCode: OpCode): List[Json] = {
     val head = opCode.code.asJson
     val extra: List[Json] = opCode match {
-      case OpCode.Get(id)          => List(id.asJson)
-      case OpCode.Constant(value)  => List(value.asJson)
-      case OpCode.Pop              => Nil
-      case OpCode.Cast(from, to)   => List(from.asJson, to.asJson)
-      case OpCode.Neg              => Nil
-      case OpCode.Equals(dataType) => List(dataType.asJson)
-      case OpCode.And              => Nil
-      case OpCode.Or               => Nil
-      case OpCode.ReturnOnFalse    => Nil
-      case OpCode.BinaryOp(dt, op) => List(dt.asJson, op.asJson)
-      case OpCode.IsNull           => Nil
+      case OpCode.Get(id)                          => List(id.asJson)
+      case OpCode.Constant(value)                  => List(value.asJson)
+      case OpCode.Pop                              => Nil
+      case OpCode.Cast(from, to)                   => List(from.asJson, to.asJson)
+      case OpCode.Neg                              => Nil
+      case OpCode.Equals(dataType)                 => List(dataType.asJson)
+      case OpCode.And                              => Nil
+      case OpCode.Or                               => Nil
+      case OpCode.ReturnOnFalse                    => Nil
+      case OpCode.BinaryOp(dt, op)                 => List(dt.asJson, op.asJson)
+      case OpCode.IsNull                           => Nil
+      case OpCode.UnpackNullableJump(offset, drop) => List(offset.asJson, drop.asJson)
+      case OpCode.PackNullable                     => Nil
+      case OpCode.ArrayGet                         => Nil
+      case OpCode.ArraySize                        => Nil
+      case OpCode.StructGet(idx)                   => List(idx.asJson)
     }
     head :: extra
   }
@@ -97,17 +102,22 @@ object ProgramJson {
     }
 
     code match {
-      case OpCode.GetCode           => get1[Int](OpCode.Get)
-      case OpCode.ConstantCode      => get1[SingleElementBundle](OpCode.Constant)
-      case OpCode.PopCode           => get0(OpCode.Pop)
-      case OpCode.CastCode          => get2[DataType, DataType](OpCode.Cast)
-      case OpCode.NegCode           => get0(OpCode.Neg)
-      case OpCode.EqualsCode        => get1[DataType](OpCode.Equals)
-      case OpCode.AndCode           => get0(OpCode.And)
-      case OpCode.OrCode            => get0(OpCode.Or)
-      case OpCode.ReturnOnFalseCode => get0(OpCode.ReturnOnFalse)
-      case OpCode.BinaryOpCode      => get2(OpCode.BinaryOp)
-      case OpCode.IsNullCode        => get0(OpCode.IsNull)
+      case OpCode.GetCode                => get1[Int](OpCode.Get)
+      case OpCode.ConstantCode           => get1[SingleElementBundle](OpCode.Constant)
+      case OpCode.PopCode                => get0(OpCode.Pop)
+      case OpCode.CastCode               => get2[DataType, DataType](OpCode.Cast)
+      case OpCode.NegCode                => get0(OpCode.Neg)
+      case OpCode.EqualsCode             => get1[DataType](OpCode.Equals)
+      case OpCode.AndCode                => get0(OpCode.And)
+      case OpCode.OrCode                 => get0(OpCode.Or)
+      case OpCode.ReturnOnFalseCode      => get0(OpCode.ReturnOnFalse)
+      case OpCode.BinaryOpCode           => get2(OpCode.BinaryOp)
+      case OpCode.IsNullCode             => get0(OpCode.IsNull)
+      case OpCode.UnpackNullableJumpCode => get2(OpCode.UnpackNullableJump)
+      case OpCode.PackNullableCode       => get0(OpCode.PackNullable)
+      case OpCode.ArrayGetCode           => get0(OpCode.ArrayGet)
+      case OpCode.ArraySizeCode          => get0(OpCode.ArraySize)
+      case OpCode.StructGetCode          => get1(OpCode.StructGet)
       case other =>
         Left(DecodingFailure(s"unknown op code ${other}", Nil))
     }

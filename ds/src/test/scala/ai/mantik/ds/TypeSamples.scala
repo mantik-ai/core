@@ -1,7 +1,7 @@
 package ai.mantik.ds
 
 import ai.mantik.ds.FundamentalType._
-import ai.mantik.ds.element.{ ImageElement, Primitive }
+import ai.mantik.ds.element.{ Element, ImageElement, ArrayElement, StructElement, Primitive }
 import akka.util.ByteString
 
 import scala.collection.immutable.ListMap
@@ -33,8 +33,23 @@ object TypeSamples {
     VoidType -> Primitive.unit
   )
 
+  def nonFundamentals: Seq[(DataType, Element)] = Seq(image, array, namedTuple)
+
   val image = (
     Image(2, 3, ListMap(ImageChannel.Black -> ImageComponent(FundamentalType.Uint8))),
     ImageElement(ByteString(1, 2, 3, 4, 5, 6))
+  )
+
+  val array = (
+    ArrayT(FundamentalType.Int32),
+    ArrayElement(IndexedSeq(Primitive(2), Primitive(4)))
+  )
+
+  val namedTuple = (
+    Struct(
+      "x" -> FundamentalType.Int32,
+      "y" -> FundamentalType.StringType
+    ),
+      StructElement(IndexedSeq(Primitive(3), Primitive("World")))
   )
 }

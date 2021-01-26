@@ -2,6 +2,7 @@ package selectbridge
 
 import (
 	"github.com/stretchr/testify/assert"
+	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"testing"
 )
@@ -160,6 +161,123 @@ func TestNullHandling(t *testing.T) {
 	expectedOutput := builder.RowsAsElements(
 		builder.PrimitiveRow(int32(100), "Hello"),
 		builder.PrimitiveRow(int32(200), "World"),
+	)
+
+	transformed, err := model.Execute(input)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedOutput, transformed)
+}
+
+func TestArray1(t *testing.T) {
+	model, err := LoadModel("../../examples/array1")
+	assert.NoError(t, err)
+
+	input := builder.RowsAsElements(
+		builder.Row(
+			builder.PrimitiveArray(int32(4), int32(5), int32(6), int32(7)),
+		),
+		builder.Row(
+			builder.PrimitiveArray(),
+		),
+	)
+
+	expectedOutput := builder.RowsAsElements(
+		builder.PrimitiveRow(int32(5), int32(4)),
+		builder.PrimitiveRow(nil, int32(0)),
+	)
+
+	transformed, err := model.Execute(input)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedOutput, transformed)
+}
+
+func TestArray2Nullables(t *testing.T) {
+	model, err := LoadModel("../../examples/array2_nullables")
+	assert.NoError(t, err)
+
+	input := builder.RowsAsElements(
+		builder.Row(
+			element.Primitive{nil}, builder.PrimitiveArray(), element.Primitive{nil},
+		),
+		builder.Row(
+			builder.PrimitiveArray("Hello", "World"),
+			builder.PrimitiveArray(nil, nil),
+			builder.PrimitiveArray("How", "Are", "You?"),
+		),
+		builder.Row(
+			builder.PrimitiveArray(),
+			builder.PrimitiveArray("You", "Are", "Nice"),
+			builder.PrimitiveArray(nil, nil, nil),
+		),
+	)
+
+	expectedOutput := builder.RowsAsElements(
+		builder.PrimitiveRow(nil, nil, nil, int32(0), nil, nil),
+		builder.PrimitiveRow("World", int32(2), nil, int32(2), "Are", int32(3)),
+		builder.PrimitiveRow(nil, int32(0), "Are", int32(3), nil, int32(3)),
+	)
+
+	transformed, err := model.Execute(input)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedOutput, transformed)
+}
+
+func TestStruct1(t *testing.T) {
+	model, err := LoadModel("../../examples/struct1")
+	assert.NoError(t, err)
+
+	input := builder.RowsAsElements(
+		builder.Row(
+			element.Primitive{int32(1)},
+			&element.StructElement{
+				builder.PrimitiveElements("Alice", int32(42)),
+			},
+		),
+		builder.Row(
+			element.Primitive{int32(2)},
+			&element.StructElement{
+				builder.PrimitiveElements("Bob", nil),
+			},
+		),
+	)
+
+	expectedOutput := builder.RowsAsElements(
+		builder.PrimitiveRow(int32(1), "Alice", int32(42)),
+		builder.PrimitiveRow(int32(2), "Bob", nil),
+	)
+
+	transformed, err := model.Execute(input)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedOutput, transformed)
+}
+
+func TestStruct2Nullable(t *testing.T) {
+	model, err := LoadModel("../../examples/struct2_nullable")
+	assert.NoError(t, err)
+
+	input := builder.RowsAsElements(
+		builder.Row(
+			element.Primitive{int32(1)},
+			&element.StructElement{
+				builder.PrimitiveElements("Alice", int32(42)),
+			},
+		),
+		builder.Row(
+			element.Primitive{int32(2)},
+			&element.StructElement{
+				builder.PrimitiveElements("Bob", nil),
+			},
+		),
+		builder.Row(
+			element.Primitive{int32(3)},
+			element.Primitive{nil},
+		),
+	)
+
+	expectedOutput := builder.RowsAsElements(
+		builder.PrimitiveRow(int32(1), "Alice", int32(42)),
+		builder.PrimitiveRow(int32(2), "Bob", nil),
+		builder.PrimitiveRow(int32(3), nil, nil),
 	)
 
 	transformed, err := model.Execute(input)

@@ -1,7 +1,7 @@
 package ds
 
 type TabularTypeBuilder struct {
-	columns []TabularColumn
+	columns []NamedType
 }
 
 func BuildTabular() *TabularTypeBuilder {
@@ -9,7 +9,7 @@ func BuildTabular() *TabularTypeBuilder {
 }
 
 func (t *TabularTypeBuilder) Add(name string, dataType DataType) *TabularTypeBuilder {
-	t.columns = append(t.columns, TabularColumn{name, Ref(dataType)})
+	t.columns = append(t.columns, NamedType{name, Ref(dataType)})
 	return t
 }
 

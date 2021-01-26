@@ -75,6 +75,24 @@ func lookupElementDeserializer(dataType ds.DataType) (ElementDeserializer, error
 		}
 		return &nullableDeserializer{subDeserializer}, nil
 	}
+	array, ok := dataType.(*ds.Array)
+	if ok {
+		subDeserializer, err := lookupElementDeserializer(array.Underlying.Underlying)
+		if err != nil {
+			return nil, err
+		}
+		return &arrayDeserializer{subDeserializer}, nil
+	}
+	s, ok := dataType.(*ds.Struct)
+	if ok {
+		subDeserializer, err := newTabularRowDeserializer(
+			ds.TabularData{Columns: s.Fields},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return &structDeserializer{*subDeserializer}, nil
+	}
 	return nil, errors.Errorf("Not implemented %s", dataType.TypeName())
 }
 
@@ -196,4 +214,37 @@ func (n nullableDeserializer) Read(backend serializer.DeserializingBackend) (ele
 	} else {
 		return n.underlyingDeserializer.Read(backend)
 	}
+}
+
+type arrayDeserializer struct {
+	underlyingDeserializer ElementDeserializer
+}
+
+func (a arrayDeserializer) Read(backend serializer.DeserializingBackend) (element.Element, error) {
+	len, err := backend.DecodeArrayLen()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]element.Element, len, len)
+	for i := 0; i < len; i++ {
+		e, err := a.underlyingDeserializer.Read(backend)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = e
+	}
+	return &element.ArrayElement{result}, nil
+}
+
+type structDeserializer struct {
+	// borrowing tableDeserializer
+	underlying tableRowDeserializer
+}
+
+func (s structDeserializer) Read(backend serializer.DeserializingBackend) (element.Element, error) {
+	row, err := s.underlying.ReadTabularRow(backend)
+	if err != nil {
+		return nil, err
+	}
+	return &element.StructElement{Elements: row.Columns}, nil
 }

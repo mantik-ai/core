@@ -82,7 +82,8 @@ private[sql] object SelectBuilder {
   @tailrec
   private def guessName(node: AST.ExpressionNode): Option[String] = {
     node match {
-      case id: AST.IdentifierNode => Some(id.name)
+      case id: AST.IdentifierNode   => Some(id.name)
+      case id: AST.StructAccessNode => Some(id.name)
       case cast: AST.CastNode =>
         guessName(cast.expression)
       case _ => None

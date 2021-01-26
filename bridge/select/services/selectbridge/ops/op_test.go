@@ -22,25 +22,25 @@ func TestOpList_UnmarshalJSON(t *testing.T) {
 	allOps := `
 		[
 			"get",
-    		1,
-    		"pop",
-    		"cnt",
-    		{
-      			"type" : "string",
-      			"value" : "Hello World"
-    		},
+			1,
+			"pop",
+			"cnt",
+			{
+	  			"type" : "string",
+	  			"value" : "Hello World"
+			},
 			"cast",
-    		"int32",
-    		"int64",
-    		"neg",
-    		"and",
-    		"or",
-    		"eq",
 			"int32",
-    		"retf",
-    		"bn",
-    		"int32",
-    		"add",
+			"int64",
+			"neg",
+			"and",
+			"or",
+			"eq",
+			"int32",
+			"retf",
+			"bn",
+			"int32",
+			"add",
 			"bn",
 			"float32",
 			"sub",
@@ -50,7 +50,15 @@ func TestOpList_UnmarshalJSON(t *testing.T) {
 			"bn",
 			"int8",
 			"div",
-			"isn"
+			"isn",
+			"unj",
+			1,
+			2,
+			"pn",
+			"arrayget",
+			"arraysize",
+			"structget",
+			1
 		]
 	`
 	var l OpList
@@ -71,5 +79,10 @@ func TestOpList_UnmarshalJSON(t *testing.T) {
 		&BinaryOp{ds.Ref(ds.Float64), operations.MulCode},
 		&BinaryOp{ds.Ref(ds.Int8), operations.DivCode},
 		&IsNullOp{},
+		&UnpackNullableJump{Offset: 1, Drop: 2},
+		&PackNullable{},
+		&ArrayGet{},
+		&ArraySize{},
+		&StructGet{1},
 	}, l)
 }

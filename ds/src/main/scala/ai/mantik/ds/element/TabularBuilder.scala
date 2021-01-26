@@ -1,6 +1,6 @@
 package ai.mantik.ds.element
 
-import ai.mantik.ds.{ FundamentalType, Image, Nullable, TabularData, Tensor }
+import ai.mantik.ds.{ FundamentalType, Image, ArrayT, Struct, Nullable, TabularData, Tensor }
 
 /** Builder for tabular data */
 class TabularBuilder(tabularData: TabularData) {
@@ -19,6 +19,8 @@ class TabularBuilder(tabularData: TabularData) {
   private def addCheckedRow(values: Seq[Any]): Unit = {
     require(values.length == tabularData.columns.size)
     val converted = values.zip(tabularData.columns).map {
+      case (value: Primitive[_], (columnName, pt: FundamentalType)) =>
+        value
       case (value, (columnName, pt: FundamentalType)) =>
         val encoder = PrimitiveEncoder.lookup(pt)
         require(encoder.convert.isDefinedAt(value), s"Value  ${value} of class ${value.getClass} must fit to ${pt}")
@@ -43,6 +45,12 @@ class TabularBuilder(tabularData: TabularData) {
           case unsupported =>
             throw new IllegalArgumentException(s"Unsupported value ${unsupported} for ${n}")
         }
+      case (value: ArrayElement, (columnName, l: ArrayT)) =>
+        // TODO: More checks
+        value
+      case (value: StructElement, (columnName, nt: Struct)) =>
+        // TODO: More checks
+        value
       case (other, (columnName, dataType)) =>
         throw new IllegalArgumentException(s"Could not encode ${other} as ${dataType}")
     }

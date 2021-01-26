@@ -217,6 +217,44 @@ func TestNullablePrimitive(t *testing.T) {
 	testComparator(t, &bundle)
 }
 
+func TestArray(t *testing.T) {
+	format := ds.BuildTabular().Add(
+		"x", &ds.Array{ds.Ref(ds.Int32)},
+	).Result()
+	bundle := builder.Bundle(
+		format,
+		builder.Row(
+			&element.ArrayElement{Elements: []element.Element{element.Primitive{int32(100)}, element.Primitive{int32(200)}}},
+		),
+		builder.Row(
+			&element.ArrayElement{Elements: []element.Element{}},
+		),
+	)
+	testEncodeAndDecode(t, &bundle)
+	testComparator(t, &bundle)
+}
+
+func TestStruct(t *testing.T) {
+	format := ds.BuildTabular().Add(
+		"x", &ds.Struct{[]ds.NamedType{
+			{"name", ds.Ref(ds.String)},
+			{"age", ds.Ref(&ds.Nullable{ds.Ref(ds.Int32)})},
+		}},
+	).Result()
+
+	bundle := builder.Bundle(
+		format,
+		builder.Row(
+			&element.StructElement{[]element.Element{element.Primitive{"Alice"}, element.Primitive{int32(42)}}},
+		),
+		builder.Row(
+			&element.StructElement{[]element.Element{element.Primitive{"Bob"}, element.Primitive{nil}}},
+		),
+	)
+	testEncodeAndDecode(t, &bundle)
+	testComparator(t, &bundle)
+}
+
 func TestEmbeddedTabular(t *testing.T) {
 	format, err := ds.FromJsonString(
 		`

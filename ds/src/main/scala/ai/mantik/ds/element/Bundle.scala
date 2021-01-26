@@ -121,6 +121,8 @@ object TabularBundle {
   /** Builder for tabular data. */
   def build(tabularData: TabularData): TabularBuilder = new TabularBuilder(tabularData)
 
+  def build(columns: (String, DataType)*): TabularBuilder = new TabularBuilder(TabularData(columns: _*))
+
   /** Builder for tabular data (column wise). */
   def buildColumnWise: ColumnWiseBundleBuilder = ColumnWiseBundleBuilder()
 

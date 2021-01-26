@@ -93,7 +93,7 @@ object AutoUnion {
   private def buildExpression(from: Option[(Int, DataType)], to: DataType): Expression = {
     from match {
       case None =>
-        assume(to.isInstanceOf[Nullable])
+        assume(to.isNullable)
         CastExpression(
           ConstantExpression(Bundle.voidNull),
           to

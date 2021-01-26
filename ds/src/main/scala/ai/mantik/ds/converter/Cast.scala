@@ -3,6 +3,7 @@ package ai.mantik.ds.converter
 import ai.mantik.ds.converter.casthelper.{ FundamentalCasts, ImageHelper, TensorHelper }
 import ai.mantik.ds.element._
 import ai.mantik.ds._
+import cats.implicits._
 
 /**
  * A Single Cast Operation, converting one element type to another one.
@@ -67,6 +68,14 @@ object Cast {
         findNullableToNonNullableCast(from, to)
       case (from, to: Nullable) =>
         findNonNullableToNullableCast(from, to)
+      case (from: ArrayT, to: ArrayT) =>
+        findArrayCast(from, to)
+      case (from: Struct, to: Struct) =>
+        findStructCast(from, to)
+      case (from: Struct, to: DataType) =>
+        findUnpackingCast(from, to)
+      case (from: DataType, to: Struct) =>
+        findPackingCast(from, to)
       case _ =>
         Left(s"Cannot cast from ${from} to ${to}")
     }
@@ -288,5 +297,85 @@ object Cast {
         NullElement
       }
     )
+  }
+
+  private def findArrayCast(from: ArrayT, to: ArrayT): Either[String, Cast] = {
+    findCast(from.underlying, to.underlying).map { underlyingCast =>
+      Cast(
+        from = from,
+        to = to,
+        loosing = underlyingCast.loosing,
+        canFail = underlyingCast.canFail,
+        op = { from =>
+          ArrayElement(from.asInstanceOf[ArrayElement].elements.map(underlyingCast.op))
+        }
+      )
+    }
+  }
+
+  private def findStructCast(from: Struct, to: Struct): Either[String, Cast] = {
+    if (from.arity != to.arity) {
+      Left(s"Can not cast from ${from}(arity=${from.arity}) to ${to}(arity=${to.arity})")
+    } else {
+      from.fields.values.toVector.zip(to.fields.values.toVector).map {
+        case (fromDt, toDt) =>
+          findCast(fromDt, toDt)
+      }.sequence.map { casts =>
+        Cast(
+          from = from,
+          to = to,
+          canFail = casts.exists(_.canFail),
+          loosing = casts.exists(_.loosing),
+          op = { from =>
+            StructElement(
+              from.asInstanceOf[StructElement]
+                .elements.zip(casts)
+                .map {
+                  case (e, cast) =>
+                    cast.op(e)
+                }
+            )
+          }
+        )
+      }
+    }
+  }
+
+  private def findPackingCast(from: DataType, to: Struct): Either[String, Cast] = {
+    if (to.arity != 1) {
+      Left(s"Can only pack single-arity tuples")
+    } else {
+      val singleType = to.fields.values.head
+      findCast(from, singleType).map { cast =>
+        Cast(
+          from = from,
+          to = to,
+          canFail = cast.canFail,
+          loosing = cast.loosing,
+          op = { from =>
+            StructElement(cast.op(from))
+          }
+        )
+      }
+    }
+  }
+
+  private def findUnpackingCast(from: Struct, to: DataType): Either[String, Cast] = {
+    if (from.arity != 1) {
+      Left(s"Can only unpack single-arity tuples")
+    } else {
+      val singleType = from.fields.values.head
+      findCast(singleType, to).map { cast =>
+        Cast(
+          from = from,
+          to = to,
+          canFail = cast.canFail,
+          loosing = cast.loosing,
+          op = { from =>
+            cast.op(from.asInstanceOf[StructElement].elements.head)
+          }
+        )
+      }
+    }
   }
 }

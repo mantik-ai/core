@@ -32,11 +32,17 @@ class ExpressionParserSpec extends ParserTestBase {
   expressionTest("1.0e3", NumberNode(1000))
   expressionTest("void", VoidNode)
   expressionTest("foo", IdentifierNode("foo", ignoreCase = true))
+  expressionTest("foo.bar", IdentifierNode("foo.bar"))
+  expressionTest("(foo)", IdentifierNode("foo"))
+  expressionTest("(foo).bar", StructAccessNode(IdentifierNode("foo"), "bar"))
   expressionTest("\"foo\"", IdentifierNode("foo", ignoreCase = false))
   expressionTest("\"foO\"", IdentifierNode("foO", ignoreCase = false))
   expressionTest("\"void\"", IdentifierNode("void", ignoreCase = false))
   expressionTest("CAST (1as int32)", CastNode(NumberNode(1), FundamentalTypeNode(FundamentalType.Int32)))
   expressionTest("CAST (1 as int32)", CastNode(NumberNode(1), FundamentalTypeNode(FundamentalType.Int32)))
+  expressionTest("CAST (1 as int32[])", CastNode(NumberNode(1), ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32))))
+  expressionTest("CAST (1 as int32[][])", CastNode(NumberNode(1), ArrayTypeNode(ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32)))))
+  expressionTest("CAST (1 as int32[][] NULLABLE)", CastNode(NumberNode(1), NullableTypeNode(ArrayTypeNode(ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32))))))
   expressionTest("CAST (TRUE as TENSOR)", CastNode(BoolNode(true), TensorTypeNode(None)))
   expressionTest("CAST (TRUE as TENSOR of int32)", CastNode(BoolNode(true), TensorTypeNode(Some(FundamentalType.Int32))))
   expressionTest("CAST (TRUE as IMAGE)", CastNode(BoolNode(true), ImageTypeNode(None, None)))
@@ -82,6 +88,23 @@ class ExpressionParserSpec extends ParserTestBase {
     BinaryOperationNode(
       "or",
       BinaryOperationNode("and", NumberNode(1), NumberNode(2)),
+      NumberNode(3)
+    )
+  )
+
+  expressionTest(
+    "a[1 + 4][3]",
+    BinaryOperationNode(
+      "[]",
+      BinaryOperationNode(
+        "[]",
+        IdentifierNode("a"),
+        BinaryOperationNode(
+          "+",
+          NumberNode(1),
+          NumberNode(4)
+        )
+      ),
       NumberNode(3)
     )
   )

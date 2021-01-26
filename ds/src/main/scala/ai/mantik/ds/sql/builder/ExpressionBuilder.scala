@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.sql.Condition.IsNull
-import ai.mantik.ds.sql.{ BinaryExpression, BinaryOperationExpression, ColumnExpression, Condition, Expression, QueryTabularType }
+import ai.mantik.ds.sql.{ ArrayGetExpression, BinaryExpression, BinaryOperationExpression, ColumnExpression, Condition, Expression, QueryTabularType, SizeExpression, StructAccessExpression }
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
 import ai.mantik.ds.sql.parser.AST
 import ai.mantik.ds.sql.parser.AST.NullNode
@@ -32,6 +32,13 @@ private[sql] object ExpressionBuilder {
                   Left("Cannot negate a non boolean data type")
               }
             }
+          case "size" =>
+            for {
+              exp <- convertExpression(input, unary.exp)
+              expArray <- CastBuilder.ensureArray(exp, true)
+            } yield {
+              SizeExpression(expArray._1)
+            }
           case other =>
             Left(s"Unsupported unary operation ${other}")
         }
@@ -50,6 +57,28 @@ private[sql] object ExpressionBuilder {
           }
         } else {
           Left(s"Only IS NOT <NULL> supported, got ${b.right}")
+        }
+      case b: AST.BinaryOperationNode if b.operation == "[]" =>
+        for {
+          left <- convertExpression(input, b.left)
+          leftArray <- CastBuilder.ensureArray(left, true)
+          right <- convertExpression(input, b.right)
+          rightIndex <- CastBuilder.wrapTypeWithNullableSupport(right, FundamentalType.Int32)
+        } yield {
+          ArrayGetExpression(leftArray._1, rightIndex)
+        }
+      case s: AST.StructAccessNode =>
+        for {
+          input <- convertExpression(input, s.expression)
+          inputStructure <- CastBuilder.ensureStruct(input, true)
+          structure = inputStructure._2
+          _ <- if (structure.fields.contains(s.name)) {
+            Right(())
+          } else {
+            Left(s"Structure ${structure} doesn't contain field ${s.name}")
+          }
+        } yield {
+          StructAccessExpression(inputStructure._1, s.name)
         }
       case b: AST.BinaryOperationNode if binaryConditions.contains(b.operation) =>
         for {

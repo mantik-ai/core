@@ -24,15 +24,11 @@ func LookupComparator(dataType ds.DataType) (Comparator, error) {
 	}
 	tabularData, ok := dataType.(*ds.TabularData)
 	if ok {
-		sub := make([]Comparator, len(tabularData.Columns), len(tabularData.Columns))
-		for i, c := range tabularData.Columns {
-			subC, err := LookupComparator(c.SubType.Underlying)
-			if err != nil {
-				return nil, err
-			}
-			sub[i] = subC
+		cc, err := newCompoundComparator(tabularData.Columns)
+		if err != nil {
+			return nil, err
 		}
-		return tabularComparator{sub}, nil
+		return tabularComparator{*cc}, nil
 	}
 	_, imageType := dataType.(*ds.Image)
 	if imageType {
@@ -54,6 +50,22 @@ func LookupComparator(dataType ds.DataType) (Comparator, error) {
 		}
 		return nullableComparator{underlying}, nil
 	}
+	arrayType, ok := dataType.(*ds.Array)
+	if ok {
+		underlying, err := LookupComparator(arrayType.Underlying.Underlying)
+		if err != nil {
+			return nil, err
+		}
+		return arrayComparator{underlying}, nil
+	}
+	structType, ok := dataType.(*ds.Struct)
+	if ok {
+		underlying, err := newCompoundComparator(structType.Fields)
+		if err != nil {
+			return nil, err
+		}
+		return structComparator{*underlying}, nil
+	}
 	return nil, errors.Errorf("Unsupported type %s", dataType.TypeName())
 }
 
@@ -73,7 +85,7 @@ func (p primitiveComparator) Compare(left element.Element, right element.Element
 }
 
 type tabularComparator struct {
-	sub []Comparator
+	compound compoundComparator
 }
 
 func (t tabularComparator) Compare(left element.Element, right element.Element) int {
@@ -96,8 +108,28 @@ func (t tabularComparator) Compare(left element.Element, right element.Element) 
 	}
 	leftTab := left.(*element.TabularRow)
 	rightTab := right.(*element.TabularRow)
+	return t.compound.Compare(leftTab.Columns, rightTab.Columns)
+}
+
+type compoundComparator struct {
+	sub []Comparator
+}
+
+func newCompoundComparator(orderedMap ds.OrderedMap) (*compoundComparator, error) {
+	sub := make([]Comparator, len(orderedMap), len(orderedMap))
+	for i, c := range orderedMap {
+		subC, err := LookupComparator(c.SubType.Underlying)
+		if err != nil {
+			return nil, err
+		}
+		sub[i] = subC
+	}
+	return &compoundComparator{sub}, nil
+}
+
+func (t compoundComparator) Compare(left []element.Element, right []element.Element) int {
 	for i, c := range t.sub {
-		r := c.Compare(leftTab.Columns[i], rightTab.Columns[i])
+		r := c.Compare(left[i], right[i])
 		if r != 0 {
 			return r
 		}
@@ -148,4 +180,37 @@ func isNull(e element.Element) bool {
 		return true
 	}
 	return false
+}
+
+type arrayComparator struct {
+	underlying Comparator
+}
+
+func (a arrayComparator) Compare(left element.Element, right element.Element) int {
+	lc := left.(*element.ArrayElement)
+	rc := right.(*element.ArrayElement)
+	if len(lc.Elements) < len(rc.Elements) {
+		return -1
+	} else if len(lc.Elements) > len(rc.Elements) {
+		return +1
+	} else {
+		for i, leftValue := range lc.Elements {
+			rightValue := rc.Elements[i]
+			diff := a.underlying.Compare(leftValue, rightValue)
+			if diff != 0 {
+				return diff
+			}
+		}
+		return 0
+	}
+}
+
+type structComparator struct {
+	underlying compoundComparator
+}
+
+func (s structComparator) Compare(left element.Element, right element.Element) int {
+	lc := left.(*element.StructElement)
+	rc := right.(*element.StructElement)
+	return s.underlying.Compare(lc.Elements, rc.Elements)
 }

@@ -72,6 +72,25 @@ func lookupElementSerializer(dataType ds.DataType) (ElementSerializer, error) {
 		}
 		return nullableSerializer{underlying}, nil
 	}
+	arrayType, ok := dataType.(*ds.Array)
+	if ok {
+		underlying, err := lookupElementSerializer(arrayType.Underlying.Underlying)
+		if err != nil {
+			return nil, err
+		}
+		return arraySerializer{underlying}, nil
+	}
+	structType, ok := dataType.(*ds.Struct)
+	if ok {
+		// Using the tableRowSerializer for that
+		tableRowSerializer, err := prepareTableRowSerializer(
+			&ds.TabularData{Columns: structType.Fields},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return &structSerializer{*tableRowSerializer}, nil
+	}
 	return nil, errors.Errorf("Unsupported type %s", dataType.TypeName())
 }
 
@@ -195,5 +214,39 @@ func (n nullableSerializer) Write(backend serializer.SerializingBackend, e eleme
 		return nil
 	} else {
 		return n.underlying.Write(backend, e)
+	}
+}
+
+type arraySerializer struct {
+	underlying ElementSerializer
+}
+
+func (a arraySerializer) Write(backend serializer.SerializingBackend, e element.Element) error {
+	arrayElement, ok := e.(*element.ArrayElement)
+	if !ok {
+		return errors.Errorf("Expected array element, got %d", e.Kind())
+	} else {
+		backend.EncodeArrayLen(len(arrayElement.Elements))
+		for _, v := range arrayElement.Elements {
+			err := a.underlying.Write(backend, v)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+type structSerializer struct {
+	// Borrowing the tableRowSerializer
+	underlying tableRowSerializer
+}
+
+func (s structSerializer) Write(backend serializer.SerializingBackend, e element.Element) error {
+	structElement, ok := e.(*element.StructElement)
+	if !ok {
+		return errors.Errorf("Expected struct element, got %d", e.Kind())
+	} else {
+		return s.underlying.Write(backend, &element.TabularRow{structElement.Elements})
 	}
 }

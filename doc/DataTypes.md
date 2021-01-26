@@ -261,6 +261,38 @@ It's defined like
 
 The underlying type can be different, of course.
 
+### Array Types
+
+An array is a repeated value. The length of the array is arbitrary.
+
+It's defined like:
+
+```
+{
+    "type": "array",
+    "underlying": "int32"
+}
+```
+
+### Struct Types
+
+A struct type can contain multiple embedded fields.
+
+It's defined like:
+
+```
+{
+    "type": "struct",
+    "fields": {
+      "name": "string",
+      "age": {
+        "type": "nullable",
+        "underlying": "int32"
+      }
+    }
+}
+```
+
 ## Implementation
 
 The Scala implementation resides in `ds`. A Golang implementation resides in the `go_shared/ds` project.
