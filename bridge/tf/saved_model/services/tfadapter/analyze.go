@@ -202,7 +202,7 @@ func convertBlock(isTabular bool, order []string, values map[string]TensorRefere
 		if err != nil {
 			return nil, err
 		}
-		columns = append(columns, ds.TabularColumn{Name: n, SubType: ds.Ref(convertedTensor)})
+		columns = append(columns, ds.NamedType{Name: n, SubType: ds.Ref(convertedTensor)})
 	}
 
 	if isTabular {

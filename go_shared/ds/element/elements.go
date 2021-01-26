@@ -9,6 +9,8 @@ const KIND_PRIMITIVE = 2
 const KIND_IMAGE_ELEMENT = 3
 const KIND_TENSOR_ELEMENT = 4
 const KIND_EMBEDDED_TABULAR = 5
+const KIND_ARRAY = 6
+const KIND_STRUCT = 7
 
 type Element interface {
 	Kind() int
@@ -54,6 +56,22 @@ type EmbeddedTabularElement struct {
 
 func (e *EmbeddedTabularElement) Kind() int {
 	return KIND_EMBEDDED_TABULAR
+}
+
+type ArrayElement struct {
+	Elements []Element
+}
+
+func (a *ArrayElement) Kind() int {
+	return KIND_ARRAY
+}
+
+type StructElement struct {
+	Elements []Element
+}
+
+func (s *StructElement) Kind() int {
+	return KIND_STRUCT
 }
 
 type StreamWriter interface {

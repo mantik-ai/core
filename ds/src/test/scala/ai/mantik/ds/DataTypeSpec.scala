@@ -216,6 +216,11 @@ class DataTypeSpec extends TestBase {
         componentType = FundamentalType.Uint8,
         shape = Seq(1, 2)
       )
+    ),
+    ArrayT(FundamentalType.Int32),
+    Struct(
+      "x" -> FundamentalType.Int32,
+      "y" -> ArrayT(FundamentalType.StringType)
     )
   )
 

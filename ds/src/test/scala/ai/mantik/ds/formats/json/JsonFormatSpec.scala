@@ -138,4 +138,12 @@ class JsonFormatSpec extends TestBase {
     val encodedEmbedded = JsonFormat.serializeBundle(sample2)
     JsonFormat.deserializeBundle(encodedEmbedded) shouldBe Right(sample2)
   }
+
+  it should "work for arrays" in {
+    testAsSingleAndAsTabular(TypeSamples.array._1, TypeSamples.array._2)
+  }
+
+  it should "work for named tuples" in {
+    testAsSingleAndAsTabular(TypeSamples.namedTuple._1, TypeSamples.namedTuple._2)
+  }
 }

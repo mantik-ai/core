@@ -13,8 +13,8 @@ func TestMsgPackJsonSerialization(t *testing.T) {
 		ds.Int32,
 		ds.String,
 		&ds.TabularData{
-			Columns: []ds.TabularColumn{
-				ds.TabularColumn{"x", ds.Ref(ds.Int32)},
+			Columns: []ds.NamedType{
+				ds.NamedType{"x", ds.Ref(ds.Int32)},
 			},
 		},
 	}

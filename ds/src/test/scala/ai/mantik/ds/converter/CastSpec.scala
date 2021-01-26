@@ -1,7 +1,7 @@
 package ai.mantik.ds.converter
 
 import ai.mantik.ds
-import ai.mantik.ds.element.{ Bundle, ImageElement, NullElement, Primitive, SingleElementBundle, SomeElement, TensorElement, ValueEncoder }
+import ai.mantik.ds.element.{ Bundle, ImageElement, ArrayElement, StructElement, NullElement, Primitive, SingleElementBundle, SomeElement, TensorElement, ValueEncoder }
 import ai.mantik.ds._
 import ai.mantik.testutils.TestBase
 import akka.util.ByteString
@@ -232,5 +232,62 @@ class CastSpec extends TestBase {
     c4.canFail shouldBe false
     c4.loosing shouldBe false
     c4.convert(Primitive(8: Byte)) shouldBe SomeElement(Primitive(8))
+  }
+
+  it should "work for arrays" in {
+    val c = Cast.findCast(
+      ArrayT(FundamentalType.Int64),
+      ArrayT(FundamentalType.Int32)
+    ).forceRight
+    c.canFail shouldBe false
+    c.loosing shouldBe true
+    c.isSafe shouldBe false
+    c.convert(ArrayElement(Primitive(100L), Primitive(200L))) shouldBe ArrayElement(
+      Primitive(100), Primitive(200)
+    )
+  }
+
+  it should "work for structures" in {
+    val a = Struct(
+      "x" -> FundamentalType.Int32,
+      "y" -> FundamentalType.StringType
+    )
+    val b = Struct(
+      "a" -> FundamentalType.Int64,
+      "b" -> FundamentalType.Float32
+    )
+
+    val c = Cast.findCast(
+      a, b
+    ).forceRight
+
+    c.canFail shouldBe true
+    c.loosing shouldBe false
+
+    c.convert(StructElement(Primitive(100), Primitive("3.14"))) shouldBe StructElement(
+      Primitive(100L), Primitive(3.14f)
+    )
+  }
+
+  it should "be usable to pack and unpack" in {
+    val c = Cast.findCast(
+      FundamentalType.Int32,
+      Struct(
+        "a" -> FundamentalType.Int64
+      )
+    ).forceRight
+    c.canFail shouldBe false
+    c.loosing shouldBe false
+    c.convert(Primitive(100)) shouldBe StructElement(Primitive(100L))
+
+    val c2 = Cast.findCast(
+      Struct(
+        "a" -> FundamentalType.Int32
+      ),
+      FundamentalType.StringType
+    ).forceRight
+    c2.canFail shouldBe false
+    c2.loosing shouldBe false
+    c2.convert(StructElement(Primitive(100))) shouldBe Primitive("100")
   }
 }

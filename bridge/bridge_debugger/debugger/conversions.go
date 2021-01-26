@@ -74,7 +74,7 @@ func buildSelectAdapter(dataType ds.DataType, selector ColumnSelector) (*adapt.C
 		if fromId < 0 {
 			return nil, errors.Errorf("Column %s not found", pair.From)
 		}
-		resultType.Columns = append(resultType.Columns, ds.TabularColumn{pair.To, tab.Columns[fromId].SubType})
+		resultType.Columns = append(resultType.Columns, ds.NamedType{pair.To, tab.Columns[fromId].SubType})
 		ids = append(ids, fromId)
 	}
 	var adapter adapt.Adapter = func(e element.Element) (element.Element, error) {

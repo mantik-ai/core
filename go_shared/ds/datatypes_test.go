@@ -95,6 +95,20 @@ var complexExamples = []string{
 			"shape": [2,3]
 		}
 	}`,
+	`
+	{
+		"type": "struct",
+		"fields": {
+			"a": "int32",
+			"b": "string"
+		}
+	}
+	`,
+	`
+	{
+		"type": "array",
+		"underlying": "int32"
+	}`,
 }
 
 func TestFundamentalJson(t *testing.T) {
@@ -129,9 +143,9 @@ func TestToJson(t *testing.T) {
 
 func TestTabularDataJson(t *testing.T) {
 	sample := TabularData{}
-	sample.Columns = []TabularColumn{
-		TabularColumn{"x", TypeReference{Int32}},
-		TabularColumn{"y", TypeReference{Float32}},
+	sample.Columns = []NamedType{
+		NamedType{"x", TypeReference{Int32}},
+		NamedType{"y", TypeReference{Float32}},
 	}
 	l := 3
 	sample.RowCount = &l

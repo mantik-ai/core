@@ -30,9 +30,9 @@ func (t *TabularData) IndexOfColumn(name string) int {
 	return -1
 }
 
-type OrderedMap []TabularColumn
+type OrderedMap []NamedType
 
-type TabularColumn struct {
+type NamedType struct {
 	Name    string
 	SubType TypeReference
 }
@@ -74,7 +74,7 @@ func (omap *OrderedMap) UnmarshalJSON(data []byte) error {
 	if delim, ok := t.(json.Delim); !ok || delim != '{' {
 		return errors.New("Expected {")
 	}
-	keyvalues := make([]TabularColumn, 0)
+	keyvalues := make([]NamedType, 0)
 
 	for dec.More() {
 		t, err = dec.Token()
@@ -90,7 +90,7 @@ func (omap *OrderedMap) UnmarshalJSON(data []byte) error {
 		if err != nil {
 			return err
 		}
-		keyvalues = append(keyvalues, TabularColumn{key, value})
+		keyvalues = append(keyvalues, NamedType{key, value})
 	}
 	t, err = dec.Token()
 	if delim, ok := t.(json.Delim); !ok || delim != '}' {

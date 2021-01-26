@@ -112,5 +112,23 @@ func (t *TypeReference) UnmarshalJSON(bytes []byte) error {
 		t.Underlying = &nullabe
 		return nil
 	}
+	if *d.Type == "struct" {
+		s := Struct{}
+		err := json.Unmarshal(bytes, &s)
+		if err != nil {
+			return err
+		}
+		t.Underlying = &s
+		return nil
+	}
+	if *d.Type == "array" {
+		a := Array{}
+		err := json.Unmarshal(bytes, &a)
+		if err != nil {
+			return err
+		}
+		t.Underlying = &a
+		return nil
+	}
 	return errors.New("Not implemented " + *d.Type)
 }

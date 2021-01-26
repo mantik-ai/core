@@ -64,3 +64,19 @@ sealed trait NullableElement extends Element
 case class SomeElement(x: Element) extends NullableElement
 
 case object NullElement extends NullableElement
+
+/** Element of [[ai.mantik.ds.ArrayT]] */
+case class ArrayElement(elements: IndexedSeq[Element]) extends Element
+
+object ArrayElement {
+  /** Convenience Constructor. */
+  def apply(elements: Element*): ArrayElement = ArrayElement(elements.toIndexedSeq)
+}
+
+/** Named tuple element. */
+case class StructElement(elements: IndexedSeq[Element]) extends Element
+
+object StructElement {
+  /** Convenience Constructor. */
+  def apply(elements: Element*): StructElement = StructElement(elements.toIndexedSeq)
+}

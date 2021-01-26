@@ -3,11 +3,13 @@ package ai.mantik.planner.repository.rpc
 import ai.mantik.elements.errors.{ ErrorCodes, MantikException, MantikRemoteException }
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
 import akka.util.ByteString
-import io.circe.Decoder
+import io.circe.{ Decoder, Json }
 import io.circe.jawn.JawnParser
 import io.grpc.StatusRuntimeException
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 private[mantik] object Conversions {
 
@@ -85,8 +87,11 @@ private[mantik] object Conversions {
   /** Like decodeJsonItem but uses byte buffers to avoid copying. */
   def decodeLargeJsonItem[T: Decoder](json: ByteString, msg: String => String): T = {
     jawnParser.decodeByteBuffer[T](json.asByteBuffer) match {
-      case Left(error) => ErrorCodes.ProtocolError.throwIt(msg(Option(error.getMessage).getOrElse("unknown")))
-      case Right(ok)   => ok
+      case Left(error) =>
+        val firstBytes = Try(json.decodeString(StandardCharsets.UTF_8).take(100)).toOption
+        val message = msg(Option(error.getMessage).getOrElse("unknown")) + s" first bytes: ${firstBytes}"
+        ErrorCodes.ProtocolError.throwIt(message)
+      case Right(ok) => ok
     }
   }
 }

@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.converter.Cast
-import ai.mantik.ds.element.{ Element, NullElement, Primitive }
+import ai.mantik.ds.element.{ ArrayElement, Element, NullElement, Primitive, SomeElement, StructElement }
 import ai.mantik.ds.operations.BinaryFunction
 
 import scala.collection.mutable
@@ -17,22 +17,24 @@ class ProgramRunner(program: Program) {
 
   /**
    * The operation as it is executed.
-   * Returns true if the code should continue.
+   * Returns offset on which to continue
    */
-  type ExecutableOp = (IndexedSeq[Element], StackType) => Boolean
+  type ExecutableOp = (IndexedSeq[Element], StackType) => Option[Int]
 
-  private val executables = program.ops.map(op2ExecutableOp)
+  private val executables: Vector[ExecutableOp] = program.ops.map(op2ExecutableOp)
 
   def run(args: IndexedSeq[Element]): IndexedSeq[Element] = {
     require(args.length >= program.args, s"Program needs minimal ${program.args} arguments")
     val stack = new StackType()
 
-    val it = executables.iterator
-    while (it.hasNext) {
-      val op = it.next()
-      if (!op(args, stack)) {
-        // early exit
-        return stack.reverse.toVector
+    var position = 0
+    while (position < executables.size) {
+      val op = executables(position)
+      op(args, stack) match {
+        case Some(offset) => position = position + offset
+        case None =>
+          // early exit
+          return stack.reverse.toVector
       }
     }
 
@@ -44,7 +46,7 @@ class ProgramRunner(program: Program) {
       (_, s) =>
         {
           f(s)
-          true
+          Some(1)
         }
     }
     def makeTransformContinueOp(f: Element => Element): ExecutableOp = {
@@ -58,7 +60,7 @@ class ProgramRunner(program: Program) {
       case OpCode.Get(i) =>
         (a, s) => {
           s.push(a(i))
-          true
+          Some(1)
         }
       case castOp: OpCode.Cast =>
         val cast = eitherOrFeatureNotSupported(Cast.findCast(castOp.from, castOp.to))
@@ -90,24 +92,72 @@ class ProgramRunner(program: Program) {
       case OpCode.ReturnOnFalse =>
         (_, s) => {
           val last = s.last.asInstanceOf[Primitive[Boolean]].x
-          if (last == false) {
-            false
+          if (!last) {
+            None
           } else {
-            true
+            Some(1)
           }
         }
       case OpCode.Pop =>
-        (_, s) => {
+        makeContinueOp { s =>
           s.pop()
-          true
         }
       case b: OpCode.BinaryOp =>
         val function = eitherOrFeatureNotSupported(BinaryFunction.findBinaryFunction(b.op, b.dataType))
-        (_, s) => {
+        makeContinueOp { s =>
           val right = s.pop()
           val left = s.pop()
           s.push(function.op(left, right))
-          true
+        }
+      case OpCode.ArrayGet =>
+        makeContinueOp { s =>
+          val right = s.pop()
+          val left = s.pop()
+          val array = left.asInstanceOf[ArrayElement]
+          val index = right.asInstanceOf[Primitive[Int]].x - 1 // SQL is 1-based
+          if (index >= 0 && index < array.elements.length) {
+            val e = array.elements(index) match {
+              case s: SomeElement => s
+              case NullElement    => NullElement
+              case other          => SomeElement(other)
+            }
+            s.push(e)
+          } else {
+            s.push(NullElement)
+          }
+        }
+      case OpCode.ArraySize =>
+        makeContinueOp { s =>
+          val array = s.pop()
+          val len = array.asInstanceOf[ArrayElement].elements.size
+          s.push(Primitive[Int](len))
+        }
+      case OpCode.StructGet(index) =>
+        makeContinueOp { s =>
+          val struct = s.pop().asInstanceOf[StructElement]
+          s.push(struct.elements(index))
+        }
+      case OpCode.UnpackNullableJump(offset, drop) =>
+        (_, s) => {
+          val value = s.pop()
+          value match {
+            case SomeElement(value) =>
+              s.push(value)
+              Some(1)
+            case NullElement =>
+              for (_ <- 0 until drop) {
+                s.pop()
+              }
+              s.push(NullElement)
+              Some(1 + offset)
+            case other =>
+              throw new IllegalArgumentException(s"Expected nullable, got ${other}")
+          }
+        }
+      case OpCode.PackNullable =>
+        makeContinueOp { s =>
+          val value = s.pop()
+          s.push(SomeElement(value))
         }
     }
   }

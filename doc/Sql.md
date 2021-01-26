@@ -73,7 +73,16 @@ Supported SQL Commands
 - Null checks are possible `[..] WHERE x IS NOT NULL`
 - `AND` and `OR` concatenations are possible
 - Constants are possible, e.g. `SELECT x + 1 AS foo`
+- Accessing Arrays:
+  - Values `x[1]` **Note:** SQL Starts counting on index 1.
+  - Length: `size(x)`
+- Accessing Struct Fields, e.g. `SELECT (p).name`
 
+Note: not all DataTypes are support by SQL, unsupported are
+
+- Images (except casting)
+- Tensors (except casting)  
+- Embedded Tables
 
 How the SQL is implemented
 --------------------------

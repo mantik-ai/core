@@ -34,6 +34,11 @@ func PrimitiveRow(elements ...interface{}) *element.TabularRow {
 	return &element.TabularRow{PrimitiveElements(elements...)}
 }
 
+/** An array consisting of primitive values. */
+func PrimitiveArray(elements ...interface{}) *element.ArrayElement {
+	return &element.ArrayElement{PrimitiveElements(elements...)}
+}
+
 // Wraps multiple primitives into elements.
 func PrimitiveElements(elements ...interface{}) []element.Element {
 	converted := make([]element.Element, len(elements))

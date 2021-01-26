@@ -81,6 +81,13 @@ private[sql] object AST {
       name
     }
   }
+
+  case class StructAccessNode(expression: ExpressionNode, name: String) extends ExpressionNode {
+    override def toString: String = {
+      s"(${expression}).${name}"
+    }
+  }
+
   case class CastNode(expression: ExpressionNode, destinationType: TypeNode) extends ExpressionNode {
     override def toString: String = {
       s"CAST(${expression} as ${destinationType})"
@@ -88,7 +95,7 @@ private[sql] object AST {
   }
 
   /**
-   * Binary Operation like +,-,and,or.
+   * Binary Operation like +,-,and,or,[]
    * @param operation lowercased operation name
    */
   case class BinaryOperationNode(operation: String, left: ExpressionNode, right: ExpressionNode) extends ExpressionNode {
@@ -116,4 +123,6 @@ private[sql] object AST {
   case class ImageTypeNode(underlying: Option[FundamentalType], channel: Option[ImageChannel]) extends TypeNode
   /** Marks something as nullable */
   case class NullableTypeNode(underlying: TypeNode) extends TypeNode
+  /** Marks something as array */
+  case class ArrayTypeNode(underlying: TypeNode) extends TypeNode
 }

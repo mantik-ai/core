@@ -40,9 +40,11 @@ trainingType:
 statType:
   columns:
     centers:
-      type: tensor
-      shape: [2]
-      componentType: float64
+      type: array
+      underlying:
+        type: tensor
+        shape: [2]
+        componentType: float64
     inertia: float64
     n_iter: int32
 # The type when trained

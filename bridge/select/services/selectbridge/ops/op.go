@@ -9,7 +9,7 @@ import (
 )
 
 // The op codes for the interpreter
-// For a better documentation look into the Scala Code
+// For a better documentation look into the Scala Code (class OpCode, Program and ProgramJson))
 
 type OpList []OpCode
 
@@ -76,6 +76,24 @@ type BinaryOp struct {
 type IsNullOp struct {
 }
 
+type ArrayGet struct {
+}
+
+type ArraySize struct {
+}
+
+type StructGet struct {
+	Idx int32
+}
+
+type UnpackNullableJump struct {
+	Offset int32
+	Drop   int32
+}
+
+type PackNullable struct {
+}
+
 /* Parse a single opcode, returns the opcode and the remaining raw messages. */
 func ParseOpCode(in []json.RawMessage) (OpCode, []json.RawMessage, error) {
 	if len(in) == 0 {
@@ -120,6 +138,21 @@ func ParseOpCode(in []json.RawMessage) (OpCode, []json.RawMessage, error) {
 	case "isn":
 		var op IsNullOp
 		return parseOp0(in, &op)
+	case "unj":
+		var op UnpackNullableJump
+		return parseOp2(in, &op, &op.Offset, &op.Drop)
+	case "pn":
+		var op PackNullable
+		return parseOp0(in, &op)
+	case "arrayget":
+		var op ArrayGet
+		return parseOp0(in, &op)
+	case "arraysize":
+		var op ArraySize
+		return parseOp0(in, &op)
+	case "structget":
+		var op StructGet
+		return parseOp1(in, &op, &op.Idx)
 	default:
 		return nil, nil, errors.Errorf("Unknown operation %s", code)
 	}

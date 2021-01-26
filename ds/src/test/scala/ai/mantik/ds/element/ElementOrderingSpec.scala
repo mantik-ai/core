@@ -15,4 +15,15 @@ class ElementOrderingSpec extends TestBase {
         }
     }
   }
+
+  it should "work for non-primitives" in {
+    TypeSamples.nonFundamentals.foreach {
+      case (dt, sample) =>
+        val ordering = ElementOrdering.elementOrdering(dt)
+        withClue(s"it works for ${dt}") {
+          ordering.lt(sample, sample) shouldBe false
+          ordering.gteq(sample, sample) shouldBe true
+        }
+    }
+  }
 }

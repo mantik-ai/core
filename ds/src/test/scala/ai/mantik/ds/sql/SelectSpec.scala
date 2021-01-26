@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql
 
-import ai.mantik.ds.element.{ Bundle, NullElement, TabularBundle, TensorElement }
+import ai.mantik.ds.element.{ ArrayElement, Bundle, NullElement, Primitive, SomeElement, StructElement, TabularBundle, TensorElement }
 import ai.mantik.ds.sql.run.{ Compiler, SelectProgram }
-import ai.mantik.ds.{ FundamentalType, Nullable, TabularData, Tensor }
+import ai.mantik.ds.{ ArrayT, FundamentalType, Nullable, Struct, TabularData, Tensor }
 import ai.mantik.testutils.TestBase
 
 class SelectSpec extends TestBase {
@@ -153,5 +153,132 @@ class SelectSpec extends TestBase {
         "x" -> Nullable(FundamentalType.Int32)
       )
     ).row(1).result
+  }
+
+  it should "run array accesses" in {
+    val bundle = TabularBundle.build(
+      TabularData(
+        "x" -> ArrayT(FundamentalType.Int32)
+      )
+    ).row(
+        ArrayElement(Primitive(4), Primitive(5), Primitive(6))
+      ).row(
+          ArrayElement()
+        ).result
+
+    val result = Select.run(
+      bundle, "SELECT x[2] as a, SIZE(x) as b"
+    )
+
+    result shouldBe TabularBundle.build(
+      TabularData(
+        "a" -> Nullable(FundamentalType.Int32),
+        "b" -> FundamentalType.Int32
+      )
+    ).row(
+        5, 3
+      ).row(
+          NullElement, 0
+        ).result
+  }
+
+  it should "correctly handle nullable arrays" in {
+    val bundle = TabularBundle.build(
+      TabularData(
+        "x" -> Nullable(ArrayT(FundamentalType.Int32))
+      )
+    ).row(
+        NullElement
+      ).row(
+        SomeElement(ArrayElement(Primitive(1)))
+      ).result
+
+    val result = Select.run(
+      bundle, "SELECT x[1] as a, SIZE(x) as b, x[null] as c"
+    )
+
+    result shouldBe TabularBundle.build(
+      TabularData(
+        "a" -> Nullable(FundamentalType.Int32),
+        "b" -> Nullable(FundamentalType.Int32),
+        "c" -> Nullable(FundamentalType.Int32)
+      )
+    ).row(
+        NullElement, NullElement, NullElement
+      ).row(
+        SomeElement(Primitive(1)), SomeElement(Primitive(1)), NullElement
+      ).result
+  }
+
+  it should "correctly handle even more complicaited nullable arrays" in {
+    val bundle = TabularBundle.build(
+      "x" -> ArrayT(Nullable(FundamentalType.Int32)),
+      "y" -> Nullable(ArrayT(Nullable(FundamentalType.Int32)))
+    ).row(
+        ArrayElement(NullElement, SomeElement(Primitive(1))), NullElement
+      ).row(
+          ArrayElement(SomeElement(Primitive(1)), NullElement), SomeElement(ArrayElement(SomeElement(Primitive(1))))
+        ).result
+
+    val result = Select.run(
+      bundle, "SELECT x[1] AS a, size(x) AS b, y[1] AS c, size(y) AS d"
+    )
+
+    result shouldBe TabularBundle.build(
+      TabularData(
+        "a" -> Nullable(FundamentalType.Int32),
+        "b" -> FundamentalType.Int32,
+        "c" -> Nullable(FundamentalType.Int32),
+        "d" -> Nullable(FundamentalType.Int32)
+      )
+    ).row(
+        NullElement, Primitive(2), NullElement, NullElement
+      ).row(
+        SomeElement(Primitive(1)), Primitive(2), SomeElement(Primitive(1)), SomeElement(Primitive(1))
+      ).result
+  }
+
+  it should "run struct acesses" in {
+    val bundle = TabularBundle.build(
+      "x" -> Struct(
+        "name" -> FundamentalType.StringType,
+        "age" -> Nullable(FundamentalType.Int32)
+      )
+    ).row(StructElement(Primitive("Alice"), SomeElement(Primitive(42))))
+      .row(StructElement(Primitive("Bob"), NullElement))
+      .result
+
+    val result = Select.run(
+      bundle, "SELECT (x).name, (x).age"
+    )
+
+    result shouldBe TabularBundle.build(
+      "name" -> FundamentalType.StringType,
+      "age" -> Nullable(FundamentalType.Int32)
+    ).row("Alice", 42)
+      .row("Bob", NullElement)
+      .result
+  }
+
+  it should "work for nullable structs" in {
+    val bundle = TabularBundle.build(
+      "x" -> Nullable(Struct(
+        "name" -> FundamentalType.StringType,
+        "age" -> Nullable(FundamentalType.Int32)
+      ))
+    ).row(SomeElement(StructElement(Primitive("Alice"), SomeElement(Primitive(42)))))
+      .row(NullElement)
+      .result
+
+    val result = Select.run(
+      bundle, "SELECT (x).name, (x).age"
+    )
+
+    result shouldBe TabularBundle.build(
+      "name" -> Nullable(FundamentalType.StringType),
+      "age" -> Nullable(FundamentalType.Int32)
+    ).row("Alice", 42)
+      .row(NullElement, NullElement)
+      .result
   }
 }

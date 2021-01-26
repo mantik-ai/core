@@ -50,7 +50,7 @@ func buildInputFeed(model *LoadedModel, inputRows []*element.TabularRow) (*map[t
 	return &result, nil
 }
 
-func buildInputTensor(isTabular bool, inputRows []*element.TabularRow, column ds.TabularColumn, columnIndex int) (*tensorflow.Tensor, error) {
+func buildInputTensor(isTabular bool, inputRows []*element.TabularRow, column ds.NamedType, columnIndex int) (*tensorflow.Tensor, error) {
 	tensorType, ok := column.SubType.Underlying.(*ds.Tensor)
 	if !ok {
 		return nil, errors.Errorf("Can only convert tensors, got %s", column.SubType.Underlying.TypeName())

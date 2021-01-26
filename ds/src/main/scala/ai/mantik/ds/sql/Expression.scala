@@ -2,7 +2,7 @@ package ai.mantik.ds.sql
 
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
 import ai.mantik.ds.operations.BinaryOperation
-import ai.mantik.ds.{ DataType, FundamentalType }
+import ai.mantik.ds.{ ArrayT, DataType, FundamentalType, Nullable, Struct }
 
 /** An expression (e.g. Inside Select). */
 sealed trait Expression {
@@ -65,6 +65,50 @@ case class CastExpression(
     expression: Expression,
     dataType: DataType
 ) extends UnaryExpression
+
+/** Returns array length. */
+case class SizeExpression(
+    expression: Expression
+) extends UnaryExpression {
+  override def dataType: DataType = Nullable.mapIfNullable(expression.dataType, _ => FundamentalType.Int32)
+}
+
+/** Returns array value. */
+case class ArrayGetExpression(
+    array: Expression,
+    index: Expression
+) extends BinaryExpression {
+  require(Nullable.unwrap(array.dataType).isInstanceOf[ArrayT])
+  require(Nullable.unwrap(index.dataType) == FundamentalType.Int32)
+
+  override def left: Expression = array
+
+  override def right: Expression = index
+
+  override def dataType: DataType = Nullable.makeNullable(
+    Nullable.unwrap(array.dataType).asInstanceOf[ArrayT].underlying
+  )
+}
+
+/** Gives access to a structural field  */
+case class StructAccessExpression(
+    expression: Expression,
+    name: String
+) extends UnaryExpression {
+
+  def underlyingStruct: Struct = Nullable.unwrap(expression.dataType) match {
+    case s: Struct => s
+    case other     => throw new IllegalStateException(s"Expected struct, got ${other}")
+  }
+
+  def underlyingField: DataType = underlyingStruct.fields.getOrElse(name, throw new IllegalStateException(s"Field ${name} not found"))
+
+  override def dataType: DataType = {
+    Nullable.mapIfNullable(expression.dataType, _ =>
+      underlyingField
+    )
+  }
+}
 
 /** A Simple binary expression which works on the same type. */
 case class BinaryOperationExpression(

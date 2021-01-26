@@ -1,10 +1,10 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.FundamentalType.StringType
+import ai.mantik.ds.FundamentalType.{ StringType, fromName }
 import ai.mantik.ds.element.{ Bundle, Primitive, SingleElementBundle, TabularBundle }
 import ai.mantik.ds.sql._
 import ai.mantik.ds.testutil.TestBase
-import ai.mantik.ds.{ FundamentalType, Nullable, TabularData }
+import ai.mantik.ds.{ ArrayT, FundamentalType, Nullable, Struct, TabularData }
 
 class SelectBuilderSpec extends TestBase {
 
@@ -303,6 +303,80 @@ class SelectBuilderSpec extends TestBase {
       )
     )
     got shouldBe expected
+    testReparsable(got)
+  }
+
+  it should "support array accesses" in {
+    val input = TabularData(
+      "x" -> ArrayT(FundamentalType.Int32),
+      "y" -> FundamentalType.Int8
+    )
+
+    val got = SelectBuilder.buildSelect(
+      input,
+      "SELECT x[y], size(x)"
+    ).forceRight
+
+    got.resultingTabularType shouldBe TabularData(
+      "$1" -> Nullable(FundamentalType.Int32),
+      "$2" -> FundamentalType.Int32
+    )
+
+    val expected = Select(
+      AnonymousInput(input),
+      Some(
+        Vector(
+          SelectProjection("$1", ArrayGetExpression(
+            ColumnExpression(0, ArrayT(FundamentalType.Int32)),
+            CastExpression(
+              ColumnExpression(1, FundamentalType.Int8),
+              FundamentalType.Int32
+            )
+          )),
+          SelectProjection("$2", SizeExpression(ColumnExpression(0, ArrayT(FundamentalType.Int32))))
+        )
+      )
+    )
+    got shouldBe expected
+    testReparsable(got)
+  }
+
+  it should "support array casts" in {
+    val input = TabularData(
+      "x" -> ArrayT(FundamentalType.Int32),
+      "y" -> FundamentalType.Int8
+    )
+
+    val got = SelectBuilder.buildSelect(
+      input,
+      "SELECT CAST (x as INT32), CAST(y as INT8[][] NULLABLE)"
+    ).forceRight
+
+    got.resultingTabularType shouldBe TabularData(
+      "x" -> FundamentalType.Int32,
+      "y" -> Nullable(ArrayT(ArrayT(FundamentalType.Int8)))
+    )
+
+    testReparsable(got)
+  }
+
+  it should "support struct accesses" in {
+    val input = TabularData(
+      "user" -> Struct(
+        "name" -> FundamentalType.StringType,
+        "age" -> FundamentalType.Int32
+      )
+    )
+    val got = SelectBuilder.buildSelect(
+      input,
+      "SELECT (user).name, (user).age"
+    ).forceRight
+
+    got.resultingTabularType shouldBe TabularData(
+      "name" -> FundamentalType.StringType,
+      "age" -> FundamentalType.Int32
+    )
+
     testReparsable(got)
   }
 }

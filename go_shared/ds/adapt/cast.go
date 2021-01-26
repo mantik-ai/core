@@ -64,6 +64,27 @@ func LookupCast(from ds.DataType, to ds.DataType) (*Cast, error) {
 	if !isFromNullable && isToNullable {
 		return lookupNonNullableToNullable(from, toNullable)
 	}
+
+	fromArray, isFromArray := from.(*ds.Array)
+	toArray, isToArray := to.(*ds.Array)
+	if isFromArray && isToArray {
+		return lookupArrayCast(fromArray, toArray)
+	}
+
+	fromStruct, isFromStruct := from.(*ds.Struct)
+	toStruct, isToStruct := to.(*ds.Struct)
+	if isFromStruct && isToStruct {
+		return lookupStructCast(fromStruct, toStruct)
+	}
+
+	if isToStruct {
+		return lookupPackCast(from, toStruct)
+	}
+
+	if isFromStruct {
+		return lookupUnpackCast(fromStruct, to)
+	}
+
 	return nil, errors.New("Cast not available")
 }
 
@@ -153,4 +174,122 @@ func wrapRawAdapter(adapter RawAdapter) Adapter {
 	return func(e element.Element) (element.Element, error) {
 		return element.Primitive{adapter(e.(element.Primitive).X)}, nil
 	}
+}
+
+func lookupArrayCast(from *ds.Array, to *ds.Array) (*Cast, error) {
+	underlying, err := LookupCast(from.Underlying.Underlying, to.Underlying.Underlying)
+	if err != nil {
+		return nil, err
+	}
+	return &Cast{
+		From:    from,
+		To:      to,
+		Loosing: underlying.Loosing,
+		CanFail: underlying.CanFail,
+		Adapter: func(e element.Element) (element.Element, error) {
+			input, ok := e.(*element.ArrayElement)
+			if !ok {
+				return nil, errors.New("Expected array")
+			}
+			result := make([]element.Element, len(input.Elements), len(input.Elements))
+			for i, v := range input.Elements {
+				x, err := underlying.Adapter(v)
+				if err != nil {
+					return nil, err
+				}
+				result[i] = x
+			}
+			return &element.ArrayElement{result}, nil
+		},
+	}, nil
+}
+
+func lookupStructCast(from *ds.Struct, to *ds.Struct) (*Cast, error) {
+	if from.Arity() != to.Arity() {
+		return nil, errors.New("Cannot cast with different arity")
+	}
+
+	subCasts := make([]*Cast, from.Arity(), from.Arity())
+	var canFail = false
+	var loosing = false
+	for i, fromType := range from.Fields {
+		cast, err := LookupCast(fromType.SubType.Underlying, to.Fields[i].SubType.Underlying)
+		if err != nil {
+			return nil, err
+		}
+		canFail = canFail || cast.CanFail
+		loosing = loosing || cast.Loosing
+		subCasts[i] = cast
+	}
+	return &Cast{
+		From:    from,
+		To:      to,
+		Loosing: loosing,
+		CanFail: canFail,
+		Adapter: func(e element.Element) (element.Element, error) {
+			structElement, ok := e.(*element.StructElement)
+			if !ok {
+				return nil, errors.New("Expected struct")
+			}
+			result := make([]element.Element, len(subCasts), len(subCasts))
+			for i, e := range structElement.Elements {
+				casted, err := subCasts[i].Adapter(e)
+				if err != nil {
+					return nil, err
+				}
+				result[i] = casted
+			}
+			return &element.StructElement{result}, nil
+		},
+	}, nil
+}
+
+func lookupPackCast(from ds.DataType, to *ds.Struct) (*Cast, error) {
+	if to.Arity() != 1 {
+		return nil, errors.New("Can only pack structs of arity 1")
+	}
+	cast, err := LookupCast(from, to.Fields[0].SubType.Underlying)
+	if err != nil {
+		return nil, err
+	}
+	return &Cast{
+		From:    from,
+		To:      to,
+		Loosing: cast.Loosing,
+		CanFail: cast.CanFail,
+		Adapter: func(e element.Element) (element.Element, error) {
+			casted, err := cast.Adapter(e)
+			if err != nil {
+				return nil, err
+			}
+			return &element.StructElement{[]element.Element{casted}}, nil
+		},
+	}, nil
+}
+
+func lookupUnpackCast(from *ds.Struct, to ds.DataType) (*Cast, error) {
+	if from.Arity() != 1 {
+		return nil, errors.New("Can only unpack structs of arity 1")
+	}
+	cast, err := LookupCast(from.Fields[0].SubType.Underlying, to)
+	if err != nil {
+		return nil, err
+	}
+	return &Cast{
+		From:    from,
+		To:      to,
+		Loosing: cast.Loosing,
+		CanFail: cast.CanFail,
+		Adapter: func(e element.Element) (element.Element, error) {
+			se, ok := e.(*element.StructElement)
+			if !ok {
+				return nil, errors.New("Expected Struct")
+			}
+			casted, err := cast.Adapter(se.Elements[0])
+			if err != nil {
+				return nil, err
+			}
+			return casted, nil
+		},
+	}, nil
 }

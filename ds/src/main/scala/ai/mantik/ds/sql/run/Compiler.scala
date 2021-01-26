@@ -2,8 +2,8 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.operations.{ BinaryFunction, BinaryOperation }
-import ai.mantik.ds.sql.{ Alias, AnonymousInput, BinaryOperationExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Join, Query, Select, SelectProjection, Union }
-import ai.mantik.ds.{ DataType, FundamentalType }
+import ai.mantik.ds.sql.{ Alias, AnonymousInput, ArrayGetExpression, BinaryOperationExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Join, Query, Select, SelectProjection, SizeExpression, StructAccessExpression, Union }
+import ai.mantik.ds.{ DataType, FundamentalType, Nullable }
 import cats.implicits._
 
 import scala.annotation.tailrec
@@ -141,6 +141,72 @@ object Compiler {
           rightOps <- compileExpression(c.right)
           op <- binaryOperation(c.op, c.dataType)
         } yield leftOps ++ rightOps :+ op
+      case a: ArrayGetExpression =>
+        compileOperationWithPotentialNullableArguments(
+          Vector(OpCode.ArrayGet),
+          false, // Array Get is always nullable
+          a.array,
+          a.index
+        )
+      case a: SizeExpression =>
+        compileOperationWithPotentialNullableArguments(
+          Vector(OpCode.ArraySize),
+          true, // ArraySize may be nullable if array is nullable
+          a.expression
+        )
+      case s: StructAccessExpression =>
+        s.underlyingStruct.lookupFieldIndex(s.name) match {
+          case None => Left(s"Field ${s.name} not found")
+          case Some(fieldIndex) =>
+            val needNullWrap = s.expression.dataType.isNullable && !s.underlyingField.isNullable
+            compileOperationWithPotentialNullableArguments(
+              Vector(OpCode.StructGet(fieldIndex)),
+              needNullWrap,
+              s.expression
+            )
+        }
+    }
+  }
+
+  /**
+   * Compiles operation(arguments..)
+   * All Arguments are null checked (if nullable) and if necessary null the whole expression
+   * will return null.
+   *
+   * @param opNeedsPotentialNullWrap add a Nullable-Cast at the end if any of the arguments are nullable.
+   */
+  private def compileOperationWithPotentialNullableArguments(
+    operation: Vector[OpCode],
+    opNeedsPotentialNullWrap: Boolean,
+    arguments: Expression*
+  ): Either[String, Vector[OpCode]] = {
+    for {
+      argumentOpCodes <- arguments.map(compileExpression).toVector.sequence
+    } yield {
+      val argumentsNullable = arguments.map(_.dataType.isNullable)
+      val containsNullable = argumentsNullable.contains(true)
+      // Note: reversed
+      val resultBuilder = Vector.newBuilder[OpCode]
+      var offset = 0
+
+      if (containsNullable && opNeedsPotentialNullWrap) {
+        resultBuilder += OpCode.PackNullable
+        offset += 1
+      }
+
+      resultBuilder ++= operation.reverse
+      offset += operation.size
+      argumentOpCodes.zip(argumentsNullable).zipWithIndex.reverse.foreach {
+        case ((opCodes, isNullable), idx) =>
+          if (isNullable) {
+            resultBuilder += OpCode.UnpackNullableJump(offset, drop = idx)
+            offset += 1
+          }
+          resultBuilder ++= opCodes.reverse
+          offset += opCodes.size
+      }
+      val result = resultBuilder.result().reverse
+      result
     }
   }
 

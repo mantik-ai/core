@@ -25,6 +25,15 @@ class StringPreviewGeneratorSpec extends TestBase {
     .row(3, "How are you?")
     .result
 
+  it should "render non fundamentals" in {
+    TypeSamples.nonFundamentals.foreach {
+      case (dt, example) =>
+        val bundle = Bundle(dt, Vector(SingleElement(example)))
+        val p = StringPreviewGenerator().render(bundle)
+        p shouldNot be(empty)
+    }
+  }
+
   it should "render a simple table" in {
     StringPreviewGenerator().render(simpleBundle) shouldBe
       """|x|y           |

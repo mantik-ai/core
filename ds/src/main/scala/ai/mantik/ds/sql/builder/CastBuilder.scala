@@ -4,7 +4,7 @@ import ai.mantik.ds.converter.Cast
 import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.sql.{ CastExpression, ConstantExpression, Expression }
-import ai.mantik.ds.{ DataType, FundamentalType, Image, ImageChannel, ImageFormat, Nullable, Tensor }
+import ai.mantik.ds.{ ArrayT, DataType, FundamentalType, Image, ImageChannel, ImageFormat, Nullable, Struct, Tensor }
 import ai.mantik.ds.sql.parser.AST
 
 import scala.util.control.NonFatal
@@ -83,16 +83,44 @@ private[sql] object CastBuilder {
     }
   }
 
+  /** Like [[wrapType]], but also accepts a nullable expression */
+  def wrapTypeWithNullableSupport(in: Expression, dataType: DataType): Either[String, Expression] = {
+    in.dataType match {
+      case Nullable(_) =>
+        wrapType(in, Nullable(dataType))
+      case _ =>
+        wrapType(in, dataType)
+    }
+  }
+
+  def ensureArray(in: Expression, maybeNullable: Boolean): Either[String, (Expression, ArrayT)] = {
+    in.dataType match {
+      case a: ArrayT                            => Right(in -> a)
+      case Nullable(a: ArrayT) if maybeNullable => Right(in -> a)
+      case somethingElse                        => Left(s"Cannot ensure ${somethingElse} as array")
+    }
+  }
+
+  def ensureStruct(in: Expression, maybeNullable: Boolean): Either[String, (Expression, Struct)] = {
+    in.dataType match {
+      case s: Struct                            => Right(in -> s)
+      case Nullable(s: Struct) if maybeNullable => Right(in -> s)
+      case somethingElse                        => Left(s"Cannot ensure ${somethingElse} is struct")
+    }
+  }
+
   def buildCast(expression: Expression, castNode: AST.CastNode): Either[String, Expression] = {
     for {
-      dataType <- findCast(expression, castNode.destinationType)
+      dataType <- convertTypeNode(expression, castNode.destinationType)
     } yield CastExpression(expression, dataType)
   }
 
-  private def findCast(input: Expression, destinationType: AST.TypeNode): Either[String, DataType] = {
+  private def convertTypeNode(input: Expression, destinationType: AST.TypeNode): Either[String, DataType] = {
     destinationType match {
       case AST.NullableTypeNode(underlying) =>
-        findCast(input, underlying).map(Nullable(_))
+        convertTypeNode(input, underlying).map(Nullable(_))
+      case AST.ArrayTypeNode(underlying) =>
+        convertTypeNode(input, underlying).map(ArrayT(_))
       case AST.FundamentalTypeNode(dataType: DataType) =>
         // TODO: Check if we support this cast
         Right(dataType)
