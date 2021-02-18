@@ -305,6 +305,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       },
       fileId = dbArtifact.item.fileId,
       itemId = ItemId.fromString(dbArtifact.item.itemId),
+      executorStorageId = dbArtifact.item.executorStorageId,
       deploymentInfo = dbArtifact.depl.map { depl =>
         DeploymentInfo(
           name = depl.name,
@@ -331,7 +332,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       mantikheader = a.mantikHeader,
       fileId = a.fileId,
       itemId = a.itemId.toString,
-      kind = a.parsedMantikHeader.definition.kind
+      kind = a.parsedMantikHeader.definition.kind,
+      executorStorageId = a.executorStorageId
     )
   }
 
@@ -379,6 +381,37 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       artifacts.toIndexedSeq
     }
 
+  }
+
+  override def byFileId(fileId: String): Future[Seq[MantikArtifact]] = {
+    dbOperation(s"byFileId fileId=${fileId}") {
+      val query = quote {
+        db.items.filter(_.fileId == lift(Some(fileId): Option[String]))
+          .leftJoin(db.names).on(_.itemId == _.currentItemId)
+          .leftJoin(db.deployments).on(_._1.itemId == _.itemId)
+      }
+      val artifacts = run(query).map {
+        case ((item, name), depl) =>
+          (item, name, depl)
+      }
+      artifacts.map {
+        case (item, name, depl) =>
+          val subDeployments = getSubDeployments(item.itemId)
+          decodeDbArtifact(DbArtifact(name, item, depl, subDeployments))
+      }
+    }
+  }
+
+  override def updateExecutorStorageId(itemId: ItemId, executorStorageId: Option[String]): Future[Boolean] = {
+    dbOperation(s"updateRemoteFileId itemId=${itemId}, executorStorageId=${executorStorageId}") {
+      val query = quote {
+        db.items
+          .filter(_.itemId == lift(itemId.toString))
+          .update(_.executorStorageId -> lift(executorStorageId))
+      }
+      val result = run(query)
+      result > 0
+    }
   }
 }
 

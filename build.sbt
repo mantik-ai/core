@@ -3,7 +3,7 @@ ThisBuild / version := "0.3-SNAPSHOT"
 ThisBuild / scalaVersion := "2.12.8"
 // ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
 ThisBuild / scalacOptions += "-feature"
-ThisBuild / scalacOptions += "-deprecation"
+ThisBuild / scalacOptions ++= Seq("-unchecked", "-deprecation")
 ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats
 // ThisBuild / updateOptions := updateOptions.value.withGigahorse(false) // See https://github.com/sbt/sbt/issues/3570
 
@@ -244,6 +244,16 @@ lazy val executorDocker = makeProject("executor/docker", "executorDocker")
   .enablePlugins(BuildInfoPlugin)
   .settings(configureBuildInfo("ai.mantik.executor.docker.buildinfo"))
 
+lazy val executorS3Storage = makeProject("executor/s3-storage", "executorS3Storage")
+  .dependsOn(testutils, executorApi, executorCommon)
+  .settings(
+    name := "executor-s3-storage",
+    libraryDependencies ++= Seq(
+      // Amazon S3
+      "software.amazon.awssdk" % "s3" % "2.15.69"
+    )
+  )
+
 lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubernetes")
   .dependsOn(executorApi, executorCommon)
   .dependsOn(executorCommonTest % "it")
@@ -265,7 +275,7 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
       // Guava
       "com.google.guava" % "guava" % "27.1-jre",
 
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
     )
   )
   .enablePlugins(BuildInfoPlugin)
@@ -273,7 +283,7 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
 
 lazy val planner = makeProject("planner")
   .dependsOn(ds, elements, executorApi, componently, mnpScala)
-  .dependsOn(executorKubernetes % "it", executorDocker % "it")
+  .dependsOn(executorKubernetes % "it", executorDocker % "it", executorS3Storage % "it")
   .settings(
     name := "planner",
     libraryDependencies ++= Seq(
@@ -303,7 +313,7 @@ lazy val examples = makeProject("examples")
 
 /** Engine implementation and API. */
 lazy val engine = makeProject("engine")
-  .dependsOn(planner, executorKubernetes % "it", executorDocker % "it")
+  .dependsOn(planner, executorKubernetes % "it", executorDocker % "it", executorS3Storage % "it")
   .settings(
     name := "engine"
   )
@@ -315,7 +325,7 @@ lazy val engine = makeProject("engine")
 
 /** Runable Main Class */
 lazy val engineApp = makeProject("engine-app", "engineApp")
-  .dependsOn(engine, executorKubernetes, executorDocker)
+  .dependsOn(engine, executorKubernetes, executorDocker, executorS3Storage)
   .settings(
     name := "engine-app"
   )
@@ -338,6 +348,7 @@ lazy val root = (project in file("."))
     executorCommon,
     executorKubernetes,
     executorDocker,
+    executorS3Storage,
     examples,
     planner,
     engine,

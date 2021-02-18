@@ -92,12 +92,12 @@ class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
     response.token shouldBe "Token1234"
     response.validUntil shouldBe empty
 
-    intercept[RuntimeException] {
-      await(client.login(
+    awaitException[RuntimeException] {
+      client.login(
         s"http://localhost:100", // unused port
         "username1",
         "password1"
-      ))
+      )
     }
   }
 }

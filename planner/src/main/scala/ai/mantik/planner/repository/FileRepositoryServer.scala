@@ -17,7 +17,7 @@ import scala.util.{ Failure, Success }
 /** HTTP Server for FileRepository, to make it accessible from Executor. */
 @Singleton
 private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileRepository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
-  val HelloMessage = "This is a mantik header Repository"
+  val HelloMessage = "This is the Mantik FileRepositoryServer"
 
   private val subConfig = config.getConfig("mantik.fileRepositoryServer")
   private val port = subConfig.getInt("port")
@@ -57,11 +57,11 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
         get {
           logger.debug(s"Requesting file ${id}")
           onComplete(fileRepository.loadFile(id)) {
-            case Success((contentType, fileSource)) =>
-              val mediaType = findAkkaMediaType(contentType)
-              logger.debug(s"Completing file ${id} (${contentType})")
+            case Success(result) =>
+              val mediaType = findAkkaMediaType(result.contentType)
+              logger.debug(s"Completing file ${id} (${result.contentType})")
               complete(
-                HttpEntity(mediaType, fileSource)
+                HttpEntity(mediaType, result.source)
               )
             case Failure(e: MantikException) if e.code == FileRepository.NotFoundCode =>
               logger.warn(s"File ${id} not found (http requested)")

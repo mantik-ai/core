@@ -67,10 +67,10 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
   }
 
   "get" should "should fail for not existing" in new Env {
-    val e = intercept[StatusRuntimeException] {
-      await(localRegistryServiceImpl.getArtifact(
+    val e = awaitException[StatusRuntimeException] {
+      localRegistryServiceImpl.getArtifact(
         GetArtifactRequest("notexisting")
-      ))
+      )
     }
     e.getStatus.getCode shouldBe Code.NOT_FOUND
   }
@@ -228,9 +228,9 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     Converters.decodeMantikArtifact(result.artifact.get) shouldBe original
 
     original.fileId shouldBe defined
-    val (contentType, fileSource) = await(components.fileRepository.loadFile(original.fileId.get))
-    contentType shouldBe ContentTypes.ZipFileContentType
-    val fileContent = collectByteSource(fileSource)
+    val loadFileResult = await(components.fileRepository.loadFile(original.fileId.get))
+    loadFileResult.contentType shouldBe ContentTypes.ZipFileContentType
+    val fileContent = collectByteSource(loadFileResult.source)
     fileContent shouldBe (bytes.reduce(_ ++ _))
   }
 

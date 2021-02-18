@@ -97,19 +97,19 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
 
   it should "store and retrieve artifacts" in {
     withRepo { repo =>
-      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
-        await(repo.get(artifact1.namedId.get))
+      awaitErrorCode(ErrorCodes.MantikItemNotFound) {
+        repo.get(artifact1.namedId.get)
       }
-      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
-        await(repo.get(artifact1.itemId))
+      awaitErrorCode(ErrorCodes.MantikItemNotFound) {
+        repo.get(artifact1.itemId)
       }
 
       await(repo.store(artifact1))
       val back = await(repo.get(artifact1.namedId.get))
       back shouldBe artifact1
 
-      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
-        await(repo.get(artifact2.namedId.get))
+      awaitErrorCode(ErrorCodes.MantikItemNotFound) {
+        repo.get(artifact2.namedId.get)
       }
 
       await(repo.store(artifact2))
@@ -122,6 +122,23 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
       withClue("Pure items can also be pulled") {
         await(repo.get(artifact1.itemId)) shouldBe artifact1.copy(namedId = None)
       }
+
+      val backByFileId = await(repo.byFileId(artifact1.fileId.get))
+      backByFileId shouldBe Seq(artifact1)
+      val backByOtherFileId = await(repo.byFileId("notexisting"))
+      backByOtherFileId shouldBe empty
+    }
+  }
+
+  it should "update executorStorageId" in {
+    withRepo { repo =>
+      await(repo.store(artifact1))
+      await(repo.updateExecutorStorageId(artifact1.itemId, Some("1234")))
+      val back = await(repo.get(artifact1.itemId))
+      back.executorStorageId shouldBe Some("1234")
+      await(repo.updateExecutorStorageId(artifact1.itemId, None))
+      val back2 = await(repo.get(artifact1.itemId))
+      back2.executorStorageId shouldBe None
     }
   }
 
@@ -147,8 +164,8 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
       val back3 = await(repo.get(newName))
       back3.itemId shouldBe artifact2.itemId
 
-      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
-        await(repo.ensureMantikId(ItemId.generate(), "new_name"))
+      awaitErrorCode(ErrorCodes.MantikItemNotFound) {
+        repo.ensureMantikId(ItemId.generate(), "new_name")
       }
     }
   }
@@ -216,8 +233,8 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
           )
         ).toJson
       )
-      interceptErrorCode(ErrorCodes.MantikItemConflict) {
-        await(repo.store(updated))
+      awaitErrorCode(ErrorCodes.MantikItemConflict) {
+        repo.store(updated)
       }
     }
   }
@@ -230,8 +247,8 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
       await(repo.remove("someId")) shouldBe false
 
       await(repo.remove(artifact1.namedId.get)) shouldBe true
-      interceptErrorCode(ErrorCodes.MantikItemNotFound) {
-        await(repo.get(artifact1.namedId.get))
+      awaitErrorCode(ErrorCodes.MantikItemNotFound) {
+        repo.get(artifact1.namedId.get)
       }
       withClue("Other names/versions should still exists") {
         await(repo.get(artifact1DifferentName.namedId.get)) shouldBe artifact1DifferentName
@@ -256,8 +273,8 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
         deploymentInfo = Some(deploymentInfo1)
       )
       await(repo.store(rawItemWithDeployment))
-      interceptErrorCode(ErrorCodes.MantikItemConflict) {
-        await(repo.remove(rawItemWithDeployment.itemId))
+      awaitErrorCode(ErrorCodes.MantikItemConflict) {
+        repo.remove(rawItemWithDeployment.itemId)
       }
       await(repo.get(rawItemWithDeployment.itemId)) shouldBe rawItemWithDeployment
     }
@@ -266,8 +283,8 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
   it should "deny removing the bare element if there is a name on it" in {
     withRepo { repo =>
       await(repo.store(artifact1))
-      interceptErrorCode(ErrorCodes.MantikItemConflict) {
-        await(repo.remove(artifact1.itemId))
+      awaitErrorCode(ErrorCodes.MantikItemConflict) {
+        repo.remove(artifact1.itemId)
       }
       await(repo.get(artifact1.namedId.get)) shouldBe artifact1
     }

@@ -1,7 +1,6 @@
 package ai.mantik.planner.impl.exec
 
 import java.util.UUID
-
 import ai.mantik.bridge.protocol.bridge.MantikInitConfiguration
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
@@ -25,12 +24,12 @@ import cats.implicits._
 import com.google.protobuf.any.Any
 import io.circe.syntax._
 import io.grpc.ManagedChannel
-import javax.inject.{ Inject, Singleton }
 
+import javax.inject.{ Inject, Singleton }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
 /** Naive MNP Implementation of an Executor. */
 class MnpPlanExecutor(
@@ -40,7 +39,7 @@ class MnpPlanExecutor(
     isolationSpace: String,
     dockerConfig: DockerConfig,
     artifactRetriever: MantikArtifactRetriever,
-    fileRepositoryServerRemotePresence: FileRepositoryServerRemotePresence,
+    payloadExecutorProvider: ExecutionPayloadProvider,
     mantikItemStateManager: MantikItemStateManager
 )(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
 
@@ -64,7 +63,7 @@ class MnpPlanExecutor(
     repository: Repository,
     executor: Executor,
     retriever: MantikArtifactRetriever,
-    fileRepositoryServerRemotePresence: FileRepositoryServerRemotePresence,
+    payloadExecutorProvider: ExecutionPayloadProvider,
     mantikItemStateManager: MantikItemStateManager
   )(implicit akkaRuntime: AkkaRuntime) {
     this(
@@ -76,7 +75,7 @@ class MnpPlanExecutor(
         akkaRuntime.config.getConfig("mantik.bridge.docker")
       ),
       retriever,
-      fileRepositoryServerRemotePresence: FileRepositoryServerRemotePresence,
+      payloadExecutorProvider,
       mantikItemStateManager
     )
   }
@@ -257,20 +256,81 @@ class MnpPlanExecutor(
         name -> containerMapping.containers(c.container).address
     }
     val taskId = "evaluation"
-    val preparation: MnpExecutionPreparation = new MnpExecutionPreparer(
-      graphId, graph, containerAddresses, files, fileRepositoryServerRemotePresence.assembledRemoteUri()
-    ).build()
 
-    for {
-      sessions <- initializeSessions(graph, containerMapping, preparation)
-      progressTracker = new ProgressTracker(sessions, taskId)
-      _ <- runLinks(taskId, sessions, preparation)
-      _ = progressTracker.stop()
-      _ <- shutdownSessions(sessions)
-    } yield {
-      // Done
-      ()
+    withGraphRemoteFiles(graph, files) { remoteFiles =>
+
+      val preparation: MnpExecutionPreparation = new MnpExecutionPreparer(
+        graphId, graph, containerAddresses, files, remoteFiles
+      ).build()
+
+      for {
+        sessions <- initializeSessions(graph, containerMapping, preparation)
+        progressTracker = new ProgressTracker(sessions, taskId)
+        _ <- runLinks(taskId, sessions, preparation)
+        _ = progressTracker.stop()
+        _ <- shutdownSessions(sessions)
+      } yield {
+        // Done
+        ()
+      }
     }
+  }
+
+  /** Provides temporary remote files for a graph. Files will be deleted afterwards. */
+  private def withGraphRemoteFiles[T](
+    graph: Graph[PlanNodeService],
+    files: ExecutionOpenFiles
+  )(f: Map[String, String] => Future[T]): Future[T] = {
+    val fileMapping: Vector[(String, String)] = graph.nodes.collect {
+      case (nodeId, Node(d: PlanNodeService.DockerContainer, _, _)) if d.data.isDefined =>
+        val fileId = files.resolveFileRead(d.data.get).fileId
+        nodeId -> fileId
+    }.toVector
+
+    // Tricky, we want remote files to be deleted when something fails
+
+    val t0 = System.currentTimeMillis()
+    val uploads = fileMapping.map {
+      case (nodeId, fileId) =>
+        payloadExecutorProvider.provideTemporary(fileId)
+    }
+
+    manyFuturesWithResult(uploads).flatMap { results =>
+      val t1 = System.currentTimeMillis()
+      val failed = results.count(_.isFailure)
+      logger.debug(s"Uploaded ${uploads.size} temporaries, failed: ${failed} within ${t1 - t0}ms")
+
+      val firstFailure = results.collectFirst {
+        case Failure(err) => err
+      }
+      val successes: Vector[(String, payloadExecutorProvider.TemporaryFileKey, String)] = fileMapping.zip(results).collect {
+        case ((nodeId, _), Success((key, url))) =>
+          (nodeId, key, url)
+      }
+
+      val inner = if (failed > 0) {
+        logger.warn(s"There were ${failed} failed uploads", firstFailure.get)
+        Future.failed(new PlanExecutorException(s"There were ${failed} failed uploads", firstFailure.get))
+      } else {
+        f(successes.map { s =>
+          (s._1, s._3)
+        }.toMap)
+      }
+
+      for {
+        result <- inner
+        _ <- payloadExecutorProvider.undoTemporary(successes.map(_._2))
+      } yield result
+    }
+  }
+
+  private def manyFuturesWithResult[T](in: Vector[Future[T]]): Future[Vector[Try[T]]] = {
+    val asTrials: Vector[Future[Try[T]]] = in.map { future =>
+      future
+        .map(Success(_))
+        .recover { case x => Failure(x) }
+    }
+    Future.sequence(asTrials)
   }
 
   /** Helper which tracks and prints progress of tasks within the graph. */
@@ -373,11 +433,10 @@ class MnpPlanExecutor(
 
   private def runInputPush(taskId: String, session: MnpSession, inputPush: InputPush): Future[Unit] = {
     logger.debug(s"Starting push from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}")
-    fileRepository.loadFile(inputPush.fileGetResult.fileId).flatMap {
-      case (contentType, fileSource) =>
-        val runTask = session.task(taskId)
-        val sink = runTask.push(inputPush.portId)
-        fileSource.runWith(sink)
+    fileRepository.loadFile(inputPush.fileGetResult.fileId).flatMap { result =>
+      val runTask = session.task(taskId)
+      val sink = runTask.push(inputPush.portId)
+      result.source.runWith(sink)
     }.map {
       case (bytes, response) =>
         logger.debug(s"Pushed ${bytes} from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}")
@@ -406,42 +465,45 @@ class MnpPlanExecutor(
 
   private def deployAlgorithm(deployAlgorithm: PlanOp.DeployAlgorithm)(implicit files: ExecutionOpenFiles): Future[DeploymentState] = {
     val payloadData = deployAlgorithm.node.service.data.map(files.resolveFileRead)
-    val initCall = buildInitCallForDeployment(deployAlgorithm.node, payloadData)
+    payloadExecutorProvider.providePermanent(deployAlgorithm.item.itemId).flatMap { payloadUrl =>
+      val initCall = buildInitCallForDeployment(deployAlgorithm.node, payloadData, payloadUrl)
 
-    val startWorkerRequest = StartWorkerRequest(
-      isolationSpace,
-      id = deployAlgorithm.serviceId,
-      definition = MnpWorkerDefinition(
-        container = deployAlgorithm.node.service.container,
-        extraLogins = dockerConfig.logins,
-        initializer = Some(ByteString(initCall.toByteArray))
-      ),
-      nameHint = deployAlgorithm.serviceNameHint,
-      keepRunning = true
-    )
+      val startWorkerRequest = StartWorkerRequest(
+        isolationSpace,
+        id = deployAlgorithm.serviceId,
+        definition = MnpWorkerDefinition(
+          container = deployAlgorithm.node.service.container,
+          extraLogins = dockerConfig.logins,
+          initializer = Some(ByteString(initCall.toByteArray))
+        ),
+        nameHint = deployAlgorithm.serviceNameHint,
+        keepRunning = true
+      )
 
-    for {
-      response <- executor.startWorker(startWorkerRequest)
-      deploymentState = DeploymentState(
-        name = response.nodeName,
-        internalUrl = s"mnp://${response.nodeName}:8502/${DeployedSessionName}",
-        externalUrl = None
-      )
-      deploymentInfo = DeploymentInfo(
-        name = deploymentState.name,
-        internalUrl = deploymentState.internalUrl,
-        timestamp = akkaRuntime.clock.instant()
-      )
-      _ = mantikItemStateManager.upsert(deployAlgorithm.item, _.copy(deployment = Some(deploymentState)))
-      _ <- repository.setDeploymentInfo(deployAlgorithm.item.itemId, Some(deploymentInfo))
-    } yield {
-      deploymentState
+      for {
+        response <- executor.startWorker(startWorkerRequest)
+        deploymentState = DeploymentState(
+          name = response.nodeName,
+          internalUrl = s"mnp://${response.nodeName}:8502/${DeployedSessionName}",
+          externalUrl = None
+        )
+        deploymentInfo = DeploymentInfo(
+          name = deploymentState.name,
+          internalUrl = deploymentState.internalUrl,
+          timestamp = akkaRuntime.clock.instant()
+        )
+        _ = mantikItemStateManager.upsert(deployAlgorithm.item, _.copy(deployment = Some(deploymentState)))
+        _ <- repository.setDeploymentInfo(deployAlgorithm.item.itemId, Some(deploymentInfo))
+      } yield {
+        deploymentState
+      }
     }
   }
 
   private def buildInitCallForDeployment(
     node: Node[PlanNodeService.DockerContainer],
-    payloadData: Option[FileGetResult]
+    payloadData: Option[FileGetResult],
+    payloadUrl: Option[String]
   ): InitRequest = {
     val inputPorts: Vector[ConfigureInputPort] = node.inputs.map { inputPort =>
       ConfigureInputPort(inputPort.contentType)
@@ -453,9 +515,8 @@ class MnpPlanExecutor(
     val initConfiguration = MantikInitConfiguration(
       header = node.service.mantikHeader.toJson,
       payloadContentType = payloadData.map(_.contentType).getOrElse(""),
-      payload = payloadData.map { data =>
-        val fullUrl = Uri(data.path).resolvedAgainst(fileRepositoryServerRemotePresence.assembledRemoteUri()).toString()
-        MantikInitConfiguration.Payload.Url(fullUrl)
+      payload = payloadUrl.map { url =>
+        MantikInitConfiguration.Payload.Url(url)
       }.getOrElse(
         MantikInitConfiguration.Payload.Empty
       )
@@ -522,7 +583,7 @@ class MnpPlanExecutor(
   private def deployPipelineSubNodes(dp: PlanOp.DeployPipeline): Future[Map[String, StartWorkerResponse]] = {
     val subRequests: Map[String, Future[StartWorkerResponse]] = dp.sub.map {
       case (key, subItem) =>
-        val initCall = buildInitCallForDeployment(subItem.node, None)
+        val initCall = buildInitCallForDeployment(subItem.node, None, None)
         val nameHint = "mantik-sub-" + subItem.node.service.container.simpleImageName
         val startWorkerRequest = StartWorkerRequest(
           isolationSpace = isolationSpace,

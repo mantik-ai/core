@@ -20,7 +20,8 @@ class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
     itemId = ItemId.generate().toString,
     fileId = Some("1"),
     mantikheader = "blabla",
-    kind = "kind"
+    kind = "kind",
+    executorStorageId = Some("123")
   )
 
   it should "store elements" in {

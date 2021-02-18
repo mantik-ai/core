@@ -26,6 +26,8 @@ class LocalMantikRegistryImpl @Inject() (
     fileRepository.loadFile(fileId).recover {
       case e: MantikException if e.code.isA(FileRepository.NotFoundCode) =>
         ErrorCodes.MantikItemPayloadNotFound.throwIt(s"Payload ${fileId} not found", e)
+    }.map { result =>
+      (result.contentType, result.source)
     }
   }
 

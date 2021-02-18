@@ -12,13 +12,15 @@ import ai.mantik.elements.{ ItemId, MantikDefinition, MantikId, MantikHeader, Na
  * @param namedId an optional name, if it's not an anonymous item.
  * @param itemId the itemId
  * @param deploymentInfo optional current deployment info.
+ * @param executorStorageId id of the payload mirrored in executor storage
  */
 case class MantikArtifact(
     mantikHeader: String,
     fileId: Option[String],
     namedId: Option[NamedMantikId],
     itemId: ItemId,
-    deploymentInfo: Option[DeploymentInfo] = None
+    deploymentInfo: Option[DeploymentInfo] = None,
+    executorStorageId: Option[String] = None
 ) {
   /** Returns the named Mantik Id if given, or the itemId as fallback */
   def mantikId: MantikId = namedId.getOrElse(itemId)

@@ -16,6 +16,7 @@ For a full documentation, please have a look into the [Building](Building.md) do
 Assuming you want to try it out locally, with Minikube, you should install the following:
 
 - Minikube: As a local kubernetes environment
+- A local Minio-Instance for running integration tests, reachable in http://minio.minikube (see `scripts/dev/start_minikube_minio.sh`)
 - Java Development Kit 1.11: Needed for Scala
 - Make: Needed for Building
 - SBT (Simple Build Tool): Needed for Building Scala

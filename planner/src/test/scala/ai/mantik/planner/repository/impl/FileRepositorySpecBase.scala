@@ -30,6 +30,7 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
     bytesWritten shouldBe testBytes.length
     val get = repo.getFileSync(info.fileId, false)
     get.isTemporary shouldBe false
+    get.fileSize shouldBe Some(testBytes.length)
     val (contentType, bytesAgain) = repo.getFileContentSync(info.fileId)
     contentType shouldBe ContentTypes.MantikBundleContentType
     bytesAgain shouldBe testBytes
@@ -45,8 +46,8 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
 
     withClue("it should fail if copy destination has the wrong content type") {
       val store2 = await(repo.requestFileStorage("Other", false))
-      interceptErrorCode(FileRepository.InvalidContentType) {
-        await(repo.copy(info.fileId, store2.fileId))
+      awaitErrorCode(FileRepository.InvalidContentType) {
+        repo.copy(info.fileId, store2.fileId)
       }
 
       interceptErrorCode(FileRepository.NotFoundCode) {
@@ -65,6 +66,8 @@ abstract class FileRepositorySpecBase extends TestBaseWithAkkaRuntime with TempD
       repo.getFileSync(info.fileId, optimistic = true)
     }
     getFileResponse.isTemporary shouldBe true
+    getFileResponse.fileSize shouldBe None
+
     // now store some content
     repo.storeFileSync(info.fileId, testBytes)
 

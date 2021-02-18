@@ -6,7 +6,7 @@ import io.circe._
 /** Errors from Executor. */
 object Errors {
 
-  class ExecutorException(val msg: String, val statusCode: Int) extends RuntimeException(msg)
+  class ExecutorException(val msg: String, val statusCode: Int, cause: Throwable = null) extends RuntimeException(msg, cause)
 
   implicit val encoder: ObjectEncoder[ExecutorException] = new ObjectEncoder[ExecutorException] {
 
@@ -35,7 +35,7 @@ object Errors {
   }
 
   /** A resource was not found. */
-  class NotFoundException(msg: String) extends ExecutorException(msg, 404)
+  class NotFoundException(msg: String, cause: Throwable = null) extends ExecutorException(msg, 404, cause)
 
   /** A Conflict (e.g. Exists Already). */
   class ConflictException(msg: String) extends ExecutorException(msg, 409)

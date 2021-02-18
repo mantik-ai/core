@@ -47,8 +47,8 @@ class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempD
 
   it should "fail on missing dependencies" in new Env {
     // Bridge missing
-    interceptErrorCode(ErrorCodes.MantikItemNotFound) {
-      await(retriever.addLocalMantikItemToRepository(sampleDir))
+    awaitErrorCode(ErrorCodes.MantikItemNotFound) {
+      retriever.addLocalMantikItemToRepository(sampleDir)
     }
   }
 

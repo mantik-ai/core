@@ -4,7 +4,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
@@ -13,14 +12,16 @@ import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.{ Errors, Executor }
 import akka.actor.Cancellable
 import com.google.common.net.InetAddresses
+
 import javax.inject.{ Inject, Provider }
 import play.api.libs.json.Json
-import skuber.apps.Deployment
+import skuber.apps.v1.Deployment
 import skuber.json.format._
-import skuber.{ Endpoints, ObjectMeta, Pod, Service }
+import skuber.{ Endpoints, LabelSelector, ObjectMeta, Pod, Service }
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import scala.util.{ Failure, Success }
 
 /** Kubennetes implementation of [[Executor]]. */
 class KubernetesExecutor(config: Config, ops: K8sOperations)(
@@ -38,7 +39,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     config.kubernetes.namespacePrefix + isolationSpace
   }
 
-  override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
+  override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = logErrors(s"PublishService ${publishServiceRequest.serviceName}") {
     // IP Adresses need an endpoint, while DNS names can be done via ExternalName
     // (See https://kubernetes.io/docs/concepts/services-networking/service/#externalname )
 
@@ -112,7 +113,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   private def checkPods(): Unit = {
-    logger.debug("Checking Pods")
+    logger.trace("Checking Pods")
     val timestamp = clock.instant()
     checkBrokenImagePods(timestamp)
   }
@@ -144,7 +145,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     Future.successful(str)
   }
 
-  override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = {
+  override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = logErrors("GrpcProxy") {
     val grpcProxyConfig = config.common.grpcProxy
     if (!grpcProxyConfig.enabled) {
       return Future.failed(
@@ -165,7 +166,11 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
         )
       ),
       spec = Some(Deployment.Spec(
-        template = Some(
+        selector = LabelSelector(
+          LabelSelector.IsEqualRequirement(LabelConstants.ManagedByLabelName, LabelConstants.ManagedByLabelValue),
+          LabelSelector.IsEqualRequirement(LabelConstants.RoleLabelName, LabelConstants.role.grpcProxy)
+        ),
+        template =
           Pod.Template.Spec(
             metadata = ObjectMeta(
               labels = Map(
@@ -187,7 +192,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
               )
             ))
           )
-        )
       ))
     )
     val service = Service(
@@ -217,19 +221,17 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       deploymentAssembled <- ops.createOrReplace(Some(namespace), deployment)
       serviceAssembled <- ops.createOrReplace(Some(namespace), service)
     } yield {
-      logger.info("Assembled grpc Proxy")
-      logger.info(s"Service: ${Json.prettyPrint(Json.toJson(serviceAssembled))}")
       val nodePort = serviceAssembled.spec.get.ports.head.nodePort
-      logger.info(s"Node port ${nodePort}")
       val grpcProxy = GrpcProxy(
         proxyUrl = Some(s"http://${kubernetesHost}:$nodePort")
       )
+      logger.info(s"Ensured grpc Proxy ${grpcProxy.proxyUrl} for namespace ${namespace}")
       grpcProxies.put(namespace, grpcProxy)
       grpcProxy
     }
   }
 
-  override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = {
+  override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = logErrors(s"StartWorker ${startWorkerRequest.id}") {
     val converter = KubernetesConverter(config, kubernetesHost)
     val internalId = UUID.randomUUID().toString
     val converted = converter.convertStartWorkRequest(internalId, startWorkerRequest)
@@ -249,7 +251,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     }
   }
 
-  override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] = {
+  override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] = logErrors(s"ListWorkers") {
     val namespace = namespaceForIsolationSpace(listWorkerRequest.isolationSpace)
     listWorkersImpl(namespace, listWorkerRequest.nameFilter, listWorkerRequest.idFilter).map { workloads =>
       ListWorkerResponse(
@@ -286,7 +288,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       state = workload.workerState,
       container = {
         val maybeMainContainer = workload.pod.flatMap(_.spec.flatMap(_.containers.headOption)).orElse(
-          workload.deployment.flatMap(_.spec.flatMap(_.template).flatMap(_.spec).flatMap(_.containers.headOption))
+          workload.deployment.flatMap(_.spec.map(_.template).flatMap(_.spec).flatMap(_.containers.headOption))
         )
         maybeMainContainer.map { mainContainer =>
           Container(
@@ -300,7 +302,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     )
   }
 
-  override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
+  override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = logErrors(s"StopWorker") {
     val namespace = namespaceForIsolationSpace(stopWorkerRequest.isolationSpace)
     listWorkersImpl(namespace, stopWorkerRequest.nameFilter, stopWorkerRequest.idFilter).flatMap { workloads =>
       val responses = workloads.map { workload =>
@@ -322,6 +324,17 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
           responses
         )
       }
+    }
+  }
+
+  private def logErrors[T](what: String)(f: => Future[T]): Future[T] = {
+    val t0 = System.currentTimeMillis()
+    f.andThen {
+      case Failure(exception) =>
+        logger.warn(s"${what} failed", exception)
+      case Success(value) =>
+        val t1 = System.currentTimeMillis()
+        logger.trace(s"${what} executed within ${t1 - t0}ms")
     }
   }
 

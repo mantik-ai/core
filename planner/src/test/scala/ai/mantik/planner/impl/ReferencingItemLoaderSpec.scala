@@ -25,8 +25,8 @@ class ReferencingItemLoaderSpec extends TestBase with AkkaSupport {
     )
     val loader = new SimpleLoader(dependencies)
     await(loader.loadWithHull("a")) shouldBe Seq(Item("a"))
-    intercept[MantikException] {
-      await(loader.loadWithHull("b"))
+    awaitException[MantikException] {
+      loader.loadWithHull("b")
     }.code.isA(ErrorCodes.MantikItemNotFound) shouldBe true
   }
 

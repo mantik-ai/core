@@ -41,8 +41,10 @@ class HelloMnpBridgeSpec extends IntegrationTestBase {
     }
 
     try {
-      val response = await(client.about())
-      response.name shouldNot be(empty)
+      eventually {
+        val response = await(client.about())
+        response.name shouldNot be(empty)
+      }
     } finally  {
       channel.shutdownNow()
     }

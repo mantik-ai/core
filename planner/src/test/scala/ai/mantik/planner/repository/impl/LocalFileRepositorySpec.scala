@@ -60,8 +60,8 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
     repo.removeTimeoutedFiles()
     repo.listFiles().toSet should not(contain(storeResult.fileId))
 
-    intercept[MantikException] {
-      await(repo.storeFile(storeResult.fileId))
+    awaitException[MantikException] {
+      repo.storeFile(storeResult.fileId)
     }.code.isA(FileRepository.NotFoundCode) shouldBe true
   }
 
