@@ -6,7 +6,6 @@ import java.nio.file.{ CopyOption, Files, Path, StandardCopyOption }
 import java.time.temporal.{ ChronoUnit, Temporal, TemporalUnit }
 import java.time.{ Clock, Instant }
 import java.util.UUID
-
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.planner.repository.FileRepository
@@ -19,12 +18,16 @@ import io.circe.{ Decoder, Encoder }
 import scala.concurrent.{ ExecutionContext, Future }
 import io.circe.syntax._
 import io.circe.parser
+
 import javax.inject.{ Inject, Singleton }
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
 import ai.mantik.elements.errors.ConfigurationException
+import akka.NotUsed
+
+import scala.util.Try
 
 /**
  * A FileRepository which is using a local file system for storing files.
@@ -99,13 +102,23 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
   override def requestFileGet(id: String, optimistic: Boolean): Future[FileRepository.FileGetResult] = {
     Future {
       val fileMeta = loadMeta(id)
-      val fileExits = fileName(id).toFile.isFile()
+      val file = fileName(id).toFile
+      val fileExits = file.isFile
+      val fileSize: Option[Long] = if (fileExits) {
+        Try(file.length()).toOption
+      } else {
+        None
+      }
       if (!optimistic && !fileExits) {
         logger.warn(s"File ${id} is not existing and request is not optimistic")
         FileRepository.NotFoundCode.throwIt(s"File ${id} is not yet written")
       }
       FileGetResult(
-        id, fileMeta.temporary, FileRepository.makePath(id), fileMeta.contentType
+        fileId = id,
+        isTemporary = fileMeta.temporary,
+        path = FileRepository.makePath(id),
+        contentType = fileMeta.contentType,
+        fileSize = fileSize
       )
     }
   }
@@ -127,15 +140,21 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     }
   }
 
-  override def loadFile(id: String): Future[(String, Source[ByteString, _])] = {
+  override def loadFile(id: String): Future[FileRepository.LoadFileResult] = {
     Future {
       val name = fileName(id)
       val meta = loadMeta(id)
       val exists = Files.isRegularFile(name)
+      val fileSize = name.toFile.length()
       if (!exists) {
         FileRepository.NotFoundCode.throwIt(s"File ${id} doesn't exist")
       }
-      meta.contentType -> FileIO.fromPath(name)
+      val source = FileIO.fromPath(name).mapMaterializedValue(_ => NotUsed)
+      FileRepository.LoadFileResult(
+        contentType = meta.contentType,
+        fileSize = fileSize,
+        source = source
+      )
     }
   }
 

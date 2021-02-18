@@ -57,7 +57,8 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
       _.itemId -> "item_id",
       _.mantikheader -> "mantikheader",
       _.fileId -> "file_id",
-      _.kind -> "kind"
+      _.kind -> "kind",
+      _.executorStorageId -> "executor_storage_id"
     )
   }
 
@@ -82,7 +83,8 @@ private[impl] object LocalRepositoryDb {
       itemId: String,
       mantikheader: String,
       fileId: Option[String],
-      kind: String
+      kind: String,
+      executorStorageId: Option[String]
   )
 
   case class DbDeploymentInfo(

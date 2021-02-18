@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS mantik_item (
     -- File ID
     file_id VARCHAR,
     -- Kind of item
-    kind VARCHAR NOT NULL DEFAULT '' -- Has default value to be compatible to migration.
+    kind VARCHAR NOT NULL DEFAULT '', -- Has default value to be compatible to migration.
+    -- ID of the payload file mirrored in executor storage
+    executor_storage_id VARCHAR
 );
 
 -- Holds the deployment info for a item id

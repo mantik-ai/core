@@ -24,8 +24,8 @@ class SessionManagerSpec extends TestBase with AkkaSupport {
     session.isShutdown shouldBe false
     await(manager.close(session.id))
     session.isShutdown shouldBe true
-    intercept[MantikException] {
-      await(manager.get(session.id))
+    awaitException[MantikException] {
+      manager.get(session.id)
     }.code.isA(EngineErrors.SessionNotFound) shouldBe true
 
     session3.isShutdown shouldBe false

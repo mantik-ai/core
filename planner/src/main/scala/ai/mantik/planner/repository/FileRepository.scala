@@ -2,6 +2,7 @@ package ai.mantik.planner.repository
 
 import ai.mantik.componently.Component
 import ai.mantik.elements.errors.{ ErrorCode, ErrorCodes, MantikException }
+import akka.NotUsed
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.ByteString
 import io.grpc.Status.Code
@@ -30,7 +31,7 @@ private[mantik] trait FileRepository extends Component {
    * Request retrieval of a file.
    * @return content type and file source
    */
-  def loadFile(id: String): Future[(String, Source[ByteString, _])]
+  def loadFile(id: String): Future[FileRepository.LoadFileResult]
 
   /** Request copying a file. */
   def copy(from: String, to: String): Future[Unit]
@@ -57,6 +58,13 @@ object FileRepository {
       path: String
   )
 
+  /** Result of file load request. */
+  case class LoadFileResult(
+      fileSize: Long,
+      contentType: String,
+      source: Source[ByteString, NotUsed]
+  )
+
   /** Result of get file request. */
   case class FileGetResult(
       fileId: String,
@@ -64,7 +72,9 @@ object FileRepository {
       isTemporary: Boolean,
       // Relative Path under which the file is available from the server
       path: String,
-      contentType: String
+      contentType: String,
+      // File size if known
+      fileSize: Option[Long]
   )
 
   /**

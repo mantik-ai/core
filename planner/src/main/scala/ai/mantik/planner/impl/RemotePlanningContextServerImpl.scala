@@ -13,9 +13,10 @@ import akka.util.ByteString
 import io.circe.syntax._
 import io.circe.{ Encoder, Json, Printer }
 import io.grpc.stub.StreamObserver
-import javax.inject.Inject
 
+import javax.inject.Inject
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 /** Implements the gRpc Server for [[PlanningContextService]] */
 class RemotePlanningContextServerImpl @Inject() (
@@ -56,7 +57,8 @@ class RemotePlanningContextServerImpl @Inject() (
 
       StreamConversions.respondMultiOut(Conversions.encodeErrors, responseObserver, source)
     } catch {
-      Conversions.encodeErrors
+      case NonFatal(e) =>
+        throw Conversions.encodeErrorIfPossible(e)
     }
   }
 

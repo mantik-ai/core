@@ -71,6 +71,11 @@ Requirements
       Minikube is used as developing Kubernetes backend, for integration tests
       and also for developing with the Docker Backend without needing root-Permissions.
       
+    * [Minio](https://min.io/)
+    
+      Minio is a free object server with (partly) S3 Compatible API.
+      We use it local deployments to publish binary assets to bridges running in Kubernetes.
+      
     * `socat`
     
       ```

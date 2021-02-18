@@ -4,6 +4,7 @@ import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{ ListWorkerRequest, MnpWorkerDefinition, StartWorkerRequest, WorkerState }
 import ai.mantik.testutils.TestBase
 
+import scala.concurrent.Await
 import scala.util.{ Failure, Success, Try }
 
 trait MissingImageSpecBase {
@@ -22,7 +23,7 @@ trait MissingImageSpecBase {
   it should "fail correctly for missing images." in withExecutor { executor =>
     // It may either fail immediately or go into error stage later
     Try {
-      await(executor.startWorker(simpleStartWorker))
+      Await.result(executor.startWorker(simpleStartWorker), timeout)
     } match {
       case Failure(error) if error.getMessage.toLowerCase.contains("no such image") =>
       // ok (docker acts this way)

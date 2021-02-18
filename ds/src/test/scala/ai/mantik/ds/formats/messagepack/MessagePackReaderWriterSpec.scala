@@ -53,8 +53,8 @@ class MessagePackReaderWriterSpec extends TestBase with GlobalAkkaSupport with T
 
   it should "report errors on empty streams" in {
     val decoder = MessagePackReaderWriter.autoFormatDecoder()
-    intercept[EncodingException] {
-      await(Source.empty.via(decoder).runWith(Sink.seq))
+    awaitException[EncodingException] {
+      Source.empty.via(decoder).runWith(Sink.seq)
     }
   }
 
@@ -64,8 +64,8 @@ class MessagePackReaderWriterSpec extends TestBase with GlobalAkkaSupport with T
       List(encoded, ByteString(0x4d.toByte))
     )
     val decoder = MessagePackReaderWriter.autoFormatDecoder()
-    intercept[EncodingException] {
-      await(source.via(decoder).runWith(Sink.seq))
+    awaitException[EncodingException] {
+      source.via(decoder).runWith(Sink.seq)
     }
   }
 

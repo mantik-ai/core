@@ -2,14 +2,13 @@ package ai.mantik.executor.kubernetes
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
-
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.model.{ MnpPipelineDefinition, MnpWorkerDefinition, StartWorkerRequest }
 import ai.mantik.executor.model.docker.DockerLogin
 import io.circe.Json
-import skuber.apps.Deployment
+import skuber.apps.v1.Deployment
 import skuber.ext.Ingress
-import skuber.{ Container, EnvVar, ObjectMeta, Pod, Secret, Service }
+import skuber.{ Container, EnvVar, LabelSelector, ObjectMeta, Pod, Secret, Service }
 
 /** Converts requests into Kubernetes Structures */
 case class KubernetesConverter(
@@ -84,6 +83,7 @@ case class KubernetesConverter(
     nameHintPrefix: String,
     definition: MnpWorkerDefinition
   ): Deployment = {
+    val id = mainLabels(LabelConstants.InternalIdLabelName)
     Deployment(
       metadata = ObjectMeta(
         labels = mainLabels,
@@ -91,7 +91,11 @@ case class KubernetesConverter(
       ),
       spec = Some(
         Deployment.Spec(
-          template = Some(
+          selector = LabelSelector(
+            LabelSelector.IsEqualRequirement(LabelConstants.ManagedByLabelName, LabelConstants.ManagedByLabelValue),
+            LabelSelector.IsEqualRequirement(LabelConstants.InternalIdLabelName, id)
+          ),
+          template =
             Pod.Template.Spec(
               metadata = ObjectMeta(
                 labels = mainLabels,
@@ -99,7 +103,6 @@ case class KubernetesConverter(
               ),
               spec = Some(generateMnpWorkerPodSpec(definition))
             )
-          )
         )
       )
     )
@@ -207,7 +210,11 @@ case class KubernetesConverter(
           ),
           spec = Some(
             Deployment.Spec(
-              template = Some(
+              selector = LabelSelector(
+                LabelSelector.IsEqualRequirement(LabelConstants.ManagedByLabelName, LabelConstants.ManagedByLabelValue),
+                LabelSelector.IsEqualRequirement(LabelConstants.InternalIdLabelName, internalId)
+              ),
+              template =
                 Pod.Template.Spec(
                   metadata = ObjectMeta(
                     generateName = nameHintPrefix + "pipeline",
@@ -215,7 +222,6 @@ case class KubernetesConverter(
                   ),
                   spec = Some(podSpec)
                 )
-              )
             )
           )
         )

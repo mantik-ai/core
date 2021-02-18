@@ -51,8 +51,8 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
       externalName = "ignored",
       externalPort = 4001
     )
-    intercept[Errors.BadRequestException] {
-      await(dockerExecutor.publishService(invalid))
+    awaitException[Errors.BadRequestException] {
+      dockerExecutor.publishService(invalid)
     }
   }
 

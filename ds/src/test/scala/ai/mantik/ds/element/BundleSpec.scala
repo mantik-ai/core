@@ -127,8 +127,8 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
   "deserializers" should "not hang on empty data" in {
     // Regression Bug #47
     val source = Source.empty
-    intercept[EncodingException] {
-      await(source.runWith(Bundle.fromStreamWithHeader))
+    awaitException[EncodingException] {
+      source.runWith(Bundle.fromStreamWithHeader)
     }
   }
 
@@ -143,11 +143,11 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     import scala.concurrent.duration._
     val dir = new File(getClass.getResource("/sample_directory").toURI).toPath
     val source = ZipUtils.zipDirectory(dir, 10.seconds)
-    intercept[EncodingException] {
-      await(source.runWith(Bundle.fromStreamWithHeader))
+    awaitException[EncodingException] {
+      source.runWith(Bundle.fromStreamWithHeader)
     }
-    intercept[EncodingException] {
-      await(source.runWith(Bundle.fromStreamWithoutHeader(sampleBundle.model)))
+    awaitException[EncodingException] {
+      source.runWith(Bundle.fromStreamWithoutHeader(sampleBundle.model))
     }
   }
 

@@ -2,7 +2,7 @@ package ai.mantik.executor.kubernetes
 
 import org.slf4j.LoggerFactory
 import skuber.api.client.KubernetesClient
-import skuber.apps.Deployment
+import skuber.apps.v1.Deployment
 import skuber.batch.Job
 import skuber.ext.Ingress
 import skuber.json.batch.format._
@@ -23,17 +23,17 @@ private[mantik] class KubernetesCleaner(rootClient: KubernetesClient, config: Co
   /** Delete all managed Kubernetes content. For Integration Tests. */
   def deleteKubernetesContent(): Unit = {
     logger.info("Deleting Kubernetes Content...")
-    val pendingNamespaces = await(rootClient.getNamespaceNames).filter(_.startsWith(config.kubernetes.namespacePrefix))
+    val pendingNamespaces = await("Get Namespaces", rootClient.getNamespaceNames).filter(_.startsWith(config.kubernetes.namespacePrefix))
     pendingNamespaces.foreach { namespace =>
       logger.info(s"Deleting namespace ${namespace}")
       val namespaced = rootClient.usingNamespace(namespace)
-      await(namespaced.deleteAll[ListResource[Deployment]]())
-      await(namespaced.deleteAll[ListResource[ConfigMap]]())
-      await(namespaced.deleteAll[ListResource[Pod]]())
-      await(namespaced.deleteAll[ListResource[Job]]())
-      await(namespaced.deleteAll[ListResource[Ingress]]())
+      await("Deleting Deployments", namespaced.deleteAll[ListResource[Deployment]]())
+      await("Deleting ConfigMaps", namespaced.deleteAll[ListResource[ConfigMap]]())
+      await("Deleting Pods", namespaced.deleteAll[ListResource[Pod]]())
+      await("Deleting Jobs", namespaced.deleteAll[ListResource[Job]]())
+      await("Deleting Ingresses", namespaced.deleteAll[ListResource[Ingress]]())
       // await(namespaced.deleteAll[ListResource[Service]]()) // error 405 ?!
-      await(rootClient.delete[Namespace](namespace, gracePeriodSeconds = 0))
+      await("Deleting Namespace", rootClient.delete[Namespace](namespace, gracePeriodSeconds = 0))
     }
     pendingNamespaces.foreach { namespace =>
       waitForNamespaceDeletion(namespace)
@@ -43,7 +43,7 @@ private[mantik] class KubernetesCleaner(rootClient: KubernetesClient, config: Co
 
   @tailrec
   private def waitForNamespaceDeletion(namespace: String): Unit = {
-    val namespaces = await(rootClient.getNamespaceNames)
+    val namespaces = await("Get NamespaceNames", rootClient.getNamespaceNames)
     if (namespaces.contains(namespace)) {
       logger.info(s"Namespace ${namespace} still exists, waiting")
       Thread.sleep(1000)
@@ -51,6 +51,13 @@ private[mantik] class KubernetesCleaner(rootClient: KubernetesClient, config: Co
     }
   }
 
-  private def await[T](f: Future[T]): T = Await.result(f, 60.seconds)
-
+  private def await[T](what: String, f: Future[T]): T = {
+    try {
+      Await.result(f, 60.seconds)
+    } catch {
+      case e: Exception =>
+        logger.error(s"${what} failed", e)
+        throw e
+    }
+  }
 }

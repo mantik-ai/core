@@ -63,6 +63,18 @@ abstract class PlanningContextSpecBase extends IntegrationTestBase  {
     ).result
   }
 
+  it should "handle async errors" in {
+    val simpleInput = DataSet.literal(
+      TabularBundle.buildColumnWise.withPrimitives(
+        "x", "1", "2", "Bad Data"
+      ).result
+    )
+    val converted = simpleInput.select("select cast (x AS INT32)")
+    intercept[MantikException]{
+      planningContext.execute(converted.fetch)
+    }
+  }
+
   "pushLocalItem" should "add a local item and use it's default name" in {
     intercept[MantikException]{
       planningContext.loadDataSet("mnist_dataset")

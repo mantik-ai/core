@@ -1,7 +1,9 @@
 package ai.mantik.testutils
 
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshalling.Marshal
-import akka.http.scaladsl.model.RequestEntity
+import akka.http.scaladsl.model.headers.Accept
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, RequestEntity, Uri }
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.util.ByteString
 
@@ -25,5 +27,15 @@ trait HttpSupport {
     }
     val content = await(Unmarshal(response).to[ByteString])
     content
+  }
+
+  protected def httpGet(url: String): (HttpResponse, ByteString) = {
+    logger.info(s"Accessing HTTP Get ${url}")
+
+    val uri = Uri(url)
+    val getRequest = HttpRequest(uri = uri)
+    val getResponse = await(Http().singleRequest(getRequest))
+    val content = await(Unmarshal(getResponse).to[ByteString])
+    (getResponse, content)
   }
 }

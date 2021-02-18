@@ -17,8 +17,8 @@ class FutureHelperSpec extends TestBase with AkkaSupport {
     val result = FutureHelper.time(logger, "Failing Sample") {
       Future.failed(dummyException)
     }
-    intercept[RuntimeException] {
-      await(result)
+    awaitException[RuntimeException] {
+      result
     } shouldBe dummyException
   }
 
@@ -42,8 +42,8 @@ class FutureHelperSpec extends TestBase with AkkaSupport {
     }
 
     val result = FutureHelper.afterEachOtherStateful(List("A", "BC", "DEF"), 5)(failOn2nd)
-    intercept[RuntimeException] {
-      await(result)
+    awaitException[RuntimeException] {
+      result
     } shouldBe dummyException
     call shouldBe 2
   }
@@ -65,8 +65,8 @@ class FutureHelperSpec extends TestBase with AkkaSupport {
       }
     }
     val result = FutureHelper.afterEachOther(Seq(0, 1, 2, 3, 4))(failOn2)
-    intercept[RuntimeException] {
-      await(result)
+    awaitException[RuntimeException] {
+      result
     } shouldBe dummyException
     called shouldBe 3
   }
@@ -96,8 +96,8 @@ class FutureHelperSpec extends TestBase with AkkaSupport {
       calls += 1
       Future.failed(dummyException)
     }
-    intercept[RuntimeException] {
-      await(result)
+    awaitException[RuntimeException] {
+      result
     } shouldBe dummyException
     calls shouldBe 1
   }
@@ -108,8 +108,8 @@ class FutureHelperSpec extends TestBase with AkkaSupport {
       calls += 1
       Future.successful(None)
     }
-    intercept[TimeoutException] {
-      await(result)
+    awaitException[TimeoutException] {
+      result
     }
     calls shouldBe <=(5)
     calls shouldBe >=(2)

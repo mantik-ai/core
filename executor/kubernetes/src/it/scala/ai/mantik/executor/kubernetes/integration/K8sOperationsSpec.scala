@@ -2,18 +2,17 @@ package ai.mantik.executor.kubernetes.integration
 
 import java.time.Clock
 import java.util.UUID
-
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.kubernetes.{K8sOperations, KubernetesConstants}
 import ai.mantik.testutils.tags.IntegrationTest
 import play.api.libs.json.Json
 import skuber.Pod.Phase
 import skuber.api.client.Status
-import skuber.apps.Deployment
+import skuber.apps.v1.Deployment
 import skuber.batch.Job
 import skuber.json.batch.format._
 import skuber.json.format._
-import skuber.{Container, K8SException, ObjectMeta, Pod, RestartPolicy}
+import skuber.{Container, K8SException, LabelSelector, ObjectMeta, Pod, RestartPolicy}
 
 import scala.concurrent.Future
 
@@ -95,10 +94,10 @@ class K8sOperationsSpec extends KubernetesTestBase {
   }
 
   "errorHandling" should "execute a regular function" in new Env {
-    await(k8sOperations.errorHandling(Future.successful(5))) shouldBe 5
+    await(k8sOperations.errorHandling("wait")(Future.successful(5))) shouldBe 5
     val e = new RuntimeException("Boom")
-    intercept[RuntimeException] {
-      await(k8sOperations.errorHandling(Future.failed(e)))
+    awaitException[RuntimeException] {
+      k8sOperations.errorHandling("failed")(Future.failed(e))
     } shouldBe e
   }
 
@@ -124,7 +123,7 @@ class K8sOperationsSpec extends KubernetesTestBase {
       }
     }
     val t0 = System.currentTimeMillis()
-    val result = await(k8sOperations.errorHandling(failTwice()))
+    val result = await(k8sOperations.errorHandling("twice")(failTwice()))
     val t1 = System.currentTimeMillis()
     result shouldBe 5
     t1 - t0 shouldBe >=(2000L)
@@ -138,8 +137,8 @@ class K8sOperationsSpec extends KubernetesTestBase {
       Future.failed(retryException)
     }
     val t0 = System.currentTimeMillis()
-    intercept[K8SException] {
-      await(k8sOperations.errorHandling(failAlways()))
+    awaitException[K8SException] {
+      k8sOperations.errorHandling("failAlways")(failAlways())
     } shouldBe retryException
     val t1 = System.currentTimeMillis()
     (t1 - t0) shouldBe >=(3000L)
@@ -162,14 +161,16 @@ class K8sOperationsSpec extends KubernetesTestBase {
       ),
       spec = Some(
         Deployment.Spec(
-          template = Some(
+          selector = LabelSelector(
+            LabelSelector.IsEqualRequirement(LabelConstants.InternalIdLabelName, labels(LabelConstants.InternalIdLabelName))
+          ),
+          template =
             Pod.Template.Spec(
               metadata = ObjectMeta(
                 labels = labels
               ),
               spec = Some(longRunningPod.withRestartPolicy(RestartPolicy.Always))
             )
-          )
         )
       )
     )

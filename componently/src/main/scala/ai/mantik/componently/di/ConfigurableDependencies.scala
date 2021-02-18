@@ -22,6 +22,8 @@ abstract class ConfigurableDependencies(implicit akkaRuntime: AkkaRuntime) exten
   protected sealed trait ProviderLike
   /** Retrieves the implementation by class instance. */
   private case class ClassProvider(clazz: Class[AnyRef]) extends ProviderLike
+  /** Retrieves the implementation by class name. */
+  private case class ClassName(className: String) extends ProviderLike
   /**
    * Retrieves the implementation by providing a full qualified name of a provider clazz.
    * Can be used for lookup of classes outside the current JAR.
@@ -43,6 +45,8 @@ abstract class ConfigurableDependencies(implicit akkaRuntime: AkkaRuntime) exten
   import scala.language.implicitConversions
   protected implicit def classToClassProvider(x: Class[_ <: AnyRef]): ProviderLike = ClassProvider(x.asInstanceOf[Class[AnyRef]])
 
+  protected implicit def classNameToClassProvider(name: String): ProviderLike = ClassName(name)
+
   def provider(fullClassName: String, asSingleton: Boolean = false): ProviderLike = LookupProvider(fullClassName, asSingleton)
 
   override final def configure(): Unit = {
@@ -62,6 +66,9 @@ abstract class ConfigurableDependencies(implicit akkaRuntime: AkkaRuntime) exten
   private def bind(from: Class[AnyRef], provider: ProviderLike): Unit = {
     provider match {
       case ClassProvider(cls) => bind(from).to(cls)
+      case ClassName(name) =>
+        val classInstance = getClass.getClassLoader.loadClass(name).asInstanceOf[Class[AnyRef]]
+        bind(from).to(classInstance)
       case LookupProvider(name, asSingleton) =>
         val providerInstance = getClass.getClassLoader.loadClass(name).asInstanceOf[Class[Provider[AnyRef]]]
         val provideCall = bind(from).toProvider(providerInstance)

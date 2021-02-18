@@ -1,21 +1,19 @@
 package ai.mantik.planner.impl
 
-import java.nio.file.Path
-
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.errors.{ ErrorCodes, MantikAsyncException }
-import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
+import ai.mantik.elements.errors.MantikAsyncException
+import ai.mantik.elements.{ MantikId, NamedMantikId }
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.{ FileRepositoryServerRemotePresence, MnpPlanExecutor }
-import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
-import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, LocalMantikRegistry, MantikArtifactRetriever, RemoteMantikRegistry, Repository }
-import javax.inject.Inject
+import ai.mantik.planner.impl.exec.{ ExecutionPayloadProvider, MnpPlanExecutor }
+import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl }
+import ai.mantik.planner.repository._
 
+import java.nio.file.Path
+import javax.inject.Inject
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
-import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
 private[planner] class PlanningContextImpl @Inject() (
@@ -70,22 +68,23 @@ private[mantik] object PlanningContextImpl {
   def constructWithComponents(
     repository: Repository,
     fileRepository: FileRepository,
-    fileRepositoryServer: FileRepositoryServer,
+    // fileRepositoryServer: FileRepositoryServer,
     executor: Executor,
-    registry: RemoteMantikRegistry
+    registry: RemoteMantikRegistry,
+    payloadProvider: ExecutionPayloadProvider
   )(implicit akkaRuntime: AkkaRuntime): PlanningContextImpl = {
     val mantikItemStateManager = new MantikItemStateManager()
     val planner = new PlannerImpl(akkaRuntime.config, mantikItemStateManager)
     val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
     val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
-    val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
+    // val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
 
     val planExecutor = new MnpPlanExecutor(
       fileRepository,
       repository,
       executor,
       retriever,
-      fileRepositoryServerRemotePresence,
+      payloadProvider,
       mantikItemStateManager
     )
     val context = new PlanningContextImpl(localRegistry, planner, planExecutor, registry, retriever, mantikItemStateManager)

@@ -32,22 +32,24 @@ trait StartWorkerSpecBase {
   }
 
   protected def stopAndKill(executor: Executor, startWorkerResponse: StartWorkerResponse): Unit = {
-    await(executor.stopWorker(StopWorkerRequest(
+    val stopResponse = await(executor.stopWorker(StopWorkerRequest(
       isolationSpace,
       nameFilter = Some(startWorkerResponse.nodeName),
       remove = false
     )))
+    stopResponse.removed shouldNot be(empty)
 
     eventually {
       val listResponse2 = await(executor.listWorkers(ListWorkerRequest(isolationSpace)))
       listResponse2.workers.find(_.nodeName == startWorkerResponse.nodeName).get.state shouldBe 'terminal
     }
 
-    await(executor.stopWorker(StopWorkerRequest(
+    val stopResponse2 = await(executor.stopWorker(StopWorkerRequest(
       isolationSpace,
       nameFilter = Some(startWorkerResponse.nodeName),
       remove = true
     )))
+    stopResponse2.removed shouldNot be(empty)
 
     eventually {
       val listResponse2 = await(executor.listWorkers(ListWorkerRequest(isolationSpace)))

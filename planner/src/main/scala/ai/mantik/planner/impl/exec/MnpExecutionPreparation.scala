@@ -54,7 +54,7 @@ class MnpExecutionPreparer(
     graph: Graph[PlanNodeService],
     containerAddresses: Map[String, String], // maps nodeId to running name + port
     files: ExecutionOpenFiles,
-    remoteFileRepositoryAddress: Uri
+    remoteFileUrls: Map[String, String] // maps nodeId to URLs of file payload
 ) {
 
   def build(): MnpExecutionPreparation = {
@@ -108,7 +108,7 @@ class MnpExecutionPreparer(
       header = dockerContainer.mantikHeader.toJson,
       payloadContentType = inputData.map(_.contentType).getOrElse(""),
       payload = inputData.map { data =>
-        val fullUrl = Uri(data.path).resolvedAgainst(remoteFileRepositoryAddress).toString()
+        val fullUrl = remoteFileUrls.getOrElse(nodeId, throw new InconsistencyException(s"No remote url found for node id ${nodeId}"))
         MantikInitConfiguration.Payload.Url(fullUrl)
       }.getOrElse(
         MantikInitConfiguration.Payload.Empty

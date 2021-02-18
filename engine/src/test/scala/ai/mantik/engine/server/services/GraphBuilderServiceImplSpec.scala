@@ -99,11 +99,11 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   "get" should "place elements from the repo in the graph" in new Env {
-    MantikRemoteException.fromGrpc(intercept[StatusRuntimeException] {
-      await(graphBuilder.get(GetRequest("123", "foo")))
+    MantikRemoteException.fromGrpc(awaitException[StatusRuntimeException] {
+      graphBuilder.get(GetRequest("123", "foo"))
     }).code.isA(EngineErrors.SessionNotFound) shouldBe true
-    MantikRemoteException.fromGrpc(intercept[StatusRuntimeException] {
-      await(graphBuilder.get(GetRequest(session1.id, "foo")))
+    MantikRemoteException.fromGrpc(awaitException[StatusRuntimeException] {
+      graphBuilder.get(GetRequest(session1.id, "foo"))
     }).code.isA(ErrorCodes.MantikItemNotFound) shouldBe true
     val response = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
     response.itemId shouldBe "1"

@@ -35,7 +35,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
       }
 
       override def requestFileGet(id: String, optimistic: Boolean): Future[FileRepository.FileGetResult] = {
-        val result = FileRepository.FileGetResult(id.toString, false, "path", "ContentType")
+        val result = FileRepository.FileGetResult(id.toString, false, "path", "ContentType", Some(123))
         wasOptimisticRead = optimistic
         getResults += result
         Future.successful(
@@ -44,7 +44,7 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
       }
 
       override def storeFile(id: String): Future[Sink[ByteString, Future[Long]]] = ???
-      override def loadFile(id: String): Future[(String, Source[ByteString, _])] = ???
+      override def loadFile(id: String): Future[FileRepository.LoadFileResult] = ???
       override def deleteFile(id: String): Future[Boolean] = ???
 
       override def copy(from: String, to: String): Future[Unit] = ???

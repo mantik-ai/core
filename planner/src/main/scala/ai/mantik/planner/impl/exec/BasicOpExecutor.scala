@@ -36,10 +36,9 @@ class BasicOpExecutor(
       case PlanOp.LoadBundleFromFile(_, fileRef) =>
         val fileId = files.resolveFileId(fileRef)
         FutureHelper.time(logger, s"Bundle Pull $fileId") {
-          fileRepository.loadFile(fileId).flatMap {
-            case (_, source) =>
-              val sink = Bundle.fromStreamWithHeader()
-              source.runWith(sink)
+          fileRepository.loadFile(fileId).flatMap { result =>
+            val sink = Bundle.fromStreamWithHeader()
+            result.source.runWith(sink)
           }
         }
       case PlanOp.AddMantikItem(item, fileReference) =>

@@ -42,4 +42,13 @@ private[mantik] trait Repository extends Component {
     deployedOnly: Boolean = false,
     kindFilter: Option[String] = None
   ): Future[IndexedSeq[MantikArtifact]]
+
+  /**
+   * Look for a mantik artifact by fileId.
+   * (In practive none or one artifact should be returned.
+   */
+  def byFileId(fileId: String): Future[Seq[MantikArtifact]]
+
+  /** Update remote file id field. */
+  def updateExecutorStorageId(itemId: ItemId, executorStorageId: Option[String]): Future[Boolean]
 }

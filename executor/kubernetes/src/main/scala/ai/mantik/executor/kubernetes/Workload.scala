@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.model.WorkerState
 import com.typesafe.scalalogging.Logger
-import skuber.apps.Deployment
+import skuber.apps.v1.Deployment
 import skuber.ext.Ingress
 import skuber.ext.Ingress.Backend
 import skuber.{ ObjectResource, Pod, ResourceDefinition, Service }
@@ -80,9 +80,9 @@ case class Workload(
       } yield ()
     } else {
 
-      killReason.map { reason =>
-        ops.sendKillPatch[Service](service.name, ns(service), reason)
-      }.sequence.flatMap { _ =>
+      // Always mark kill status, otherwise we may not know afterwards that we killed it.
+      val reason = killReason.getOrElse("Stopped")
+      ops.sendKillPatch[Service](service.name, ns(service), reason).flatMap { _ =>
         deployment match {
           case Some(definedDeployment) =>
             // Scale to 0 (also see workerState)
@@ -101,7 +101,7 @@ case class Workload(
       containerStatus <- status.containerStatuses.headOption
       state <- containerStatus.state
     } yield {
-      state match {
+      val result = state match {
         case _: skuber.Container.Running => WorkerState.Running
         case t: skuber.Container.Terminated =>
           t.exitCode match {
@@ -113,6 +113,7 @@ case class Workload(
         case other =>
           WorkerState.Pending
       }
+      result
     }
 
     // If deployment is scaled to 0 then it's like stopped
@@ -336,7 +337,7 @@ object Workload {
             case Some(reason) if Errors.contains(reason) && reachedTimeout(startTime) =>
               Some(reason)
             case Some(reason) =>
-              logger.debug(s"Pod ${pod.name} reached a status ${reason} which is not yet worth to terminate")
+              logger.trace(s"Pod ${pod.name} reached a status ${reason} which is not yet worth to terminate")
               None
             case _ => None
           }

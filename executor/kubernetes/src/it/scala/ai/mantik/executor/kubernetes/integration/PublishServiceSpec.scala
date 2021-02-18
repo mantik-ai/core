@@ -60,8 +60,8 @@ class PublishServiceSpec extends IntegrationTestBase {
   }
 
   it should "deny service names with different ports" in new Env {
-    intercept[Errors.BadRequestException] {
-      await(executor.publishService(
+    awaitException[Errors.BadRequestException] {
+      executor.publishService(
         PublishServiceRequest(
           "space3",
           "service1",
@@ -69,7 +69,7 @@ class PublishServiceSpec extends IntegrationTestBase {
           "myserver.example.com",
           4001
         )
-      ))
+      )
     }
   }
 }
