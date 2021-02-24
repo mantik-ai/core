@@ -24,6 +24,8 @@ service GraphBuilderService {
     rpc AutoUnion(AutoUnionRequest) returns (NodeResponse) {}
     /** Run a SQL Query on datasets. */
     rpc SqlQuery(QueryRequest) returns (NodeResponse) {}
+    /** Split a DataSet into multiple fractions. */
+    rpc Split(SplitRequest) returns (MultiNodeResponse) {}
     /** Build a pipeline from Algorithms. */
     rpc BuildPipeline(BuildPipelineRequest) returns (NodeResponse){}
     /* Returns the item using a new name. */
@@ -43,6 +45,12 @@ message NodeResponse {
     string item_id = 1;
     // Information about the item
     MantikItem item = 2;
+}
+
+/* A variable count of multiple created nodes. */
+message MultiNodeResponse {
+    // The multiple created nodes
+    repeated NodeResponse nodes = 1;
 }
 
 message ApplyRequest {
@@ -100,6 +108,20 @@ message QueryRequest {
     string statement = 2;
     // Dataset ids
     repeated string dataset_ids = 3;
+}
+
+message SplitRequest {
+    string session_id = 1;
+    // The id of the dataset to split
+    string dataset_id = 2;
+    // Defines the fractions in which to split the DataSet
+    repeated double fractions = 3;
+    // If true shuffle before splitting
+    bool shuffle = 4;
+    // The seed for shuffling
+    int64 shuffle_seed = 5;
+    // If true disable caching during evaluation
+    bool no_caching = 6;
 }
 
 // Request for Building a Pipeline

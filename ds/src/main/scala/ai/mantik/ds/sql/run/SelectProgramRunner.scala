@@ -4,7 +4,7 @@ import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.TabularData
 import ai.mantik.ds.element.{ Bundle, Primitive, TabularBundle, TabularRow }
 import ai.mantik.ds.sql.Select
-import ai.mantik.ds.sql.run.TableGeneratorProgramRunner.RowIterator
+import ai.mantik.ds.sql.run.SingleTableGeneratorProgramRunner.RowIterator
 
 /**
  * Runs Select Programs

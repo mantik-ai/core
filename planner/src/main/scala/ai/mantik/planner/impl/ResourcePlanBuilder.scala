@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.sql.{ Query, Select }
+import ai.mantik.ds.sql.{ MultiQuery, Query, Select, SingleQuery }
 import ai.mantik.elements.ItemId
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.pipelines.ResolvedPipelineStep
@@ -304,12 +304,12 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
   def manifestPipelineStep(resolvedPipelineStep: ResolvedPipelineStep): State[PlanningState, ResourcePlan] = {
     resolvedPipelineStep match {
       case ResolvedPipelineStep.AlgorithmStep(algorithm) => manifestAlgorithm(algorithm)
-      case ResolvedPipelineStep.SelectStep(select)       => manifestQuery(select)
+      case ResolvedPipelineStep.SelectStep(select)       => manifestQuery(SingleQuery(select))
     }
   }
 
   /** Manifest an SQL Query */
-  def manifestQuery(query: Query): State[PlanningState, ResourcePlan] = {
+  def manifestQuery(query: MultiQuery): State[PlanningState, ResourcePlan] = {
     elements.query(query)
   }
 

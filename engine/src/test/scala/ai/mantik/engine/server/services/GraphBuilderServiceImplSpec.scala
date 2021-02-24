@@ -3,19 +3,20 @@ package ai.mantik.engine.server.services
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.helper.circe.CirceJson
+import ai.mantik.ds.sql.Split
 import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
 import ai.mantik.elements.errors.{ ErrorCodes, MantikException, MantikRemoteException }
 import ai.mantik.{ elements, planner }
 import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, QueryRequest, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, QueryRequest, SelectRequest, SetMetaVariableRequest, SplitRequest, TagRequest, TrainRequest }
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
 import ai.mantik.engine.testutil.{ DummyComponents, TestArtifacts, TestBaseWithSessions }
 import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.repository.MantikArtifact
-import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, MantikItem, PayloadSource, Pipeline }
+import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, MantikItem, Operation, PayloadSource, Pipeline }
 import io.grpc.StatusRuntimeException
 
 class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
@@ -331,6 +332,65 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     ))
     val underlying = session1.getItemAs[DataSet](joined.itemId)
     underlying shouldBe DataSet.query(statement, underlyingDs2, underlyingDs3).withItemId(underlying.itemId)
+  }
+
+  "split" should "work" in new Env {
+    val ds2 = await(graphBuilder.get(GetRequest(session1.id, dataset2.mantikId.toString)))
+    val underlyingDs2 = session1.getItemAs[DataSet](ds2.itemId)
+
+    val splitted = await(
+      graphBuilder.split(
+        SplitRequest(
+          sessionId = session1.id,
+          datasetId = ds2.itemId,
+          fractions = Seq(0.5, 0.3)
+        )
+      )
+    )
+    val underlying = splitted.nodes.map { node =>
+      session1.getItemAs[DataSet](node.itemId)
+    }
+    val expected = underlyingDs2.split(Seq(0.5, 0.3))
+    underlying.size shouldBe expected.size
+    // We can't check for item equivalence here as itemIds are deep buried inside caching
+    // however we can check that caching is activated by default
+    underlying.foreach { u =>
+      val query = u.payloadSource
+        .asInstanceOf[PayloadSource.Projection]
+        .source.asInstanceOf[PayloadSource.Cached]
+        .source.asInstanceOf[PayloadSource.OperationResult]
+        .op.asInstanceOf[Operation.SqlQueryOperation]
+      val split = query.query.asInstanceOf[Split]
+      split.fractions shouldBe Seq(0.5, 0.3)
+      split.shuffleSeed shouldBe None
+    }
+  }
+
+  it should "accept shuffling and caching requests" in new Env {
+    val ds2 = await(graphBuilder.get(GetRequest(session1.id, dataset2.mantikId.toString)))
+    val underlyingDs2 = session1.getItemAs[DataSet](ds2.itemId)
+
+    val splitted = await(
+      graphBuilder.split(
+        SplitRequest(
+          sessionId = session1.id,
+          datasetId = ds2.itemId,
+          fractions = Seq(0.5, 0.3),
+          shuffle = true,
+          shuffleSeed = 14,
+          noCaching = true
+        )
+      )
+    )
+    val underlying = splitted.nodes.map { node =>
+      session1.getItemAs[DataSet](node.itemId)
+    }
+    val expected = underlyingDs2.split(Seq(0.5, 0.3), shuffleSeed = Some(14), cached = false)
+    underlying.size shouldBe expected.size
+    underlying.zip(expected).foreach {
+      case (u, e) =>
+        u shouldBe e.withItemId(u.itemId)
+    }
   }
 
   trait EnvForPipeline extends PlainEnv {

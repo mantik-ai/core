@@ -4,7 +4,7 @@ import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.{ Bundle, TabularBundle }
 import ai.mantik.ds.sql.builder.{ JoinBuilder, QueryBuilder, SelectBuilder }
-import ai.mantik.ds.sql.run.{ Compiler, TableGeneratorProgramRunner }
+import ai.mantik.ds.sql.run.{ Compiler, SingleTableGeneratorProgramRunner }
 import cats.implicits._
 import org.slf4j.LoggerFactory
 
@@ -25,8 +25,8 @@ sealed trait Query {
     for {
       tabularGenerator <- Compiler.compile(this)
       result <- try {
-        val runner = new TableGeneratorProgramRunner(tabularGenerator)
-        Right(runner.run(inputs.toVector, resultingTabularType))
+        val runner = new SingleTableGeneratorProgramRunner(tabularGenerator)
+        Right(runner.run(inputs.toVector))
       } catch {
         case NonFatal(e) =>
           Query.logger.warn(s"Could not execute query", e)

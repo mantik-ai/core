@@ -19,7 +19,7 @@ func ParseSelectMantikHeader(data []byte) (*SelectMantikHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-	if (len(mf.Input) == 0) || (len(mf.Output) != 1) {
+	if (len(mf.Input) == 0) || (len(mf.Output) < 1) {
 		return nil, errors.New("Invalid type")
 	}
 	if mf.Program.Underlying == nil {

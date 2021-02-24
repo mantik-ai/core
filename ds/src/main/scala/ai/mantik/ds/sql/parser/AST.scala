@@ -5,6 +5,12 @@ import ai.mantik.ds.{ FundamentalType, ImageChannel }
 /** Abstract syntax tree for the parser. */
 private[sql] object AST {
 
+  sealed trait MultiQueryNode
+
+  case class SingleQuery(query: QueryNode) extends MultiQueryNode
+
+  case class Split(query: QueryNode, fractions: Vector[NumberNode], shuffleSeed: Option[NumberNode]) extends MultiQueryNode
+
   sealed trait QueryNode
 
   case class AnonymousReference(id: Int) extends QueryNode

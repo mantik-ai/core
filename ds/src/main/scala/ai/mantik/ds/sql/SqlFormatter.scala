@@ -10,6 +10,20 @@ import ai.mantik.ds.sql.builder.JoinBuilder
 /** Formats Queries as SQL again. */
 object SqlFormatter {
 
+  def formatSql(query: MultiQuery): String = {
+    query match {
+      case SingleQuery(query) => formatSql(query)
+      case s: Split =>
+        val fractions = s.fractions.mkString(",")
+        val inner = s"(${formatSql(s.query)})"
+        val shuffle = s.shuffleSeed match {
+          case Some(seed) => joinWithWhitespace("WITH", "SHUFFLE", seed.toString)
+          case None       => ""
+        }
+        joinWithWhitespace("SPLIT", inner, "AT", fractions, shuffle)
+    }
+  }
+
   def formatSql(query: Query): String = {
     query match {
       case AnonymousInput(_, slot) => "$" + s"$slot"

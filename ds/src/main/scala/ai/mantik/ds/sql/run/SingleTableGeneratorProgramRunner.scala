@@ -2,33 +2,21 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.TabularData
 import ai.mantik.ds.element.{ TabularBundle, TabularRow }
-import ai.mantik.ds.sql.run.TableGeneratorProgramRunner.{ QueryRunner, RowIterator, RowVector }
+import ai.mantik.ds.sql.run.SingleTableGeneratorProgramRunner.{ QueryRunner, RowIterator, RowVector }
 import cats.implicits._
 
 import scala.collection.mutable
 
-/** Executes TableGeneratorRunner programs  */
-class TableGeneratorProgramRunner(tableGeneratorProgram: TableGeneratorProgram) {
+/** Executes SingleTableGeneratorProgram programs  */
+class SingleTableGeneratorProgramRunner(tableGeneratorProgram: SingleTableGeneratorProgram) {
 
   /** Id of the maximum input source */
-  val maxInputSourceId: Int = maxInputSource(tableGeneratorProgram)
+  val maxInputSourceId: Int = tableGeneratorProgram.maxInputSource
 
   /** Runs the query */
-  private val queryRunner: QueryRunner = makeQueryRunner(tableGeneratorProgram)
+  val queryRunner: QueryRunner = makeQueryRunner(tableGeneratorProgram)
 
-  private def maxInputSource(program: TableGeneratorProgram): Int = {
-    program match {
-      case DataSource(id, _) => id
-      case u: UnionProgram =>
-        u.inputs.map(maxInputSource).max
-      case s: SelectProgram =>
-        s.input.map(maxInputSource).getOrElse(0)
-      case j: JoinProgram =>
-        maxInputSource(j.left).max(maxInputSource(j.right))
-    }
-  }
-
-  private def makeQueryRunner(program: TableGeneratorProgram): QueryRunner = {
+  private def makeQueryRunner(program: SingleTableGeneratorProgram): QueryRunner = {
     program match {
       case DataSource(id, _) => inputs => inputs(id).iterator
       case s: SelectProgram =>
@@ -104,15 +92,15 @@ class TableGeneratorProgramRunner(tableGeneratorProgram: TableGeneratorProgram) 
   }
 
   @throws[IllegalArgumentException]("On illegal input size")
-  def run(input: Vector[TabularBundle], resultingType: TabularData): TabularBundle = {
+  def run(input: Vector[TabularBundle]): TabularBundle = {
     require(input.size > maxInputSourceId, s"Expected at least ${maxInputSourceId + 1} elements")
     val rowsVectors = input.map(_.rows)
     val resultRows = queryRunner(rowsVectors).toVector
-    TabularBundle(resultingType, resultRows)
+    TabularBundle(tableGeneratorProgram.result, resultRows)
   }
 }
 
-object TableGeneratorProgramRunner {
+object SingleTableGeneratorProgramRunner {
   type RowIterator = Iterator[TabularRow]
   type RowVector = Vector[TabularRow]
   type InputElements = Vector[RowVector]

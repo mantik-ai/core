@@ -2,11 +2,10 @@ package ai.mantik.planner.select
 
 import ai.mantik.ds.TabularData
 import ai.mantik.ds.sql.run.{ Compiler, TableGeneratorProgram }
-import ai.mantik.ds.sql.{ AnonymousInput, Query, Select, Union }
+import ai.mantik.ds.sql.{ AnonymousInput, MultiQuery, Query, Select, SingleQuery, Union }
 import ai.mantik.elements.meta.MetaJson
 import ai.mantik.elements.{ CombinerDefinition, MantikDefinition, MantikHeader, MantikHeaderMeta }
 import ai.mantik.planner.BuiltInItems
-import cats.implicits._
 import io.circe.Json
 import io.circe.syntax._
 
@@ -25,9 +24,7 @@ case class SelectMantikHeaderBuilder(
     CombinerDefinition(
       bridge = BuiltInItems.SelectBridgeName,
       input = inputs,
-      output = Vector(
-        program.result
-      )
+      output = program.allResults
     )
   }
 
@@ -48,11 +45,16 @@ object SelectMantikHeaderBuilder {
    * @return either an error or a mantikHeader which can execute the selection.
    */
   def compileToMantikHeader(query: Query): Either[String, MantikHeader[CombinerDefinition]] = {
+    compileToMantikHeader(SingleQuery(query))
+  }
+
+  /** Compile a Muil Query to a select header. */
+  def compileToMantikHeader(multiQuery: MultiQuery): Either[String, MantikHeader[CombinerDefinition]] = {
     for {
-      program <- Compiler.compile(query)
-      inputs <- query.figureOutInputPorts
+      program <- Compiler.compile(multiQuery)
+      inputs <- multiQuery.figureOutInputPorts
     } yield {
-      SelectMantikHeaderBuilder(program, inputs, query.toStatement).toMantikHeader
+      SelectMantikHeaderBuilder(program, inputs, multiQuery.toStatement).toMantikHeader
     }
   }
 }

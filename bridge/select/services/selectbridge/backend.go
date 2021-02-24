@@ -5,7 +5,6 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"gl.ambrosys.de/mantik/go_shared/serving"
-	"io"
 	"path"
 	"select/services/selectbridge/runner"
 )
@@ -31,7 +30,7 @@ func LoadModelFromMantikHeader(mantikHeader serving.MantikHeader) (*SelectBacken
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not decode MantikHeader")
 	}
-	runner, err := runner.NewGeneratorRunner(sm.Program)
+	runner, err := runner.NewMultiGeneratorRunner(sm.Program)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +42,7 @@ func LoadModelFromMantikHeader(mantikHeader serving.MantikHeader) (*SelectBacken
 
 type SelectBackendModel struct {
 	header *SelectMantikHeader
-	runner runner.GeneratorRunner
+	runner runner.MultiGeneratorRunner
 }
 
 func (s *SelectBackendModel) Cleanup() {
@@ -64,25 +63,7 @@ func (s *SelectBackendModel) Outputs() []ds.TypeReference {
 }
 
 func (s *SelectBackendModel) Run(input []element.StreamReader, output []element.StreamWriter) error {
-	if len(output) != 1 {
-		return errors.New("Only one output supported")
-	}
-	singleOutput := output[0]
-	result := s.runner.Run(input)
-	for {
-		element, err := result.Read()
-		if err == io.EOF {
-			// Done
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		err = singleOutput.Write(element)
-		if err != nil {
-			return err
-		}
-	}
+	return s.runner.Run(input, output)
 }
 
 // Run a single n:1 Model
@@ -100,4 +81,29 @@ func (s *SelectBackendModel) Execute(inputs ...[]element.Element) ([]element.Ele
 		return nil, err
 	}
 	return output.Elements(), nil
+}
+
+/** Run a n:m Model. */
+func (s *SelectBackendModel) ExecuteNM(inputs ...[]element.Element) ([][]element.Element, error) {
+	outputCount := len(s.Outputs())
+
+	inputReaders := make([]element.StreamReader, len(inputs), len(inputs))
+	for i, input := range inputs {
+		inputReaders[i] = element.NewElementBuffer(input)
+	}
+
+	outputWriters := make([]element.StreamWriter, outputCount, outputCount)
+	for o := 0; o < outputCount; o++ {
+		outputWriters[o] = &element.ElementBuffer{}
+	}
+	err := s.Run(inputReaders, outputWriters)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([][]element.Element, outputCount, outputCount)
+	for o := 0; o < outputCount; o++ {
+		result[o] = outputWriters[o].(*element.ElementBuffer).Elements()
+	}
+	return result, nil
 }

@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.element.{ Element, NullElement, Primitive, TabularRow }
 import ai.mantik.ds.sql.JoinType
-import ai.mantik.ds.sql.run.TableGeneratorProgramRunner.RowIterator
+import ai.mantik.ds.sql.run.SingleTableGeneratorProgramRunner.RowIterator
 
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import com.google.common.collect.{ HashMultimap, Multimap }

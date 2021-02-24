@@ -3,7 +3,7 @@ package ai.mantik.planner
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
-import ai.mantik.ds.sql.{ AutoSelect, AutoUnion, Join, JoinType, Query, Select, SqlContext }
+import ai.mantik.ds.sql.{ AnonymousInput, AutoSelect, AutoUnion, Join, JoinType, Query, Select, SingleQuery, Split, SqlContext }
 import ai.mantik.elements
 import ai.mantik.elements.{ DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
 import ai.mantik.planner.repository.Bridge
@@ -46,7 +46,7 @@ case class DataSet(
 
     val payloadSource = PayloadSource.OperationResult(
       Operation.SqlQueryOperation(
-        select,
+        SingleQuery(select),
         Vector(this)
       )
     )
@@ -127,6 +127,47 @@ case class DataSet(
     }
   }
 
+  /**
+   * Split the DataSet into multiple fractions.
+   * @param fractions the relative size of each fraction
+   * @param shuffleSeed if given, shuffle the dataset before extracting fractions using this Random seed
+   * @param cached if true, cache sub results to avoid recalculation
+   * @return fractions.length + 1 DataSets
+   */
+  def split(fractions: Seq[Double], shuffleSeed: Option[Long] = None, cached: Boolean = true): Seq[DataSet] = {
+    val tabularType = forceDataTypeTabular()
+    val underlying = AnonymousInput(tabularType)
+    val split = Split(
+      underlying,
+      fractions.toVector,
+      shuffleSeed
+    )
+
+    val resultCount = fractions.size + 1
+
+    val operationResult = PayloadSource.OperationResult(
+      Operation.SqlQueryOperation(
+        split,
+        Vector(this)
+      )
+    )
+
+    val resultItemIds = Vector.fill(resultCount)(ItemId.generate())
+
+    val maybeCachedOperationResult = if (cached) {
+      PayloadSource.Cached(operationResult, resultItemIds)
+    } else {
+      operationResult
+    }
+
+    val dataSets = for (resultId <- 0 until resultCount) yield {
+      DataSet.natural(Source.constructed(PayloadSource.Projection(maybeCachedOperationResult, resultId)), tabularType).withItemId(
+        resultItemIds(resultId)
+      )
+    }
+    dataSets
+  }
+
   override protected def withCore(core: MantikItemCore[DataSetDefinition]): DataSet = {
     copy(core = core)
   }
@@ -181,7 +222,7 @@ object DataSet {
     }
     val payloadSource = PayloadSource.OperationResult(
       Operation.SqlQueryOperation(
-        query,
+        SingleQuery(query),
         arguments
       )
     )

@@ -90,6 +90,20 @@ type discriminator struct {
 	Type string `json:"type"`
 }
 
+type SplitProgram struct {
+	Input       TableGeneratorProgramRef `json:"Input"`
+	Fractions   []float64                `json:"fractions"`
+	ShuffleSeed *int64                   `json:"shuffleSeed"`
+}
+
+func (s *SplitProgram) Type() string {
+	return "split"
+}
+
+func (s *SplitProgram) TabularResult() *ds.TabularData {
+	return s.Input.Underlying.TabularResult()
+}
+
 func (p *TableGeneratorProgramRef) UnmarshalJSON(bytes []byte) error {
 	d := discriminator{}
 	err := json.Unmarshal(bytes, &d)
@@ -113,6 +127,10 @@ func (p *TableGeneratorProgramRef) UnmarshalJSON(bytes []byte) error {
 		var joinProgram JoinProgram
 		err = json.Unmarshal(bytes, &joinProgram)
 		p.Underlying = &joinProgram
+	case "split":
+		var splitProgram SplitProgram
+		err = json.Unmarshal(bytes, &splitProgram)
+		p.Underlying = &splitProgram
 	default:
 		err = errors.Errorf("Unknown program type %s", d.Type)
 	}

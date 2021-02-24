@@ -1,0 +1,50 @@
+kind: combiner
+bridge: builtin/select
+input:
+- type: tabular
+  columns:
+    x:
+      type: nullable
+      underlying: int32
+output:
+- type: tabular
+  columns:
+    a:
+      type: nullable
+      underlying: int32
+- type: tabular
+  columns:
+    a:
+      type: nullable
+      underlying: int32
+program:
+  type: split
+  input:
+    type: select
+    input:
+      type: source
+      port: 0
+      result:
+        type: tabular
+        columns:
+          x:
+            type: nullable
+            underlying: int32
+    selector: null
+    projector:
+      args: 1
+      retStackDepth: 1
+      stackInitDepth: 1
+      ops:
+      - get
+      - 0
+    result:
+      type: tabular
+      columns:
+        a:
+          type: nullable
+          underlying: int32
+  fractions:
+  - 0.6
+  shuffleSeed: 1
+query: SPLIT (SELECT ("x") AS "a" FROM $0) AT 0.6 WITH SHUFFLE 1

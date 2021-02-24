@@ -40,7 +40,7 @@ private[sql] class JoinCompiler(join: Join) {
     )
   }
 
-  private def generateSources(analysis: JoinConditionAnalyzer.Analysis): Either[String, (TableGeneratorProgram, TableGeneratorProgram)] = {
+  private def generateSources(analysis: JoinConditionAnalyzer.Analysis): Either[String, (SingleTableGeneratorProgram, SingleTableGeneratorProgram)] = {
     for {
       left <- Compiler.compile(join.left)
       right <- Compiler.compile(join.right)
@@ -57,12 +57,12 @@ private[sql] class JoinCompiler(join: Join) {
   }
 
   private def buildInputSource(
-    input: TableGeneratorProgram,
+    input: SingleTableGeneratorProgram,
     groupingDataTypes: Vector[DataType],
     groupingProgram: Program,
     elementTypes: Vector[DataType],
     elementProgram: Program
-  ): TableGeneratorProgram = {
+  ): SingleTableGeneratorProgram = {
     val fullDataType = groupingDataTypes ++ elementTypes
     val asTabular = TabularData(fullDataType.zipWithIndex.map {
       case (dt, i) =>

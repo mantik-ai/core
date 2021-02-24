@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.sql.{ Query, Select }
+import ai.mantik.ds.sql.{ MultiQuery, Query, Select }
 import ai.mantik.executor.model.docker.{ Container, DockerConfig }
 import ai.mantik.planner
 import ai.mantik.planner.Planner.{ InconsistencyException, PlannerException }
@@ -110,13 +110,13 @@ class PlannerElements(config: Config) {
   }
 
   /** Generate the plan for a SQL Query */
-  def query(query: Query): State[PlanningState, ResourcePlan] = {
+  def query(query: MultiQuery): State[PlanningState, ResourcePlan] = {
     val node = queryNode(query)
     makeSingleNodeResourcePlan(node)
   }
 
   /** Generate the docker container node SQL Query */
-  def queryNode(query: Query): Node[PlanNodeService.DockerContainer] = {
+  def queryNode(query: MultiQuery): Node[PlanNodeService.DockerContainer] = {
     val header = SelectMantikHeaderBuilder.compileToMantikHeader(query) match {
       case Left(error) => throw new FeatureNotSupported(s"Could not compile select statement ${query.toStatement}, ${error}")
       case Right(ok)   => ok
@@ -129,10 +129,11 @@ class PlannerElements(config: Config) {
       case Left(error) => throw new InconsistencyException(s"Could not figure out input ports of query ${error}")
       case Right(ok)   => ok
     }
+    val outputs = Vector.fill(query.resultingQueryType.size)(NodePort(MantikBundleContentType))
     Node(
       container,
       inputs = inputs.map { _ => NodePort(MantikBundleContentType) },
-      outputs = Vector(NodePort(MantikBundleContentType))
+      outputs = outputs
     )
   }
 

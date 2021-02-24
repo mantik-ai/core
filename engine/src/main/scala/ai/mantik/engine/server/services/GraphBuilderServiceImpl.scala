@@ -6,7 +6,7 @@ import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, NodeResponse, QueryRequest, SelectRequest, SetMetaVariableRequest, TagRequest, TrainRequest, TrainResponse }
+import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, MultiNodeResponse, NodeResponse, QueryRequest, SelectRequest, SetMetaVariableRequest, SplitRequest, TagRequest, TrainRequest, TrainResponse }
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{ Session, SessionManager }
 import ai.mantik.planner.impl.MantikItemStateManager
@@ -125,6 +125,25 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
     } yield {
       val result = DataSet.query(request.statement, datasets: _*)
       placeInGraph(session, result)
+    }
+  }
+
+  override def split(request: SplitRequest): Future[MultiNodeResponse] = handleErrors {
+    sessionManager.get(request.sessionId).map { session =>
+      val dataset = session.getItemAs[DataSet](request.datasetId)
+      val splitted = dataset.split(
+        fractions = request.fractions,
+        shuffleSeed = if (request.shuffle) {
+          Some(request.shuffleSeed)
+        } else {
+          None
+        },
+        cached = !request.noCaching
+      )
+      val nodes = splitted.map { dataSet =>
+        placeInGraph(session, dataSet)
+      }
+      MultiNodeResponse(nodes)
     }
   }
 

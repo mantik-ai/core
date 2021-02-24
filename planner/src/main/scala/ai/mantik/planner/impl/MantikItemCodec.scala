@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.helper.circe.DiscriminatorDependentCodec
-import ai.mantik.ds.sql.{ Query, Select, SqlContext }
+import ai.mantik.ds.sql.{ MultiQuery, Query, Select, SingleQuery, SqlContext }
 import ai.mantik.ds.{ DataType, TabularData }
 import ai.mantik.elements._
 import ai.mantik.planner.pipelines.{ ResolvedPipeline, ResolvedPipelineStep }
@@ -90,7 +90,7 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
       statement: String
   )
 
-  private implicit val queryEncoder: Encoder[Query] = semiauto.deriveEncoder[EncodedQuery].contramap { s =>
+  private implicit val queryEncoder: Encoder[MultiQuery] = semiauto.deriveEncoder[EncodedQuery].contramap { s =>
     val inputPorts = s.figureOutInputPorts match {
       case Left(error) => throw new IllegalArgumentException(s"Invalid query input ports ${error}")
       case Right(ok) =>
@@ -99,16 +99,16 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     EncodedQuery(inputPorts, s.toStatement)
   }
 
-  private implicit val selectEncoder: Encoder[Select] = queryEncoder.contramap { s => s: Query }
+  private implicit val selectEncoder: Encoder[Select] = queryEncoder.contramap { s => SingleQuery(s): MultiQuery }
 
-  private implicit val queryDecoder: Decoder[Query] = semiauto.deriveDecoder[EncodedQuery].emap { encoded =>
+  private implicit val queryDecoder: Decoder[MultiQuery] = semiauto.deriveDecoder[EncodedQuery].emap { encoded =>
     implicit val sqlContext = SqlContext(encoded.inputs)
-    Query.parse(encoded.statement)
+    MultiQuery.parse(encoded.statement)
   }
 
   private implicit val selectDecoder: Decoder[Select] = queryDecoder.emap {
-    case s: Select => Right(s)
-    case other     => Left(s"Expected Select, got ${other.getClass.getSimpleName}")
+    case SingleQuery(s: Select) => Right(s)
+    case other                  => Left(s"Expected Select, got ${other.getClass.getSimpleName}")
   }
 
   private val pureAlgorithmEncoder: ObjectEncoder[Algorithm] = semiauto.deriveEncoder[Algorithm]

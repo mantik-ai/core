@@ -1,5 +1,6 @@
 package ai.mantik.planner.impl
 
+import ai.mantik.ds.sql.SingleQuery
 import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId, PipelineStep }
 import ai.mantik.planner.PlanOp.DeployPipelineSubItem
 import ai.mantik.planner.Planner.{ InconsistencyException, PlannerException }
@@ -9,6 +10,7 @@ import ai.mantik.planner.repository.ContentTypes
 import cats.data.State
 import cats.implicits._
 import com.typesafe.config.Config
+
 import javax.inject.Inject
 
 /**
@@ -285,7 +287,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
     val steps = pipeline.resolved.steps.zipWithIndex
     steps.collect {
       case (ResolvedPipelineStep.SelectStep(select), idx) =>
-        val node = elements.queryNode(select)
+        val node = elements.queryNode(SingleQuery(select))
         idx.toString -> DeployPipelineSubItem(node)
     }.toMap
   }
