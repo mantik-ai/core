@@ -1,5 +1,4 @@
-SCALA_RESOURCES = $(shell find */src/main -name "*.scala")
-SCALA_TEST_RESOURCES = $(shell find */src/test -name "*.scala")
+SCALA_RESOURCES = $(shell git ls-files ../*.scala)
 
 ifndef CACHE_DIR
   # $(info CACHE_DIR not set)
@@ -13,26 +12,32 @@ else
   -Dsbt.coursier.home=$(CACHE_DIR)/coursier
 endif
 
-SBT = sbt $(SBT_CACHE_PARAMETER) -warn
+SBT = cd ../; sbt $(SBT_CACHE_PARAMETER) -warn
 
 # .make files are there to tell Make if something is going to be rebuild
 
-.PHONY: scala-build
+.PHONY: build
+build: target/build.make
 
-scala-build: engine-app/target/build.make
+DOCKER_IMAGE_NAME=engine
+include ../scripts/ci/Makefile.docker_single
 
-engine-app/target/build.make: ${SCALA_RESOURCES}
-	$(SBT) package
+
+target/build.make: ${SCALA_RESOURCES}
+	$(SBT) package engineApp/stage
 	touch $@
 
-.PHONY: scala-test
-scala-test:
+.PHONY: test
+test:
 	$(SBT) test
 
-.PHONY: scala-install
-scala-install:
+.PHONY: install
+install:
 	$(SBT) publishLocal
 
-.PHONY: scala-publish
-scala-publish:
+.PHONY: publish
+publish:
 	$(SBT) publish
+
+clean:
+	$(SBT) clean

@@ -35,7 +35,7 @@ build:
       - "*/*/*/*/target"
       - "*/*/*/*/*/target"
       - "public"
-    expire_in: 3 day
+    expire_in: 5 hrs
 
 
 test:
@@ -45,7 +45,6 @@ test:
     CACHE_DIR: "$PWD/cache"
   script:
     - mkdir -p $CACHE_DIR
-    - sleep 2 # Sometimes test seem to not find release artifacts with correct timestamps
     - make test
   cache:
     key: dependency_cache
@@ -66,8 +65,7 @@ docker:
     - docker:dind
   script:
     - mkdir -p $CACHE_DIR
-    - sleep 2 # Sometimes test seem to not find release artifacts with correct timestamps
-    - make docker
+    - make docker-unchecked
 
 docker_publish:
   stage: publish
@@ -86,7 +84,7 @@ docker_publish:
     - docker:dind
   script:
     - mkdir -p $CACHE_DIR
-    - make docker
+    - make docker-unchecked
     - make docker-publish
 
 other_publish:

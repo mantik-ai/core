@@ -1,0 +1,24 @@
+FROM openjdk:11
+
+RUN useradd -ms /bin/bash mantikengine && \
+    mkdir /app && \
+    mkdir -p /data/mantik/logs && \
+    mkdir -p /data/mantik/repo && \
+    chown mantikengine:mantikengine /app && \
+    chown -R mantikengine:mantikengine /data/mantik
+
+ADD --chown=mantikengine:mantikengine target/universal/stage /app
+
+USER mantikengine
+
+# Note: Mantik runs unter user mantikengine (UID=GID=1000)
+
+# Contains repository of Mantik Artifacts
+# (Subdirectories: artifacts, files)
+VOLUME /data/mantik/repo
+# Contains logs
+VOLUME /data/mantik/logs
+
+ENTRYPOINT ["/app/bin/engine-app", "-Dconfig.resource=application_dockerimage.conf", "-Dlogback.configurationFile=logback_dockerimage.xml"]
+
+

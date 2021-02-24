@@ -51,7 +51,9 @@ object DockerConfig {
 
     def optionalString(key: String): Option[String] = {
       if (config.hasPath(key)) {
-        Some(config.getString(key))
+        // Empty value is interpreted as None
+        val value = config.getString(key)
+        Some(value.trim).filter(_.nonEmpty)
       } else {
         None
       }

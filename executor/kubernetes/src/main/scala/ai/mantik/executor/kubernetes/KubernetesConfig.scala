@@ -24,7 +24,8 @@ case class KubernetesConfig(
     defaultRetryInterval: FiniteDuration,
     ingressSubPath: Option[String],
     ingressRemoteUrl: String,
-    ingressAnnotations: Map[String, String]
+    ingressAnnotations: Map[String, String],
+    nodeAddress: Option[String]
 )
 
 object KubernetesConfig {
@@ -38,7 +39,8 @@ object KubernetesConfig {
       defaultRetryInterval = c.getFiniteDuration("behavior.retryInterval"),
       ingressSubPath = c.getOptionalString("ingress.subPath"),
       ingressRemoteUrl = c.getString("ingress.remoteUrl"),
-      ingressAnnotations = c.getKeyValueMap("ingress.annotations")
+      ingressAnnotations = c.getKeyValueMap("ingress.annotations"),
+      nodeAddress = c.getOptionalString("nodeAddress")
     )
   }
 }

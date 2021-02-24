@@ -9,5 +9,8 @@ include ../scripts/ci/Makefile.go
 .PHONY: docker
 docker:
 
+.PHONY: docker-unchecked
+docker-unchecked:
+
 .PHONY: docker-publish
 docker-publish:

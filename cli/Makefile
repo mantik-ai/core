@@ -7,7 +7,9 @@ GO_PATH ?= $(HOME)/go
 
 .PHONY: docker
 docker:
-	@# Nothing to do
+
+.PHONY: docker-unchecked
+docker-unchecked:
 
 .PHONY: docker-publish
 docker-publish:

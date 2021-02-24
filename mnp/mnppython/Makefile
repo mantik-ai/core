@@ -24,5 +24,9 @@ $(eval $(call python_grpc,../protocol/protobuf/,mnp/_stubs,mantik.mnp))
 docker:
 	@#"Nothing to do"
 
+.PHONY: docker-unchecked
+docker-unchecked:
+
+
 .PHONY: docker-publish
 docker-publish:
