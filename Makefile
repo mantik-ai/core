@@ -57,12 +57,12 @@ docker-minikube:
 .PHONY: local-install
 # Only scala needs an install method
 local-install:
-	$(MAKE) -c engine-app make install
+	$(MAKE) -C engine-app install
 
 .PHONY: publish
 # Only scala needs a publish method
 publish:
-	$(MAKE) -c engine-app publish
+	$(MAKE) -C engine-app publish
 
 .PHONY: clean
 clean:
