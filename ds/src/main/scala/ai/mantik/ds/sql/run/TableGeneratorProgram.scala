@@ -15,6 +15,23 @@ import java.util.Locale
 sealed trait TableGeneratorProgram {
   /** Result Data Type. */
   def result: TabularData
+
+  /** Maximum id of input sources */
+  def maxInputSource: Int
+
+  /** Extra results (in case of [[MultiGeneratorProgram]]) */
+  def extraResults: Vector[TabularData]
+
+  /** Return the type of all result tables */
+  def allResults: Vector[TabularData] = result +: extraResults
+}
+
+/** Special program for generating multiple tabular output values. */
+sealed trait MultiTableGeneratorProgram extends TableGeneratorProgram
+
+/** A Program which emits exactly one table */
+sealed trait SingleTableGeneratorProgram extends TableGeneratorProgram {
+  override final def extraResults: Vector[TabularData] = Vector.empty
 }
 
 /**
@@ -25,18 +42,22 @@ sealed trait TableGeneratorProgram {
  * @param projector a program doing the projection. called with a row, returns the translated row. If empty, the row is returned untouched.
  */
 case class SelectProgram(
-    input: Option[TableGeneratorProgram] = None,
+    input: Option[SingleTableGeneratorProgram] = None,
     selector: Option[Program],
     projector: Option[Program],
     result: TabularData
-) extends TableGeneratorProgram
+) extends SingleTableGeneratorProgram {
+  override def maxInputSource: Int = input.map(_.maxInputSource).getOrElse(0)
+}
 
 /** An input source. */
 case class DataSource(
     port: Int,
     result: TabularData
-) extends TableGeneratorProgram {
+) extends SingleTableGeneratorProgram {
   require(port >= 0, "Port must be >= 0")
+
+  override def maxInputSource: Int = port
 }
 
 /**
@@ -47,11 +68,13 @@ case class DataSource(
  * @param inOrder extension, emit result from left to right (makes it order deterministic)
  */
 case class UnionProgram(
-    inputs: Vector[TableGeneratorProgram],
+    inputs: Vector[SingleTableGeneratorProgram],
     all: Boolean,
     result: TabularData,
     inOrder: Boolean
-) extends TableGeneratorProgram
+) extends SingleTableGeneratorProgram {
+  override def maxInputSource: Int = inputs.map(_.maxInputSource).max
+}
 
 /**
  * A Program performing joins
@@ -66,14 +89,29 @@ case class UnionProgram(
  * @param result result tabular type
  */
 case class JoinProgram(
-    left: TableGeneratorProgram,
-    right: TableGeneratorProgram,
+    left: SingleTableGeneratorProgram,
+    right: SingleTableGeneratorProgram,
     groupSize: Int,
     joinType: JoinType,
     filter: Option[Program] = None,
     selector: Vector[Int],
     result: TabularData
-) extends TableGeneratorProgram
+) extends SingleTableGeneratorProgram {
+  override def maxInputSource: Int = left.maxInputSource.max(right.maxInputSource)
+}
+
+/** A program for splitting input streams. */
+case class SplitProgram(
+    input: SingleTableGeneratorProgram,
+    fractions: Vector[Double],
+    shuffleSeed: Option[Long]
+) extends MultiTableGeneratorProgram {
+  override def extraResults: Vector[TabularData] = Vector.fill(fractions.size)(input.result)
+
+  override def result: TabularData = input.result
+
+  override def maxInputSource: Int = input.maxInputSource
+}
 
 object TableGeneratorProgram {
 
@@ -96,12 +134,24 @@ object TableGeneratorProgram {
     }
   }
 
+  implicit def singleGeneratorProgramEncoder: ObjectEncoder[SingleTableGeneratorProgram] = {
+    codec.contramapObject(x => x: TableGeneratorProgram)
+  }
+
+  implicit def singleGeneratorProgramDecoder: Decoder[SingleTableGeneratorProgram] = {
+    codec.emap {
+      case s: SingleTableGeneratorProgram => Right(s)
+      case somethingElse                  => Left(s"Expected SingleTableGeneratorProgram, got ${somethingElse.getClass.getSimpleName}")
+    }
+  }
+
   implicit val codec: ObjectEncoder[TableGeneratorProgram] with Decoder[TableGeneratorProgram] = new DiscriminatorDependentCodec[TableGeneratorProgram]("type") {
     override val subTypes = Seq(
       makeSubType[UnionProgram]("union"),
       makeSubType[SelectProgram]("select", true),
       makeSubType[DataSource]("source"),
-      makeSubType[JoinProgram]("join")
+      makeSubType[JoinProgram]("join"),
+      makeSubType[SplitProgram]("split")
     )
   }
 }

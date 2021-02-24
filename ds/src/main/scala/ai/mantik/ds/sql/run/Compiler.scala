@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.operations.{ BinaryFunction, BinaryOperation }
-import ai.mantik.ds.sql.{ Alias, AnonymousInput, ArrayGetExpression, BinaryOperationExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Join, Query, Select, SelectProjection, SizeExpression, StructAccessExpression, Union }
+import ai.mantik.ds.sql.{ Alias, AnonymousInput, ArrayGetExpression, BinaryOperationExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Join, MultiQuery, Query, Select, SelectProjection, SingleQuery, SizeExpression, Split, StructAccessExpression, Union }
 import ai.mantik.ds.{ DataType, FundamentalType, Nullable }
 import cats.implicits._
 
@@ -11,13 +11,24 @@ import scala.annotation.tailrec
 /** Compiles select statements into programs. */
 object Compiler {
 
-  def compile(query: Query): Either[String, TableGeneratorProgram] = {
+  def compile(query: Query): Either[String, SingleTableGeneratorProgram] = {
     query match {
       case a: AnonymousInput => Right(DataSource(a.slot, query.resultingTabularType))
       case s: Select         => compile(s)
       case u: Union          => compile(u)
       case a: Alias          => compile(a.query) // alias is not present program
       case j: Join           => JoinCompiler.compile(j)
+    }
+  }
+
+  def compile(multiQuery: MultiQuery): Either[String, TableGeneratorProgram] = {
+    multiQuery match {
+      case s: SingleQuery =>
+        compile(s.query)
+      case s: Split =>
+        compile(s.query).map { underlying =>
+          SplitProgram(underlying, s.fractions, s.shuffleSeed)
+        }
     }
   }
 

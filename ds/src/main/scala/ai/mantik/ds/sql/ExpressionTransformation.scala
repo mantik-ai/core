@@ -46,6 +46,13 @@ private[sql] object ExpressionTransformation {
         c.copy(left = dependencies.head, right = dependencies.tail.head)
       case c: Condition.Or =>
         c.copy(left = ensureCondition(dependencies.head), right = ensureCondition(dependencies.tail.head))
+      case c: ArrayGetExpression =>
+        c.copy(array = ensureCondition(c.array), index = ensureCondition(c.index))
+      case c: SizeExpression =>
+        c.copy(expression = ensureCondition(c.expression))
+      case c: StructAccessExpression =>
+        c.copy(expression = ensureCondition(c.expression))
+
     }
   }
 }

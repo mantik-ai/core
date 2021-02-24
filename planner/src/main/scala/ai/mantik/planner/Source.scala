@@ -1,7 +1,7 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.sql.{ Query, Select }
+import ai.mantik.ds.sql.{ MultiQuery, Query, Select }
 import ai.mantik.elements.{ ItemId, NamedMantikId }
 
 /** Defines where a MantikItem comes from. */
@@ -79,7 +79,9 @@ case object Operation {
   }
 
   /** An SQL Query Operation */
-  case class SqlQueryOperation(query: Query, arguments: Vector[DataSet]) extends Operation
+  case class SqlQueryOperation(query: MultiQuery, arguments: Vector[DataSet]) extends Operation {
+    override val resultCount: Int = query.resultingQueryType.size
+  }
 }
 
 /** Represents the way [[MantikItem]](s) gets their Payload Data from. */

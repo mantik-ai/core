@@ -77,6 +77,14 @@ Supported SQL Commands
   - Values `x[1]` **Note:** SQL Starts counting on index 1.
   - Length: `size(x)`
 - Accessing Struct Fields, e.g. `SELECT (p).name`
+- DataSet splits: `SPLIT (<query>) AT 0.5, 0.2 WITH SHUFFLE 1` (with a Shuffle-Random seed of `1`)
+  **Note:** 
+  - Split-Support is only accessiable via `DataSet.split(..)`-Operation
+  - A split at `0.5`, `0.2` results in three datasets of the size 50%, 20% and 30%
+  - The shuffling should be stable.
+  - The shuffling can be omitted (`SPLIT (<query>) AT 0.5`), then no shuffling is done
+  - Splitting is a Mantik-Specific SQL Extension
+  
 
 Note: not all DataTypes are support by SQL, unsupported are
 
