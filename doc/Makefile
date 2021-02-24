@@ -9,14 +9,15 @@ clean:
 	cp ../Readme.rst index.rst
 	pipenv run sphinx-build -b html . ../public
 
+# Empty Goals
 .PHONY: test
 test:
-	# Empty
 
 .PHONY: docker
 docker:
-	@# Nothing to do
+
+.PHONY: docker-unchecked
+docker-unchecked:
 
 .PHONY: docker-publish
 docker-publish:
-	@# Nothing to do

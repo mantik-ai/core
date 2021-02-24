@@ -23,7 +23,10 @@ else
 endif
 
 .PHONY: docker
-docker: build
+docker: | build docker-unchecked
+
+.PHONY: docker-unchecked
+docker-unchecked:
 	$(DOCKER) build $(DOCKER_FILE_ARGUMENT) $(DOCKER_EXTRA_ARGS) -t $(IMAGE_FULL_NAME) .
 
 .PHONY: docker-publish

@@ -337,6 +337,7 @@ lazy val engineApp = makeProject("engine-app", "engineApp")
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
     )
   )
+  .enablePlugins(JavaAppPackaging)
 
 lazy val root = (project in file("."))
   .aggregate(

@@ -33,6 +33,8 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
   logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
   logger.info(s"Disable Pull:        ${config.common.disablePull}")
+  val nodeAddress = config.kubernetes.nodeAddress.getOrElse(kubernetesHost)
+  logger.info(s"Node Address:        ${nodeAddress}")
 
   private def namespaceForIsolationSpace(isolationSpace: String): String = {
     // TODO: Escape invalid characters.
@@ -223,7 +225,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     } yield {
       val nodePort = serviceAssembled.spec.get.ports.head.nodePort
       val grpcProxy = GrpcProxy(
-        proxyUrl = Some(s"http://${kubernetesHost}:$nodePort")
+        proxyUrl = Some(s"http://${nodeAddress}:$nodePort")
       )
       logger.info(s"Ensured grpc Proxy ${grpcProxy.proxyUrl} for namespace ${namespace}")
       grpcProxies.put(namespace, grpcProxy)

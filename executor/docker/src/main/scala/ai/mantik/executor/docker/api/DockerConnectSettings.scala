@@ -15,8 +15,16 @@ case class DockerConnectSettings(
     dockerCertPath: Option[String],
     attachMinikube: Boolean
 ) {
+  /**
+   * Returns the docker URL as URI.
+   * Note: DOCKER_HOST encodings TCP-Connection as tcp://, we are changing this to https.
+   */
   def asUri: Uri = {
-    Uri(url)
+    if (url.startsWith("tcp://")) {
+      Uri("https://" + url.stripPrefix("tcp://"))
+    } else {
+      Uri(url)
+    }
   }
 
   /**
@@ -26,7 +34,7 @@ case class DockerConnectSettings(
   def derive(tempCertFile: Path): DockerConnectSettings = {
     val minikubeExtended = if (attachMinikube) {
       val minikubeSettings = extractMinikubeDockerSettings()
-      val dockerUrl = "https://" + minikubeSettings("DOCKER_HOST").stripPrefix("tcp://")
+      val dockerUrl = minikubeSettings("DOCKER_HOST")
       copy(
         url = dockerUrl,
         dockerCertPath = Some(minikubeSettings("DOCKER_CERT_PATH")),

@@ -1,10 +1,10 @@
 # No Built in Rules
 MAKEFLAGS += --no-builtin-rules
 
-build: scala-build build-subprojects
-include scripts/ci/Makefile.core
+build: build-subprojects
 
 SUB_PROJECTS=\
+	engine-app\
 	mnp/mnpgo\
 	mnp/mnppython\
 	go_shared\
@@ -29,18 +29,22 @@ help:
 	@echo ""
 	@echo "build             Build the code"
 	@echo "test              Run all unittests"
+	@echo "clean             Remove results"
 	@echo "local-install     Install non-docker artifacts locally"
 	@echo "publish           Publish non-docker artifacts to the repository"
 	@echo "docker            Build Docker Images."
 	@echo "                  Note: if your docker needs' sudo you can override the docker executable"
 	@echo "                  export DOCKER=\"sudo docker\""
+	@echo "docker-unchecked  Build Docker Images, assuming that the build finished (workaround for CI)"
 	@echo "docker-minikube   Build Docker Images on a running Minikube instance"
 	@echo "docker-publish    Upload Docker Images to the docker repository"
 	@echo "integration-test  Run integration tests on minikube"
 
-test: scala-test test-subprojects
+test: test-subprojects
 
 docker: docker-subprojects
+
+docker-unchecked: docker-unchecked-subprojects
 
 docker-publish: docker-publish-subprojects
 
@@ -52,11 +56,13 @@ docker-minikube:
 
 .PHONY: local-install
 # Only scala needs an install method
-local-install: scala-install
+local-install:
+	$(MAKE) -c engine-app make install
 
 .PHONY: publish
 # Only scala needs a publish method
-publish: scala-publish
+publish:
+	$(MAKE) -c engine-app publish
 
 .PHONY: clean
 clean:
