@@ -296,3 +296,10 @@ It's defined like:
 ## Implementation
 
 The Scala implementation resides in `ds`. A Golang implementation resides in the `go_shared/ds` project.
+
+## Pitfalls
+
+Some json libraries represent json internally as hashmap; especially for dictionary-like parts the order of entries is unstable. 
+In mantik headers we use a dict-like structure to define e.g. the tabular type (underlying types), but data is passed as ordered list referring to those entries in messagepack and json (see above). Unstable order of types can lead to the confusion of tabular columns. The same is true for `struct` type. 
+In mantik code this issue is addressed by using `Circe` library in scala and a custom `Marshal` / `Unmarshal` json operation in golang (`go_shared/ds/tabulardata.go`). For python 3.7 and above, dict order is preserved (see `python_sdk/mantik/types.py`).
+
