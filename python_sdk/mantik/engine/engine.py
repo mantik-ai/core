@@ -12,6 +12,8 @@ from google.protobuf.empty_pb2 import Empty
 import mantik.types
 from mantik.engine.compat import *
 
+from mantik.util import get_zip_bit_representation
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,7 +55,8 @@ class MantikItem:
                     session_id=self._session.session_id,
                     dataset_id=self.item_id,
                     encoding=ENCODING_JSON,
-                )
+                ),
+                timeout=30,
             )
             self.bundle = _convert(self._f_response.bundle)
         return self
@@ -106,11 +109,42 @@ class Client(object):
         """Return a fetchable dataset"""
         return MantikItem(result, self._session, self._graph_executor)
 
-    def _add_algorithm(self, directory: str) -> MantikItem:
-        response = self._debug_service.AddLocalMantikDirectory(
-            AddLocalMantikDirectoryRequest(directory=directory)
+    def _read_mantik_header(self, directory: str) -> str:
+        """Read mantik header file in given directory"""
+        with open(directory + "/MantikHeader", "r") as f:
+            return f.read()
+
+    def _zip_payload(self, directory: str):
+        """Search for payload folder and return bitwise representation of zipped payload"""
+        payload_dir = directory + "/payload"
+        return get_zip_bit_representation(payload_dir) or ""
+
+    def _make_add_artifact_request_stream(
+        self, mantik_header: str, named_mantik_id: str = "", payload: str = ""
+    ):
+        """Create stream of AddArtifactRequest"""
+        content_type = "application/zip" if payload else None
+        yield AddArtifactRequest(
+                    mantik_header=mantik_header,
+                    named_mantik_id=named_mantik_id,
+                    content_type=content_type,
+                    payload=payload,
+                )
+
+    def _add_algorithm(self, directory: str, named_mantik_id: str = "") -> MantikItem:
+        mantik_header = self._read_mantik_header(directory)
+        payload = self._zip_payload(directory)
+        request_iterator = self._make_add_artifact_request_stream(
+            mantik_header, named_mantik_id, payload
         )
-        logger.debug("Added item %s", response.name)
+        response = self._local_registry_service.AddArtifact(
+            request_iterator=request_iterator,
+            target=f"{self.host}:{self.port}",  # credentials must be supplied explicitly
+            channel_credentials=grpc.experimental.insecure_channel_credentials(),
+        )
+        logger.debug(
+            "Added item %s", response.artifact.item_id
+        )
         return self._make_item(response)
 
     def upload_bundle(self, bundle: mantik.types.Bundle) -> MantikItem:
@@ -168,7 +202,7 @@ class Client(object):
         return self._make_item(pipe)
 
     def apply(
-        self, pipe: Union[PipeStep, List[PipeStep]], data: SomeData,
+        self, pipe: Union[PipeStep, List[PipeStep]], data: SomeData
     ) -> MantikItem:
         """Execute the pipeline pipe on some data."""
         dataset = (
@@ -198,15 +232,15 @@ class Client(object):
                     session_id=self.session.session_id,
                     item_id=item_id,
                     values=[
-                        MetaVariableValue(
-                            name=name,
-                            json=json.dumps(value)
-                        )
+                        MetaVariableValue(name=name, json=json.dumps(value))
                         for name, value in variables.items()
-                    ]
+                    ],
                 )
             ).item_id
-        return {item_id: _set(item_id, variables) for item_id, variables in meta.items()}
+
+        return {
+            item_id: _set(item_id, variables) for item_id, variables in meta.items()
+        }
 
     def train(self, pipe, data, meta=None, caching=True):
         """Transform a trainable pipeline to a pipeline.
@@ -223,7 +257,7 @@ class Client(object):
         )
         features = self.apply(pipe[:-1], dataset) if len(pipe) > 1 else dataset
         last = pipe[-1]
-        name = last if isinstance(last, str) else last.item.name
+        name = last if isinstance(last, str) else last.item.artifact.item_id
         trainable = self._graph_builder.Get(
             GetRequest(session_id=self.session.session_id, name=name)
         )
@@ -236,7 +270,8 @@ class Client(object):
                 trainable_id=new_ids.get(old_id, old_id),
                 training_dataset_id=features.item_id,
                 no_caching=not caching,
-            )
+            ),
+            timeout=30,
         )
         trained_algorithm = self._make_item(train_response.trained_algorithm)
         stats = self._make_item(train_response.stat_dataset)
@@ -275,6 +310,7 @@ class Client(object):
         self._debug_service = DebugServiceStub(channel)
         self._graph_builder = GraphBuilderServiceStub(channel)
         self._graph_executor = GraphExecutorServiceStub(channel)
+        self._local_registry_service = LocalRegistryService()
 
         self._connected = True
         logger.info("Connected to version %s", self.version)
