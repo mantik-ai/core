@@ -2,6 +2,7 @@ import os
 import zipfile
 import logging
 
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -25,3 +26,13 @@ def zip_directory(directory: str, writer, avoid_hidden=False):
                 logger.debug(f"Zipping {fp} -> {zp}")
                 zipwriter.write(fp, zp)
         zipwriter.close()
+
+
+def get_zip_bit_representation(directory: str, avoid_hidden=False):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        zip_dir = zip_directory(
+            directory, writer=tmp_dir + "/zip_temp", avoid_hidden=avoid_hidden
+        )
+        with open(tmp_dir + "/zip_temp", "rb") as f:
+            content = f.read()
+    return content

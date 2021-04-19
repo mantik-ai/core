@@ -15,6 +15,9 @@ from ._stubs.mantik.engine.graph_builder_pb2_grpc import *
 from ._stubs.mantik.engine.graph_executor_pb2 import *
 from ._stubs.mantik.engine.graph_executor_pb2_grpc import *
 
+from ._stubs.mantik.engine.local_registry_pb2 import *
+from ._stubs.mantik.engine.local_registry_pb2_grpc import *
+
 from ._stubs.mantik.engine.ds_pb2 import *
 
 from google.protobuf import symbol_database as _symbol_database
