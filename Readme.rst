@@ -41,3 +41,44 @@ Code Structure
 - :code:`planner` Contains the local application and interface for planning and executing jobs.
 - :code:`project` Contains Scala Build Information
 - :code:`testutils` Contains shared Scala Testing Code
+
+Contributing
+------------
+
+Contributions are welcome!
+
+If you want to contribute code, please sign a contributor agreement.
+
+For more information see `https://mantik.ai/contributing <https://mantik.ai/contributing>`_.
+
+Copyright
+---------
+
+Copyright 2020-2021 Mantik UG (Haftungsbeschränkt)
+All rights reserved.
+
+Mantik is licensed unter the Terms of
+
+GNU Affero General Public License v3.
+
+See LICENSE.md
+
+Linking Exception
+*****************
+
+Additionally, the following linking exception is granted:
+
+.. code-block::
+
+   Additional permission under the GNU Affero GPL version 3 section 7:
+
+   If you modify this Program, or any covered work, by linking or
+   combining it with other code, such other code is not for that reason
+   alone subject to any of the requirements of the GNU Affero GPL
+   version 3.
+
+
+Proprietary Licenses
+********************
+
+Mantik UG (Haftungsbeschränkt) reserves the right to sell proprietary licenses.
