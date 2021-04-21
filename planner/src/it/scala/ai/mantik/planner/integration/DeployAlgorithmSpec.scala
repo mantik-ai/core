@@ -32,14 +32,18 @@ class DeployAlgorithmSpec extends IntegrationTestBase with Samples {
 
   it should "deploy a simple select algorithm" in {
     // Note: Selects are not part of Algorithm anymore
-    val pipeline = Pipeline.build(Left(
-      Select.parse(
-        TabularData(
-          "x" -> FundamentalType.Int32
-        ),
-        "select * where x = 10"
-      ).forceRight
-    ))
+    val pipeline = Pipeline.build(
+      Left(
+        Select
+          .parse(
+            TabularData(
+              "x" -> FundamentalType.Int32
+            ),
+            "select * where x = 10"
+          )
+          .forceRight
+      )
+    )
     val state = context.state(pipeline)
     state.deployment shouldBe empty
     state.itemStored shouldBe false

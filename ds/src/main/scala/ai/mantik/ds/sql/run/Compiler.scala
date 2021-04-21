@@ -1,9 +1,29 @@
 package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.operations.{ BinaryFunction, BinaryOperation }
-import ai.mantik.ds.sql.{ Alias, AnonymousInput, ArrayGetExpression, BinaryOperationExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Expression, Join, MultiQuery, Query, Select, SelectProjection, SingleQuery, SizeExpression, Split, StructAccessExpression, Union }
-import ai.mantik.ds.{ DataType, FundamentalType, Nullable }
+import ai.mantik.ds.operations.{BinaryFunction, BinaryOperation}
+import ai.mantik.ds.sql.{
+  Alias,
+  AnonymousInput,
+  ArrayGetExpression,
+  BinaryOperationExpression,
+  CastExpression,
+  ColumnExpression,
+  Condition,
+  ConstantExpression,
+  Expression,
+  Join,
+  MultiQuery,
+  Query,
+  Select,
+  SelectProjection,
+  SingleQuery,
+  SizeExpression,
+  Split,
+  StructAccessExpression,
+  Union
+}
+import ai.mantik.ds.{DataType, FundamentalType, Nullable}
 import cats.implicits._
 
 import scala.annotation.tailrec
@@ -180,16 +200,16 @@ object Compiler {
   }
 
   /**
-   * Compiles operation(arguments..)
-   * All Arguments are null checked (if nullable) and if necessary null the whole expression
-   * will return null.
-   *
-   * @param opNeedsPotentialNullWrap add a Nullable-Cast at the end if any of the arguments are nullable.
-   */
+    * Compiles operation(arguments..)
+    * All Arguments are null checked (if nullable) and if necessary null the whole expression
+    * will return null.
+    *
+    * @param opNeedsPotentialNullWrap add a Nullable-Cast at the end if any of the arguments are nullable.
+    */
   private def compileOperationWithPotentialNullableArguments(
-    operation: Vector[OpCode],
-    opNeedsPotentialNullWrap: Boolean,
-    arguments: Expression*
+      operation: Vector[OpCode],
+      opNeedsPotentialNullWrap: Boolean,
+      arguments: Expression*
   ): Either[String, Vector[OpCode]] = {
     for {
       argumentOpCodes <- arguments.map(compileExpression).toVector.sequence
@@ -207,14 +227,13 @@ object Compiler {
 
       resultBuilder ++= operation.reverse
       offset += operation.size
-      argumentOpCodes.zip(argumentsNullable).zipWithIndex.reverse.foreach {
-        case ((opCodes, isNullable), idx) =>
-          if (isNullable) {
-            resultBuilder += OpCode.UnpackNullableJump(offset, drop = idx)
-            offset += 1
-          }
-          resultBuilder ++= opCodes.reverse
-          offset += opCodes.size
+      argumentOpCodes.zip(argumentsNullable).zipWithIndex.reverse.foreach { case ((opCodes, isNullable), idx) =>
+        if (isNullable) {
+          resultBuilder += OpCode.UnpackNullableJump(offset, drop = idx)
+          offset += 1
+        }
+        resultBuilder ++= opCodes.reverse
+        offset += opCodes.size
       }
       val result = resultBuilder.result().reverse
       result

@@ -14,18 +14,20 @@ class AutoUnionSpec extends IntegrationTestBase {
 
     val input1 = DataSet.literal(input1Data)
 
-    val input2 = DataSet.literal(TabularBundle.buildColumnWise
-      .withPrimitives("x", 2, 5)
-      .withPrimitives("y", "b", "f")
-      .result
+    val input2 = DataSet.literal(
+      TabularBundle.buildColumnWise
+        .withPrimitives("x", 2, 5)
+        .withPrimitives("y", "b", "f")
+        .result
     )
 
-    val input3 = DataSet.literal(TabularBundle.buildColumnWise
-      .withPrimitives("x", 4, 3)
-      .withPrimitives("z", "foo", "bar")
-      .result)
+    val input3 = DataSet.literal(
+      TabularBundle.buildColumnWise
+        .withPrimitives("x", 4, 3)
+        .withPrimitives("z", "foo", "bar")
+        .result
+    )
   }
-
 
   it should "be possible to do a simple autoUnion" in new Env {
     val result = input1.autoUnion(input2, all = false).fetch.run()
@@ -47,12 +49,28 @@ class AutoUnionSpec extends IntegrationTestBase {
     val result = input1.autoUnion(input3, all = false).fetch.run()
     result shouldBe TabularBundle.buildColumnWise
       .withPrimitives("x", 1, 2, 3, 4, 3)
-      .withColumn("y", Nullable(FundamentalType.StringType), Vector(
-        SomeElement(Primitive("a")), SomeElement(Primitive("b")), SomeElement(Primitive("c")), NullElement, NullElement
-      ))
-      .withColumn("z", Nullable(FundamentalType.StringType), Vector(
-        NullElement, NullElement, NullElement, SomeElement(Primitive("foo")), SomeElement(Primitive("bar"))
-      ))
+      .withColumn(
+        "y",
+        Nullable(FundamentalType.StringType),
+        Vector(
+          SomeElement(Primitive("a")),
+          SomeElement(Primitive("b")),
+          SomeElement(Primitive("c")),
+          NullElement,
+          NullElement
+        )
+      )
+      .withColumn(
+        "z",
+        Nullable(FundamentalType.StringType),
+        Vector(
+          NullElement,
+          NullElement,
+          NullElement,
+          SomeElement(Primitive("foo")),
+          SomeElement(Primitive("bar"))
+        )
+      )
       .result
   }
 

@@ -1,13 +1,20 @@
 package ai.mantik.planner.pipelines
 
-import ai.mantik.ds.{ DataType, FundamentalType, TabularData, Tensor }
+import ai.mantik.ds.{DataType, FundamentalType, TabularData, Tensor}
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.MetaVariableSetting
-import ai.mantik.elements.{ AlgorithmDefinition, MantikHeader, NamedMantikId, OptionalFunctionType, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{
+  AlgorithmDefinition,
+  MantikHeader,
+  NamedMantikId,
+  OptionalFunctionType,
+  PipelineDefinition,
+  PipelineStep
+}
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
+import ai.mantik.planner.{Algorithm, DefinitionSource, PayloadSource, Source}
 import ai.mantik.testutils.TestBase
 import io.circe.Json
 
@@ -42,23 +49,27 @@ class PipelineResolverSpec extends TestBase {
   )
 
   private def resolvePipeline2(
-    a: Algorithm, b: Algorithm,
-    inputType: Option[DataType] = None,
-    outputType: Option[DataType] = None
+      a: Algorithm,
+      b: Algorithm,
+      inputType: Option[DataType] = None,
+      outputType: Option[DataType] = None
   ): Either[PipelineException, ResolvedPipeline] = {
     PipelineResolver.resolvePipeline(
-      MantikHeader.pure(PipelineDefinition(
-        steps = List(
-          PipelineStep.AlgorithmStep("a"),
-          PipelineStep.AlgorithmStep("b")
-        ),
-        `type` = Some(
-          OptionalFunctionType(
-            input = inputType,
-            output = outputType
+      MantikHeader.pure(
+        PipelineDefinition(
+          steps = List(
+            PipelineStep.AlgorithmStep("a"),
+            PipelineStep.AlgorithmStep("b")
+          ),
+          `type` = Some(
+            OptionalFunctionType(
+              input = inputType,
+              output = outputType
+            )
           )
         )
-      )), Map(
+      ),
+      Map(
         NamedMantikId(name = "a") -> a,
         NamedMantikId(name = "b") -> b
       )
@@ -66,35 +77,44 @@ class PipelineResolverSpec extends TestBase {
   }
 
   private def resolvePipeline2Select(
-    a: String,
-    b: Algorithm,
-    inputType: Option[DataType] = None,
-    outputType: Option[DataType] = None
+      a: String,
+      b: Algorithm,
+      inputType: Option[DataType] = None,
+      outputType: Option[DataType] = None
   ): Either[PipelineException, ResolvedPipeline] = {
     PipelineResolver.resolvePipeline(
-      MantikHeader.pure(PipelineDefinition(
-        steps = List(
-          PipelineStep.SelectStep(a),
-          PipelineStep.AlgorithmStep("b")
-        ),
-        `type` = Some(
-          OptionalFunctionType(
-            input = inputType,
-            output = outputType
+      MantikHeader.pure(
+        PipelineDefinition(
+          steps = List(
+            PipelineStep.SelectStep(a),
+            PipelineStep.AlgorithmStep("b")
+          ),
+          `type` = Some(
+            OptionalFunctionType(
+              input = inputType,
+              output = outputType
+            )
           )
         )
-      )), Map(
+      ),
+      Map(
         NamedMantikId(name = "b") -> b
       )
     )
   }
 
   it should "deny empty pipelines" in {
-    PipelineResolver.resolvePipeline(
-      MantikHeader.pure(PipelineDefinition(
-        steps = Nil
-      )), Map.empty
-    ).forceLeft.getMessage should include("Empty Pipeline")
+    PipelineResolver
+      .resolvePipeline(
+        MantikHeader.pure(
+          PipelineDefinition(
+            steps = Nil
+          )
+        ),
+        Map.empty
+      )
+      .forceLeft
+      .getMessage should include("Empty Pipeline")
   }
 
   it should "resolve a simple pipeline" in {
@@ -128,39 +148,51 @@ class PipelineResolverSpec extends TestBase {
   }
 
   it should "allow select statements if input type is present" in {
-    val resolved = resolvePipeline2Select("select cast (x as string) as y", algorithm2, inputType = Some(algorithm1.functionType.input))
+    val resolved = resolvePipeline2Select(
+      "select cast (x as string) as y",
+      algorithm2,
+      inputType = Some(algorithm1.functionType.input)
+    )
     resolved shouldBe 'right
     val missingInput = resolvePipeline2Select("select cast (x as string) as y", algorithm2, inputType = None)
     missingInput.forceLeft shouldBe an[InvalidPipelineException]
-    val badType = resolvePipeline2Select("select cast (x as string) as y", algorithm2, inputType = Some(
-      TabularData(
-        "foo" -> FundamentalType.Int32
+    val badType = resolvePipeline2Select(
+      "select cast (x as string) as y",
+      algorithm2,
+      inputType = Some(
+        TabularData(
+          "foo" -> FundamentalType.Int32
+        )
       )
-    ))
+    )
     badType.forceLeft shouldBe an[InvalidPipelineException]
   }
 
   val algorithm3 = Algorithm(
     source = Source.constructed(PayloadSource.Loaded("file2", ContentTypes.MantikBundleContentType)),
-    MantikHeader.fromYaml(
-      """kind: algorithm
-        |bridge: bridge1
-        |metaVariables:
-        |  - name: out
-        |    type: int32
-        |    value: 2
-        |type:
-        |  input:
-        |    columns:
-        |      y: string
-        |  output:
-        |    columns:
-        |      z:
-        |        type: tensor
-        |        componentType: float32
-        |        shape: ["${out}"]
+    MantikHeader
+      .fromYaml(
+        """kind: algorithm
+          |bridge: bridge1
+          |metaVariables:
+          |  - name: out
+          |    type: int32
+          |    value: 2
+          |type:
+          |  input:
+          |    columns:
+          |      y: string
+          |  output:
+          |    columns:
+          |      z:
+          |        type: tensor
+          |        componentType: float32
+          |        shape: ["${out}"]
       """.stripMargin
-    ).forceRight.cast[AlgorithmDefinition].forceRight,
+      )
+      .forceRight
+      .cast[AlgorithmDefinition]
+      .forceRight,
     TestItems.algoBridge
   )
 
@@ -169,25 +201,43 @@ class PipelineResolverSpec extends TestBase {
     resolved.functionType.output shouldBe TabularData("z" -> Tensor(FundamentalType.Float32, List(2)))
 
     // no change in algorithm, so still constructed.
-    resolved.steps(1).asInstanceOf[ResolvedPipelineStep.AlgorithmStep].algorithm.source.definition shouldBe an[DefinitionSource.Constructed]
+    resolved
+      .steps(1)
+      .asInstanceOf[ResolvedPipelineStep.AlgorithmStep]
+      .algorithm
+      .source
+      .definition shouldBe an[DefinitionSource.Constructed]
 
-    val resolvedWithApplication = PipelineResolver.resolvePipeline(
-      MantikHeader.pure(PipelineDefinition(
-        steps = List(
-          PipelineStep.AlgorithmStep("a"),
-          PipelineStep.AlgorithmStep("b", metaVariables = Some(
-            List(
-              MetaVariableSetting("out", Json.fromInt(10))
+    val resolvedWithApplication = PipelineResolver
+      .resolvePipeline(
+        MantikHeader.pure(
+          PipelineDefinition(
+            steps = List(
+              PipelineStep.AlgorithmStep("a"),
+              PipelineStep.AlgorithmStep(
+                "b",
+                metaVariables = Some(
+                  List(
+                    MetaVariableSetting("out", Json.fromInt(10))
+                  )
+                )
+              )
             )
-          ))
+          )
+        ),
+        Map(
+          NamedMantikId(name = "a") -> algorithm1,
+          NamedMantikId(name = "b") -> algorithm3
         )
-      )), Map(
-        NamedMantikId(name = "a") -> algorithm1,
-        NamedMantikId(name = "b") -> algorithm3
       )
-    ).forceRight
+      .forceRight
     resolvedWithApplication.functionType.output shouldBe TabularData("z" -> Tensor(FundamentalType.Float32, List(10)))
-    resolvedWithApplication.steps(1).asInstanceOf[ResolvedPipelineStep.AlgorithmStep].algorithm.source.definition shouldBe an[DefinitionSource.Derived]
+    resolvedWithApplication
+      .steps(1)
+      .asInstanceOf[ResolvedPipelineStep.AlgorithmStep]
+      .algorithm
+      .source
+      .definition shouldBe an[DefinitionSource.Derived]
 
   }
 

@@ -1,21 +1,21 @@
 package ai.mantik.ds.converter
 
-import ai.mantik.ds.element.{ Primitive, RootElement }
-import ai.mantik.ds.{ DataType, FundamentalType, Image, TabularData }
+import ai.mantik.ds.element.{Primitive, RootElement}
+import ai.mantik.ds.{DataType, FundamentalType, Image, TabularData}
 import akka.stream.scaladsl.Flow
-import akka.stream.{ Attributes, FlowShape, Inlet, Outlet }
-import akka.stream.stage.{ GraphStageLogic, GraphStageWithMaterializedValue, InHandler, OutHandler }
+import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
+import akka.stream.stage.{GraphStageLogic, GraphStageWithMaterializedValue, InHandler, OutHandler}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.ListMap
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 /**
- * Generator for preview data.
- * Images: Convert to PNG and reduce size.
- * Element Count: Strip number of elements.
- * Counts count of elements (for analyzing purposes).
- */
+  * Generator for preview data.
+  * Images: Convert to PNG and reduce size.
+  * Element Count: Strip number of elements.
+  * Counts count of elements (for analyzing purposes).
+  */
 class PreviewGenerator(dataFormat: DataType, maxElementCount: Int) {
 
   val MaxImageWidth = 256
@@ -47,10 +47,11 @@ class PreviewGenerator(dataFormat: DataType, maxElementCount: Int) {
 
         // ListMap.map converts to a Map which is loosening order, so we
         // convert to a Seq first.
-        val updatedColumns = ListMap(tabularData.columns.toSeq.zip(columnConverters).map {
-          case ((columnName, _), converter) =>
+        val updatedColumns = ListMap(
+          tabularData.columns.toSeq.zip(columnConverters).map { case ((columnName, _), converter) =>
             columnName -> converter.targetType
-        }: _*)
+          }: _*
+        )
 
         val updatedTableType = tabularData.copy(
           columns = updatedColumns
@@ -58,14 +59,15 @@ class PreviewGenerator(dataFormat: DataType, maxElementCount: Int) {
 
         TabularConverter(updatedTableType, columnConverters.toVector)
       case image: Image if ImagePngConverter.canHandle(image) =>
-        val (newWidth, newHeight) = ImagePreviewHelper.limitSize(image.width, image.height, MaxImageWidth, MaxImageHeight)
+        val (newWidth, newHeight) =
+          ImagePreviewHelper.limitSize(image.width, image.height, MaxImageWidth, MaxImageHeight)
         new ImagePngConverter(image, newWidth, newHeight)
       case image: Image =>
         DataTypeConverter.ConstantConverter(
-          FundamentalType.StringType, Primitive(s"Image ${image} not supported")
+          FundamentalType.StringType,
+          Primitive(s"Image ${image} not supported")
         )
       case FundamentalType.StringType =>
-
         DataTypeConverter.fundamental(FundamentalType.StringType) { s: String =>
           restrictStringLength(s, 64)
         }
@@ -90,7 +92,8 @@ class PreviewGenerator(dataFormat: DataType, maxElementCount: Int) {
   }
 }
 
-private class PreviewGeneratorImpl(rootElementConverter: RootElementConverter, previewElements: Int) extends GraphStageWithMaterializedValue[FlowShape[RootElement, RootElement], Future[Long]] {
+private class PreviewGeneratorImpl(rootElementConverter: RootElementConverter, previewElements: Int)
+    extends GraphStageWithMaterializedValue[FlowShape[RootElement, RootElement], Future[Long]] {
   private val logger = LoggerFactory.getLogger(getClass)
 
   val in = Inlet[RootElement]("PreviewGenerator.in")

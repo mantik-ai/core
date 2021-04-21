@@ -1,10 +1,11 @@
 package ai.mantik.ds.element
 
-import ai.mantik.ds.{ DataType, FundamentalType, Image, ArrayT, Struct, Nullable, TabularData, Tensor }
+import ai.mantik.ds.{DataType, FundamentalType, Image, ArrayT, Struct, Nullable, TabularData, Tensor}
 
 import Ordering.Implicits._
 
 object ElementOrdering {
+
   /** Returns an ordering for a DataType's Elements */
   def elementOrdering(dataType: DataType): Ordering[Element] = {
     dataType match {
@@ -63,11 +64,10 @@ object ElementOrdering {
 
   private def imageOrdering(image: Image): Ordering[ImageElement] = {
     val bsOrdering: Ordering[IndexedSeq[Byte]] = implicitly
-    Ordering.fromLessThan {
-      case (left, right) =>
-        val leftBytes = left.bytes
-        val rightBytes = right.bytes
-        bsOrdering.lt(leftBytes, rightBytes)
+    Ordering.fromLessThan { case (left, right) =>
+      val leftBytes = left.bytes
+      val rightBytes = right.bytes
+      bsOrdering.lt(leftBytes, rightBytes)
     }
   }
 
@@ -75,11 +75,10 @@ object ElementOrdering {
     val pe = PrimitiveEncoder.lookup(tensor.componentType)
     implicit val elementOrdering: Ordering[pe.ScalaType] = pe.ordering
     val indexedSeqOrdering: Ordering[IndexedSeq[pe.ScalaType]] = implicitly[Ordering[IndexedSeq[pe.ScalaType]]]
-    Ordering.fromLessThan {
-      case (left, right) =>
-        val leftTensorElement = left.asInstanceOf[TensorElement[pe.ScalaType]]
-        val rightTensorElement = right.asInstanceOf[TensorElement[pe.ScalaType]]
-        indexedSeqOrdering.lt(leftTensorElement.elements, rightTensorElement.elements)
+    Ordering.fromLessThan { case (left, right) =>
+      val leftTensorElement = left.asInstanceOf[TensorElement[pe.ScalaType]]
+      val rightTensorElement = right.asInstanceOf[TensorElement[pe.ScalaType]]
+      indexedSeqOrdering.lt(leftTensorElement.elements, rightTensorElement.elements)
     }
   }
 
@@ -106,9 +105,8 @@ object ElementOrdering {
 
   private def fundamentalOrdering[_](primitiveEncoder: PrimitiveEncoder[_]): Ordering[Primitive[_]] = {
     val po = primitiveEncoder.ordering
-    Ordering.fromLessThan {
-      case (l, r) =>
-        po.lt(l.x.asInstanceOf[primitiveEncoder.ScalaType], r.x.asInstanceOf[primitiveEncoder.ScalaType])
+    Ordering.fromLessThan { case (l, r) =>
+      po.lt(l.x.asInstanceOf[primitiveEncoder.ScalaType], r.x.asInstanceOf[primitiveEncoder.ScalaType])
     }
   }
 }

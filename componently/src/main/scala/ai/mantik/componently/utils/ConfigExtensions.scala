@@ -2,10 +2,10 @@ package ai.mantik.componently.utils
 
 import com.typesafe.config.Config
 
-import scala.concurrent.duration.{ Duration, FiniteDuration }
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.collection.JavaConverters._
 
-/** Extensions for [[Config]]  */
+/** Extensions for [[Config]] */
 object ConfigExtensions {
 
   class ConfigExt(config: Config) {

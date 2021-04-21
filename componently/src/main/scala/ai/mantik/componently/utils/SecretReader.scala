@@ -1,30 +1,30 @@
 package ai.mantik.componently.utils
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{ Files, Path, Paths }
+import java.nio.file.{Files, Path, Paths}
 
-import com.typesafe.config.{ Config, ConfigException, ConfigFactory }
+import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 import com.typesafe.scalalogging.Logger
 
 /**
- * Reads secrets from Typesafe Config, allowing multiple ways to read them from external values.
- * Following methods are allowed:
- *
- * `plain:plain-password` => Read the secret as string
- * `file:file` => Read the secret from a file (for kubernetes), UTF8
- * `env:variable` => Read the secret from environment variable.
- *
- * If nothing matches, it will return the plain value.
- */
+  * Reads secrets from Typesafe Config, allowing multiple ways to read them from external values.
+  * Following methods are allowed:
+  *
+  * `plain:plain-password` => Read the secret as string
+  * `file:file` => Read the secret from a file (for kubernetes), UTF8
+  * `env:variable` => Read the secret from environment variable.
+  *
+  * If nothing matches, it will return the plain value.
+  */
 class SecretReader(configKey: String, config: Config) {
 
   private val logger = Logger(getClass)
 
   /**
-   * Read the secret value.
-   * @throws ConfigException if the config key was not found
-   * @throws UnresolvedSecretException if the config value could not be resolved.
-   */
+    * Read the secret value.
+    * @throws ConfigException if the config key was not found
+    * @throws UnresolvedSecretException if the config value could not be resolved.
+    */
   def read(): String = {
     val value = config.getString(configKey)
     SecretReader.readSecretFromString(value, configKey) match {
@@ -50,11 +50,11 @@ object SecretReader {
   }
 
   /**
-   * Read the secret value.
-   * @throws UnresolvedSecretException if the config value could not be resolved.
-   *
-   * @return None if the string is not encoded using env/plain/file notation.
-   */
+    * Read the secret value.
+    * @throws UnresolvedSecretException if the config value could not be resolved.
+    *
+    * @return None if the string is not encoded using env/plain/file notation.
+    */
   def readSecretFromString(value: String, configKey: String): Option[String] = {
     value match {
       case s if s.startsWith(PlainPrefix) =>
@@ -71,7 +71,9 @@ object SecretReader {
         val envName = value.stripPrefix(EnvPrefix)
         val content = System.getenv(envName)
         if (content == null) {
-          throw new UnresolvedSecretException(s"Environment variable ${envName} could not be found, configKey = ${configKey}")
+          throw new UnresolvedSecretException(
+            s"Environment variable ${envName} could not be found, configKey = ${configKey}"
+          )
         }
         Some(content)
       case _ => None

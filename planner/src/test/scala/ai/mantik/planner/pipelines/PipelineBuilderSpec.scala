@@ -2,19 +2,22 @@ package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.sql.Select
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.elements
-import ai.mantik.elements.PipelineStep.{ AlgorithmStep, SelectStep }
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId, PipelineStep }
+import ai.mantik.elements.PipelineStep.{AlgorithmStep, SelectStep}
+import ai.mantik.elements.{AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId, PipelineStep}
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.{ Algorithm, DefinitionSource, PayloadSource, Source }
+import ai.mantik.planner.{Algorithm, DefinitionSource, PayloadSource, Source}
 import ai.mantik.testutils.TestBase
 
 class PipelineBuilderSpec extends TestBase {
 
   val algorithm1 = Algorithm(
-    source = Source(DefinitionSource.Loaded(Some("algo1"), ItemId.generate()), PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)),
+    source = Source(
+      DefinitionSource.Loaded(Some("algo1"), ItemId.generate()),
+      PayloadSource.Loaded("file1", ContentTypes.MantikBundleContentType)
+    ),
     MantikHeader.pure(
       AlgorithmDefinition(
         bridge = TestItems.algoBridge.mantikId,
@@ -42,11 +45,14 @@ class PipelineBuilderSpec extends TestBase {
   )
 
   val select =
-    Select.parse(
-      TabularData(
-        "x" -> FundamentalType.Int32
-      ), "select cast (x as string) as y"
-    ).forceRight
+    Select
+      .parse(
+        TabularData(
+          "x" -> FundamentalType.Int32
+        ),
+        "select cast (x as string) as y"
+      )
+      .forceRight
 
   it should "build pipelines" in {
     val pipeline = PipelineBuilder.build(Seq(Right(algorithm1), Right(algorithm2))).forceRight

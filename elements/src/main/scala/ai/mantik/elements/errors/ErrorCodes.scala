@@ -3,9 +3,9 @@ package ai.mantik.elements.errors
 import io.grpc.Status.Code
 
 /**
- * Main Error codes used for [[MantikException]].
- * They provide enough information for serializing/deserializing common error cases.
- */
+  * Main Error codes used for [[MantikException]].
+  * They provide enough information for serializing/deserializing common error cases.
+  */
 object ErrorCodes {
   private val defaultCodeBuilder = Seq.newBuilder[ErrorCode]
 

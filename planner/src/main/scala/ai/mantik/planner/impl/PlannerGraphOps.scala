@@ -1,7 +1,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.planner.Planner
-import ai.mantik.planner.graph.{ Graph, Link, Node }
+import ai.mantik.planner.graph.{Graph, Link, Node}
 
 /** Extends the graph with some convenience methods. */
 private[impl] class PlannerGraphOps[T](graph: Graph[T]) {

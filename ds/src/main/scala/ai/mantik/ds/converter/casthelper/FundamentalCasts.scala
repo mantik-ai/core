@@ -1,8 +1,8 @@
 package ai.mantik.ds.converter.casthelper
 
-import ai.mantik.ds.{ DataType, FundamentalType }
+import ai.mantik.ds.{DataType, FundamentalType}
 import ai.mantik.ds.converter.Cast
-import ai.mantik.ds.element.{ Primitive, PrimitiveEncoder }
+import ai.mantik.ds.element.{Primitive, PrimitiveEncoder}
 
 import scala.collection.mutable
 
@@ -63,37 +63,38 @@ private[converter] object FundamentalCasts {
     makeCastOp(FundamentalType.Int32, FundamentalType.Int64, false, false)((x => x.toLong): Int => Long),
     makeCastOp(FundamentalType.Int64, FundamentalType.Int32, true, false)((x => x.toInt): Long => Int),
     makeCastOp(FundamentalType.Int32, FundamentalType.Int8, true, false)((x => x.toByte): Int => Byte),
-
     makeCastOp(FundamentalType.Uint8, FundamentalType.Int8, true, false)(identity: Byte => Byte),
     makeCastOp(FundamentalType.Int8, FundamentalType.Uint8, true, false)(identity: Byte => Byte),
-
-    makeCastOp(FundamentalType.Uint8, FundamentalType.Float32, loosing = false, canFail = false)((x => java.lang.Byte.toUnsignedInt(x).toFloat): Byte => Float),
-    makeCastOp(FundamentalType.Int8, FundamentalType.Float32, loosing = false, canFail = false)((x => x.toFloat): Byte => Float),
-
+    makeCastOp(FundamentalType.Uint8, FundamentalType.Float32, loosing = false, canFail = false)(
+      (x => java.lang.Byte.toUnsignedInt(x).toFloat): Byte => Float
+    ),
+    makeCastOp(FundamentalType.Int8, FundamentalType.Float32, loosing = false, canFail = false)(
+      (x => x.toFloat): Byte => Float
+    ),
     makeCastOp(FundamentalType.Uint8, FundamentalType.Int32, false, false)((x => x & 0xff): Byte => Int),
     makeCastOp(FundamentalType.Uint32, FundamentalType.Int64, false, false)((x => x & 0xffffffffL): Int => Long),
-
     makeCastOp(FundamentalType.Uint32, FundamentalType.Int32, true, false)(identity: Int => Int),
     makeCastOp(FundamentalType.Int32, FundamentalType.Uint32, true, false)(identity: Int => Int),
-
-    makeCastOp(FundamentalType.Uint32, FundamentalType.Float64, loosing = false, canFail = false)((x => java.lang.Integer.toUnsignedLong(x).toDouble): Int => Double),
-    makeCastOp(FundamentalType.Int32, FundamentalType.Float64, loosing = false, canFail = false)((x => x.toDouble): Int => Double),
-
+    makeCastOp(FundamentalType.Uint32, FundamentalType.Float64, loosing = false, canFail = false)(
+      (x => java.lang.Integer.toUnsignedLong(x).toDouble): Int => Double
+    ),
+    makeCastOp(FundamentalType.Int32, FundamentalType.Float64, loosing = false, canFail = false)(
+      (x => x.toDouble): Int => Double
+    ),
     makeCastOp(FundamentalType.Uint64, FundamentalType.Int64, true, false)(identity: Long => Long),
     makeCastOp(FundamentalType.Int64, FundamentalType.Uint64, true, false)(identity: Long => Long),
-
     makeCastOp(FundamentalType.Int64, FundamentalType.Float32, true, false)((x => x.toFloat): Long => Float),
     makeCastOp(FundamentalType.Int64, FundamentalType.Float64, true, false)((x => x.toDouble): Long => Double),
-
     makeCastOp(FundamentalType.Float32, FundamentalType.Float64, false, false)((x => x.toDouble): Float => Double),
     makeCastOp(FundamentalType.Float64, FundamentalType.Float32, true, false)((x => x.toFloat): Double => Float),
-
-    makeCastOp(FundamentalType.Float64, FundamentalType.Int64, loosing = true, canFail = false)((x => x.toLong): Double => Long),
-    makeCastOp(FundamentalType.Float64, FundamentalType.Uint64, loosing = true, canFail = false)((x => x.toLong): Double => Long),
-
+    makeCastOp(FundamentalType.Float64, FundamentalType.Int64, loosing = true, canFail = false)(
+      (x => x.toLong): Double => Long
+    ),
+    makeCastOp(FundamentalType.Float64, FundamentalType.Uint64, loosing = true, canFail = false)(
+      (x => x.toLong): Double => Long
+    ),
     makeCastOp(FundamentalType.Int32, FundamentalType.BoolType, true, false)((x => x != 0): Int => Boolean),
     makeCastOp(FundamentalType.BoolType, FundamentalType.Int32, false, false)((x => if (x) 1 else 0): Boolean => Int),
-
     makeStringParser(FundamentalType.Int8)(_.toByte),
     makeStringParser(FundamentalType.Int32)(_.toInt),
     makeStringParser(FundamentalType.Int64)(_.toLong),
@@ -101,7 +102,6 @@ private[converter] object FundamentalCasts {
     makeStringParser(FundamentalType.Float64)(_.toDouble),
     makeStringParser(FundamentalType.BoolType)(_.toBoolean),
     makeStringParser(FundamentalType.VoidType)(_ => ()),
-
     makeStringParser(FundamentalType.Uint8) { x =>
       val asInt = x.toInt
       if (asInt < 0 || asInt > 255) {
@@ -109,15 +109,12 @@ private[converter] object FundamentalCasts {
       }
       asInt.toByte
     },
-
     makeStringParser(FundamentalType.Uint32) { x =>
       Integer.parseUnsignedInt(x)
     },
-
     makeStringParser(FundamentalType.Uint64) { x =>
       java.lang.Long.parseUnsignedLong(x)
     },
-
     makeStringSerializer(FundamentalType.BoolType)((_.toString): Boolean => String),
     makeStringSerializer(FundamentalType.Int8)((_.toString): Byte => String),
     makeStringSerializer(FundamentalType.Int32)((_.toString): Int => String),
@@ -132,29 +129,26 @@ private[converter] object FundamentalCasts {
 
   /** Creates a cast operation. The implicit Aux-Pattern is used solely for checking that Types are matching. */
   private def makeCastOp[From <: FundamentalType, To <: FundamentalType, FromS, ToS](
-    from: From, to: To,
-    loosing: Boolean,
-    canFail: Boolean)(f: FromS => ToS)(
-    implicit
-    fromAux: PrimitiveEncoder.Aux[From, FromS],
-    toAux: PrimitiveEncoder.Aux[To, ToS]
+      from: From,
+      to: To,
+      loosing: Boolean,
+      canFail: Boolean
+  )(f: FromS => ToS)(
+      implicit fromAux: PrimitiveEncoder.Aux[From, FromS],
+      toAux: PrimitiveEncoder.Aux[To, ToS]
   ): Cast = {
-    Cast(from, to, loosing, canFail, e =>
-      Primitive(f(e.asInstanceOf[Primitive[FromS]].x))
-    )
+    Cast(from, to, loosing, canFail, e => Primitive(f(e.asInstanceOf[Primitive[FromS]].x)))
   }
 
   /** Creates a cast operation from String to a type. */
   private def makeStringParser[To <: FundamentalType, ST](to: To)(f: String => ST)(
-    implicit
-    aux: PrimitiveEncoder.Aux[To, ST]
+      implicit aux: PrimitiveEncoder.Aux[To, ST]
   ): Cast = {
     Cast(FundamentalType.StringType, to, false, true, e => Primitive(f(e.asInstanceOf[Primitive[String]].x)))
   }
 
   private def makeStringSerializer[From <: FundamentalType, ST](from: From)(f: ST => String)(
-    implicit
-    aux: PrimitiveEncoder.Aux[From, ST]
+      implicit aux: PrimitiveEncoder.Aux[From, ST]
   ): Cast = {
     Cast(from, FundamentalType.StringType, false, false, e => Primitive(f(e.asInstanceOf[Primitive[ST]].x)))
   }

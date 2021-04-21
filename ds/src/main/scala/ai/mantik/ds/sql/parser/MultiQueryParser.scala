@@ -1,14 +1,14 @@
 package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.sql.parser.AST.QueryNode
-import org.parboiled2.{ Parser, Rule1 }
+import org.parboiled2.{Parser, Rule1}
 
 import scala.collection.immutable
 
 /**
- * Parses Multi queries
- * (Special queries which can return multiple tables)
- */
+  * Parses Multi queries
+  * (Special queries which can return multiple tables)
+  */
 trait MultiQueryParser {
   self: Parser with ConstantParser with ExpressionParser =>
 
@@ -38,11 +38,11 @@ trait MultiQueryParser {
       optional(
         keyword("with") ~ keyword("shuffle") ~ NumberExpression
       ) ~> { (innerQuery: AST.QueryNode, splits: immutable.Seq[AST.NumberNode], shuffle: Option[AST.NumberNode]) =>
-          AST.Split(
-            innerQuery,
-            splits.toVector,
-            shuffle
-          )
-        }
+        AST.Split(
+          innerQuery,
+          splits.toVector,
+          shuffle
+        )
+      }
   }
 }

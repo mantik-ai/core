@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.{ FundamentalType, Nullable }
-import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
-import ai.mantik.ds.sql.{ CastExpression, ColumnExpression, ConstantExpression }
+import ai.mantik.ds.{FundamentalType, Nullable}
+import ai.mantik.ds.element.{Bundle, SingleElementBundle}
+import ai.mantik.ds.sql.{CastExpression, ColumnExpression, ConstantExpression}
 import ai.mantik.testutils.TestBase
 
 class CastBuilderSpec extends TestBase {
@@ -25,8 +25,12 @@ class CastBuilderSpec extends TestBase {
   }
 
   it should "handle nullable values" in {
-    CastBuilder.comparisonType(Nullable(FundamentalType.Int32), FundamentalType.Int8) shouldBe Right(Nullable(FundamentalType.Int32))
-    CastBuilder.comparisonType(FundamentalType.Int32, Nullable(FundamentalType.Int8)) shouldBe Right(Nullable(FundamentalType.Int32))
+    CastBuilder.comparisonType(Nullable(FundamentalType.Int32), FundamentalType.Int8) shouldBe Right(
+      Nullable(FundamentalType.Int32)
+    )
+    CastBuilder.comparisonType(FundamentalType.Int32, Nullable(FundamentalType.Int8)) shouldBe Right(
+      Nullable(FundamentalType.Int32)
+    )
   }
 
   "wrapType" should "wrap a type in a cast" in {
@@ -41,13 +45,15 @@ class CastBuilderSpec extends TestBase {
 
   it should "auto convert constants" in {
     CastBuilder.wrapType(
-      ConstantExpression(Bundle.fundamental(100: Byte)), FundamentalType.Int32
+      ConstantExpression(Bundle.fundamental(100: Byte)),
+      FundamentalType.Int32
     ) shouldBe Right(ConstantExpression(Bundle.fundamental(100)))
   }
 
   it should "fail for impossible casts" in {
     CastBuilder.wrapType(
-      ColumnExpression(1, FundamentalType.VoidType), FundamentalType.Int32
+      ColumnExpression(1, FundamentalType.VoidType),
+      FundamentalType.Int32
     ) shouldBe 'left
   }
 }

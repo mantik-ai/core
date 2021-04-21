@@ -1,19 +1,20 @@
 package ai.mantik.ds.converter
 
-import ai.mantik.ds.converter.casthelper.{ FundamentalCasts, ImageHelper, TensorHelper }
+import ai.mantik.ds.converter.casthelper.{FundamentalCasts, ImageHelper, TensorHelper}
 import ai.mantik.ds.element._
 import ai.mantik.ds._
 import cats.implicits._
 
 /**
- * A Single Cast Operation, converting one element type to another one.
- * @param from source type
- * @param to destination type
- * @param loosing if true, the cast is loosing precision
- * @param canFail if true, the cast can fail
- * @param op the cast operation
- */
-case class Cast(from: DataType, to: DataType, loosing: Boolean, canFail: Boolean, op: Element => Element) extends DataTypeConverter {
+  * A Single Cast Operation, converting one element type to another one.
+  * @param from source type
+  * @param to destination type
+  * @param loosing if true, the cast is loosing precision
+  * @param canFail if true, the cast can fail
+  * @param op the cast operation
+  */
+case class Cast(from: DataType, to: DataType, loosing: Boolean, canFail: Boolean, op: Element => Element)
+    extends DataTypeConverter {
 
   /** Append another cast to this cast. */
   def append(other: Cast): Cast = {
@@ -27,7 +28,11 @@ case class Cast(from: DataType, to: DataType, loosing: Boolean, canFail: Boolean
       return this
     }
     Cast(
-      from, other.to, loosing || other.loosing, canFail || other.canFail, x => other.op(op(x))
+      from,
+      other.to,
+      loosing || other.loosing,
+      canFail || other.canFail,
+      x => other.op(op(x))
     )
   }
 
@@ -100,7 +105,8 @@ object Cast {
         tensor,
         loosing = false,
         canFail = false,
-        op = e => packer(IndexedSeq(e.asInstanceOf[Primitive[_]])))
+        op = e => packer(IndexedSeq(e.asInstanceOf[Primitive[_]]))
+      )
     )
   }
 
@@ -112,13 +118,15 @@ object Cast {
       toSingleType <- findFundamentalCast(tensor.componentType, ft)
       unpacker = TensorHelper.tensorUnpacker(tensor.componentType)
     } yield {
-      converter.Cast(
-        tensor,
-        tensor.componentType,
-        loosing = false,
-        canFail = false,
-        op = e => unpacker(e.asInstanceOf[TensorElement[_]]).head
-      ).append(toSingleType)
+      converter
+        .Cast(
+          tensor,
+          tensor.componentType,
+          loosing = false,
+          canFail = false,
+          op = e => unpacker(e.asInstanceOf[TensorElement[_]]).head
+        )
+        .append(toSingleType)
     }
   }
 
@@ -142,9 +150,11 @@ object Cast {
         canFail = typeConversion.canFail,
         op = { e =>
           val elements = tensorUnpacker(e.asInstanceOf[TensorElement[_]])
-          val casted = if (typeConversion.isIdentity) elements else {
-            elements.map(x => typeConversion.op(x).asInstanceOf[Primitive[_]])
-          }
+          val casted =
+            if (typeConversion.isIdentity) elements
+            else {
+              elements.map(x => typeConversion.op(x).asInstanceOf[Primitive[_]])
+            }
           imagePacker(casted)
         }
       )
@@ -171,9 +181,11 @@ object Cast {
         canFail = typeConversion.canFail,
         op = { i =>
           val imageElements = imageUnpacker(i.asInstanceOf[ImageElement])
-          val casted = if (typeConversion.isIdentity) imageElements else {
-            imageElements.map(x => typeConversion.op(x).asInstanceOf[Primitive[_]])
-          }
+          val casted =
+            if (typeConversion.isIdentity) imageElements
+            else {
+              imageElements.map(x => typeConversion.op(x).asInstanceOf[Primitive[_]])
+            }
           tensorPacker(casted)
         }
       )
@@ -317,27 +329,31 @@ object Cast {
     if (from.arity != to.arity) {
       Left(s"Can not cast from ${from}(arity=${from.arity}) to ${to}(arity=${to.arity})")
     } else {
-      from.fields.values.toVector.zip(to.fields.values.toVector).map {
-        case (fromDt, toDt) =>
+      from.fields.values.toVector
+        .zip(to.fields.values.toVector)
+        .map { case (fromDt, toDt) =>
           findCast(fromDt, toDt)
-      }.sequence.map { casts =>
-        Cast(
-          from = from,
-          to = to,
-          canFail = casts.exists(_.canFail),
-          loosing = casts.exists(_.loosing),
-          op = { from =>
-            StructElement(
-              from.asInstanceOf[StructElement]
-                .elements.zip(casts)
-                .map {
-                  case (e, cast) =>
+        }
+        .sequence
+        .map { casts =>
+          Cast(
+            from = from,
+            to = to,
+            canFail = casts.exists(_.canFail),
+            loosing = casts.exists(_.loosing),
+            op = { from =>
+              StructElement(
+                from
+                  .asInstanceOf[StructElement]
+                  .elements
+                  .zip(casts)
+                  .map { case (e, cast) =>
                     cast.op(e)
-                }
-            )
-          }
-        )
-      }
+                  }
+              )
+            }
+          )
+        }
     }
   }
 

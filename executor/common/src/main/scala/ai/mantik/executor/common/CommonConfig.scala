@@ -1,7 +1,7 @@
 package ai.mantik.executor.common
 
-import ai.mantik.executor.model.docker.{ Container, DockerConfig }
-import com.typesafe.config.{ Config => TypesafeConfig }
+import ai.mantik.executor.model.docker.{Container, DockerConfig}
+import com.typesafe.config.{Config => TypesafeConfig}
 
 /** Common settings for various executors. */
 case class CommonConfig(

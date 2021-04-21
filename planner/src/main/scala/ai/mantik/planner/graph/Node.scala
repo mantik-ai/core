@@ -1,18 +1,18 @@
 package ai.mantik.planner.graph
 
 import ai.mantik.componently.utils.Renderable
-import io.circe.generic.{ JsonCodec, semiauto }
-import io.circe.{ Decoder, Encoder, ObjectEncoder }
+import io.circe.generic.{JsonCodec, semiauto}
+import io.circe.{Decoder, Encoder, ObjectEncoder}
 
 /**
- * Describes a Node in a [[Graph]]
- *
- * @param service Describes what is needed to access resources on this node.
- * @param inputs input ports
- * @param outputs output ports
- *
- * @tparam T The node Service type
- */
+  * Describes a Node in a [[Graph]]
+  *
+  * @param service Describes what is needed to access resources on this node.
+  * @param inputs input ports
+  * @param outputs output ports
+  *
+  * @tparam T The node Service type
+  */
 case class Node[+T](
     service: T,
     inputs: Vector[NodePort] = Vector.empty,
@@ -30,19 +30,25 @@ object Node {
   implicit def encoder[T: Encoder]: ObjectEncoder[Node[T]] = semiauto.deriveEncoder[Node[T]]
   implicit def decoder[T: Decoder]: Decoder[Node[T]] = semiauto.deriveDecoder[Node[T]]
 
-  /** Generates a Default Sink with one input port*/
+  /** Generates a Default Sink with one input port */
   def sink[T](service: T, contentType: String): Node[T] = Node[T](
-    service, inputs = Vector(NodePort(contentType)), outputs = Vector.empty
+    service,
+    inputs = Vector(NodePort(contentType)),
+    outputs = Vector.empty
   )
 
   /** Generates a Default Source with one output port */
   def source[T](service: T, contentType: String): Node[T] = Node[T](
-    service, outputs = Vector(NodePort(contentType)), inputs = Vector.empty
+    service,
+    outputs = Vector(NodePort(contentType)),
+    inputs = Vector.empty
   )
 
   /** Generates a node with a single input and output of the same content type. */
   def transformer[T](service: T, contentType: String): Node[T] = Node[T](
-    service, inputs = Vector(NodePort(contentType)), outputs = Vector(NodePort(contentType))
+    service,
+    inputs = Vector(NodePort(contentType)),
+    outputs = Vector(NodePort(contentType))
   )
 
   implicit def renderable[T](implicit renderable: Renderable[T]): Renderable[Node[T]] = new Renderable[Node[T]] {

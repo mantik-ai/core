@@ -11,16 +11,17 @@ class DeployPipelineSpec extends IntegrationTestBase with Samples with HttpSuppo
 
   it should "be possible to deploy a pipeline" in new EnvWithAlgorithm {
 
-    val inputAdaptor = Select.parse(
-      TabularData(
-        "x" -> FundamentalType.Int32
-      ),
-      "select CAST(x as float64)"
-    ).forceRight
+    val inputAdaptor = Select
+      .parse(
+        TabularData(
+          "x" -> FundamentalType.Int32
+        ),
+        "select CAST(x as float64)"
+      )
+      .forceRight
 
     val outputAdapter =
       Select.parse(doubleMultiply.functionType.output.asInstanceOf[TabularData], "select CAST (y as int32)").forceRight
-
 
     val pipeline = Pipeline.build(
       Left(inputAdaptor),

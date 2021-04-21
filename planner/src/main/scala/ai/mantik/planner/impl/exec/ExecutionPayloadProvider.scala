@@ -1,15 +1,15 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.componently.di.ConfigurableDependencies
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.ItemId
 import ai.mantik.executor.ExecutorFileStorage
-import ai.mantik.planner.repository.{ FileRepository, MantikArtifact, Repository }
+import ai.mantik.planner.repository.{FileRepository, MantikArtifact, Repository}
 import akka.stream.scaladsl.Keep
 
-import java.time.temporal.{ ChronoUnit, UnsupportedTemporalTypeException }
+import java.time.temporal.{ChronoUnit, UnsupportedTemporalTypeException}
 import javax.inject.Singleton
-import scala.concurrent.{ Future, duration }
+import scala.concurrent.{Future, duration}
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 import cats.implicits._
@@ -27,9 +27,9 @@ private[mantik] trait ExecutionPayloadProvider {
   def undoTemporary(keys: Seq[TemporaryFileKey]): Future[Unit]
 
   /**
-   * Provide permanent access for a file, returns URL
-   * @return permanent URL or none if there is no payload
-   */
+    * Provide permanent access for a file, returns URL
+    * @return permanent URL or none if there is no payload
+    */
   def providePermanent(itemId: ItemId): Future[Option[String]]
 
   /** Undo permanent access for a file. */

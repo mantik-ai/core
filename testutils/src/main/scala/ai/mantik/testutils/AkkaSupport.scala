@@ -2,10 +2,10 @@ package ai.mantik.testutils
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.stream.scaladsl.{ Sink, Source }
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.ByteString
-import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.BeforeAndAfterAll
 
 import scala.concurrent.ExecutionContext
@@ -30,14 +30,13 @@ trait AkkaSupport extends BeforeAndAfterAll {
   private def configForAkka(): Config = {
     // Overriding Akka Config, so that we do not have to
     // setup SLF4J support for each test library.
-    val overrides = ConfigFactory.parseString(
-      """
-        |akka {
-        |  loggers = ["akka.event.slf4j.Slf4jLogger"]
-        |  loglevel = "DEBUG"
-        |  logging-filter = "akka.event.slf4j.Slf4jLoggingFilter"
-        |}
-        |""".stripMargin)
+    val overrides = ConfigFactory.parseString("""
+                                                |akka {
+                                                |  loggers = ["akka.event.slf4j.Slf4jLogger"]
+                                                |  loglevel = "DEBUG"
+                                                |  logging-filter = "akka.event.slf4j.Slf4jLoggingFilter"
+                                                |}
+                                                |""".stripMargin)
     overrides.withFallback(typesafeConfig)
   }
 

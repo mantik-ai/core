@@ -5,7 +5,13 @@ import java.nio.file.Path
 import ai.mantik.componently.utils.SecretReader
 import akka.http.scaladsl.model.Uri
 import com.typesafe.config.Config
-import com.typesafe.sslconfig.ssl.{ KeyManagerConfig, KeyStoreConfig, SSLConfigSettings, TrustManagerConfig, TrustStoreConfig }
+import com.typesafe.sslconfig.ssl.{
+  KeyManagerConfig,
+  KeyStoreConfig,
+  SSLConfigSettings,
+  TrustManagerConfig,
+  TrustStoreConfig
+}
 
 case class DockerConnectSettings(
     url: String,
@@ -15,10 +21,11 @@ case class DockerConnectSettings(
     dockerCertPath: Option[String],
     attachMinikube: Boolean
 ) {
+
   /**
-   * Returns the docker URL as URI.
-   * Note: DOCKER_HOST encodings TCP-Connection as tcp://, we are changing this to https.
-   */
+    * Returns the docker URL as URI.
+    * Note: DOCKER_HOST encodings TCP-Connection as tcp://, we are changing this to https.
+    */
   def asUri: Uri = {
     if (url.startsWith("tcp://")) {
       Uri("https://" + url.stripPrefix("tcp://"))
@@ -28,9 +35,9 @@ case class DockerConnectSettings(
   }
 
   /**
-   * Derive connect settings from given values (e.g. by attaching to minikube).
-   * If there is nothing to derive, it returns itself.
-   */
+    * Derive connect settings from given values (e.g. by attaching to minikube).
+    * If there is nothing to derive, it returns itself.
+    */
   def derive(tempCertFile: Path): DockerConnectSettings = {
     val minikubeExtended = if (attachMinikube) {
       val minikubeSettings = extractMinikubeDockerSettings()
@@ -72,7 +79,7 @@ case class DockerConnectSettings(
     }.toMap
   }
 
-  /** Derive a client certificate (from PEM Files)  */
+  /** Derive a client certificate (from PEM Files) */
   private def deriveClientIfNecessary(tempCertFile: Path): DockerConnectSettings = {
     dockerCertPath match {
       case None => this // not given
@@ -99,23 +106,25 @@ case class DockerConnectSettings(
   }
 
   /**
-   * Returns SSL Config settings to use.
-   * (In case of PEM Files, you have to call this on [[deriveClientCertIfNecessary]].
-   */
+    * Returns SSL Config settings to use.
+    * (In case of PEM Files, you have to call this on [[deriveClientCertIfNecessary]].
+    */
   lazy val sslConfigSettings: Option[SSLConfigSettings] = {
     if (clientCert.isEmpty) {
       None
     } else {
-      val sslSettings = SSLConfigSettings().withTrustManagerConfig(
-        TrustManagerConfig().withTrustStoreConfigs(
-          caCert.map { caCert =>
-            TrustStoreConfig(
-              filePath = Some(caCert),
-              data = None
-            ).withStoreType("PEM")
-          }.toList
+      val sslSettings = SSLConfigSettings()
+        .withTrustManagerConfig(
+          TrustManagerConfig().withTrustStoreConfigs(
+            caCert.map { caCert =>
+              TrustStoreConfig(
+                filePath = Some(caCert),
+                data = None
+              ).withStoreType("PEM")
+            }.toList
+          )
         )
-      ).withKeyManagerConfig(
+        .withKeyManagerConfig(
           KeyManagerConfig().withKeyStoreConfigs(
             clientCert.map { cert =>
               KeyStoreConfig(

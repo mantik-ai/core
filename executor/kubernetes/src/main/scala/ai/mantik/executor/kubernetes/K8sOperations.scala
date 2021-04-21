@@ -4,20 +4,20 @@ import java.time.Clock
 import java.time.temporal.ChronoUnit
 
 import ai.mantik.componently.utils.FutureHelper
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.Errors.InternalException
 import ai.mantik.executor.common.LabelConstants
 import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import com.typesafe.scalalogging.Logger
-import play.api.libs.json.{ Format, JsObject, JsValue, Json, Writes }
+import play.api.libs.json.{Format, JsObject, JsValue, Json, Writes}
 import skuber.Container.Running
-import skuber.api.client.{ KubernetesClient, Status, WatchEvent }
-import skuber.api.patch.{ JsonMergePatch, MetadataPatch }
+import skuber.api.client.{KubernetesClient, Status, WatchEvent}
+import skuber.api.patch.{JsonMergePatch, MetadataPatch}
 import skuber.apps.v1.Deployment
 import skuber.apps.v1.ReplicaSet
 import skuber.batch.Job
@@ -25,14 +25,27 @@ import skuber.ext.Ingress
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
-import skuber.{ Container, K8SException, KListItem, LabelSelector, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition, Secret, Service }
+import skuber.{
+  Container,
+  K8SException,
+  KListItem,
+  LabelSelector,
+  ListResource,
+  Namespace,
+  ObjectResource,
+  Pod,
+  ResourceDefinition,
+  Secret,
+  Service
+}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future, Promise, TimeoutException }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
+import scala.util.{Failure, Success}
 
 /** Wraps Kubernetes Operations */
-class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
+class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase {
 
   // this seems to be missing in skuber
   private implicit val rsListFormat = skuber.json.format.ListResourceFormat[ReplicaSet]
@@ -42,33 +55,44 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   }
 
   /**
-   * Figures out the name/ip of Kubernetes we are talking to.
-   * (For ingress interpolation)
-   */
+    * Figures out the name/ip of Kubernetes we are talking to.
+    * (For ingress interpolation)
+    */
   def clusterServer: Uri = {
     Uri(rootClient.clusterServer)
   }
 
   /** Create an object in Kubernetes. */
-  def create[O <: ObjectResource](namespace: Option[String], obj: O)(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[O] = {
+  def create[O <: ObjectResource](
+      namespace: Option[String],
+      obj: O
+  )(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[O] = {
     errorHandling(s"Create ${rd.spec.defaultVersion}/${rd.spec.names.singular}") {
       namespacedClient(namespace).create(obj)
     }
   }
 
   /** Like create, but ignores argument if it's None. */
-  def maybeCreate[O <: ObjectResource](namespace: Option[String], maybeObj: Option[O])(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[Option[O]] = {
-    maybeObj.map { obj =>
-      create(namespace, obj).map {
-        Some(_)
+  def maybeCreate[O <: ObjectResource](
+      namespace: Option[String],
+      maybeObj: Option[O]
+  )(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[Option[O]] = {
+    maybeObj
+      .map { obj =>
+        create(namespace, obj).map {
+          Some(_)
+        }
       }
-    }.getOrElse(
-      Future.successful(None)
-    )
+      .getOrElse(
+        Future.successful(None)
+      )
   }
 
-  /** Creates or replaces  */
-  def createOrReplace[O <: ObjectResource](namespace: Option[String], obj: O)(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[O] = {
+  /** Creates or replaces */
+  def createOrReplace[O <: ObjectResource](
+      namespace: Option[String],
+      obj: O
+  )(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[O] = {
     val client = namespacedClient(namespace)
     val description = s"${obj.apiVersion}/${obj.kind}"
     errorHandling(s"Create or replace ${description}")(client.create(obj)).recoverWith {
@@ -85,7 +109,10 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     }
   }
 
-  private def waitUntilDeleted[O <: ObjectResource](namespace: Option[String], name: String)(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[Unit] = {
+  private def waitUntilDeleted[O <: ObjectResource](
+      namespace: Option[String],
+      name: String
+  )(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[Unit] = {
     val client = namespacedClient(namespace)
     def tryFunction(): Future[Option[Boolean]] = {
       errorHandling(s"Get ${rd.spec.defaultVersion}/${rd.spec.names.singular}") {
@@ -95,9 +122,11 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
         }
       }
     }
-    FutureHelper.tryMultipleTimes(config.kubernetes.defaultTimeout, config.kubernetes.defaultRetryInterval)(tryFunction()).map { _ =>
-      ()
-    }
+    FutureHelper
+      .tryMultipleTimes(config.kubernetes.defaultTimeout, config.kubernetes.defaultRetryInterval)(tryFunction())
+      .map { _ =>
+        ()
+      }
   }
 
   def deploymentSetReplicas(namespace: Option[String], deploymentName: String, replicas: Int): Future[Deployment] = {
@@ -108,9 +137,8 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   }
 
   def jsonPatch[O <: ObjectResource](namespace: Option[String], name: String, jsonRequest: JsValue)(
-    implicit
-    fmt: Format[O],
-    rd: ResourceDefinition[O]
+      implicit fmt: Format[O],
+      rd: ResourceDefinition[O]
   ): Future[O] = {
     case object data extends JsonMergePatch
     implicit val writes: Writes[data.type] = Writes { _ =>
@@ -123,7 +151,9 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   }
 
   /** Delete an object in Kubernetes. */
-  def delete[O <: ObjectResource](namespace: Option[String], name: String, gracePeriodSeconds: Int = -1)(implicit rd: ResourceDefinition[O]): Future[Unit] = {
+  def delete[O <: ObjectResource](namespace: Option[String], name: String, gracePeriodSeconds: Int = -1)(
+      implicit rd: ResourceDefinition[O]
+  ): Future[Unit] = {
     errorHandling(s"Delete ${rd.spec.defaultVersion}/${rd.spec.names.singular}") {
       namespacedClient(namespace).delete(name, gracePeriodSeconds)
     }
@@ -131,17 +161,19 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
 
   /** Ensure the existence of a namespace, and returns a kubernetes client for this namespace. */
   def ensureNamespace(namespace: String): Future[Namespace] = {
-    errorHandling("Get namespace")(rootClient.get[Namespace](namespace)).map { ns =>
-      logger.trace(s"Using existing namespace ${namespace}, no creation necessary")
-      ns
-    }.recoverWith {
-      case e: K8SException if e.status.code.contains(404) =>
-        logger.info(s"Namespace ${namespace} doesn't exist, trying to create")
-        errorHandling("Create Namespace")(rootClient.create(Namespace(namespace))).andThen {
-          case Success(_)     => logger.info(s"Namespace ${namespace} on the fly created")
-          case Failure(error) => logger.error(s"Creating namespace ${namespace} failed", error)
-        }
-    }
+    errorHandling("Get namespace")(rootClient.get[Namespace](namespace))
+      .map { ns =>
+        logger.trace(s"Using existing namespace ${namespace}, no creation necessary")
+        ns
+      }
+      .recoverWith {
+        case e: K8SException if e.status.code.contains(404) =>
+          logger.info(s"Namespace ${namespace} doesn't exist, trying to create")
+          errorHandling("Create Namespace")(rootClient.create(Namespace(namespace))).andThen {
+            case Success(_)     => logger.info(s"Namespace ${namespace} on the fly created")
+            case Failure(error) => logger.error(s"Creating namespace ${namespace} failed", error)
+          }
+      }
   }
 
   /** Returns all Pods which are managed by this executor and which are in pending state. */
@@ -164,29 +196,32 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     }
   }
 
-  /** Returns pending pods managed by this executor. .*/
+  /** Returns pending pods managed by this executor. . */
   private def getPendingPods(namespace: Option[String] = None): Future[List[Pod]] = {
     errorHandling("getPendingPods") {
-      namespacedClient(namespace).listWithOptions[ListResource[skuber.Pod]](
-        skuber.ListOptions(
-          labelSelector = Some(LabelSelector(
-            LabelSelector.IsEqualRequirement(LabelConstants.ManagedByLabelName, LabelConstants.ManagedByLabelValue),
-            LabelSelector.IsEqualRequirement(LabelConstants.RoleLabelName, LabelConstants.role.worker)
-          )),
-          fieldSelector = Some("status.phase==Pending")
+      namespacedClient(namespace)
+        .listWithOptions[ListResource[skuber.Pod]](
+          skuber.ListOptions(
+            labelSelector = Some(
+              LabelSelector(
+                LabelSelector.IsEqualRequirement(LabelConstants.ManagedByLabelName, LabelConstants.ManagedByLabelValue),
+                LabelSelector.IsEqualRequirement(LabelConstants.RoleLabelName, LabelConstants.role.worker)
+              )
+            ),
+            fieldSelector = Some("status.phase==Pending")
+          )
         )
-      ).map(_.items)
+        .map(_.items)
     }
   }
 
   def listSelected[T <: KListItem](namespace: Option[String], labelFilter: Seq[(String, String)])(
-    implicit
-    format: Format[ListResource[T]], rd: ResourceDefinition[ListResource[T]]
+      implicit format: Format[ListResource[T]],
+      rd: ResourceDefinition[ListResource[T]]
   ): Future[ListResource[T]] = {
     val labelSelector = LabelSelector(
-      (labelFilter.map {
-        case (k, v) =>
-          LabelSelector.IsEqualRequirement(k, KubernetesNamer.encodeLabelValue(v))
+      (labelFilter.map { case (k, v) =>
+        LabelSelector.IsEqualRequirement(k, KubernetesNamer.encodeLabelValue(v))
       }.toVector): _*
     )
     errorHandling(s"ListSelected ${rd.spec.defaultVersion}/${rd.spec.names.singular}") {
@@ -197,22 +232,28 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   }
 
   def byName[T <: ObjectResource](namespace: Option[String], name: String)(
-    implicit
-    format: Format[T], resourceDefinition: ResourceDefinition[T]
+      implicit format: Format[T],
+      resourceDefinition: ResourceDefinition[T]
   ): Future[Option[T]] = {
-    errorHandling(s"byName ${resourceDefinition.spec.defaultVersion}/${resourceDefinition.spec.names.singular} ${namespace}/${name}") {
+    errorHandling(
+      s"byName ${resourceDefinition.spec.defaultVersion}/${resourceDefinition.spec.names.singular} ${namespace}/${name}"
+    ) {
       namespacedClient(namespace).getOption[T](name)
     }
   }
 
-  /**  Add Kill-Annotations to some items. */
+  /** Add Kill-Annotations to some items. */
   def sendKillPatch[T <: ObjectResource](name: String, namespace: Option[String], reason: String)(
-    implicit
-    fmt: Format[T], rd: ResourceDefinition[T]
+      implicit fmt: Format[T],
+      rd: ResourceDefinition[T]
   ): Future[Unit] = {
-    val patch = MetadataPatch(annotations = Some(Map(
-      KubernetesConstants.KillAnnotationName -> reason
-    )))
+    val patch = MetadataPatch(annotations =
+      Some(
+        Map(
+          KubernetesConstants.KillAnnotationName -> reason
+        )
+      )
+    )
     errorHandling("sendKillPatch") {
       rootClient.patch[MetadataPatch, T](name, patch, namespace)
     }.map { _ => () }
@@ -245,7 +286,9 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
         case Failure(s: K8SException) if s.status.code.contains(500) && retryAfterSeconds(s.status).nonEmpty =>
           val retryValue = retryAfterSeconds(s.status).get
           val seconds = Math.min(Math.max(1, retryValue), config.kubernetes.defaultTimeout.toSeconds)
-          logger.warn(s"K8S ${what} Operation failed with 500+retry ${retryValue}, will try again in ${seconds} seconds.")
+          logger.warn(
+            s"K8S ${what} Operation failed with 500+retry ${retryValue}, will try again in ${seconds} seconds."
+          )
           actorSystem.scheduler.scheduleOnce(seconds.seconds) {
             tryAgain(remaining - 1)
           }

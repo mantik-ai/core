@@ -5,17 +5,18 @@ import java.util.Base64
 
 import ai.mantik.elements.errors.InvalidMantikIdException
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
+import io.circe.{Decoder, DecodingFailure, Encoder, HCursor, Json}
 import io.circe.syntax._
 
 import scala.util.matching.Regex
 import scala.language.implicitConversions
 
 /**
- * Identifies a MantikArtifact. Can either be an (anonymous) ItemId or a
- * [[NamedMantikId]]
- */
+  * Identifies a MantikArtifact. Can either be an (anonymous) ItemId or a
+  * [[NamedMantikId]]
+  */
 sealed trait MantikId {
+
   /** Converts to String representation. */
   def toString: String
 }
@@ -51,17 +52,17 @@ object MantikId {
 }
 
 /**
- * Provides a stable identifier for Mantik Items.
- *
- * In contrast to [[NamedMantikId]] this id always responds to the very same
- * item. In practice, all [[NamedMantikId]] link to a [[ItemId]] which link
- * to the item content.
- *
- * They can not be overwritten but deleted.
- *
- * In the moment they are random, but in future they shall represent hash values
- * of the items.
- */
+  * Provides a stable identifier for Mantik Items.
+  *
+  * In contrast to [[NamedMantikId]] this id always responds to the very same
+  * item. In practice, all [[NamedMantikId]] link to a [[ItemId]] which link
+  * to the item content.
+  *
+  * They can not be overwritten but deleted.
+  *
+  * In the moment they are random, but in future they shall represent hash values
+  * of the items.
+  */
 final class ItemId private (
     private val id: String
 ) extends MantikId {
@@ -118,12 +119,12 @@ object ItemId {
 }
 
 /**
- * A Named Mantik Artifact.
- *
- * @param account the users account, defaults to library.
- * @param name of the Mantik artifact. If it starts with @ it refers to a [[ItemId]].
- * @param version the version, defaults to latest.
- */
+  * A Named Mantik Artifact.
+  *
+  * @param account the users account, defaults to library.
+  * @param name of the Mantik artifact. If it starts with @ it refers to a [[ItemId]].
+  * @param version the version, defaults to latest.
+  */
 final case class NamedMantikId(
     // Note: ordering is this way, to force the user to use
     // named arguments to set name explicitly.
@@ -149,10 +150,14 @@ final case class NamedMantikId(
   }
 
   /** Returns Naming violatins. */
-  def violations: Seq[String] = NamedMantikId.accountViolations(account) ++ NamedMantikId.nameViolations(name) ++ NamedMantikId.versionViolations(version)
+  def violations: Seq[String] =
+    NamedMantikId.accountViolations(account) ++ NamedMantikId.nameViolations(name) ++ NamedMantikId.versionViolations(
+      version
+    )
 }
 
 object NamedMantikId {
+
   /** If no version is given, this version is accessed. */
   val DefaultVersion = "latest"
 
@@ -191,18 +196,16 @@ object NamedMantikId {
   def decodeStringResult(s: String): Result[NamedMantikId] = {
     s.split(":").toList match {
       case List(accountName, version) =>
-        decodeAccountName(accountName).map {
-          case (account, name) =>
-            NamedMantikId(account = account, name = name, version = version)
+        decodeAccountName(accountName).map { case (account, name) =>
+          NamedMantikId(account = account, name = name, version = version)
         }
       case List(accountName) =>
-        decodeAccountName(accountName).map {
-          case (account, name) =>
-            NamedMantikId(
-              name = name,
-              account = account,
-              version = NamedMantikId.DefaultVersion
-            )
+        decodeAccountName(accountName).map { case (account, name) =>
+          NamedMantikId(
+            name = name,
+            account = account,
+            version = NamedMantikId.DefaultVersion
+          )
         }
       case _ =>
         Left(DecodingFailure(s"${s} is not a valid Mantik id", Nil))
@@ -224,7 +227,8 @@ object NamedMantikId {
   }
 
   /** Encodes a mantik id within a string. */
-  implicit val mantikIdCodec: Encoder[NamedMantikId] with Decoder[NamedMantikId] = new Encoder[NamedMantikId] with Decoder[NamedMantikId] {
+  implicit val mantikIdCodec: Encoder[NamedMantikId] with Decoder[NamedMantikId] = new Encoder[NamedMantikId]
+    with Decoder[NamedMantikId] {
     override def apply(a: NamedMantikId): Json = {
       Json.fromString(a.toString)
     }
@@ -265,17 +269,17 @@ object NamedMantikId {
   }
 
   /**
-   * Regex for a Name.
-   * Note: in contrast to account names, also "_" and "." in the middle is allowed
-   */
+    * Regex for a Name.
+    * Note: in contrast to account names, also "_" and "." in the middle is allowed
+    */
   val NameRegex: Regex = "^[a-z\\d](?:[a-z\\d_\\.]|-(?=[a-z\\d])){0,50}$".r
 
   /** Regex for account. */
   val AccountRegex: Regex = NameRegex
 
   /**
-   * Regex for a Version.
-   * Note: in contrast to account names, also "_" and "." in the middle is allowed
-   */
+    * Regex for a Version.
+    * Note: in contrast to account names, also "_" and "." in the middle is allowed
+    */
   val VersionRegex: Regex = "^[a-z\\d]([a-z\\d_\\.\\-]*[a-z\\d])?$".r
 }

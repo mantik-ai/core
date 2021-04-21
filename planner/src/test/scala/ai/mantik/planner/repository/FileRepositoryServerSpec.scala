@@ -4,21 +4,24 @@ import ai.mantik.elements.errors.MantikException
 import ai.mantik.planner.repository.impl.NonAsyncFileRepository
 import ai.mantik.planner.repository.impl.LocalFileRepository
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
-import ai.mantik.testutils.{ TempDirSupport, TestBase }
+import ai.mantik.testutils.{TempDirSupport, TestBase}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ ContentType, HttpEntity, HttpMethods, HttpRequest, MediaType, Uri }
+import akka.http.scaladsl.model.{ContentType, HttpEntity, HttpMethods, HttpRequest, MediaType, Uri}
 import akka.http.scaladsl.model.headers.Accept
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 
 import scala.util.Random
 
 class FileRepositoryServerSpec extends TestBaseWithAkkaRuntime with TempDirSupport {
 
-  override protected lazy val typesafeConfig: Config = ConfigFactory.load().withValue(
-    "mantik.repository.fileRepository.port", ConfigValueFactory.fromAnyRef(0)
-  )
+  override protected lazy val typesafeConfig: Config = ConfigFactory
+    .load()
+    .withValue(
+      "mantik.repository.fileRepository.port",
+      ConfigValueFactory.fromAnyRef(0)
+    )
 
   protected val MantikBundleContentType = ContentType.apply(
     MediaType.custom(ContentTypes.MantikBundleContentType, true).asInstanceOf[MediaType.Binary]
@@ -62,9 +65,11 @@ class FileRepositoryServerSpec extends TestBaseWithAkkaRuntime with TempDirSuppo
     val postRequest = HttpRequest(method = HttpMethods.POST, uri = uri)
       .withEntity(HttpEntity(MantikBundleContentType, testBytes))
 
-    val postResponse = await(Http().singleRequest(
-      postRequest
-    ))
+    val postResponse = await(
+      Http().singleRequest(
+        postRequest
+      )
+    )
     postResponse.status.isSuccess() shouldBe true
 
     val getRequest = HttpRequest(uri = uri).addHeader(

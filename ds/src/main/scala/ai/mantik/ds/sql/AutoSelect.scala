@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql
 
 import ai.mantik.ds.converter.Cast
-import ai.mantik.ds.{ DataType, TabularData }
+import ai.mantik.ds.{DataType, TabularData}
 import cats.implicits._
 
 /** Helpers for creating automatic Select-Operations for converting DataTypes. */
@@ -26,11 +26,13 @@ object AutoSelect {
   /** Generates a select statement from a from tabular to a target tabular data type */
   def autoSelect(from: TabularData, to: TabularData): Either[String, Select] = {
     buildColumnMapping(from, to).flatMap { columnMapping =>
-      val maybeProjections = to.columns.map {
-        case (toColumn, targetType) =>
+      val maybeProjections = to.columns
+        .map { case (toColumn, targetType) =>
           val fromColumn = columnMapping(toColumn)
           buildColumnSelector(from, fromColumn, toColumn, targetType)
-      }.toVector.sequence
+        }
+        .toVector
+        .sequence
 
       maybeProjections.map { projections =>
         Select(AnonymousInput(from), projections = Some(projections))
@@ -39,10 +41,10 @@ object AutoSelect {
   }
 
   /**
-   * Tries to retrieve a column mapping from from to to.
-   *
-   * @return Map, keys column names from 'to', values column names from 'from'
-   */
+    * Tries to retrieve a column mapping from from to to.
+    *
+    * @return Map, keys column names from 'to', values column names from 'from'
+    */
   private def buildColumnMapping(from: TabularData, to: TabularData): Either[String, Map[String, String]] = {
     val fromColumnNames = from.columns.keys.toList
     val toColumnNames = to.columns.keys.toList
@@ -63,7 +65,12 @@ object AutoSelect {
     Left(s"Could not resolve ${singleMissing}")
   }
 
-  private def buildColumnSelector(from: TabularData, fromColumn: String, targetColumn: String, expectedType: DataType): Either[String, SelectProjection] = {
+  private def buildColumnSelector(
+      from: TabularData,
+      fromColumn: String,
+      targetColumn: String,
+      expectedType: DataType
+  ): Either[String, SelectProjection] = {
     val fromIndex = from.lookupColumnIndex(fromColumn).getOrElse {
       // Column names should be already checked, so this should not happen
       throw new IllegalArgumentException(s"Column ${fromColumn} not found")
@@ -75,10 +82,15 @@ object AutoSelect {
       case c: Cast if c.isIdentity =>
         Right(SelectProjection(targetColumn, ColumnExpression(fromIndex, fromType)))
       case c: Cast =>
-        Right(SelectProjection(targetColumn, CastExpression(
-          ColumnExpression(fromIndex, fromType),
-          expectedType
-        )))
+        Right(
+          SelectProjection(
+            targetColumn,
+            CastExpression(
+              ColumnExpression(fromIndex, fromType),
+              expectedType
+            )
+          )
+        )
     }
   }
 }

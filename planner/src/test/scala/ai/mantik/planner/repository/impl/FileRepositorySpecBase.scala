@@ -1,8 +1,8 @@
 package ai.mantik.planner.repository.impl
 
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.planner.repository.{ ContentTypes, FileRepository }
-import ai.mantik.planner.util.{ ErrorCodeTestUtils, TestBaseWithAkkaRuntime }
+import ai.mantik.planner.repository.{ContentTypes, FileRepository}
+import ai.mantik.planner.util.{ErrorCodeTestUtils, TestBaseWithAkkaRuntime}
 import ai.mantik.testutils.TempDirSupport
 import akka.util.ByteString
 

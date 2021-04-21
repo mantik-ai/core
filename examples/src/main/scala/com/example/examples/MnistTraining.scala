@@ -3,8 +3,8 @@ import java.nio.file.Paths
 
 import ai.mantik.componently.utils.EitherExtensions._
 import ai.mantik.ds.sql.AutoSelect
-import ai.mantik.ds.{ FundamentalType, Image, ImageChannel, TabularData }
-import ai.mantik.planner.{ Algorithm, Pipeline, PlanningContext }
+import ai.mantik.ds.{FundamentalType, Image, ImageChannel, TabularData}
+import ai.mantik.planner.{Algorithm, Pipeline, PlanningContext}
 
 object MnistTraining extends ExampleBase {
 
@@ -21,7 +21,8 @@ object MnistTraining extends ExampleBase {
     // Training
     val trainDataSet = context.loadDataSet("mnist_train")
 
-    val trainAlgorithm = context.loadTrainableAlgorithm("mnist_linear")
+    val trainAlgorithm = context
+      .loadTrainableAlgorithm("mnist_linear")
       .withMetaValue("n_epochs", 5)
 
     val (trained, stats) = trainAlgorithm.train(trainDataSet)
@@ -39,7 +40,9 @@ object MnistTraining extends ExampleBase {
     // Building a Pipeline
     val productionImageInput = TabularData(
       "image" -> Image.plain(
-        28, 28, ImageChannel.Black -> FundamentalType.Uint8
+        28,
+        28,
+        ImageChannel.Black -> FundamentalType.Uint8
       )
     )
 

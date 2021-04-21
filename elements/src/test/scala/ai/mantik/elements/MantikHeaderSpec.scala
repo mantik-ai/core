@@ -1,7 +1,7 @@
 package ai.mantik.elements
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.meta.MetaVariable
@@ -191,10 +191,12 @@ class MantikHeaderSpec extends TestBase {
     val mantikHeader = MantikHeader.fromYamlWithType[PipelineDefinition](definition).forceRight
     mantikHeader.definition shouldBe
       PipelineDefinition(
-        `type` = Some(OptionalFunctionType(
-          input = Some(TabularData("x" -> FundamentalType.Int32)),
-          output = Some(TabularData("y" -> FundamentalType.Int32))
-        )),
+        `type` = Some(
+          OptionalFunctionType(
+            input = Some(TabularData("x" -> FundamentalType.Int32)),
+            output = Some(TabularData("y" -> FundamentalType.Int32))
+          )
+        ),
         steps = List(
           PipelineStep.AlgorithmStep(
             description = Some("We like this step"),
@@ -202,9 +204,11 @@ class MantikHeaderSpec extends TestBase {
           ),
           PipelineStep.AlgorithmStep(
             algorithm = "algo2",
-            metaVariables = Some(List(
-              PipelineStep.MetaVariableSetting("abc", Json.fromInt(123))
-            ))
+            metaVariables = Some(
+              List(
+                PipelineStep.MetaVariableSetting("abc", Json.fromInt(123))
+              )
+            )
           ),
           PipelineStep.SelectStep(
             "select i"

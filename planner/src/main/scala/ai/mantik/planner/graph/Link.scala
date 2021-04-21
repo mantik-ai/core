@@ -10,6 +10,7 @@ case class Link(
 )
 
 object Link {
+
   /** Shortcut for creating links. */
   def apply(link: (NodePortRef, NodePortRef)): Link = {
     Link(link._1, link._2)

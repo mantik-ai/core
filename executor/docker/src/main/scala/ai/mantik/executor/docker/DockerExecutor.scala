@@ -1,24 +1,24 @@
 package ai.mantik.executor.docker
 import java.util.UUID
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.docker.api.structures.ListContainerResponseRow
-import ai.mantik.executor.docker.api.{ DockerApiHelper, DockerClient, DockerOperations }
+import ai.mantik.executor.docker.api.{DockerApiHelper, DockerClient, DockerOperations}
 import ai.mantik.executor.docker.buildinfo.BuildInfo
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.{ Errors, Executor }
+import ai.mantik.executor.{Errors, Executor}
 import cats.implicits._
-import javax.inject.{ Inject, Provider }
+import javax.inject.{Inject, Provider}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: DockerExecutorConfig)(
-    implicit
-    akkaRuntime: AkkaRuntime
-) extends ComponentBase with Executor {
+    implicit akkaRuntime: AkkaRuntime
+) extends ComponentBase
+    with Executor {
 
   logger.info("Initializing Docker Executor")
   logger.info(s"Default Repo: ${executorConfig.common.dockerConfig.defaultImageRepository}")
@@ -80,14 +80,18 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     }
   }
 
-  private def startWorkerImpl(workerNetworkId: String, name: String, startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = {
+  private def startWorkerImpl(
+      workerNetworkId: String,
+      name: String,
+      startWorkerRequest: StartWorkerRequest
+  ): Future[StartWorkerResponse] = {
     val internalId = UUID.randomUUID().toString
 
     val dockerConverter = new DockerConverter(
       executorConfig,
       isolationSpace = startWorkerRequest.isolationSpace,
       internalId = internalId,
-      userId = startWorkerRequest.id,
+      userId = startWorkerRequest.id
     )
     val ingressConverter = startWorkerRequest.ingressName.map { ingressName =>
       IngressConverter(executorConfig, dockerClient.dockerHost, ingressName)
@@ -110,9 +114,11 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
           )
         }
       case pipelineDefinition: MnpPipelineDefinition =>
-        val converted = dockerConverter.generatePipelineContainer(name, pipelineDefinition.definition, Some(workerNetworkId))
+        val converted =
+          dockerConverter.generatePipelineContainer(name, pipelineDefinition.definition, Some(workerNetworkId))
 
-        val withIngress = ingressConverter.map(_.containerDefinitionWithIngress(converted))
+        val withIngress = ingressConverter
+          .map(_.containerDefinitionWithIngress(converted))
           .getOrElse(converted)
 
         for {
@@ -136,7 +142,9 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
       if (result.StatusCode == 0) {
         ()
       } else {
-        logger.warn(s"Initializer ${containerDefinition.name} failed with status code ${result.StatusCode} and message ${text}")
+        logger.warn(
+          s"Initializer ${containerDefinition.name} failed with status code ${result.StatusCode} and message ${text}"
+        )
         throw new Errors.CouldNotExecutePayload(s"Container init failed ${result.StatusCode}")
       }
     }
@@ -155,21 +163,28 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     }
   }
 
-  private def listWorkers(all: Boolean, isolationSpace: String, userIdFilter: Option[String]): Future[Vector[ListContainerResponseRow]] = {
+  private def listWorkers(
+      all: Boolean,
+      isolationSpace: String,
+      userIdFilter: Option[String]
+  ): Future[Vector[ListContainerResponseRow]] = {
     val labelFilters = Seq(
       DockerConstants.IsolationSpaceLabelName -> isolationSpace,
       LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
       LabelConstants.RoleLabelName -> LabelConstants.role.worker
     ) ++ userIdFilter.map { id =>
-        LabelConstants.UserIdLabelName -> id
-      }
+      LabelConstants.UserIdLabelName -> id
+    }
     dockerOperations.listContainers(
       all,
       labelFilters
     )
   }
 
-  private def decodeListWorkerResponse(listContainerResponseRow: ListContainerResponseRow, nameFilter: Option[String]): Option[ListWorkerResponseElement] = {
+  private def decodeListWorkerResponse(
+      listContainerResponseRow: ListContainerResponseRow,
+      nameFilter: Option[String]
+  ): Option[ListWorkerResponseElement] = {
     def errorIfEmpty[T](name: String, value: Option[T]): Option[T] = {
       if (value.isEmpty) {
         logger.error(s"Value ${name} is empty in ${listContainerResponseRow.Id}")
@@ -196,10 +211,12 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
       ListWorkerResponseElement(
         nodeName = name,
         id = userId,
-        container = Some(Container(
-          image = listContainerResponseRow.Image,
-          parameters = listContainerResponseRow.Command.map(_.split(' ').toVector).getOrElse(Nil)
-        )),
+        container = Some(
+          Container(
+            image = listContainerResponseRow.Image,
+            parameters = listContainerResponseRow.Command.map(_.split(' ').toVector).getOrElse(Nil)
+          )
+        ),
         state = decodeState(listContainerResponseRow.State, listContainerResponseRow.Status),
         `type` = workerType,
         externalUrl = externalUrl
@@ -252,29 +269,30 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
         row.Labels.get(LabelConstants.InternalIdLabelName)
       }
 
-      val associated = decoded.flatMap {
-        case (_, row) =>
-          byInternalId.get(row.Labels.get(LabelConstants.InternalIdLabelName))
+      val associated = decoded.flatMap { case (_, row) =>
+        byInternalId.get(row.Labels.get(LabelConstants.InternalIdLabelName))
       }.flatten
 
       logger.info(s"Going to stop ${decoded.size} containers")
 
-      Future.sequence(associated.map { row =>
-        if (stopWorkerRequest.remove.value) {
-          // no need to kill before, we are forcing removal
-          dockerClient.removeContainer(row.Id, true)
-        } else {
-          if (decodeState(row) == WorkerState.Running) {
-            dockerClient.killContainer(row.Id)
+      Future
+        .sequence(associated.map { row =>
+          if (stopWorkerRequest.remove.value) {
+            // no need to kill before, we are forcing removal
+            dockerClient.removeContainer(row.Id, true)
           } else {
-            Future.successful(())
+            if (decodeState(row) == WorkerState.Running) {
+              dockerClient.killContainer(row.Id)
+            } else {
+              Future.successful(())
+            }
           }
+        })
+        .map { _ =>
+          StopWorkerResponse(
+            decoded.map(_._1)
+          )
         }
-      }).map { _ =>
-        StopWorkerResponse(
-          decoded.map(_._1)
-        )
-      }
     }
   }
 }

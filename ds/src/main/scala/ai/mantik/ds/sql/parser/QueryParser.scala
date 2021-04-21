@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.parser
 
-import ai.mantik.ds.sql.parser.AST.{ MultiQueryNode, QueryNode, SelectNode }
-import org.parboiled2.{ ParseError, Parser, ParserInput, Rule1 }
+import ai.mantik.ds.sql.parser.AST.{MultiQueryNode, QueryNode, SelectNode}
+import org.parboiled2.{ParseError, Parser, ParserInput, Rule1}
 import Parser.DeliveryScheme.Either
 
 import scala.collection.immutable
@@ -37,13 +37,14 @@ object QueryParser {
   }
 }
 
-private[parser] class QueryParser(val input: ParserInput) extends Parser
-  with SelectParser
-  with UnionParser
-  with JoinParser
-  with AliasParser
-  with MultiQueryParser
-  with AnonymousOnlyInnerQueryParser {
+private[parser] class QueryParser(val input: ParserInput)
+    extends Parser
+    with SelectParser
+    with UnionParser
+    with JoinParser
+    with AliasParser
+    with MultiQueryParser
+    with AnonymousOnlyInnerQueryParser {
 
   def FullQuery: Rule1[AST.QueryNode] = rule {
     Query ~ optional(ParseAsAlias) ~ EOI ~> { withOptionalAlias(_, _) }

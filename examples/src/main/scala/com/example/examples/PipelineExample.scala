@@ -4,7 +4,7 @@ import java.io.File
 import ai.mantik.ds.TabularData
 import ai.mantik.ds.sql.Select
 import ai.mantik.elements.NamedMantikId
-import ai.mantik.planner.{ Pipeline, PlanningContext }
+import ai.mantik.planner.{Pipeline, PlanningContext}
 
 object PipelineExample extends ExampleBase {
 

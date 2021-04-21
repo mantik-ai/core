@@ -3,7 +3,8 @@ package ai.mantik.elements.errors
 import io.circe.DecodingFailure
 
 /** An invalid mantik id. */
-class InvalidMantikIdException(message: String, private val cause: Throwable = null) extends MantikException(ErrorCodes.InvalidMantikId, message, cause) {
+class InvalidMantikIdException(message: String, private val cause: Throwable = null)
+    extends MantikException(ErrorCodes.InvalidMantikId, message, cause) {
 
   /** Wrap in io.circe Decoding Failure. */
   def wrapInDecodingFailure: DecodingFailure = {
@@ -12,6 +13,7 @@ class InvalidMantikIdException(message: String, private val cause: Throwable = n
 }
 
 object InvalidMantikIdException {
+
   /** Convert from Decoding failure */
   def fromDecodingFailure(decodingFailure: DecodingFailure): InvalidMantikIdException = {
     new InvalidMantikIdException(decodingFailure.message)

@@ -1,14 +1,14 @@
 package ai.mantik.planner.repository.rpc
 
-import ai.mantik.elements.errors.{ ErrorCodes, MantikException, MantikRemoteException }
-import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
+import ai.mantik.elements.errors.{ErrorCodes, MantikException, MantikRemoteException}
+import ai.mantik.elements.{ItemId, MantikId, NamedMantikId}
 import akka.util.ByteString
-import io.circe.{ Decoder, Json }
+import io.circe.{Decoder, Json}
 import io.circe.jawn.JawnParser
 import io.grpc.StatusRuntimeException
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 private[mantik] object Conversions {
@@ -37,9 +37,8 @@ private[mantik] object Conversions {
     ItemId.fromString(str)
   }
 
-  val encodeErrors: PartialFunction[Throwable, Throwable] = {
-    case e: MantikException =>
-      e.toGrpc
+  val encodeErrors: PartialFunction[Throwable, Throwable] = { case e: MantikException =>
+    e.toGrpc
   }
 
   def encodeErrorIfPossible(e: Throwable): Throwable = {
@@ -57,9 +56,8 @@ private[mantik] object Conversions {
     }
   }
 
-  val decodeErrors: PartialFunction[Throwable, Throwable] = {
-    case e: StatusRuntimeException =>
-      MantikRemoteException.fromGrpc(e)
+  val decodeErrors: PartialFunction[Throwable, Throwable] = { case e: StatusRuntimeException =>
+    MantikRemoteException.fromGrpc(e)
   }
 
   def decodeErrorsIn[T](f: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
@@ -72,10 +70,10 @@ private[mantik] object Conversions {
   private val jawnParser = new JawnParser()
 
   /**
-   * Decode some serialized JSON object.
-   * @param json the JSON object
-   * @param msg message to throw if decoding fails (with original exception message)
-   */
+    * Decode some serialized JSON object.
+    * @param json the JSON object
+    * @param msg message to throw if decoding fails (with original exception message)
+    */
   def decodeJsonItem[T: Decoder](json: String, msg: String => String): T = {
     val maybeItem = jawnParser.decode[T](json)
     maybeItem match {

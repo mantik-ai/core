@@ -1,6 +1,6 @@
 package ai.mantik.ds.helper.messagepack
 
-import ai.mantik.ds.helper.circe.{ CirceJson, MessagePackJsonSupport }
+import ai.mantik.ds.helper.circe.{CirceJson, MessagePackJsonSupport}
 import ai.mantik.ds.testutil.TestBase
 import akka.util.ByteString
 

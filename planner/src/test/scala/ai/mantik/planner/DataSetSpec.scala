@@ -1,8 +1,8 @@
 package ai.mantik.planner
 
-import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
+import ai.mantik.ds.{DataType, FundamentalType, TabularData}
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{DataSetDefinition, ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.testutils.TestBase
@@ -37,7 +37,10 @@ class DataSetSpec extends TestBase {
   private def makeDs(dt: DataType): DataSet = {
     // DataSet source is not important here.
     DataSet(
-      Source(DefinitionSource.Loaded(Some(NamedMantikId("item1234")), ItemId.generate()), PayloadSource.Loaded("someId", ContentTypes.ZipFileContentType)),
+      Source(
+        DefinitionSource.Loaded(Some(NamedMantikId("item1234")), ItemId.generate()),
+        PayloadSource.Loaded("someId", ContentTypes.ZipFileContentType)
+      ),
       MantikHeader.pure(DataSetDefinition(bridge = "someformat", `type` = dt)),
       TestItems.formatBridge
     )

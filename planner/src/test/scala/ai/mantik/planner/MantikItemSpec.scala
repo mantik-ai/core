@@ -1,7 +1,7 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.util.FakeBridges
 import ai.mantik.testutils.TestBase
@@ -36,18 +36,23 @@ class MantikItemSpec extends TestBase {
 object MantikItemSpec extends FakeBridges {
   lazy val sample = Algorithm(
     Source.constructed(PayloadSource.Loaded("1", ContentTypes.ZipFileContentType)),
-    MantikHeader.fromYaml(
-      """
-        |bridge: algo1
-        |metaVariables:
-        |  - name: x
-        |    value: 123
-        |    type: int32
-        |type:
-        |  input: int32
-        |  output: float32
+    MantikHeader
+      .fromYaml(
+        """
+          |bridge: algo1
+          |metaVariables:
+          |  - name: x
+          |    value: 123
+          |    type: int32
+          |type:
+          |  input: int32
+          |  output: float32
       """.stripMargin
-    ).right.getOrElse(???).cast[AlgorithmDefinition].getOrElse(???),
+      )
+      .right
+      .getOrElse(???)
+      .cast[AlgorithmDefinition]
+      .getOrElse(???),
     algoBridge
   )
 }

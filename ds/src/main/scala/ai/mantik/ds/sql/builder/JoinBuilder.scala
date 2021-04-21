@@ -17,7 +17,12 @@ private[sql] object JoinBuilder {
     } yield Join(leftQuery, rightQuery, joinType, condition)
   }
 
-  def buildAnonymousUsing(left: TabularData, right: TabularData, using: Seq[String], joinType: JoinType): Either[String, Join] = {
+  def buildAnonymousUsing(
+      left: TabularData,
+      right: TabularData,
+      using: Seq[String],
+      joinType: JoinType
+  ): Either[String, Join] = {
     val condition = AST.JoinCondition.Using(
       using.map { name =>
         AST.IdentifierNode(name)
@@ -61,7 +66,13 @@ private[sql] object JoinBuilder {
     shadowed
   }
 
-  private def buildJoinCondition(left: Query, right: Query, joinType: JoinType, innerModel: QueryTabularType, condition: AST.JoinCondition): Either[String, JoinCondition] = {
+  private def buildJoinCondition(
+      left: Query,
+      right: Query,
+      joinType: JoinType,
+      innerModel: QueryTabularType,
+      condition: AST.JoinCondition
+  ): Either[String, JoinCondition] = {
     condition match {
       case AST.JoinCondition.Cross        => Right(JoinCondition.Cross)
       case on: AST.JoinCondition.On       => buildOnCondition(innerModel, on)
@@ -70,39 +81,50 @@ private[sql] object JoinBuilder {
 
   }
 
-  private def buildOnCondition(innerModel: QueryTabularType, condition: AST.JoinCondition.On): Either[String, JoinCondition.On] = {
+  private def buildOnCondition(
+      innerModel: QueryTabularType,
+      condition: AST.JoinCondition.On
+  ): Either[String, JoinCondition.On] = {
     for {
       expression <- ExpressionBuilder.convertExpression(innerModel, condition.expression)
       asCondition <- extractCondition(expression, innerModel)
     } yield JoinCondition.On(asCondition)
   }
 
-  private def buildUsingCondition(left: Query, right: Query, joinType: JoinType, condition: AST.JoinCondition.Using): Either[String, JoinCondition.Using] = {
-    condition.columns.map { identifierNode =>
-      for {
-        leftLookup <- ExpressionBuilder.findColumnByIdentifier(left.resultingQueryType, identifierNode)
-        leftId = leftLookup._1
-        leftDataType = leftLookup._2
-        rightLookup <- ExpressionBuilder.findColumnByIdentifier(right.resultingQueryType, identifierNode)
-        rightId = rightLookup._1
-        rightDataType = rightLookup._2
-        comparisonType <- CastBuilder.comparisonType(leftDataType, rightDataType)
-      } yield {
-        val dropId = if (joinType == JoinType.Right) {
-          leftId
-        } else {
-          rightId + left.resultingQueryType.columns.size
+  private def buildUsingCondition(
+      left: Query,
+      right: Query,
+      joinType: JoinType,
+      condition: AST.JoinCondition.Using
+  ): Either[String, JoinCondition.Using] = {
+    condition.columns
+      .map { identifierNode =>
+        for {
+          leftLookup <- ExpressionBuilder.findColumnByIdentifier(left.resultingQueryType, identifierNode)
+          leftId = leftLookup._1
+          leftDataType = leftLookup._2
+          rightLookup <- ExpressionBuilder.findColumnByIdentifier(right.resultingQueryType, identifierNode)
+          rightId = rightLookup._1
+          rightDataType = rightLookup._2
+          comparisonType <- CastBuilder.comparisonType(leftDataType, rightDataType)
+        } yield {
+          val dropId = if (joinType == JoinType.Right) {
+            leftId
+          } else {
+            rightId + left.resultingQueryType.columns.size
+          }
+          JoinCondition.UsingColumn(
+            identifierNode.name,
+            caseSensitive = !identifierNode.ignoreCase,
+            leftId = leftId,
+            rightId = rightId,
+            dropId = dropId,
+            dataType = comparisonType
+          )
         }
-        JoinCondition.UsingColumn(
-          identifierNode.name,
-          caseSensitive = !identifierNode.ignoreCase,
-          leftId = leftId,
-          rightId = rightId,
-          dropId = dropId,
-          dataType = comparisonType
-        )
       }
-    }.sequence.map(JoinCondition.Using.apply)
+      .sequence
+      .map(JoinCondition.Using.apply)
   }
 
   private def extractCondition(expression: Expression, innerModel: QueryTabularType): Either[String, Condition] = {

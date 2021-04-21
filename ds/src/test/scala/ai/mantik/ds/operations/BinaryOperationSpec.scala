@@ -10,7 +10,8 @@ class BinaryOperationSpec extends TestBase {
     (BinaryOperation.Mul: BinaryOperation).asJson shouldBe Json.fromString("mul")
     Json.fromString("mul").as[BinaryOperation] shouldBe Right(BinaryOperation.Mul)
     for {
-      x <- Seq.apply[BinaryOperation](BinaryOperation.Add, BinaryOperation.Sub, BinaryOperation.Mul, BinaryOperation.Div)
+      x <- Seq
+        .apply[BinaryOperation](BinaryOperation.Add, BinaryOperation.Sub, BinaryOperation.Mul, BinaryOperation.Div)
     } {
       x.asJson.as[BinaryOperation] shouldBe Right(x)
     }

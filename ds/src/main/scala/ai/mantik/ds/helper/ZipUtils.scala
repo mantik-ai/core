@@ -2,26 +2,28 @@ package ai.mantik.ds.helper
 
 import java.io._
 import java.nio.file.Path
-import java.util.zip.{ ZipEntry, ZipInputStream, ZipOutputStream }
+import java.util.zip.{ZipEntry, ZipInputStream, ZipOutputStream}
 
 import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import _root_.akka.stream._
 import _root_.akka.stream.scaladsl._
 import _root_.akka.util.ByteString
 
 /**
- * Utilities for the Zip Format.
- * Some info: https://www.baeldung.com/java-compress-and-uncompress
- */
+  * Utilities for the Zip Format.
+  * Some info: https://www.baeldung.com/java-compress-and-uncompress
+  */
 object ZipUtils {
   private val logger = LoggerFactory.getLogger(getClass)
 
   /** Zip a directory as asynchronous source. */
-  def zipDirectory(directory: Path, timeout: FiniteDuration)(implicit ec: ExecutionContext): Source[ByteString, Future[Unit]] = {
+  def zipDirectory(directory: Path, timeout: FiniteDuration)(
+      implicit ec: ExecutionContext
+  ): Source[ByteString, Future[Unit]] = {
     val outputStream = StreamConverters.asOutputStream(timeout)
     outputStream.mapMaterializedValue { outputStream =>
       Future {
@@ -41,11 +43,13 @@ object ZipUtils {
   }
 
   /**
-   * Zip a byte stream in memory into a ZIP-File containing one file.
-   * The materialized value will release as soon as the zipping is done.
-   * Note: the error handling is not very stable yet.
-   */
-  def zipSingleFileStream(fileName: String = "file1")(implicit ec: ExecutionContext): Flow[ByteString, ByteString, Future[Unit]] = {
+    * Zip a byte stream in memory into a ZIP-File containing one file.
+    * The materialized value will release as soon as the zipping is done.
+    * Note: the error handling is not very stable yet.
+    */
+  def zipSingleFileStream(
+      fileName: String = "file1"
+  )(implicit ec: ExecutionContext): Flow[ByteString, ByteString, Future[Unit]] = {
     val output = StreamConverters.asOutputStream()
     val input = StreamConverters.asInputStream()
 
@@ -53,81 +57,79 @@ object ZipUtils {
 
     val myTestCase = new RuntimeException()
 
-    val result = Flow.fromSinkAndSourceMat(input, output) {
-      case (inputStream, outputStream) =>
-        Future {
-          try {
-            val zipOutputStream = new ZipOutputStream(outputStream)
-            zipOutputStream.putNextEntry(new ZipEntry(fileName))
-            IOUtils.copy(inputStream, zipOutputStream)
-            zipOutputStream.finish()
-            outputStream.flush()
-            zipOutputStream.close()
-          } catch {
-            case e: IOException if e.getMessage.contains("Reactive stream is terminated") =>
-              // This happens if the down stream is closed too early
-              logger.info(s"Destination closed", e)
-            case e: Exception =>
-              logger.warn(s"Error during zipping", e)
-              throw e
-          } finally {
-            outputStream.close()
-          }
+    val result = Flow.fromSinkAndSourceMat(input, output) { case (inputStream, outputStream) =>
+      Future {
+        try {
+          val zipOutputStream = new ZipOutputStream(outputStream)
+          zipOutputStream.putNextEntry(new ZipEntry(fileName))
+          IOUtils.copy(inputStream, zipOutputStream)
+          zipOutputStream.finish()
+          outputStream.flush()
+          zipOutputStream.close()
+        } catch {
+          case e: IOException if e.getMessage.contains("Reactive stream is terminated") =>
+            // This happens if the down stream is closed too early
+            logger.info(s"Destination closed", e)
+          case e: Exception =>
+            logger.warn(s"Error during zipping", e)
+            throw e
+        } finally {
+          outputStream.close()
         }
+      }
     }
     result
   }
 
   /**
-   * Unzip the first found file in a zip file, the materialize value will release as soon as the unzipping is done.
-   * Note: the error handling is not very stable yet.
-   */
+    * Unzip the first found file in a zip file, the materialize value will release as soon as the unzipping is done.
+    * Note: the error handling is not very stable yet.
+    */
   def unzipSingleFileStream()(implicit ec: ExecutionContext): Flow[ByteString, ByteString, Future[Unit]] = {
     val output = StreamConverters.asOutputStream()
     val input = StreamConverters.asInputStream()
-    val result = Flow.fromSinkAndSourceMat(input, output) {
-      case (inputStream, outputStream) =>
-        Future {
-          try {
-            val zipInputStream = new ZipInputStream(inputStream)
-            var nextEntry = zipInputStream.getNextEntry
-            while (nextEntry != null && nextEntry.isDirectory) {
-              nextEntry = zipInputStream.getNextEntry
-            }
-            if (nextEntry == null) {
-              outputStream.close()
-              throw new IllegalStateException(s"No file found in zip archive")
-            }
-            IOUtils.copy(zipInputStream, outputStream)
-            // Also consume the rest of it
+    val result = Flow.fromSinkAndSourceMat(input, output) { case (inputStream, outputStream) =>
+      Future {
+        try {
+          val zipInputStream = new ZipInputStream(inputStream)
+          var nextEntry = zipInputStream.getNextEntry
+          while (nextEntry != null && nextEntry.isDirectory) {
             nextEntry = zipInputStream.getNextEntry
-            while (nextEntry != null) {
-              logger.info(s"Ignoring ${nextEntry.getName}")
-              nextEntry = zipInputStream.getNextEntry
-            }
-            outputStream.flush()
-            outputStream.close()
-            ()
-          } catch {
-            case e: IOException if e.getMessage.contains("Reactive stream is terminated") =>
-              // Seems harmless in multiple tests.
-              logger.debug(s"Destination closed", e)
-            case e: Exception =>
-              logger.warn(s"Error during on-the-fly unzipping", e)
-              throw e
-          } finally {
-            outputStream.close()
           }
-
+          if (nextEntry == null) {
+            outputStream.close()
+            throw new IllegalStateException(s"No file found in zip archive")
+          }
+          IOUtils.copy(zipInputStream, outputStream)
+          // Also consume the rest of it
+          nextEntry = zipInputStream.getNextEntry
+          while (nextEntry != null) {
+            logger.info(s"Ignoring ${nextEntry.getName}")
+            nextEntry = zipInputStream.getNextEntry
+          }
+          outputStream.flush()
+          outputStream.close()
+          ()
+        } catch {
+          case e: IOException if e.getMessage.contains("Reactive stream is terminated") =>
+            // Seems harmless in multiple tests.
+            logger.debug(s"Destination closed", e)
+          case e: Exception =>
+            logger.warn(s"Error during on-the-fly unzipping", e)
+            throw e
+        } finally {
+          outputStream.close()
         }
+
+      }
     }
     result
   }
 
   /**
-   * Zip a whole directory.
-   * Note: mainly for testing, usually uploading and compression is done via Mantik CLI Tool.
-   */
+    * Zip a whole directory.
+    * Note: mainly for testing, usually uploading and compression is done via Mantik CLI Tool.
+    */
   private def zipDirectory(directory: Path, outputStream: OutputStream): Unit = {
     val directoryFile = directory.toFile
     if (!directoryFile.isDirectory) {
@@ -167,7 +169,9 @@ object ZipUtils {
   }
 
   /** Unzip a Zip-File-Stream into a target directory (non-blocking) */
-  def unzip(input: Source[ByteString, _], targetDirectory: Path, readTimeout: FiniteDuration)(implicit materializer: Materializer): Future[Unit] = {
+  def unzip(input: Source[ByteString, _], targetDirectory: Path, readTimeout: FiniteDuration)(
+      implicit materializer: Materializer
+  ): Future[Unit] = {
     val converter = StreamConverters.asInputStream(readTimeout)
     val inputStream = input.runWith(converter)
     implicit val ec = materializer.executionContext

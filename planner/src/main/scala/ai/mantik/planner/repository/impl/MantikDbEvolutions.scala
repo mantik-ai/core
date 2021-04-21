@@ -4,7 +4,7 @@ import java.sql.SQLException
 
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.elements.MantikHeader
-import ai.mantik.planner.utils.sqlite.{ QuillSqlite, SqliteEvolutions }
+import ai.mantik.planner.utils.sqlite.{QuillSqlite, SqliteEvolutions}
 import io.getquill.Escape
 
 /** Constants for Mantik Database Evolutions */
@@ -47,26 +47,27 @@ class MantikDbEvolutions(
 
     // infix doesn't doesn't seem to work with two results
     val result = executeQuery(
-      "SELECT item_id, mantikfile FROM mantik_item", extractor = row =>
-        (row.getString(1), row.getString(2))
+      "SELECT item_id, mantikfile FROM mantik_item",
+      extractor = row => (row.getString(1), row.getString(2))
     ).toIndexedSeq
 
-    val itemIdWithKind: IndexedSeq[(String, String)] = result.map {
-      case (itemId, mantikHeaderJson) =>
-        val json = CirceJson.forceParseJson(mantikHeaderJson)
-        val mantikHeader = MantikHeader.parseSingleDefinition(json).right.getOrElse {
-          throw new IllegalStateException(s"Could not parse json ${json}")
-        }
-        itemId -> mantikHeader.definition.kind
+    val itemIdWithKind: IndexedSeq[(String, String)] = result.map { case (itemId, mantikHeaderJson) =>
+      val json = CirceJson.forceParseJson(mantikHeaderJson)
+      val mantikHeader = MantikHeader.parseSingleDefinition(json).right.getOrElse {
+        throw new IllegalStateException(s"Could not parse json ${json}")
+      }
+      itemId -> mantikHeader.definition.kind
     }
 
-    itemIdWithKind.foreach {
-      case (itemId, kind) =>
-        quillSqlite.context.executeAction("UPDATE mantik_item SET kind=? WHERE item_id=?", prepare = { row =>
+    itemIdWithKind.foreach { case (itemId, kind) =>
+      quillSqlite.context.executeAction(
+        "UPDATE mantik_item SET kind=? WHERE item_id=?",
+        prepare = { row =>
           row.setString(1, kind)
           row.setString(2, itemId)
           List(kind, itemId) -> row
-        })
+        }
+      )
     }
   }
 }

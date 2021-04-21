@@ -1,7 +1,7 @@
 package ai.mantik.ds.operations
 
-import ai.mantik.ds.{ DataType, FundamentalType }
-import ai.mantik.ds.element.{ Element, Primitive, PrimitiveEncoder }
+import ai.mantik.ds.{DataType, FundamentalType}
+import ai.mantik.ds.element.{Element, Primitive, PrimitiveEncoder}
 
 /** A Binary Operation. */
 case class BinaryFunction(
@@ -88,10 +88,10 @@ object BinaryFunction {
   )
 
   private def makeBinaryFunction[FT <: FundamentalType, ST](ft: FT)(
-    add: (ST, ST) => ST,
-    sub: (ST, ST) => ST,
-    mul: (ST, ST) => ST,
-    div: (ST, ST) => ST
+      add: (ST, ST) => ST,
+      sub: (ST, ST) => ST,
+      mul: (ST, ST) => ST,
+      div: (ST, ST) => ST
   )(implicit aux: PrimitiveEncoder.Aux[FT, ST]): BinaryFunctions = {
     BinaryFunctions(
       ft,
@@ -102,13 +102,14 @@ object BinaryFunction {
     )
   }
 
-  private def wrapFunction[FT <: FundamentalType, ST](op: (ST, ST) => ST)(implicit aux: PrimitiveEncoder.Aux[FT, ST]): (Element, Element) => Element = {
-    (a, b) =>
-      aux.wrap(
-        op(
-          aux.unwrap(a.asInstanceOf[Primitive[_]]),
-          aux.unwrap(b.asInstanceOf[Primitive[_]])
-        )
+  private def wrapFunction[FT <: FundamentalType, ST](
+      op: (ST, ST) => ST
+  )(implicit aux: PrimitiveEncoder.Aux[FT, ST]): (Element, Element) => Element = { (a, b) =>
+    aux.wrap(
+      op(
+        aux.unwrap(a.asInstanceOf[Primitive[_]]),
+        aux.unwrap(b.asInstanceOf[Primitive[_]])
       )
+    )
   }
 }

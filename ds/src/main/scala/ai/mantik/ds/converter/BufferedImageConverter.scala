@@ -4,17 +4,17 @@ import java.awt.Transparency
 import java.awt.color.ColorSpace
 import java.awt.image._
 
-import ai.mantik.ds.{ FundamentalType, Image, ImageChannel, ImageFormat }
+import ai.mantik.ds.{FundamentalType, Image, ImageChannel, ImageFormat}
 import ai.mantik.ds.element
 import akka.util.ByteIterator
 import org.slf4j.LoggerFactory
 
 /**
- * Responsible for converting Image data into BufferedImages to render previews.
- * Note:
- *
- * - image quality is reduced, only 8 bit channels are supported
- */
+  * Responsible for converting Image data into BufferedImages to render previews.
+  * Note:
+  *
+  * - image quality is reduced, only 8 bit channels are supported
+  */
 private[converter] class BufferedImageConverter(image: Image) {
   private val logger = LoggerFactory.getLogger(getClass)
 
@@ -27,13 +27,15 @@ private[converter] class BufferedImageConverter(image: Image) {
 
   lazy val isBlackOnly = channels == Set(ImageChannel.Black)
   lazy val isRgbOnly = !channels.contains(ImageChannel.Black) && channels.nonEmpty &&
-    channels.diff(
-      Set(
-        ImageChannel.Red,
-        ImageChannel.Green,
-        ImageChannel.Blue
+    channels
+      .diff(
+        Set(
+          ImageChannel.Red,
+          ImageChannel.Green,
+          ImageChannel.Blue
+        )
       )
-    ).isEmpty
+      .isEmpty
 
   lazy val singleComponentType = image.components.values.map(_.componentType).toSeq.distinct match {
     case Seq(singleType) => Some(singleType)
@@ -60,9 +62,11 @@ private[converter] class BufferedImageConverter(image: Image) {
       // Fast track
       return convertGrayScaleUint8(imageData)
     }
-    if (isRgbOnly &&
+    if (
+      isRgbOnly &&
       (channels == Set(ImageChannel.Red, ImageChannel.Green, ImageChannel.Blue)) &&
-      (singleComponentType.contains(FundamentalType.Uint8) || singleComponentType.contains(FundamentalType.Int8))) {
+      (singleComponentType.contains(FundamentalType.Uint8) || singleComponentType.contains(FundamentalType.Int8))
+    ) {
       // Fast track
       return convertRgbUint8(imageData)
     }
@@ -75,7 +79,9 @@ private[converter] class BufferedImageConverter(image: Image) {
       throw new IllegalStateException(s"Cannot convert this channels, call canHandleChannels first")
     }
     val result = new BufferedImage(
-      image.width, image.height, imageType
+      image.width,
+      image.height,
+      imageType
     )
     val raster = result.getRaster
     fillRaster(raster, imageData)
@@ -101,11 +107,14 @@ private[converter] class BufferedImageConverter(image: Image) {
   // This doesn't easily work, as we still have to unwrap 3 into 4 bytes
   private def convertRgbUint8(imageData: element.ImageElement): BufferedImage = {
     require(
-      imageData.bytes.length == image.width * image.height * 3, "Pixel data length must match"
+      imageData.bytes.length == image.width * image.height * 3,
+      "Pixel data length must match"
     )
 
     val result = new BufferedImage(
-      image.width, image.height, BufferedImage.TYPE_INT_RGB
+      image.width,
+      image.height,
+      BufferedImage.TYPE_INT_RGB
     )
     val buffer = result.getRaster.getDataBuffer.asInstanceOf[DataBufferInt]
 

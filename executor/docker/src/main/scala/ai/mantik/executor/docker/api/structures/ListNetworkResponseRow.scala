@@ -31,4 +31,3 @@ case class ListNetworkResponseRow(
 ) {
   def labels: Map[String, String] = Labels.getOrElse(Map.empty)
 }
-

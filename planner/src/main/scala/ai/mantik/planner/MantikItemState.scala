@@ -1,18 +1,18 @@
 package ai.mantik.planner
 
 import ai.mantik.elements.NamedMantikId
-import io.circe.{ Encoder, Decoder }
+import io.circe.{Encoder, Decoder}
 import io.circe.generic.semiauto
 
 /**
- * The current run time state of a Mantik Item.
- *
- * @param namedMantikItem the mantik id if the Item is stored/loaded inside the repository.
- * @param itemStored the item itself is stored (this doesn't require that it has a mantik id)
- * @param nameStored the name is stored (this also requires that the item is stored).
- * @param deployment information about deployment
- * @param cacheFile temporary cache file holding the result
- */
+  * The current run time state of a Mantik Item.
+  *
+  * @param namedMantikItem the mantik id if the Item is stored/loaded inside the repository.
+  * @param itemStored the item itself is stored (this doesn't require that it has a mantik id)
+  * @param nameStored the name is stored (this also requires that the item is stored).
+  * @param deployment information about deployment
+  * @param cacheFile temporary cache file holding the result
+  */
 case class MantikItemState(
     namedMantikItem: Option[NamedMantikId] = None,
     itemStored: Boolean = false,
@@ -23,6 +23,7 @@ case class MantikItemState(
 )
 
 object MantikItemState {
+
   /** Initialize a new MantikItemState from source. */
   def initializeFromSource(source: Source): MantikItemState = {
     val file = source.payload match {

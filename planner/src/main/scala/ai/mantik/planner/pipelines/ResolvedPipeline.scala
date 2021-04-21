@@ -6,12 +6,12 @@ import ai.mantik.ds.sql.Select
 import ai.mantik.elements.PipelineStep
 import ai.mantik.planner.Algorithm
 import ai.mantik.planner.impl.MantikItemCodec
-import io.circe.{ Decoder, ObjectEncoder }
+import io.circe.{Decoder, ObjectEncoder}
 
 /**
- * A Resolved pipeline.
- * All pipeline steps are matched to algorithms.
- */
+  * A Resolved pipeline.
+  * All pipeline steps are matched to algorithms.
+  */
 private[planner] case class ResolvedPipeline(
     steps: List[ResolvedPipelineStep],
     functionType: FunctionType
@@ -19,13 +19,14 @@ private[planner] case class ResolvedPipeline(
 
   /** Build a Map of Referenced Algorithms. */
   private[planner] def referencedAlgorithms: PipelineResolver.ReferencedAlgorithms = {
-    steps.collect {
-      case as: ResolvedPipelineStep.AlgorithmStep => as.algorithm.mantikId -> as.algorithm
+    steps.collect { case as: ResolvedPipelineStep.AlgorithmStep =>
+      as.algorithm.mantikId -> as.algorithm
     }.toMap
   }
 }
 
 private[planner] sealed trait ResolvedPipelineStep {
+
   /** The function type of this pipeline step. */
   def functionType: FunctionType
 }

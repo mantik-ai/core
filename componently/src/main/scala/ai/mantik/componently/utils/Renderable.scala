@@ -4,10 +4,11 @@ import io.circe.Json
 import scala.language.implicitConversions
 
 /**
- * Type class for things which can render themself into Strings (with Newlines)
- * Mainly used for debugging complex graph structures, more readable than JSON.
- */
+  * Type class for things which can render themself into Strings (with Newlines)
+  * Mainly used for debugging complex graph structures, more readable than JSON.
+  */
 trait Renderable[T] {
+
   /** Render something into a RenderTree. */
   def buildRenderTree(value: T): Renderable.RenderTree
 }
@@ -72,25 +73,24 @@ object Renderable {
 
   /** Build a Tree for Key value lists */
   def keyValueList(
-    title: String,
-    values: (String, RenderableWrapper)*
+      title: String,
+      values: (String, RenderableWrapper)*
   ): RenderTree = {
     if (values.isEmpty) {
       Leaf(title)
     } else {
       SubTree(
         title = Some(title),
-        items = values.map {
-          case (key, value) =>
-            value.tree match {
-              case Leaf(leaf) => Leaf(key + ": " + leaf)
-              case s: SubTree => {
-                s.title match {
-                  case None        => s.copy(title = Some(key))
-                  case Some(title) => s.copy(title = Some(key + ": " + title))
-                }
+        items = values.map { case (key, value) =>
+          value.tree match {
+            case Leaf(leaf) => Leaf(key + ": " + leaf)
+            case s: SubTree => {
+              s.title match {
+                case None        => s.copy(title = Some(key))
+                case Some(title) => s.copy(title = Some(key + ": " + title))
               }
             }
+          }
         }.toIndexedSeq
       )
     }
@@ -117,12 +117,13 @@ object Renderable {
   implicit val selfTree = makeRenderable[RenderTree](identity)
 
   /** Renderable for iterable things */
-  implicit def makeTraversableRenderable[T](implicit elementRenderable: Renderable[T]): Renderable[Seq[T]] = new Renderable[Seq[T]] {
-    override def buildRenderTree(value: Seq[T]): RenderTree = {
-      val items = value.map(elementRenderable.buildRenderTree).toIndexedSeq
-      SubTree(items)
+  implicit def makeTraversableRenderable[T](implicit elementRenderable: Renderable[T]): Renderable[Seq[T]] =
+    new Renderable[Seq[T]] {
+      override def buildRenderTree(value: Seq[T]): RenderTree = {
+        val items = value.map(elementRenderable.buildRenderTree).toIndexedSeq
+        SubTree(items)
+      }
     }
-  }
 
   implicit def makeOptionRenderable[T: Renderable]: Renderable[Option[T]] = new Renderable[Option[T]] {
     override def buildRenderTree(value: Option[T]): RenderTree = {

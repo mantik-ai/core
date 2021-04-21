@@ -33,13 +33,11 @@ class KubernetesNamerSpec extends TestBase {
       "__" -> "Z005f_005f",
       "Z_." -> "Z__005f."
     )
-    pairs.foreach {
-      case (from, to) =>
-        KubernetesNamer.encodeLabelValue(from) shouldBe to
+    pairs.foreach { case (from, to) =>
+      KubernetesNamer.encodeLabelValue(from) shouldBe to
     }
-    pairs.foreach {
-      case (from, to) =>
-        KubernetesNamer.decodeLabelValue(to) shouldBe from
+    pairs.foreach { case (from, to) =>
+      KubernetesNamer.decodeLabelValue(to) shouldBe from
     }
   }
 }

@@ -8,9 +8,19 @@ import ai.mantik.executor.kubernetes.KubernetesExecutorForIntegrationTests
 import ai.mantik.executor.s3storage.S3Storage
 import ai.mantik.planner.PlanningContext
 import ai.mantik.planner.impl.PlanningContextImpl
-import ai.mantik.planner.impl.exec.{ExecutionPayloadProvider, ExecutorStorageExecutionPayloadProvider, LocalServerExecutionPayloadProvider}
+import ai.mantik.planner.impl.exec.{
+  ExecutionPayloadProvider,
+  ExecutorStorageExecutionPayloadProvider,
+  LocalServerExecutionPayloadProvider
+}
 import ai.mantik.planner.repository.impl.{TempFileRepository, TempRepository}
-import ai.mantik.planner.repository.{FileRepository, FileRepositoryServer, MantikArtifactRetriever, RemoteMantikRegistry, Repository}
+import ai.mantik.planner.repository.{
+  FileRepository,
+  FileRepositoryServer,
+  MantikArtifactRetriever,
+  RemoteMantikRegistry,
+  Repository
+}
 import ai.mantik.testutils.{AkkaSupport, TestBase}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.time.{Millis, Span}
@@ -50,22 +60,26 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with Global
     val payloadProvider = makeExecutionPayloadProviderForIntegrationTest(_fileRepo, repository)
 
     _context = PlanningContextImpl.constructWithComponents(
-      repository, _fileRepo, embeddedExecutor.executor, registry, payloadProvider
+      repository,
+      _fileRepo,
+      embeddedExecutor.executor,
+      registry,
+      payloadProvider
     )
   }
 
   private def makeExecutorForIntegrationTest(): ExecutorForIntegrationTest = {
     val executorType = typesafeConfig.getString("mantik.executor.type")
     executorType match {
-      case "docker" => return new DockerExecutorForIntegrationTest(typesafeConfig)
+      case "docker"     => return new DockerExecutorForIntegrationTest(typesafeConfig)
       case "kubernetes" => return new KubernetesExecutorForIntegrationTests(typesafeConfig)
-      case _ => throw new ConfigurationException("Bad executor type")
+      case _            => throw new ConfigurationException("Bad executor type")
     }
   }
 
   private def makeExecutionPayloadProviderForIntegrationTest(
-    fileRepository: FileRepository,
-    repo: Repository,
+      fileRepository: FileRepository,
+      repo: Repository
   ): ExecutionPayloadProvider = {
     val executorType = typesafeConfig.getString("mantik.executor.type")
     executorType match {

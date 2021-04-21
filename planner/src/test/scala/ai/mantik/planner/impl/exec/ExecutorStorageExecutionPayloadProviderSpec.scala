@@ -1,15 +1,15 @@
 package ai.mantik.planner.impl.exec
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.ds.{ DataType, FundamentalType }
-import ai.mantik.elements.{ DataSetDefinition, ItemId, MantikDefinition, MantikHeader }
-import ai.mantik.executor.{ Errors, ExecutorFileStorage }
-import ai.mantik.planner.repository.{ ContentTypes, MantikArtifact }
-import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalRepository, NonAsyncFileRepository }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.ds.{DataType, FundamentalType}
+import ai.mantik.elements.{DataSetDefinition, ItemId, MantikDefinition, MantikHeader}
+import ai.mantik.executor.{Errors, ExecutorFileStorage}
+import ai.mantik.planner.repository.{ContentTypes, MantikArtifact}
+import ai.mantik.planner.repository.impl.{LocalFileRepository, LocalRepository, NonAsyncFileRepository}
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
-import ai.mantik.testutils.{ TempDirSupport, TestBase }
+import ai.mantik.testutils.{TempDirSupport, TestBase}
 import akka.NotUsed
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.util.ByteString
 
 import java.time.temporal.ChronoUnit
@@ -43,7 +43,10 @@ class DummyStorage(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with
 
   def getEntry(id: String): Option[Entry] = entries.get(id)
 
-  override def storeFile(id: String, contentLength: Long): Future[Sink[ByteString, Future[ExecutorFileStorage.StoreFileResult]]] = {
+  override def storeFile(
+      id: String,
+      contentLength: Long
+  ): Future[Sink[ByteString, Future[ExecutorFileStorage.StoreFileResult]]] = {
     entries += (id -> Entry(contentLength))
     Future.successful {
       val sink = Sink.seq[ByteString]
@@ -77,22 +80,26 @@ class DummyStorage(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with
   }
 
   override def shareFile(id: String, duration: FiniteDuration): Future[ExecutorFileStorage.ShareResult] = {
-    updateEntry(id) { _.copy(shared = Some(duration)) }.map { updated =>
-      val url = s"http://fake/${id}/shared"
-      Future.successful(
-        ExecutorFileStorage.ShareResult(url, clock.instant().plus(duration.toSeconds, ChronoUnit.SECONDS))
-      )
-    }.getOrElse {
-      Future.failed(new Errors.NotFoundException(s"Entry not found"))
-    }
+    updateEntry(id) { _.copy(shared = Some(duration)) }
+      .map { updated =>
+        val url = s"http://fake/${id}/shared"
+        Future.successful(
+          ExecutorFileStorage.ShareResult(url, clock.instant().plus(duration.toSeconds, ChronoUnit.SECONDS))
+        )
+      }
+      .getOrElse {
+        Future.failed(new Errors.NotFoundException(s"Entry not found"))
+      }
   }
 
   override def setAcl(id: String, public: Boolean): Future[ExecutorFileStorage.SetAclResult] = {
-    updateEntry(id) { _.copy(isPublic = public) }.map { updated =>
-      Future.successful(ExecutorFileStorage.SetAclResult(s"http://fake/${id}/public"))
-    }.getOrElse {
-      Future.failed(new Errors.NotFoundException(s"Entry not found"))
-    }
+    updateEntry(id) { _.copy(isPublic = public) }
+      .map { updated =>
+        Future.successful(ExecutorFileStorage.SetAclResult(s"http://fake/${id}/public"))
+      }
+      .getOrElse {
+        Future.failed(new Errors.NotFoundException(s"Entry not found"))
+      }
   }
 
   override def getUrl(id: String): String = {
@@ -107,18 +114,20 @@ class ExecutorStorageExecutionPayloadProviderSpec extends TestBaseWithAkkaRuntim
     val storage = new DummyStorage()
 
     val provider = new ExecutorStorageExecutionPayloadProvider(
-      fileRepo, repo, storage
+      fileRepo,
+      repo,
+      storage
     )
 
     val fileId = fileRepo.requestFileStorageSync(ContentTypes.MantikBundleContentType, temp = true).fileId
     fileRepo.storeFileSync(fileId, ByteString("Hello World"))
   }
 
-  val dummyHeader = MantikHeader.pure(
-    DataSetDefinition(
-      "bridge1",
-      FundamentalType.Int32)
-  ).toJson
+  val dummyHeader = MantikHeader
+    .pure(
+      DataSetDefinition("bridge1", FundamentalType.Int32)
+    )
+    .toJson
 
   "provideTemporary" should "provide a temporary file" in new Env {
     val (key, url) = await(provider.provideTemporary(fileId))
@@ -139,13 +148,17 @@ class ExecutorStorageExecutionPayloadProviderSpec extends TestBaseWithAkkaRuntim
     val storageResult = await(storage.storeFile(storageId, 100))
     await(Source.single(ByteString("Another file")).toMat(storageResult)(Keep.right).run())
     val itemId = ItemId.generate()
-    await(repo.store(MantikArtifact(
-      mantikHeader = dummyHeader,
-      fileId = Some(fileId),
-      executorStorageId = Some(storageId),
-      itemId = itemId,
-      namedId = None
-    )))
+    await(
+      repo.store(
+        MantikArtifact(
+          mantikHeader = dummyHeader,
+          fileId = Some(fileId),
+          executorStorageId = Some(storageId),
+          itemId = itemId,
+          namedId = None
+        )
+      )
+    )
 
     val (key, url) = await(provider.provideTemporary(fileId))
     key.remoteFileId shouldBe storageId
@@ -161,13 +174,17 @@ class ExecutorStorageExecutionPayloadProviderSpec extends TestBaseWithAkkaRuntim
 
   "providePermanent" should "provide a permanent file" in new Env {
     val itemId = ItemId.generate()
-    await(repo.store(MantikArtifact(
-      mantikHeader = dummyHeader,
-      fileId = Some(fileId),
-      executorStorageId = None,
-      itemId = itemId,
-      namedId = None
-    )))
+    await(
+      repo.store(
+        MantikArtifact(
+          mantikHeader = dummyHeader,
+          fileId = Some(fileId),
+          executorStorageId = None,
+          itemId = itemId,
+          namedId = None
+        )
+      )
+    )
 
     val url = await(provider.providePermanent(itemId))
 
@@ -196,13 +213,17 @@ class ExecutorStorageExecutionPayloadProviderSpec extends TestBaseWithAkkaRuntim
 
   it should "do nothing if there is no pauload" in new Env {
     val itemId = ItemId.generate()
-    await(repo.store(MantikArtifact(
-      mantikHeader = dummyHeader,
-      fileId = None,
-      executorStorageId = None,
-      itemId = itemId,
-      namedId = None
-    )))
+    await(
+      repo.store(
+        MantikArtifact(
+          mantikHeader = dummyHeader,
+          fileId = None,
+          executorStorageId = None,
+          itemId = itemId,
+          namedId = None
+        )
+      )
+    )
 
     val url = await(provider.providePermanent(itemId))
     url shouldBe empty

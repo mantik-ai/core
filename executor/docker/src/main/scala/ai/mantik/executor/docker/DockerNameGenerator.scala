@@ -11,10 +11,10 @@ object DockerNameGenerator {
   val RootNameNodeNameSeparator = "-"
 
   /**
-   * A Named node.
-   * @param containerName the name of the container
-   * @param internalHostName the host name as seen from coordinator
-   */
+    * A Named node.
+    * @param containerName the name of the container
+    * @param internalHostName the host name as seen from coordinator
+    */
   case class NodeName(
       containerName: String,
       internalHostName: String
@@ -32,9 +32,9 @@ object DockerNameGenerator {
   private val DockerValidChars = (('a' to 'z') ++ ('0' to '9') :+ '-')
 
   /**
-   * Escape a node name to be used in docker.
-   * Note: this is one-way operation, illegal characters will be removed.
-   */
+    * Escape a node name to be used in docker.
+    * Note: this is one-way operation, illegal characters will be removed.
+    */
   def escapeDockerName(name: String): String = {
     val lc = name.toLowerCase(Locale.US).replace('.', '-')
     lc.filter(DockerValidChars.contains)

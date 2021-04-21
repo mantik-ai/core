@@ -1,8 +1,8 @@
 package ai.mantik.planner.util
 
-import ai.mantik.elements.{ BridgeDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{BridgeDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId}
 import ai.mantik.planner.DefinitionSource
-import ai.mantik.planner.repository.{ Bridge, ContentTypes }
+import ai.mantik.planner.repository.{Bridge, ContentTypes}
 
 trait FakeBridges {
 

@@ -14,13 +14,14 @@ class EnumDiscriminatorCodecSpec extends TestBase {
 
   case object BadUnregeristered extends Example
 
-  implicit object codec extends EnumDiscriminatorCodec[Example](
-    Seq(
-      "blue" -> Blue,
-      "red" -> Red,
-      "green" -> Green
-    )
-  )
+  implicit object codec
+      extends EnumDiscriminatorCodec[Example](
+        Seq(
+          "blue" -> Blue,
+          "red" -> Red,
+          "green" -> Green
+        )
+      )
 
   it should "decode and encode them all" in {
     for (x <- Seq(Blue, Red, Green)) {

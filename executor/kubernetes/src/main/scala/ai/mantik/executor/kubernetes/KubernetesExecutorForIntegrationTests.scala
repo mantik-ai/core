@@ -4,10 +4,11 @@ import java.time.Clock
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.ExecutorForIntegrationTest
-import com.typesafe.config.{ Config => TypesafeConfig }
+import com.typesafe.config.{Config => TypesafeConfig}
 
 /** An embedded executor for integration tests. */
-class KubernetesExecutorForIntegrationTests(config: TypesafeConfig)(implicit akkaRuntime: AkkaRuntime) extends ExecutorForIntegrationTest {
+class KubernetesExecutorForIntegrationTests(config: TypesafeConfig)(implicit akkaRuntime: AkkaRuntime)
+    extends ExecutorForIntegrationTest {
 
   val executorConfig = Config.fromTypesafeConfig(config)
   implicit val clock = Clock.systemUTC()
@@ -16,8 +17,7 @@ class KubernetesExecutorForIntegrationTests(config: TypesafeConfig)(implicit akk
   val k8sOperations = new K8sOperations(executorConfig, kubernetesClient)
   val executor = new KubernetesExecutor(executorConfig, k8sOperations)
 
-  override def start(): Unit = {
-  }
+  override def start(): Unit = {}
 
   def stop(): Unit = {
     kubernetesClient.close

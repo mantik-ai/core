@@ -1,9 +1,9 @@
 package ai.mantik.ds.helper.akka
 
 import akka.NotUsed
-import akka.stream.{ FlowShape, Inlet, Outlet }
+import akka.stream.{FlowShape, Inlet, Outlet}
 import akka.stream.scaladsl.Flow
-import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
+import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream._
 import akka.util.ByteString
 
@@ -22,7 +22,9 @@ private class ByteSkipper(count: Int) extends GraphStage[FlowShape[ByteString, B
 
   override val shape = FlowShape.of(in, out)
 
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) with InHandler with OutHandler {
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape)
+    with InHandler
+    with OutHandler {
     var pending = count
 
     override def onPush(): Unit = {
@@ -48,4 +50,3 @@ private class ByteSkipper(count: Int) extends GraphStage[FlowShape[ByteString, B
     setHandlers(in, out, this)
   }
 }
-

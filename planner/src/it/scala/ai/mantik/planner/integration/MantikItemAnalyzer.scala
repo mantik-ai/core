@@ -7,18 +7,19 @@ import ai.mantik.planner._
   * but right now we only need this for testing.
   */
 @deprecated("mnp", "Can be solved via MantikState")
-case class MantikItemAnalyzer (
-  item: MantikItem,
+case class MantikItemAnalyzer(
+    item: MantikItem
 )(implicit context: PlanningContext) {
 
   /** Return true if the item is requested for caching
-    * (This doesn't have to mean that the cache is evaluated) */
+    * (This doesn't have to mean that the cache is evaluated)
+    */
   def isCached: Boolean = {
     def check(payloadSource: PayloadSource): Boolean = {
       payloadSource match {
-        case _: PayloadSource.Cached => true
+        case _: PayloadSource.Cached     => true
         case p: PayloadSource.Projection => check(p.source)
-        case _ => false
+        case _                           => false
       }
     }
     check(item.core.source.payload)

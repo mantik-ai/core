@@ -4,7 +4,7 @@ import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.sql.JoinCondition.UsingColumn
 import ai.mantik.ds.sql._
-import ai.mantik.ds.{ FundamentalType, Nullable, TabularData }
+import ai.mantik.ds.{FundamentalType, Nullable, TabularData}
 import ai.mantik.testutils.TestBase
 
 class JoinBuilderSpec extends TestBase {
@@ -129,9 +129,11 @@ class JoinBuilderSpec extends TestBase {
       AnonymousInput(tabular1, 0),
       AnonymousInput(tabular3, 2),
       JoinType.Inner,
-      JoinCondition.Using(Vector(
-        UsingColumn("x", leftId = 0, rightId = 0, dropId = 2, dataType = FundamentalType.Int32),
-        UsingColumn("y", leftId = 1, rightId = 1, dropId = 3, dataType = FundamentalType.StringType))
+      JoinCondition.Using(
+        Vector(
+          UsingColumn("x", leftId = 0, rightId = 0, dropId = 2, dataType = FundamentalType.Int32),
+          UsingColumn("y", leftId = 1, rightId = 1, dropId = 3, dataType = FundamentalType.StringType)
+        )
       )
     )
   }
@@ -141,7 +143,9 @@ class JoinBuilderSpec extends TestBase {
       AnonymousInput(tabular1, 0),
       AnonymousInput(tabular4, 3),
       JoinType.Inner,
-      JoinCondition.Using(Vector(UsingColumn("x", leftId = 0, rightId = 0, dropId = 2, dataType = FundamentalType.Int64)))
+      JoinCondition.Using(
+        Vector(UsingColumn("x", leftId = 0, rightId = 0, dropId = 2, dataType = FundamentalType.Int64))
+      )
     )
   }
 
@@ -242,7 +246,9 @@ class JoinBuilderSpec extends TestBase {
       AnonymousInput(tabular1, 0),
       AnonymousInput(tabular2, 1),
       joinType,
-      JoinCondition.Using(Vector(UsingColumn("x", leftId = 0, rightId = 1, dropId = dropId, dataType = FundamentalType.Int32)))
+      JoinCondition.Using(
+        Vector(UsingColumn("x", leftId = 0, rightId = 1, dropId = dropId, dataType = FundamentalType.Int32))
+      )
     )
   }
 
@@ -251,7 +257,9 @@ class JoinBuilderSpec extends TestBase {
       AnonymousInput(tabular1, 0),
       AnonymousInput(tabular2, 1),
       JoinType.Inner,
-      JoinCondition.Using(Vector(UsingColumn("x", true, leftId = 0, rightId = 1, dropId = 3, dataType = FundamentalType.Int32)))
+      JoinCondition.Using(
+        Vector(UsingColumn("x", true, leftId = 0, rightId = 1, dropId = 3, dataType = FundamentalType.Int32))
+      )
     )
   }
 }

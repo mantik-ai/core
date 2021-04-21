@@ -1,20 +1,20 @@
 package ai.mantik.executor.kubernetes
 
-import com.typesafe.config.{ Config => TypesafeConfig }
+import com.typesafe.config.{Config => TypesafeConfig}
 
-import scala.concurrent.duration.{ Duration, FiniteDuration }
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import ai.mantik.componently.utils.ConfigExtensions._
 
 /**
- * Kubernetes part of [[Config]].
- *
- * @param namespacePrefix prefix to use for namespace creation
- * @param retryTimes how often something is retried if kubernetes asks for.
- * @param podPullImageTimeout timeout, after which pods are killed when they can't find their image.
- * @param checkPodInterval how often the pods are checked.
- * @param defaultTimeout when a regular operation times out
- * @param defaultRetryInterval after which period something is retried again.
- */
+  * Kubernetes part of [[Config]].
+  *
+  * @param namespacePrefix prefix to use for namespace creation
+  * @param retryTimes how often something is retried if kubernetes asks for.
+  * @param podPullImageTimeout timeout, after which pods are killed when they can't find their image.
+  * @param checkPodInterval how often the pods are checked.
+  * @param defaultTimeout when a regular operation times out
+  * @param defaultRetryInterval after which period something is retried again.
+  */
 case class KubernetesConfig(
     namespacePrefix: String,
     retryTimes: Int,

@@ -1,8 +1,16 @@
 package ai.mantik.ds.sql.run
 
-import ai.mantik.ds.{ DataType, Nullable }
+import ai.mantik.ds.{DataType, Nullable}
 import ai.mantik.ds.sql.builder.CastBuilder
-import ai.mantik.ds.sql.{ ColumnExpression, Condition, Expression, ExpressionTransformation, Join, JoinCondition, JoinType }
+import ai.mantik.ds.sql.{
+  ColumnExpression,
+  Condition,
+  Expression,
+  ExpressionTransformation,
+  Join,
+  JoinCondition,
+  JoinType
+}
 import cats.implicits._
 
 import scala.collection.BitSet
@@ -19,10 +27,10 @@ private[run] object JoinConditionAnalyzer {
   )
 
   /**
-   * Analysis result.
-   * @param comparisons on the left and the right side
-   * @param filter optional filter which works on the inner value.
-   */
+    * Analysis result.
+    * @param comparisons on the left and the right side
+    * @param filter optional filter which works on the inner value.
+    */
   case class Analysis(
       comparisons: Vector[Comparison] = Vector.empty,
       filter: Option[Condition] = None
@@ -53,11 +61,14 @@ private[run] object JoinConditionAnalyzer {
     }
 
     private def compileExpressionList(expressions: Vector[Expression]): Either[String, Program] = {
-      expressions.map { expression =>
-        Compiler.compileExpression(expression)
-      }.sequence.map { opCodeVector =>
-        Program.fromOps(opCodeVector.flatten)
-      }
+      expressions
+        .map { expression =>
+          Compiler.compileExpression(expression)
+        }
+        .sequence
+        .map { opCodeVector =>
+          Program.fromOps(opCodeVector.flatten)
+        }
     }
   }
 
@@ -73,36 +84,39 @@ private[run] object JoinConditionAnalyzer {
 
   /** Analyze USING-Condition. */
   private def analyzeUsing(join: Join, columns: Vector[JoinCondition.UsingColumn]): Either[String, Analysis] = {
-    columns.map { column =>
+    columns
+      .map { column =>
+        // Workaround: Our FULL OUTER join expects nullable columns everywhere
+        // but if there are two non-nullable it would result into a non-nullable
+        // result column
+        // This is not great
+        val forceNullability = join.joinType == JoinType.Outer
 
-      // Workaround: Our FULL OUTER join expects nullable columns everywhere
-      // but if there are two non-nullable it would result into a non-nullable
-      // result column
-      // This is not great
-      val forceNullability = join.joinType == JoinType.Outer
-
-      for {
-        left <- join.left.resultingQueryType.lookupColumn(column.name, column.caseSensitive)
-        right <- join.right.resultingQueryType.lookupColumn(column.name, column.caseSensitive)
-        leftExp = ColumnExpression(left._1, left._2.dataType)
-        rightExp = ColumnExpression(right._1, right._2.dataType)
-        commonType <- CastBuilder.comparisonType(leftExp, rightExp)
-        commonTypeMaybeNullable = if (forceNullability) {
-          Nullable.makeNullable(commonType)
-        } else {
-          commonType
+        for {
+          left <- join.left.resultingQueryType.lookupColumn(column.name, column.caseSensitive)
+          right <- join.right.resultingQueryType.lookupColumn(column.name, column.caseSensitive)
+          leftExp = ColumnExpression(left._1, left._2.dataType)
+          rightExp = ColumnExpression(right._1, right._2.dataType)
+          commonType <- CastBuilder.comparisonType(leftExp, rightExp)
+          commonTypeMaybeNullable =
+            if (forceNullability) {
+              Nullable.makeNullable(commonType)
+            } else {
+              commonType
+            }
+          leftCasted <- CastBuilder.wrapType(leftExp, commonTypeMaybeNullable)
+          rightCasted <- CastBuilder.wrapType(rightExp, commonTypeMaybeNullable)
+        } yield {
+          Comparison(commonTypeMaybeNullable, leftCasted, rightCasted, Some(left._1, right._1))
         }
-        leftCasted <- CastBuilder.wrapType(leftExp, commonTypeMaybeNullable)
-        rightCasted <- CastBuilder.wrapType(rightExp, commonTypeMaybeNullable)
-      } yield {
-        Comparison(commonTypeMaybeNullable, leftCasted, rightCasted, Some(left._1, right._1))
       }
-    }.sequence.map { triples =>
-      Analysis(
-        comparisons = triples,
-        filter = None
-      )
-    }
+      .sequence
+      .map { triples =>
+        Analysis(
+          comparisons = triples,
+          filter = None
+        )
+      }
   }
 
   /** Analyze ON-Condition */
@@ -116,12 +130,12 @@ private[run] object JoinConditionAnalyzer {
         }
       }
 
-      val comparisons = splitted.collect {
-        case Left(x) => x
+      val comparisons = splitted.collect { case Left(x) =>
+        x
       }
 
-      val filter = splitted.collect {
-        case Right(filterCondition) => filterCondition
+      val filter = splitted.collect { case Right(filterCondition) =>
+        filterCondition
       }
       val combinedFilter = filter.size match {
         case 0 => None
@@ -137,10 +151,11 @@ private[run] object JoinConditionAnalyzer {
   }
 
   /**
-   * Extract comparisonExpressions from a condition, if possible.
-   * @return comparison expression for the left and for the right side
-   */
+    * Extract comparisonExpressions from a condition, if possible.
+    * @return comparison expression for the left and for the right side
+    */
   private def extractLeftRightCondition(join: Join, condition: Condition): Option[(Expression, Expression)] = {
+
     /** Returns the dependencies of an expression */
     def dependencies(expression: Expression): BitSet = {
       ExpressionTransformation.foldTree(expression)(BitSet.empty) {
@@ -156,9 +171,9 @@ private[run] object JoinConditionAnalyzer {
     }
 
     /**
-     * Translates an expression so that it's looking for input of the right side only
-     * (columnIds are shifted)
-     */
+      * Translates an expression so that it's looking for input of the right side only
+      * (columnIds are shifted)
+      */
     def translateToRightPerspective(expression: Expression): Expression = {
       ExpressionTransformation.deepMap(expression) {
         case c: ColumnExpression => c.copy(columnId = c.columnId - leftSize)

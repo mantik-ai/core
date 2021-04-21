@@ -2,9 +2,9 @@ package ai.mantik.elements
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.ds.helper.circe.{ CirceJson, DiscriminatorDependentCodec }
+import ai.mantik.ds.helper.circe.{CirceJson, DiscriminatorDependentCodec}
 import io.circe.generic.extras.Configuration
-import io.circe.{ Decoder, Encoder, ObjectEncoder }
+import io.circe.{Decoder, Encoder, ObjectEncoder}
 
 import scala.util.matching.Regex
 
@@ -39,11 +39,11 @@ object MantikDefinition extends DiscriminatorDependentCodec[MantikDefinition] {
 sealed trait MantikDefinitionWithoutBridge extends MantikDefinition
 
 /**
- * A Bridge definition.
- *
- * @param protocol 0 ... Just pipe out DataSet, 1 ... Regular Format.
- * @param payloadContentType if set, the bridge expects a payload content type.
- */
+  * A Bridge definition.
+  *
+  * @param protocol 0 ... Just pipe out DataSet, 1 ... Regular Format.
+  * @param payloadContentType if set, the bridge expects a payload content type.
+  */
 case class BridgeDefinition(
     dockerImage: String,
     suitable: Seq[String],
@@ -63,6 +63,7 @@ object BridgeDefinition {
 
 /** A MantikDefinition which needs a Bridge. */
 sealed trait MantikDefinitionWithBridge extends MantikDefinition {
+
   /** Returns the name of the bridge. */
   def bridge: MantikId
 
@@ -100,9 +101,9 @@ case class TrainableAlgorithmDefinition(
 }
 
 /**
- * A Pipeline. A special item which refers to other algorithm items which
- * executed after each other.
- */
+  * A Pipeline. A special item which refers to other algorithm items which
+  * executed after each other.
+  */
 case class PipelineDefinition(
     // Note: the type is optional,
     `type`: Option[OptionalFunctionType] = None,
@@ -116,8 +117,8 @@ case class PipelineDefinition(
   def outputType: Option[DataType] = `type`.flatMap(_.output)
 
   override def referencedItems: Seq[MantikId] = {
-    steps.collect {
-      case as: PipelineStep.AlgorithmStep => as.algorithm
+    steps.collect { case as: PipelineStep.AlgorithmStep =>
+      as.algorithm
     }
   }
 }
@@ -129,7 +130,8 @@ case class OptionalFunctionType(
 )
 
 object OptionalFunctionType {
-  implicit val codec: Encoder[OptionalFunctionType] with Decoder[OptionalFunctionType] = CirceJson.makeSimpleCodec[OptionalFunctionType]
+  implicit val codec: Encoder[OptionalFunctionType] with Decoder[OptionalFunctionType] =
+    CirceJson.makeSimpleCodec[OptionalFunctionType]
 }
 
 /** Combiner Definition (e.g. for SQL Operations) */
@@ -140,4 +142,3 @@ case class CombinerDefinition(
 ) extends MantikDefinitionWithBridge {
   override def kind: String = MantikDefinition.CombinerKind
 }
-

@@ -9,9 +9,8 @@ import scala.collection.immutable.ListMap
 object ExtraCirceCodecs {
 
   implicit def enumMapDecoder[K, V](
-    implicit
-    subDecoder: Decoder[ListMap[String, V]],
-    ed: EnumDiscriminatorCodec[K]
+      implicit subDecoder: Decoder[ListMap[String, V]],
+      ed: EnumDiscriminatorCodec[K]
   ): Decoder[ListMap[K, V]] = new Decoder[ListMap[K, V]] {
     override def apply(c: HCursor): Result[ListMap[K, V]] = {
       for {
@@ -46,9 +45,8 @@ object ExtraCirceCodecs {
   }
 
   implicit def enumMapEncoder[K, V](
-    implicit
-    subDecoder: Encoder[V],
-    ed: EnumDiscriminatorCodec[K]
+      implicit subDecoder: Encoder[V],
+      ed: EnumDiscriminatorCodec[K]
   ): ObjectEncoder[ListMap[K, V]] = new ObjectEncoder[ListMap[K, V]] {
     override def encodeObject(a: ListMap[K, V]): JsonObject = {
       JsonObject.fromIterable(

@@ -3,10 +3,10 @@ package ai.mantik.planner.impl.exec
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.planner.PlanFile
 import ai.mantik.planner.repository.FileRepository
-import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
+import ai.mantik.planner.repository.FileRepository.{FileGetResult, FileStorageResult}
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Generates [[ExecutionOpenFiles]]. */
 private[impl] class ExecutionOpenFilesBuilder(
@@ -16,19 +16,18 @@ private[impl] class ExecutionOpenFilesBuilder(
   private val logger = LoggerFactory.getLogger(getClass)
 
   /**
-   * Open multiple files.
-   * Note: files are opened sequential, as they may refer to each other.
-   *
-   * @param files the files to open.
-   */
+    * Open multiple files.
+    * Note: files are opened sequential, as they may refer to each other.
+    *
+    * @param files the files to open.
+    */
   def openFiles(files: List[PlanFile]): Future[ExecutionOpenFiles] = {
 
     val initialState = ExecutionOpenFiles()
 
     for {
-      finalState <- FutureHelper.afterEachOtherStateful(files, initialState) {
-        case (state, file) =>
-          openFile(state, file)
+      finalState <- FutureHelper.afterEachOtherStateful(files, initialState) { case (state, file) =>
+        openFile(state, file)
       }
     } yield {
       finalState
@@ -55,7 +54,9 @@ private[impl] class ExecutionOpenFilesBuilder(
           case Some(writeResponse) =>
             fileRepository.requestFileGet(writeResponse.fileId, optimistic = true).map(Some(_))
           case None =>
-            throw new IllegalStateException("Implementation problem: there is a read from a file, which should be written")
+            throw new IllegalStateException(
+              "Implementation problem: there is a read from a file, which should be written"
+            )
         }
       } else {
         file.fileId match {
@@ -72,13 +73,17 @@ private[impl] class ExecutionOpenFilesBuilder(
       writeResult <- fileWrite
       readResult <- fileRead
     } yield {
-      val newWriteFiles = writeResult.map { writeResult =>
-        state.writeFiles + (file.ref -> writeResult)
-      }.getOrElse(state.writeFiles)
+      val newWriteFiles = writeResult
+        .map { writeResult =>
+          state.writeFiles + (file.ref -> writeResult)
+        }
+        .getOrElse(state.writeFiles)
 
-      val newReadFiles = readResult.map { readResult =>
-        state.readFiles + (file.ref -> readResult)
-      }.getOrElse(state.readFiles)
+      val newReadFiles = readResult
+        .map { readResult =>
+          state.readFiles + (file.ref -> readResult)
+        }
+        .getOrElse(state.readFiles)
 
       state.copy(
         writeFiles = newWriteFiles,

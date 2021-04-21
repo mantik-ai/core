@@ -2,7 +2,7 @@ package ai.mantik.ds.converter.casthelper
 
 import ai.mantik.ds.element.TensorElement
 import ai.mantik.ds.testutil.TestBase
-import ai.mantik.ds.{ Tensor, TypeSamples }
+import ai.mantik.ds.{Tensor, TypeSamples}
 
 class TensorHelperSpec extends TestBase {
 

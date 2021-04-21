@@ -1,13 +1,13 @@
 package ai.mantik.executor.model
 
-import io.circe.{ Decoder, Encoder, Json }
+import io.circe.{Decoder, Encoder, Json}
 
 import scala.language.implicitConversions
 
 /**
- * Wraps some plain type in a way that it's serialized as a string.
- * Used for encoding values in Strings (e.g. Query Parameters)
- */
+  * Wraps some plain type in a way that it's serialized as a string.
+  * Used for encoding values in Strings (e.g. Query Parameters)
+  */
 case class StringWrapped[T](
     value: T
 )
@@ -34,4 +34,3 @@ object StringWrapped {
     }
   }
 }
-

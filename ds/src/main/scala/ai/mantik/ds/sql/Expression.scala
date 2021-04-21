@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql
 
-import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
+import ai.mantik.ds.element.{Bundle, SingleElementBundle, ValueEncoder}
 import ai.mantik.ds.operations.BinaryOperation
-import ai.mantik.ds.{ ArrayT, DataType, FundamentalType, Nullable, Struct }
+import ai.mantik.ds.{ArrayT, DataType, FundamentalType, Nullable, Struct}
 
 /** An expression (e.g. Inside Select). */
 sealed trait Expression {
@@ -14,14 +14,14 @@ sealed trait Expression {
   /** Convert this Expression to a condition. */
   def asCondition: Option[Condition] = {
     this match {
-      case c: Condition => Some(c)
+      case c: Condition                                => Some(c)
       case e if e.dataType == FundamentalType.BoolType => Some(Condition.WrappedExpression(e))
-      case _ => None
+      case _                                           => None
     }
   }
 }
 
-/** An expression which is not build from other expressions*/
+/** An expression which is not build from other expressions */
 sealed trait LeafExpression extends Expression {
   override final def dependencies: List[Expression] = Nil
 }
@@ -90,7 +90,7 @@ case class ArrayGetExpression(
   )
 }
 
-/** Gives access to a structural field  */
+/** Gives access to a structural field */
 case class StructAccessExpression(
     expression: Expression,
     name: String
@@ -101,12 +101,11 @@ case class StructAccessExpression(
     case other     => throw new IllegalStateException(s"Expected struct, got ${other}")
   }
 
-  def underlyingField: DataType = underlyingStruct.fields.getOrElse(name, throw new IllegalStateException(s"Field ${name} not found"))
+  def underlyingField: DataType =
+    underlyingStruct.fields.getOrElse(name, throw new IllegalStateException(s"Field ${name} not found"))
 
   override def dataType: DataType = {
-    Nullable.mapIfNullable(expression.dataType, _ =>
-      underlyingField
-    )
+    Nullable.mapIfNullable(expression.dataType, _ => underlyingField)
   }
 }
 

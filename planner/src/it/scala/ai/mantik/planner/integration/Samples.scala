@@ -48,18 +48,21 @@ trait Samples extends BeforeAndAfterAll {
     private def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 
     val learningData = DataSet.literal(
-      TabularBundle.buildColumnWise.withColumn(
-        "coordinates", Tensor(componentType = Float64, shape = List(2)),
-        IndexedSeq(
-          makeTensor(1, 1),
-          makeTensor(2, 2),
-          makeTensor(1, 2),
-          makeTensor(2, 2),
-          makeTensor(3, 3),
-          makeTensor(4, 3),
-          makeTensor(4, 4)
+      TabularBundle.buildColumnWise
+        .withColumn(
+          "coordinates",
+          Tensor(componentType = Float64, shape = List(2)),
+          IndexedSeq(
+            makeTensor(1, 1),
+            makeTensor(2, 2),
+            makeTensor(1, 2),
+            makeTensor(2, 2),
+            makeTensor(3, 3),
+            makeTensor(4, 3),
+            makeTensor(4, 4)
+          )
         )
-      ).result
+        .result
     )
 
     val kmeans = context.loadTrainableAlgorithm("kmeans")

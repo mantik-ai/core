@@ -1,7 +1,7 @@
 package ai.mantik.executor.s3storage
 
 import ai.mantik.componently.utils.SecretReader
-import com.typesafe.config.{ Config, ConfigException }
+import com.typesafe.config.{Config, ConfigException}
 
 import scala.collection.JavaConverters._
 
@@ -24,10 +24,11 @@ case class S3Config(
 }
 
 object S3Config {
+
   /**
-   * Name of tag used to mark S3 as being in used for tests.
-   * (Activates features like deleting everything)
-   */
+    * Name of tag used to mark S3 as being in used for tests.
+    * (Activates features like deleting everything)
+    */
   val TestTag: String = "test"
   def fromTypesafe(config: Config): S3Config = {
     val root = config.getConfig("mantik.executor.s3Storage")
@@ -40,10 +41,13 @@ object S3Config {
       aclWorkaround = root.getBoolean("aclWorkaround"),
       tags = {
         val o = root.getObject("tags")
-        o.unwrapped().asScala.map {
-          case (key, s: String) => key -> s
-          case (_, _)           => throw new ConfigException.WrongType(o.origin(), s"Expected string to string map for S3 Tags")
-        }.toMap
+        o.unwrapped()
+          .asScala
+          .map {
+            case (key, s: String) => key -> s
+            case (_, _)           => throw new ConfigException.WrongType(o.origin(), s"Expected string to string map for S3 Tags")
+          }
+          .toMap
       }
     )
   }

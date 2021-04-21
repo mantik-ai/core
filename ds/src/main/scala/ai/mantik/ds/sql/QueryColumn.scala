@@ -13,11 +13,11 @@ case class QueryColumn(
   private[sql] val lowerCaseName: String = name.toLowerCase(Locale.ENGLISH)
 
   /**
-   * Check if this column matches a given lookup.
-   * @param lookupAlias the alias to look, if empty any alias is taken
-   * @param plainName the non-aliased name to look for. if lookupLowercases is true it must be lowercased to
-   * @param lookupLowercased if true, lookup for a lowercased name
-   */
+    * Check if this column matches a given lookup.
+    * @param lookupAlias the alias to look, if empty any alias is taken
+    * @param plainName the non-aliased name to look for. if lookupLowercases is true it must be lowercased to
+    * @param lookupLowercased if true, lookup for a lowercased name
+    */
   private[sql] def matches(lookupAlias: Option[String], plainName: String, lookupLowercased: Boolean): Boolean = {
     val nameMatch = if (lookupLowercased) {
       lowerCaseName == plainName
@@ -30,6 +30,7 @@ case class QueryColumn(
 }
 
 object QueryColumn {
+
   /** Creates a QueryColumn from a fullname (which can contain an alias). */
   def apply(fullName: String, dataType: DataType): QueryColumn = {
     val (alias, baseName) = fullName.indexOf(".") match {

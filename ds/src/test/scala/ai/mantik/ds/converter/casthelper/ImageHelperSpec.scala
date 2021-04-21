@@ -1,7 +1,7 @@
 package ai.mantik.ds.converter.casthelper
 
 import ai.mantik.ds._
-import ai.mantik.ds.element.{ ImageElement, Primitive, TensorElement }
+import ai.mantik.ds.element.{ImageElement, Primitive, TensorElement}
 import ai.mantik.ds.testutil.TestBase
 import akka.util.ByteString
 

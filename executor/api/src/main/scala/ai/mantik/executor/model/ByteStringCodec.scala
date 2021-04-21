@@ -3,7 +3,7 @@ package ai.mantik.executor.model
 import java.util.Base64
 
 import akka.util.ByteString
-import io.circe.{ Decoder, Encoder, Json }
+import io.circe.{Decoder, Encoder, Json}
 
 import scala.util.Try
 

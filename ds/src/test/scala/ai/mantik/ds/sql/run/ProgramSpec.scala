@@ -10,7 +10,10 @@ class ProgramSpec extends TestBase {
 
   "fromOps" should "work in empty case" in {
     Program.fromOps(Vector.empty) shouldBe Program(
-      0, 0, 0, Vector.empty
+      0,
+      0,
+      0,
+      Vector.empty
     )
   }
 

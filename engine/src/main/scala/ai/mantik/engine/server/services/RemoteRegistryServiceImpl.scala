@@ -1,11 +1,11 @@
 package ai.mantik.engine.server.services
 
 import ai.mantik.componently.rpc.RpcConversions
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.MantikId
 import ai.mantik.engine.protos.remote_registry.RemoteRegistryServiceGrpc.RemoteRegistryService
 import ai.mantik.engine.protos.remote_registry._
-import ai.mantik.planner.repository.{ CustomLoginToken, MantikArtifactRetriever, RemoteMantikRegistry }
+import ai.mantik.planner.repository.{CustomLoginToken, MantikArtifactRetriever, RemoteMantikRegistry}
 import ai.mantik.planner.repository.impl.DefaultRegistryCredentials
 import javax.inject.Inject
 
@@ -15,17 +15,18 @@ class RemoteRegistryServiceImpl @Inject() (
     remoteRegistry: RemoteMantikRegistry,
     retriever: MantikArtifactRetriever
 )(implicit akkaRuntime: AkkaRuntime)
-  extends ComponentBase with RpcServiceBase with RemoteRegistryService {
+    extends ComponentBase
+    with RpcServiceBase
+    with RemoteRegistryService {
 
   override def pullArtifact(request: PullArtifactRequest): Future[PullArtifactResponse] = {
     handleErrors {
       val mantikId = MantikId.fromString(request.mantikId)
-      retriever.pull(mantikId, request.token.map(decodeCustomToken)).map {
-        case (artifact, hull) =>
-          PullArtifactResponse(
-            artifact = Some(Converters.encodeMantikArtifact(artifact)),
-            hull = hull.map(Converters.encodeMantikArtifact)
-          )
+      retriever.pull(mantikId, request.token.map(decodeCustomToken)).map { case (artifact, hull) =>
+        PullArtifactResponse(
+          artifact = Some(Converters.encodeMantikArtifact(artifact)),
+          hull = hull.map(Converters.encodeMantikArtifact)
+        )
       }
     }
   }
@@ -37,12 +38,11 @@ class RemoteRegistryServiceImpl @Inject() (
   override def pushArtifact(request: PushArtifactRequest): Future[PushArtifactResponse] = {
     handleErrors {
       val mantikId = MantikId.fromString(request.mantikId)
-      retriever.push(mantikId, request.token.map(decodeCustomToken)).map {
-        case (artifact, hull) =>
-          PushArtifactResponse(
-            artifact = Some(Converters.encodeMantikArtifact(artifact)),
-            hull = hull.map(Converters.encodeMantikArtifact)
-          )
+      retriever.push(mantikId, request.token.map(decodeCustomToken)).map { case (artifact, hull) =>
+        PushArtifactResponse(
+          artifact = Some(Converters.encodeMantikArtifact(artifact)),
+          hull = hull.map(Converters.encodeMantikArtifact)
+        )
       }
     }
   }
@@ -60,11 +60,13 @@ class RemoteRegistryServiceImpl @Inject() (
       }
       val url = RpcConversions.decodeOptionalString(credentials.url).getOrElse(defaultCredentials.url)
 
-      remoteRegistry.login(
-        url,
-        credentials.username,
-        credentials.password
-      ).map { response =>
+      remoteRegistry
+        .login(
+          url,
+          credentials.username,
+          credentials.password
+        )
+        .map { response =>
           LoginResponse(
             token = Some(
               LoginToken(

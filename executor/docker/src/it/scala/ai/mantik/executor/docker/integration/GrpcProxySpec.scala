@@ -6,7 +6,7 @@ class GrpcProxySpec extends IntegrationTestBase {
       val proxy = await(executor.grpcProxy("proxy_spec"))
       proxy.proxyUrl shouldBe defined
       logger.info(s"Proxy url ${proxy.proxyUrl}")
-      // TODO: Check that something is responding
+    // TODO: Check that something is responding
     }
   }
 }

@@ -3,16 +3,17 @@ package ai.mantik.ds.sql.run
 import ai.mantik.ds.TabularData
 import ai.mantik.ds.helper.circe.DiscriminatorDependentCodec
 import ai.mantik.ds.sql.JoinType
-import io.circe.{ Decoder, Encoder, Json, ObjectEncoder }
+import io.circe.{Decoder, Encoder, Json, ObjectEncoder}
 import io.circe.generic.semiauto
 
 import java.util.Locale
 
 /**
- * A Program for genearting (temporary tables)
- * Note: this is part of the API to the Select Bridge.
- */
+  * A Program for genearting (temporary tables)
+  * Note: this is part of the API to the Select Bridge.
+  */
 sealed trait TableGeneratorProgram {
+
   /** Result Data Type. */
   def result: TabularData
 
@@ -35,12 +36,12 @@ sealed trait SingleTableGeneratorProgram extends TableGeneratorProgram {
 }
 
 /**
- * A compiled Select Statement.
- *
- * @param input where the data comes from (default to port 0)
- * @param selector a program doing the selection. called with a row, returns bool on the stack if it succeeds. If empty, the row is always selected.
- * @param projector a program doing the projection. called with a row, returns the translated row. If empty, the row is returned untouched.
- */
+  * A compiled Select Statement.
+  *
+  * @param input where the data comes from (default to port 0)
+  * @param selector a program doing the selection. called with a row, returns bool on the stack if it succeeds. If empty, the row is always selected.
+  * @param projector a program doing the projection. called with a row, returns the translated row. If empty, the row is returned untouched.
+  */
 case class SelectProgram(
     input: Option[SingleTableGeneratorProgram] = None,
     selector: Option[Program],
@@ -61,12 +62,12 @@ case class DataSource(
 }
 
 /**
- * A Program for performing unions.
- *
- * @param inputs different inputs for the program.
- * @param all if true emit all rows
- * @param inOrder extension, emit result from left to right (makes it order deterministic)
- */
+  * A Program for performing unions.
+  *
+  * @param inputs different inputs for the program.
+  * @param all if true emit all rows
+  * @param inOrder extension, emit result from left to right (makes it order deterministic)
+  */
 case class UnionProgram(
     inputs: Vector[SingleTableGeneratorProgram],
     all: Boolean,
@@ -77,17 +78,17 @@ case class UnionProgram(
 }
 
 /**
- * A Program performing joins
- * Note: the join operation is usually splitted into this operation and two selects which prepares
- * the groups. See the Compiler.
- * @param left source for the left side, usually a select which also creates grouping
- * @param right source for the right side, usually a select which also creates grouping
- * @param groupSize prefix size of the groups, if 0 no grouping is performed.
- * @param joinType the join type. Encoding "inner", "left", "right", "outer"
- * @param filter the filter applied to each possible left/right possible row.
- * @param selector selected columns to return (from concatenated left and right side, including groups)
- * @param result result tabular type
- */
+  * A Program performing joins
+  * Note: the join operation is usually splitted into this operation and two selects which prepares
+  * the groups. See the Compiler.
+  * @param left source for the left side, usually a select which also creates grouping
+  * @param right source for the right side, usually a select which also creates grouping
+  * @param groupSize prefix size of the groups, if 0 no grouping is performed.
+  * @param joinType the join type. Encoding "inner", "left", "right", "outer"
+  * @param filter the filter applied to each possible left/right possible row.
+  * @param selector selected columns to return (from concatenated left and right side, including groups)
+  * @param result result tabular type
+  */
 case class JoinProgram(
     left: SingleTableGeneratorProgram,
     right: SingleTableGeneratorProgram,
@@ -145,13 +146,14 @@ object TableGeneratorProgram {
     }
   }
 
-  implicit val codec: ObjectEncoder[TableGeneratorProgram] with Decoder[TableGeneratorProgram] = new DiscriminatorDependentCodec[TableGeneratorProgram]("type") {
-    override val subTypes = Seq(
-      makeSubType[UnionProgram]("union"),
-      makeSubType[SelectProgram]("select", true),
-      makeSubType[DataSource]("source"),
-      makeSubType[JoinProgram]("join"),
-      makeSubType[SplitProgram]("split")
-    )
-  }
+  implicit val codec: ObjectEncoder[TableGeneratorProgram] with Decoder[TableGeneratorProgram] =
+    new DiscriminatorDependentCodec[TableGeneratorProgram]("type") {
+      override val subTypes = Seq(
+        makeSubType[UnionProgram]("union"),
+        makeSubType[SelectProgram]("select", true),
+        makeSubType[DataSource]("source"),
+        makeSubType[JoinProgram]("join"),
+        makeSubType[SplitProgram]("split")
+      )
+    }
 }

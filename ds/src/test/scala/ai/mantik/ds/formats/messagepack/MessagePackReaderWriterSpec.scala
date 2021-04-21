@@ -3,11 +3,11 @@ package ai.mantik.ds.formats.messagepack
 import java.io.File
 
 import ai.mantik.ds.Errors.EncodingException
-import ai.mantik.ds.FundamentalType.{ Int32, StringType }
-import ai.mantik.ds.{ DataType, TabularData }
-import ai.mantik.ds.element.{ Bundle, RootElement, TabularRow }
-import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import ai.mantik.ds.FundamentalType.{Int32, StringType}
+import ai.mantik.ds.{DataType, TabularData}
+import ai.mantik.ds.element.{Bundle, RootElement, TabularRow}
+import ai.mantik.ds.testutil.{GlobalAkkaSupport, TempDirSupport, TestBase}
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import ai.mantik.ds.element.PrimitiveEncoder._
 import akka.util.ByteString
 
@@ -22,10 +22,12 @@ class MessagePackReaderWriterSpec extends TestBase with GlobalAkkaSupport with T
     ),
     Vector(
       TabularRow(
-        Int32.wrap(3), StringType.wrap("Hello World")
+        Int32.wrap(3),
+        StringType.wrap("Hello World")
       ),
       TabularRow(
-        Int32.wrap(0), StringType.wrap("Foo")
+        Int32.wrap(0),
+        StringType.wrap("Foo")
       )
     )
   )
@@ -93,9 +95,12 @@ class MessagePackReaderWriterSpec extends TestBase with GlobalAkkaSupport with T
     val decoded = readerWriter.decodeFromByteString(bytes)
     decoded shouldBe sampleBundle
 
-    val otherDecoded = await(Source.single(bytes)
-      .via(readerWriter.decoder())
-      .runWith(Sink.seq))
+    val otherDecoded = await(
+      Source
+        .single(bytes)
+        .via(readerWriter.decoder())
+        .runWith(Sink.seq)
+    )
     otherDecoded shouldBe sampleBundle.rows
 
     val directlyDecoded = MessagePackReaderWriter.autoFormatDecoderFromByteString(bytes)
@@ -108,9 +113,12 @@ class MessagePackReaderWriterSpec extends TestBase with GlobalAkkaSupport with T
     val decoded = readerWriter.decodeFromByteString(bytes)
     decoded shouldBe sampleBundle
 
-    val otherDecoded = await(Source.single(bytes)
-      .via(readerWriter.decoder())
-      .runWith(Sink.seq))
+    val otherDecoded = await(
+      Source
+        .single(bytes)
+        .via(readerWriter.decoder())
+        .runWith(Sink.seq)
+    )
     otherDecoded shouldBe sampleBundle.rows
   }
 }

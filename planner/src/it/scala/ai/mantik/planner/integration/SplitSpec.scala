@@ -46,7 +46,6 @@ class SplitSpec extends IntegrationTestBase {
     aFetched.rows.size shouldBe 50
     aFetched.rows shouldNot be(sample.rows.slice(0, 50))
 
-
     val bFetched = b.fetch.run()
     bFetched.rows.size shouldBe 50
     bFetched.rows shouldNot be(sample.rows.slice(50, 100))

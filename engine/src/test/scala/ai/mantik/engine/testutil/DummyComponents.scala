@@ -1,10 +1,15 @@
 package ai.mantik.engine.testutil
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.planner.impl.{ MantikItemStateManager, PlannerImpl }
-import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl, TempFileRepository, TempRepository }
-import ai.mantik.planner.repository.{ MantikArtifactRetriever, RemoteMantikRegistry, Repository }
-import ai.mantik.planner.{ CoreComponents, Plan, PlanExecutor, Planner }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.planner.impl.{MantikItemStateManager, PlannerImpl}
+import ai.mantik.planner.repository.impl.{
+  LocalMantikRegistryImpl,
+  MantikArtifactRetrieverImpl,
+  TempFileRepository,
+  TempRepository
+}
+import ai.mantik.planner.repository.{MantikArtifactRetriever, RemoteMantikRegistry, Repository}
+import ai.mantik.planner.{CoreComponents, Plan, PlanExecutor, Planner}
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.Future
@@ -17,7 +22,8 @@ class DummyComponents(implicit akkaRuntime: AkkaRuntime) extends ComponentBase w
   private lazy val registry: RemoteMantikRegistry = RemoteMantikRegistry.empty
 
   override def retriever: MantikArtifactRetriever = new MantikArtifactRetrieverImpl(
-    localRegistry, registry
+    localRegistry,
+    registry
   )
 
   val stateManger = new MantikItemStateManager()

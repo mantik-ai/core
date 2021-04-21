@@ -6,7 +6,8 @@ import io.circe._
 /** Errors from Executor. */
 object Errors {
 
-  class ExecutorException(val msg: String, val statusCode: Int, cause: Throwable = null) extends RuntimeException(msg, cause)
+  class ExecutorException(val msg: String, val statusCode: Int, cause: Throwable = null)
+      extends RuntimeException(msg, cause)
 
   implicit val encoder: ObjectEncoder[ExecutorException] = new ObjectEncoder[ExecutorException] {
 

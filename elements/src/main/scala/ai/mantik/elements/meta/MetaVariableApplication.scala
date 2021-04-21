@@ -1,15 +1,15 @@
 package ai.mantik.elements.meta
 
-import io.circe.{ Json, JsonObject }
+import io.circe.{Json, JsonObject}
 import cats.implicits._
 
 /**
- * A Transformation which applies meta variables to JSON.
- *
- * @param metaVariables the list of meta variables. may itself not contain meta variables.
- *
- * Variables have the form ${foo.bar}
- */
+  * A Transformation which applies meta variables to JSON.
+  *
+  * @param metaVariables the list of meta variables. may itself not contain meta variables.
+  *
+  * Variables have the form ${foo.bar}
+  */
 case class MetaVariableApplication(
     metaVariables: List[MetaVariable]
 ) {
@@ -34,8 +34,10 @@ case class MetaVariableApplication(
       // escaped
       return Right(Json.fromString(s.stripPrefix("$")))
     }
-    if (s.startsWith(MetaVariableApplication.MetaVariablePrefix) &&
-      s.endsWith(MetaVariableApplication.MetaVariableSuffix)) {
+    if (
+      s.startsWith(MetaVariableApplication.MetaVariablePrefix) &&
+      s.endsWith(MetaVariableApplication.MetaVariableSuffix)
+    ) {
       val variableName = s
         .stripPrefix(MetaVariableApplication.MetaVariablePrefix)
         .stripSuffix(MetaVariableApplication.MetaVariableSuffix)
@@ -60,9 +62,8 @@ case class MetaVariableApplication(
 
   def applyObject(j: JsonObject): Either[String, JsonObject] = {
     val valuesBefore = j.toVector
-    val maybeMapped: Either[String, Vector[Json]] = valuesBefore.map {
-      case (key, value) =>
-        apply(value)
+    val maybeMapped: Either[String, Vector[Json]] = valuesBefore.map { case (key, value) =>
+      apply(value)
     }.sequence
     maybeMapped.map { mapped =>
       JsonObject.fromIterable(valuesBefore.map(_._1).zip(mapped))
@@ -71,8 +72,10 @@ case class MetaVariableApplication(
 }
 
 object MetaVariableApplication {
+
   /** Prefix of a Meta Variable access. */
   val MetaVariablePrefix = "${"
+
   /** Suffix of a Meta Variable access. */
   val MetaVariableSuffix = "}"
 }

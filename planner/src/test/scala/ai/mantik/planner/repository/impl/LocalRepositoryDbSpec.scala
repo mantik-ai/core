@@ -2,7 +2,7 @@ package ai.mantik.planner.repository.impl
 
 import ai.mantik.elements.ItemId
 import ai.mantik.planner.repository.impl.LocalRepositoryDb.DbMantikItem
-import ai.mantik.testutils.{ TempDirSupport, TestBase }
+import ai.mantik.testutils.{TempDirSupport, TestBase}
 
 class LocalRepositoryDbSpec extends TestBase with TempDirSupport {
 

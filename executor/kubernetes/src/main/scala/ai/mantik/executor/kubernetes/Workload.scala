@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.Logger
 import skuber.apps.v1.Deployment
 import skuber.ext.Ingress
 import skuber.ext.Ingress.Backend
-import skuber.{ ObjectResource, Pod, ResourceDefinition, Service }
+import skuber.{ObjectResource, Pod, ResourceDefinition, Service}
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
@@ -17,17 +17,17 @@ import skuber.json.apps.format.depFormat
 import skuber.json.apps.format.deployListFormat
 import cats.implicits._
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
- * A Workload as being used by the Executor
- * which can be sent to Kubernetes consisting
- * of different Kubernetes Items.
- *
- * Can also be retrieved by Kubernetes.
- *
- * @param loaded if true, the information is fetched from kubernetes
- */
+  * A Workload as being used by the Executor
+  * which can be sent to Kubernetes consisting
+  * of different Kubernetes Items.
+  *
+  * Can also be retrieved by Kubernetes.
+  *
+  * @param loaded if true, the information is fetched from kubernetes
+  */
 case class Workload(
     internalId: String,
     pod: Option[Pod],
@@ -59,7 +59,9 @@ case class Workload(
   }
 
   /** Stop a workload. */
-  def stop(remove: Boolean, ops: K8sOperations, killReason: Option[String] = None)(implicit ec: ExecutionContext): Future[Unit] = {
+  def stop(remove: Boolean, ops: K8sOperations, killReason: Option[String] = None)(
+      implicit ec: ExecutionContext
+  ): Future[Unit] = {
     def ns[T <: ObjectResource](value: T): Option[String] = {
       Some(value.namespace).filter(_.nonEmpty)
     }
@@ -67,9 +69,11 @@ case class Workload(
       ops.delete[T](ns(value), value.name)
     }
     def maybeDelete[T <: ObjectResource: ResourceDefinition](maybe: Option[T]): Future[Unit] = {
-      maybe.map { value =>
-        delete(value)
-      }.getOrElse(Future.successful(()))
+      maybe
+        .map { value =>
+          delete(value)
+        }
+        .getOrElse(Future.successful(()))
     }
     if (remove) {
       for {
@@ -128,13 +132,16 @@ case class Workload(
       WorkerState.Failed(255, Some(reason))
     }
 
-    killStatus.orElse(
-      deploymentStopped
-    ).orElse(
-      podState
-    ).getOrElse(
-      WorkerState.Pending
-    )
+    killStatus
+      .orElse(
+        deploymentStopped
+      )
+      .orElse(
+        podState
+      )
+      .getOrElse(
+        WorkerState.Pending
+      )
   }
 
   /** Check if this workload has a broken image. */
@@ -185,14 +192,20 @@ object Workload {
   val logger = Logger(getClass)
 
   /** List Workloads */
-  def list(namespace: Option[String], serviceNameFilter: Option[String], labelFilters: Seq[(String, String)], ops: K8sOperations)(implicit ec: ExecutionContext): Future[Vector[Workload]] = {
+  def list(
+      namespace: Option[String],
+      serviceNameFilter: Option[String],
+      labelFilters: Seq[(String, String)],
+      ops: K8sOperations
+  )(
+      implicit ec: ExecutionContext
+  ): Future[Vector[Workload]] = {
     serviceNameFilter match {
       case Some(serviceName) =>
         ops.byName[Service](namespace, serviceName).flatMap { maybeService =>
           val validService = maybeService.filter { service =>
-            labelFilters.forall {
-              case (key, value) =>
-                service.metadata.labels.get(key).contains(value)
+            labelFilters.forall { case (key, value) =>
+              service.metadata.labels.get(key).contains(value)
             }
           }
           expand(namespace, validService.toVector, ops, labelFilters)
@@ -204,7 +217,9 @@ object Workload {
     }
   }
 
-  def byInternalId(namespace: String, internalId: String, ops: K8sOperations)(implicit ec: ExecutionContext): Future[Option[Workload]] = {
+  def byInternalId(namespace: String, internalId: String, ops: K8sOperations)(
+      implicit ec: ExecutionContext
+  ): Future[Option[Workload]] = {
     val labelFilter = Seq(
       LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
       LabelConstants.InternalIdLabelName -> internalId
@@ -226,15 +241,13 @@ object Workload {
   /** List Workloads which are pending in all namespaces */
   def listPending(ops: K8sOperations)(implicit ec: ExecutionContext): Future[Vector[Workload]] = {
     ops.getAllManagedPendingPods().flatMap { namespacePods =>
-      val namespaceInternalIds = namespacePods.toVector.flatMap {
-        case (namespace, podList) =>
-          podList.flatMap(_.metadata.labels.get(LabelConstants.InternalIdLabelName)).map { internalId =>
-            namespace -> internalId
-          }
+      val namespaceInternalIds = namespacePods.toVector.flatMap { case (namespace, podList) =>
+        podList.flatMap(_.metadata.labels.get(LabelConstants.InternalIdLabelName)).map { internalId =>
+          namespace -> internalId
+        }
       }
-      val futures = namespaceInternalIds.map {
-        case (namespace, internalId) =>
-          byInternalId(namespace, internalId, ops)
+      val futures = namespaceInternalIds.map { case (namespace, internalId) =>
+        byInternalId(namespace, internalId, ops)
       }
       Future.sequence(futures).map { results =>
         results.flatten
@@ -243,9 +256,13 @@ object Workload {
   }
 
   /** Figure out other related items by finding sibling of the services. */
-  def expand(namespace: Option[String], services: Vector[Service], ops: K8sOperations, labelFilters: Seq[(String, String)])(
-    implicit
-    ec: ExecutionContext
+  def expand(
+      namespace: Option[String],
+      services: Vector[Service],
+      ops: K8sOperations,
+      labelFilters: Seq[(String, String)]
+  )(
+      implicit ec: ExecutionContext
   ): Future[Vector[Workload]] = {
     if (services.isEmpty) {
       return Future.successful(Vector.empty)
@@ -276,7 +293,12 @@ object Workload {
     }
   }
 
-  private def correlate(services: Vector[Service], pods: Vector[Pod], deployments: Vector[Deployment], ingresses: Vector[Ingress]): Vector[Workload] = {
+  private def correlate(
+      services: Vector[Service],
+      pods: Vector[Pod],
+      deployments: Vector[Deployment],
+      ingresses: Vector[Ingress]
+  ): Vector[Workload] = {
     def makeLookup[T <: ObjectResource](in: Vector[T]): Map[String, T] = {
       in.flatMap { x =>
         x.metadata.labels.get(LabelConstants.InternalIdLabelName).map { internalId =>
@@ -307,9 +329,9 @@ object Workload {
   }
 
   /**
-   * Check if a pod has an image error, so that we can kill it.
-   * @return the first image error found.
-   */
+    * Check if a pod has an image error, so that we can kill it.
+    * @return the first image error found.
+    */
   def podImageError(config: Config, currentTime: Instant, pod: Pod): Option[String] = {
     // See: https://github.com/kubernetes/kubernetes/blob/d24fe8a801748953a5c34fd34faa8005c6ad1770/pkg/kubelet/images/types.go
 

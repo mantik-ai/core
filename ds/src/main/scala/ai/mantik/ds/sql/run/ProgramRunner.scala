@@ -2,23 +2,23 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.converter.Cast
-import ai.mantik.ds.element.{ ArrayElement, Element, NullElement, Primitive, SomeElement, StructElement }
+import ai.mantik.ds.element.{ArrayElement, Element, NullElement, Primitive, SomeElement, StructElement}
 import ai.mantik.ds.operations.BinaryFunction
 
 import scala.collection.mutable
 
 /**
- * A Trivial interpreter for Programs.
- * @throws FeatureNotSupported if some op code could not be translated.
- */
+  * A Trivial interpreter for Programs.
+  * @throws FeatureNotSupported if some op code could not be translated.
+  */
 class ProgramRunner(program: Program) {
 
   type StackType = mutable.ArrayStack[Element]
 
   /**
-   * The operation as it is executed.
-   * Returns offset on which to continue
-   */
+    * The operation as it is executed.
+    * Returns offset on which to continue
+    */
   type ExecutableOp = (IndexedSeq[Element], StackType) => Option[Int]
 
   private val executables: Vector[ExecutableOp] = program.ops.map(op2ExecutableOp)
@@ -32,7 +32,7 @@ class ProgramRunner(program: Program) {
       val op = executables(position)
       op(args, stack) match {
         case Some(offset) => position = position + offset
-        case None =>
+        case None         =>
           // early exit
           return stack.reverse.toVector
       }
@@ -42,12 +42,11 @@ class ProgramRunner(program: Program) {
   }
 
   private def op2ExecutableOp(op: OpCode): ExecutableOp = {
-    def makeContinueOp(f: StackType => Unit): ExecutableOp = {
-      (_, s) =>
-        {
-          f(s)
-          Some(1)
-        }
+    def makeContinueOp(f: StackType => Unit): ExecutableOp = { (_, s) =>
+      {
+        f(s)
+        Some(1)
+      }
     }
     def makeTransformContinueOp(f: Element => Element): ExecutableOp = {
       makeContinueOp { s =>

@@ -1,6 +1,6 @@
 package ai.mantik.ds.sql
 
-import ai.mantik.ds.FundamentalType.{ Float32, Float64, Uint8 }
+import ai.mantik.ds.FundamentalType.{Float32, Float64, Uint8}
 import ai.mantik.ds._
 import ai.mantik.testutils.TestBase
 

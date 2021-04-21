@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.testutil.TestBase
-import org.parboiled2.{ Parser, Rule1 }
+import org.parboiled2.{Parser, Rule1}
 
 abstract class ParserTestBase extends TestBase {
   type ParserImpl <: Parser

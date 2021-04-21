@@ -20,11 +20,11 @@ class ExpressionSpec extends TestBase {
 
   "SizeExpression" should "have the correct type" in {
     SizeExpression(
-      ConstantExpression(SingleElementBundle(ArrayT(FundamentalType.StringType), ArrayElement())),
+      ConstantExpression(SingleElementBundle(ArrayT(FundamentalType.StringType), ArrayElement()))
     ).dataType shouldBe FundamentalType.Int32
 
     SizeExpression(
-      ConstantExpression(SingleElementBundle(Nullable(ArrayT(FundamentalType.StringType)), SomeElement(ArrayElement()))),
+      ConstantExpression(SingleElementBundle(Nullable(ArrayT(FundamentalType.StringType)), SomeElement(ArrayElement())))
     ).dataType shouldBe Nullable(FundamentalType.Int32)
   }
 }

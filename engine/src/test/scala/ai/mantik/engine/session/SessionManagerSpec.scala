@@ -1,7 +1,7 @@
 package ai.mantik.engine.session
 
 import ai.mantik.elements.errors.MantikException
-import ai.mantik.testutils.{ AkkaSupport, TestBase }
+import ai.mantik.testutils.{AkkaSupport, TestBase}
 
 class SessionManagerSpec extends TestBase with AkkaSupport {
 

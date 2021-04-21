@@ -6,7 +6,9 @@ import org.parboiled2._
 trait ConstantParser {
   self: Parser =>
 
-  def Constant: Rule1[ConstantExpressionNode] = rule { StringExpression | NumberExpression | BoolExpression | Null | VoidExpression }
+  def Constant: Rule1[ConstantExpressionNode] = rule {
+    StringExpression | NumberExpression | BoolExpression | Null | VoidExpression
+  }
 
   def NumberExpression: Rule1[NumberNode] = rule {
     NumericExpressionUnwrapped ~> { x: String =>

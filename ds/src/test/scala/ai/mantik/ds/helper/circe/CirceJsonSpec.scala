@@ -13,7 +13,8 @@ class CirceJsonSpec extends TestBase {
       "c" -> Json.obj(
         "foo" -> Json.Null,
         "bar" -> Json.arr(
-          Json.Null, Json.obj(
+          Json.Null,
+          Json.obj(
             "x" -> Json.Null,
             "y" -> 3.asJson,
             "z" -> "35".asJson
@@ -28,7 +29,8 @@ class CirceJsonSpec extends TestBase {
       "b" -> "Hello".asJson,
       "c" -> Json.obj(
         "bar" -> Json.arr(
-          Json.Null, Json.obj(
+          Json.Null,
+          Json.obj(
             "y" -> 3.asJson,
             "z" -> "35".asJson
           )

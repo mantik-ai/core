@@ -16,7 +16,8 @@ class TensorFlowTrainSpec extends IntegrationTestBase with Samples {
     // Training
     val trainDataSet = context.loadDataSet("mnist_train")
 
-    val trainAlgorithm = context.loadTrainableAlgorithm("mnist_linear")
+    val trainAlgorithm = context
+      .loadTrainableAlgorithm("mnist_linear")
       .withMetaValue("n_epochs", 5)
 
     val (trained, stats) = trainAlgorithm.train(trainDataSet)

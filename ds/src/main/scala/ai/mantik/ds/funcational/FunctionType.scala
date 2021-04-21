@@ -1,7 +1,7 @@
 package ai.mantik.ds.funcational
 
-import ai.mantik.ds.{ DataType, funcational }
-import ai.mantik.ds.helper.circe.{ CirceJson, DiscriminatorDependentCodec }
+import ai.mantik.ds.{DataType, funcational}
+import ai.mantik.ds.helper.circe.{CirceJson, DiscriminatorDependentCodec}
 
 case class FunctionType(
     input: DataType,

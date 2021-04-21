@@ -1,10 +1,10 @@
 package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.FundamentalType.BoolType
-import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
+import ai.mantik.ds.{DataType, FundamentalType, TabularData}
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.sql.Condition.WrappedExpression
-import ai.mantik.ds.sql.{ Condition, ConstantExpression, Expression, QueryTabularType }
+import ai.mantik.ds.sql.{Condition, ConstantExpression, Expression, QueryTabularType}
 import ai.mantik.ds.sql.parser.AST
 import cats.implicits._
 
@@ -24,10 +24,12 @@ private[builder] object SelectorBuilder {
           leftConverted <- convertSelector(input, left)
           rightConverted <- convertSelector(input, right)
         } yield {
-          Vector(Condition.Or(
-            combineWithAnd(leftConverted),
-            combineWithAnd(rightConverted)
-          ))
+          Vector(
+            Condition.Or(
+              combineWithAnd(leftConverted),
+              combineWithAnd(rightConverted)
+            )
+          )
         }
       case AST.BinaryOperationNode("=", left, right) =>
         for {
@@ -44,9 +46,11 @@ private[builder] object SelectorBuilder {
           leftExpression <- ExpressionBuilder.convertExpression(input, left)
           rightExpression <- ExpressionBuilder.convertExpression(input, right)
           eq <- buildEquals(leftExpression, rightExpression)
-        } yield Vector(Condition.Not(
-          eq
-        ))
+        } yield Vector(
+          Condition.Not(
+            eq
+          )
+        )
       case b: AST.BinaryOperationNode =>
         ExpressionBuilder.convertExpression(input, b).flatMap {
           case c: Condition                            => Right(Vector(c))

@@ -1,7 +1,7 @@
 package ai.mantik.testutils
 
 import java.time.temporal.ChronoUnit
-import java.time.{ Clock, Instant, ZoneId, ZoneOffset }
+import java.time.{Clock, Instant, ZoneId, ZoneOffset}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -20,8 +20,7 @@ class FakeClock(zone: ZoneId = ZoneOffset.UTC, private var time: Instant = FakeC
 
   /** Set the time to defaultTime + duration. */
   def setTimeOffset(duration: FiniteDuration): Unit = {
-    setTime(
-      FakeClock.DefaultTime.plus(duration.toNanos, ChronoUnit.NANOS))
+    setTime(FakeClock.DefaultTime.plus(duration.toNanos, ChronoUnit.NANOS))
   }
 
   /** Reset time to the default value. */
@@ -31,6 +30,7 @@ class FakeClock(zone: ZoneId = ZoneOffset.UTC, private var time: Instant = FakeC
 }
 
 object FakeClock {
+
   /** A complete arbitrary default time. */
   val DefaultTime = Instant.parse("2019-06-05T14:00:00Z")
 }

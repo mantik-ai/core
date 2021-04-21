@@ -1,11 +1,11 @@
 package ai.mantik.ds.formats.messagepack
 
-import ai.mantik.ds.Errors.{ EncodingException, FormatNotSupportedException }
+import ai.mantik.ds.Errors.{EncodingException, FormatNotSupportedException}
 import ai.mantik.ds.FundamentalType._
 import ai.mantik.ds._
 import ai.mantik.ds.element._
 import akka.util.ByteString
-import org.msgpack.core.{ MessageFormat, MessagePackException, MessagePacker, MessageUnpacker }
+import org.msgpack.core.{MessageFormat, MessagePackException, MessagePacker, MessageUnpacker}
 
 import scala.reflect.ClassTag
 
@@ -14,6 +14,7 @@ private[messagepack] object MessagePackAdapters {
 
   /** A MessagePack adapter with anonymous interface. */
   trait AnonymousMessagePackAdapter {
+
     /** Write an element, assuming it is of correct type. */
     def elementWriter(messagePacker: MessagePacker, value: Element)
 
@@ -42,10 +43,10 @@ private[messagepack] object MessagePackAdapters {
   }
 
   /**
-   * A fundamental type, which has a scala representation.
-   * @tparam T data type
-   * @tparam ST  scala data type
-   */
+    * A fundamental type, which has a scala representation.
+    * @tparam T data type
+    * @tparam ST  scala data type
+    */
   class FundamentalMessagePackAdapter[T <: FundamentalType, ST: ClassTag](
       val writer: (MessagePacker, ST) => Unit,
       val reader: MessageUnpacker => ST
@@ -70,8 +71,8 @@ private[messagepack] object MessagePackAdapters {
 
   /** Generate an adapter for a fundamental type. */
   private def makeFundamentalAdapter[T <: FundamentalType, ST: ClassTag](
-    writer: (MessagePacker, ST) => Unit,
-    reader: (MessageUnpacker => ST)
+      writer: (MessagePacker, ST) => Unit,
+      reader: (MessageUnpacker => ST)
   ) = new FundamentalMessagePackAdapter[T, ST](writer, reader)
 
   // Note for unsigned types
@@ -207,7 +208,10 @@ private[messagepack] object MessagePackAdapters {
       .asInstanceOf[FundamentalMessagePackAdapter[_, ST]]
 
     override def write(messagePacker: MessagePacker, elementType: TensorElement[ST]): Unit = {
-      require(elementType.elements.length == tensor.packedElementCount, s"Tensor element count mismatch, expected: ${tensor.packedElementCount}, got: ${elementType.elements.length}")
+      require(
+        elementType.elements.length == tensor.packedElementCount,
+        s"Tensor element count mismatch, expected: ${tensor.packedElementCount}, got: ${elementType.elements.length}"
+      )
       messagePacker.packArrayHeader(elementType.elements.length)
       elementType.elements.foreach { element =>
         underlyingAdapter.writer(messagePacker, element)
@@ -318,9 +322,8 @@ private[messagepack] object MessagePackAdapters {
     override def write(messagePacker: MessagePacker, rootElement: IndexedSeq[Element]): Unit = {
       require(rootElement.size == subAdapters.length)
       messagePacker.packArrayHeader(rootElement.size)
-      rootElement.zip(subAdapters).foreach {
-        case (element, adapter) =>
-          adapter.elementWriter(messagePacker, element)
+      rootElement.zip(subAdapters).foreach { case (element, adapter) =>
+        adapter.elementWriter(messagePacker, element)
       }
     }
 

@@ -1,11 +1,11 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.componently.ComponentBase
-import ai.mantik.planner.repository.{ ContentTypes, FileRepository }
-import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
+import ai.mantik.planner.repository.{ContentTypes, FileRepository}
+import ai.mantik.planner.repository.FileRepository.{FileGetResult, FileStorageResult}
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
-import ai.mantik.planner.{ PlanFile, PlanFileReference }
-import akka.stream.scaladsl.{ Sink, Source }
+import ai.mantik.planner.{PlanFile, PlanFileReference}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 
 import scala.concurrent.Future
@@ -23,7 +23,10 @@ class ExecutionOpenFilesBuilderSpec extends TestBaseWithAkkaRuntime {
       var wasOptimisticRead = false
       var wasTemporaryWrite = false
 
-      override def requestFileStorage(contentType: String, temporary: Boolean): Future[FileRepository.FileStorageResult] = {
+      override def requestFileStorage(
+          contentType: String,
+          temporary: Boolean
+      ): Future[FileRepository.FileStorageResult] = {
         val id = nextFileId
         nextFileId += 1
         wasTemporaryWrite = temporary

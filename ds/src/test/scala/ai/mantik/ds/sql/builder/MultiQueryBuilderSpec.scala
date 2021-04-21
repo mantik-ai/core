@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.sql.{ AnonymousInput, ColumnExpression, Select, SelectProjection, SingleQuery, Split, SqlContext }
+import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.sql.{AnonymousInput, ColumnExpression, Select, SelectProjection, SingleQuery, Split, SqlContext}
 import ai.mantik.testutils.TestBase
 
 class MultiQueryBuilderSpec extends TestBase {
@@ -18,12 +18,16 @@ class MultiQueryBuilderSpec extends TestBase {
 
   it should "parse single queries select" in {
     val result = MultiQueryBuilder.buildQuery("SELECT x FROM $0").forceRight
-    result shouldBe SingleQuery(Select(
-      input = AnonymousInput(input),
-      projections = Some(Vector(
-        SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
-      ))
-    ))
+    result shouldBe SingleQuery(
+      Select(
+        input = AnonymousInput(input),
+        projections = Some(
+          Vector(
+            SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
+          )
+        )
+      )
+    )
   }
 
   it should "parse a split" in {
@@ -31,9 +35,11 @@ class MultiQueryBuilderSpec extends TestBase {
     result shouldBe Split(
       Select(
         input = AnonymousInput(input),
-        projections = Some(Vector(
-          SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
-        ))
+        projections = Some(
+          Vector(
+            SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
+          )
+        )
       ),
       fractions = Vector(0.2, 0.4),
       shuffleSeed = Some(4)

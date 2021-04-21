@@ -4,9 +4,9 @@ import ai.mantik.ds.DataType
 import io.circe.generic.JsonCodec
 
 /**
- * Runtime definition of pipelines.
- * Must be compatible with the Golang Pipeline controller definition.
- */
+  * Runtime definition of pipelines.
+  * Must be compatible with the Golang Pipeline controller definition.
+  */
 @JsonCodec
 case class PipelineRuntimeDefinition(
     name: String,

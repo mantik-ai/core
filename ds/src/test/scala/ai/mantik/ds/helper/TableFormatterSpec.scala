@@ -10,7 +10,8 @@ class TableFormatterSpec extends TestBase {
 
   it should "render nice 1 tables" in {
     val rendered = TableFormatter.format(
-      Seq("ABC"), Seq(Seq("Hello World"))
+      Seq("ABC"),
+      Seq(Seq("Hello World"))
     )
     val expected =
       """|ABC        |

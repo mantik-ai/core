@@ -1,6 +1,7 @@
 package ai.mantik.executor.docker
 
 object DockerConstants {
+
   /** Name of the label describing the isolation space */
   val IsolationSpaceLabelName = "ai.mantik.isolationSpace"
 

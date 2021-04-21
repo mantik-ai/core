@@ -10,7 +10,8 @@ import scala.collection.mutable
 /** Helper for naming kubernetes resources, as kubernetes has tight restrictions */
 class KubernetesNamer(id: String, superPrefix: String) {
 
-  private val prefix = s"${superPrefix}${KubernetesNamer.escapeNodeName(id)}-" // Kubernetes prefix must start with alphanumeric
+  private val prefix =
+    s"${superPrefix}${KubernetesNamer.escapeNodeName(id)}-" // Kubernetes prefix must start with alphanumeric
 
   val jobName = prefix + "job"
 
@@ -72,8 +73,7 @@ object KubernetesNamer {
   private val logger = LoggerFactory.getLogger(getClass)
 
   def escapeNodeName(nodeName: String): String = {
-    val filtered = nodeName
-      .toLowerCase
+    val filtered = nodeName.toLowerCase
       .replace('.', '-')
       .filter { c =>
         (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'
@@ -128,9 +128,9 @@ object KubernetesNamer {
   }
 
   /**
-   * Decodes label values from [[encodeLabelValue]].
-   * Note: it can fail on invalid values.
-   */
+    * Decodes label values from [[encodeLabelValue]].
+    * Note: it can fail on invalid values.
+    */
   def decodeLabelValue(value: String): String = {
     if (value.isEmpty) {
       return ""
@@ -168,10 +168,9 @@ object KubernetesNamer {
   }
 
   /**
-   *
-   * Like [[decodeLabelValue]] but catches exceptions and returns the original string
-   * if it fails. Note: the decoding result can be something else in case of a bug.
-   */
+    * Like [[decodeLabelValue]] but catches exceptions and returns the original string
+    * if it fails. Note: the decoding result can be something else in case of a bug.
+    */
   def decodeLabelValueNoCrashing(value: String): String = {
     try {
       decodeLabelValue(value)

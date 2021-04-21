@@ -39,15 +39,17 @@ class PublishServiceSpec extends IntegrationTestBase {
   }
 
   it should "allow publishing service name services" in new Env {
-    val response = await(executor.publishService(
-      PublishServiceRequest(
-        "space2",
-        "service1",
-        4000,
-        "myserver.example.com",
-        4000
+    val response = await(
+      executor.publishService(
+        PublishServiceRequest(
+          "space2",
+          "service1",
+          4000,
+          "myserver.example.com",
+          4000
+        )
       )
-    ))
+    )
     response.name shouldBe s"service1.${config.kubernetes.namespacePrefix}space2.svc.cluster.local:4000"
     val ns = config.kubernetes.namespacePrefix + "space2"
     val service = await(kubernetesClient.getInNamespace[Service]("service1", ns))

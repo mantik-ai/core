@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.Errors.TypeNotFoundException
-import ai.mantik.ds.{ ArrayT, FundamentalType, ImageChannel }
+import ai.mantik.ds.{ArrayT, FundamentalType, ImageChannel}
 import org.parboiled2._
 
 /** Parser for Expressions. */
@@ -15,7 +15,9 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
     Expression ~ EOI
   }
 
-  def BaseExpression: Rule1[ExpressionNode] = rule { BracketExpression | Cast | Constant | UnaryExpression | Identifier }
+  def BaseExpression: Rule1[ExpressionNode] = rule {
+    BracketExpression | Cast | Constant | UnaryExpression | Identifier
+  }
 
   private def BracketExpression: Rule1[ExpressionNode] = rule {
     symbolw('(') ~ Expression ~ symbolw(')') ~ optional(StructAccess) ~> {
@@ -36,8 +38,9 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   }
 
   def UnaryExpression: Rule1[UnaryOperationNode] = rule {
-    capture(oneOrMore(IdentifierChar)) ~ Whitespace ~ symbolw('(') ~ Expression ~ symbolw(')') ~> { (name: String, exp: ExpressionNode) =>
-      UnaryOperationNode(name.trim.toLowerCase, exp)
+    capture(oneOrMore(IdentifierChar)) ~ Whitespace ~ symbolw('(') ~ Expression ~ symbolw(')') ~> {
+      (name: String, exp: ExpressionNode) =>
+        UnaryOperationNode(name.trim.toLowerCase, exp)
     }
   }
 
@@ -64,7 +67,9 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   }
 
   def Type: Rule1[TypeNode] = rule {
-    (TensorType | ImageType | FundamentalTypeN) ~ Whitespace ~ ArrayNesting ~ Whitespace ~ optionalKeyword("nullable") ~> { (dt: TypeNode, arrayNesting: Int, nullable: Boolean) =>
+    (TensorType | ImageType | FundamentalTypeN) ~ Whitespace ~ ArrayNesting ~ Whitespace ~ optionalKeyword(
+      "nullable"
+    ) ~> { (dt: TypeNode, arrayNesting: Int, nullable: Boolean) =>
       val arrayIfNecessary = (0 until arrayNesting).foldLeft(dt) { (c, _) => ArrayTypeNode(c) }
       if (nullable) {
         NullableTypeNode(arrayIfNecessary)
@@ -87,7 +92,9 @@ trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   }
 
   def ImageType: Rule1[TypeNode] = rule {
-    keyword("image") ~ optional(keyword("of") ~ FundamentalTypeN) ~ optional(Whitespace ~ keyword("in") ~ ImageChannelN) ~> { (underlying: Option[FundamentalTypeNode], channel: Option[ImageChannel]) =>
+    keyword("image") ~ optional(keyword("of") ~ FundamentalTypeN) ~ optional(
+      Whitespace ~ keyword("in") ~ ImageChannelN
+    ) ~> { (underlying: Option[FundamentalTypeNode], channel: Option[ImageChannel]) =>
       ImageTypeNode(underlying.map(_.ft), channel)
     }
   }

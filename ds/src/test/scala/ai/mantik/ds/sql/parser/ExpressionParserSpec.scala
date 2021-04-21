@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.sql.parser.AST._
-import ai.mantik.ds.{ FundamentalType, ImageChannel }
-import org.parboiled2.{ Parser, ParserInput }
+import ai.mantik.ds.{FundamentalType, ImageChannel}
+import org.parboiled2.{Parser, ParserInput}
 
 class ExpressionParserSpec extends ParserTestBase {
 
@@ -40,26 +40,57 @@ class ExpressionParserSpec extends ParserTestBase {
   expressionTest("\"void\"", IdentifierNode("void", ignoreCase = false))
   expressionTest("CAST (1as int32)", CastNode(NumberNode(1), FundamentalTypeNode(FundamentalType.Int32)))
   expressionTest("CAST (1 as int32)", CastNode(NumberNode(1), FundamentalTypeNode(FundamentalType.Int32)))
-  expressionTest("CAST (1 as int32[])", CastNode(NumberNode(1), ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32))))
-  expressionTest("CAST (1 as int32[][])", CastNode(NumberNode(1), ArrayTypeNode(ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32)))))
-  expressionTest("CAST (1 as int32[][] NULLABLE)", CastNode(NumberNode(1), NullableTypeNode(ArrayTypeNode(ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32))))))
+  expressionTest(
+    "CAST (1 as int32[])",
+    CastNode(NumberNode(1), ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32)))
+  )
+  expressionTest(
+    "CAST (1 as int32[][])",
+    CastNode(NumberNode(1), ArrayTypeNode(ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32))))
+  )
+  expressionTest(
+    "CAST (1 as int32[][] NULLABLE)",
+    CastNode(NumberNode(1), NullableTypeNode(ArrayTypeNode(ArrayTypeNode(FundamentalTypeNode(FundamentalType.Int32)))))
+  )
   expressionTest("CAST (TRUE as TENSOR)", CastNode(BoolNode(true), TensorTypeNode(None)))
-  expressionTest("CAST (TRUE as TENSOR of int32)", CastNode(BoolNode(true), TensorTypeNode(Some(FundamentalType.Int32))))
+  expressionTest(
+    "CAST (TRUE as TENSOR of int32)",
+    CastNode(BoolNode(true), TensorTypeNode(Some(FundamentalType.Int32)))
+  )
   expressionTest("CAST (TRUE as IMAGE)", CastNode(BoolNode(true), ImageTypeNode(None, None)))
-  expressionTest("CAST (TRUE as IMAGE of uint8 in red)", CastNode(BoolNode(true), ImageTypeNode(Some(FundamentalType.Uint8), Some(ImageChannel.Red))))
+  expressionTest(
+    "CAST (TRUE as IMAGE of uint8 in red)",
+    CastNode(BoolNode(true), ImageTypeNode(Some(FundamentalType.Uint8), Some(ImageChannel.Red)))
+  )
   expressionTest("A = B", BinaryOperationNode("=", IdentifierNode("A"), IdentifierNode("B")))
   expressionTest("A=B", BinaryOperationNode("=", IdentifierNode("A"), IdentifierNode("B")))
   expressionTest("1<>2", BinaryOperationNode("<>", NumberNode(1), NumberNode(2)))
   expressionTest("1 or 2", BinaryOperationNode("or", NumberNode(1), NumberNode(2)))
   expressionTest("1 OR 2", BinaryOperationNode("or", NumberNode(1), NumberNode(2)))
   expressionTest("1 and 2", BinaryOperationNode("and", NumberNode(1), NumberNode(2)))
-  expressionTest("1 and 2 and 3", BinaryOperationNode("and", BinaryOperationNode("and", NumberNode(1), NumberNode(2)), NumberNode(3)))
-  expressionTest("1 and 2 or 3", BinaryOperationNode("or", BinaryOperationNode("and", NumberNode(1), NumberNode(2)), NumberNode(3)))
-  expressionTest("1 and (2 or 3)", BinaryOperationNode("and", NumberNode(1), BinaryOperationNode("or", NumberNode(2), NumberNode(3))))
-  expressionTest("1 and not (2 or 3)", BinaryOperationNode("and", NumberNode(1), UnaryOperationNode(
-    "not",
-    BinaryOperationNode("or", NumberNode(2), NumberNode(3))
-  )))
+  expressionTest(
+    "1 and 2 and 3",
+    BinaryOperationNode("and", BinaryOperationNode("and", NumberNode(1), NumberNode(2)), NumberNode(3))
+  )
+  expressionTest(
+    "1 and 2 or 3",
+    BinaryOperationNode("or", BinaryOperationNode("and", NumberNode(1), NumberNode(2)), NumberNode(3))
+  )
+  expressionTest(
+    "1 and (2 or 3)",
+    BinaryOperationNode("and", NumberNode(1), BinaryOperationNode("or", NumberNode(2), NumberNode(3)))
+  )
+  expressionTest(
+    "1 and not (2 or 3)",
+    BinaryOperationNode(
+      "and",
+      NumberNode(1),
+      UnaryOperationNode(
+        "not",
+        BinaryOperationNode("or", NumberNode(2), NumberNode(3))
+      )
+    )
+  )
   expressionTest("a IS NULL", BinaryOperationNode("is", IdentifierNode("a"), NullNode))
   expressionTest("a IS NOT NULL", BinaryOperationNode("isnot", IdentifierNode("a"), NullNode))
   expressionTest(
@@ -110,7 +141,6 @@ class ExpressionParserSpec extends ParserTestBase {
   )
 
   "binaryOperations" should "work" in {
-    testEquality(_.ExpressionEOI, "A = B", BinaryOperationNode(
-      "=", IdentifierNode("A"), IdentifierNode("B")))
+    testEquality(_.ExpressionEOI, "A = B", BinaryOperationNode("=", IdentifierNode("A"), IdentifierNode("B")))
   }
 }

@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql
 
 import ai.mantik.ds.converter.Cast
-import ai.mantik.ds.element.{ Bundle, NullElement, SingleElementBundle }
-import ai.mantik.ds.{ DataType, Nullable, TabularData }
+import ai.mantik.ds.element.{Bundle, NullElement, SingleElementBundle}
+import ai.mantik.ds.{DataType, Nullable, TabularData}
 import cats.implicits._
 
 /** Helpers for creating automatic union operations with data type compatibility */
@@ -76,17 +76,20 @@ object AutoUnion {
     }
   }
 
-  private def buildSelectors(columnNames: Vector[String], from: TabularData, commonTypes: Vector[DataType]): Vector[SelectProjection] = {
-    columnNames.zip(commonTypes).map {
-      case (columnName, commonType) =>
-        val fromIdType = for {
-          fromId <- from.lookupColumnIndex(columnName)
-          fromType <- from.columns.get(columnName)
-        } yield (fromId -> fromType)
-        SelectProjection(
-          columnName,
-          buildExpression(fromIdType, commonType)
-        )
+  private def buildSelectors(
+      columnNames: Vector[String],
+      from: TabularData,
+      commonTypes: Vector[DataType]
+  ): Vector[SelectProjection] = {
+    columnNames.zip(commonTypes).map { case (columnName, commonType) =>
+      val fromIdType = for {
+        fromId <- from.lookupColumnIndex(columnName)
+        fromType <- from.columns.get(columnName)
+      } yield (fromId -> fromType)
+      SelectProjection(
+        columnName,
+        buildExpression(fromIdType, commonType)
+      )
     }
   }
 

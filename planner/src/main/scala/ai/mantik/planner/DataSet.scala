@@ -1,13 +1,24 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.{ DataType, TabularData }
-import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
-import ai.mantik.ds.sql.{ AnonymousInput, AutoSelect, AutoUnion, Join, JoinType, Query, Select, SingleQuery, Split, SqlContext }
+import ai.mantik.ds.{DataType, TabularData}
+import ai.mantik.ds.element.{Bundle, SingleElementBundle}
+import ai.mantik.ds.sql.{
+  AnonymousInput,
+  AutoSelect,
+  AutoUnion,
+  Join,
+  JoinType,
+  Query,
+  Select,
+  SingleQuery,
+  Split,
+  SqlContext
+}
 import ai.mantik.elements
-import ai.mantik.elements.{ DataSetDefinition, ItemId, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{DataSetDefinition, ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.planner.repository.Bridge
-import io.circe.{ Decoder, Encoder }
+import io.circe.{Decoder, Encoder}
 
 /** A DataSet cannot be automatically converted to an expected type. */
 class ConversionNotApplicableException(msg: String) extends IllegalArgumentException(msg)
@@ -25,11 +36,11 @@ case class DataSet(
   def fetch: Action.FetchAction = Action.FetchAction(this)
 
   /**
-   * Prepares a select statement on this dataset.
-   *
-   * @throws FeatureNotSupported if a select is applied on non tabular data or if the select could not be compiled.
-   * @throws IllegalArgumentException on illegal selects.
-   */
+    * Prepares a select statement on this dataset.
+    *
+    * @throws FeatureNotSupported if a select is applied on non tabular data or if the select could not be compiled.
+    * @throws IllegalArgumentException on illegal selects.
+    */
   def select(statement: String): DataSet = {
     val parsedSelect = Select.parse(forceDataTypeTabular(), statement) match {
       case Left(error) => throw new IllegalArgumentException(s"Could not parse select ${error}")
@@ -68,10 +79,11 @@ case class DataSet(
 
   /** Performs join with other dataset. */
   def join(other: DataSet, columns: Seq[String], joinType: JoinType): DataSet = {
-    val joinOp = Join.anonymousFromUsing(forceDataTypeTabular(), other.forceDataTypeTabular(), columns, joinType) match {
-      case Left(error) => throw new IllegalArgumentException(s"Illegal join ${error}")
-      case Right(ok)   => ok
-    }
+    val joinOp =
+      Join.anonymousFromUsing(forceDataTypeTabular(), other.forceDataTypeTabular(), columns, joinType) match {
+        case Left(error) => throw new IllegalArgumentException(s"Illegal join ${error}")
+        case Right(ok)   => ok
+      }
     join(other, joinOp)
   }
 
@@ -81,10 +93,10 @@ case class DataSet(
   }
 
   /**
-   * Auto UNION this and another data set
-   * @param other the other dataset
-   * @param all if true generate UNION ALL, otherwise duplicates are omitted.
-   */
+    * Auto UNION this and another data set
+    * @param other the other dataset
+    * @param all if true generate UNION ALL, otherwise duplicates are omitted.
+    */
   def autoUnion(other: DataSet, all: Boolean): DataSet = {
     val autoUnion = AutoUnion.autoUnion(this.dataType, other.dataType, all) match {
       case Left(error) => throw new IllegalArgumentException(s"Could not generate auto union ${error}")
@@ -94,10 +106,10 @@ case class DataSet(
   }
 
   /**
-   * Tries to auto convert this data set to another data type.
-   * Conversions can only be done if they do not loose precision or cannot fail single rows.
-   * @throws ConversionNotApplicableException if the conversion can not be applied.
-   */
+    * Tries to auto convert this data set to another data type.
+    * Conversions can only be done if they do not loose precision or cannot fail single rows.
+    * @throws ConversionNotApplicableException if the conversion can not be applied.
+    */
   def autoAdaptOrFail(targetType: DataType): DataSet = {
     if (targetType == dataType) {
       return this
@@ -109,9 +121,9 @@ case class DataSet(
   }
 
   /**
-   * Returns a dataset, which will be cached.
-   * Note: caching is done lazy.
-   */
+    * Returns a dataset, which will be cached.
+    * Note: caching is done lazy.
+    */
   def cached: DataSet = {
     val itemId = ItemId.generate()
     payloadSource match {
@@ -128,12 +140,12 @@ case class DataSet(
   }
 
   /**
-   * Split the DataSet into multiple fractions.
-   * @param fractions the relative size of each fraction
-   * @param shuffleSeed if given, shuffle the dataset before extracting fractions using this Random seed
-   * @param cached if true, cache sub results to avoid recalculation
-   * @return fractions.length + 1 DataSets
-   */
+    * Split the DataSet into multiple fractions.
+    * @param fractions the relative size of each fraction
+    * @param shuffleSeed if given, shuffle the dataset before extracting fractions using this Random seed
+    * @param cached if true, cache sub results to avoid recalculation
+    * @return fractions.length + 1 DataSets
+    */
   def split(fractions: Seq[Double], shuffleSeed: Option[Long] = None, cached: Boolean = true): Seq[DataSet] = {
     val tabularType = forceDataTypeTabular()
     val underlying = AnonymousInput(tabularType)
@@ -161,9 +173,11 @@ case class DataSet(
     }
 
     val dataSets = for (resultId <- 0 until resultCount) yield {
-      DataSet.natural(Source.constructed(PayloadSource.Projection(maybeCachedOperationResult, resultId)), tabularType).withItemId(
-        resultItemIds(resultId)
-      )
+      DataSet
+        .natural(Source.constructed(PayloadSource.Projection(maybeCachedOperationResult, resultId)), tabularType)
+        .withItemId(
+          resultItemIds(resultId)
+        )
     }
     dataSets
   }
@@ -177,7 +191,8 @@ object DataSet {
 
   def literal(bundle: Bundle): DataSet = {
     natural(
-      Source.constructed(PayloadSource.BundleLiteral(bundle)), bundle.model
+      Source.constructed(PayloadSource.BundleLiteral(bundle)),
+      bundle.model
     )
   }
 
@@ -186,13 +201,13 @@ object DataSet {
   }
 
   /**
-   * Execute an SQL Query on Datasets.
-   * @param query SQL Query
-   * @param arguments arguments to be used within SQL query. They are accessible as $0, $1, ...
-   */
+    * Execute an SQL Query on Datasets.
+    * @param query SQL Query
+    * @param arguments arguments to be used within SQL query. They are accessible as $0, $1, ...
+    */
   def query(
-    statement: String,
-    arguments: DataSet*
+      statement: String,
+      arguments: DataSet*
   ): DataSet = {
     implicit val sqlContext = SqlContext(arguments.map { ds =>
       ds.forceDataTypeTabular()
@@ -205,8 +220,8 @@ object DataSet {
   }
 
   private def query(
-    query: Query,
-    arguments: Vector[DataSet]
+      query: Query,
+      arguments: Vector[DataSet]
   ): DataSet = {
     val inputs = query.figureOutInputPorts.getOrElse {
       throw new IllegalArgumentException(s"Illegal input ports")
@@ -214,11 +229,10 @@ object DataSet {
     if (inputs.length != arguments.length) {
       throw new IllegalArgumentException(s"Wrong count of inputs, expected ${inputs.length}, got ${arguments.length}")
     }
-    inputs.zip(arguments).foreach {
-      case (input, arg) =>
-        if (input != arg.forceDataTypeTabular()) {
-          throw new IllegalArgumentException(s"Bad input type, expected ${input}, got ${arg.forceDataTypeTabular()}")
-        }
+    inputs.zip(arguments).foreach { case (input, arg) =>
+      if (input != arg.forceDataTypeTabular()) {
+        throw new IllegalArgumentException(s"Bad input type, expected ${input}, got ${arg.forceDataTypeTabular()}")
+      }
     }
     val payloadSource = PayloadSource.OperationResult(
       Operation.SqlQueryOperation(
@@ -238,11 +252,15 @@ object DataSet {
   /** Creates a natural data source, with serialized data coming direct from a flow. */
   private[planner] def natural(source: Source, dataType: DataType): DataSet = {
     val bridge = Bridge.naturalBridge
-    DataSet(source, MantikHeader.pure(
-      elements.DataSetDefinition(
-        bridge = bridge.mantikId,
-        `type` = dataType
-      )
-    ), bridge)
+    DataSet(
+      source,
+      MantikHeader.pure(
+        elements.DataSetDefinition(
+          bridge = bridge.mantikId,
+          `type` = dataType
+        )
+      ),
+      bridge
+    )
   }
 }

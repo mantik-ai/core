@@ -2,11 +2,11 @@ package ai.mantik.componently.utils
 
 import java.util.concurrent.CompletionStage
 import java.util.function.BiConsumer
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 object JavaFutureConverter {
 
-  /** Extends CompletionStage with conversions to Scala.  */
+  /** Extends CompletionStage with conversions to Scala. */
   implicit class CompletionStageExtensions[T](completionStage: CompletionStage[T]) {
     def asScala: Future[T] = {
       val promise = Promise[T]

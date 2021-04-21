@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.sql.{ Alias, AnonymousInput, Query, SqlContext, Union }
-import ai.mantik.ds.sql.parser.{ AST, QueryParser }
+import ai.mantik.ds.sql.{Alias, AnonymousInput, Query, SqlContext, Union}
+import ai.mantik.ds.sql.parser.{AST, QueryParser}
 
 /** Builds queries from AST Nodes */
 private[sql] object QueryBuilder {

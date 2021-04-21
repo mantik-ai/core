@@ -1,6 +1,6 @@
 package ai.mantik.ds
 
-import io.circe.{ Decoder, Encoder, ObjectEncoder }
+import io.circe.{Decoder, Encoder, ObjectEncoder}
 import io.circe.syntax._
 
 import scala.collection.immutable.ListMap
@@ -58,13 +58,12 @@ case class TabularData(
     val builder = StringBuilder.newBuilder
     var first = true
     builder ++= "TabularData("
-    columns.foreach {
-      case (name, value) =>
-        if (!first) {
-          builder ++= ","
-        }
-        builder ++= s"$name:${value.toString}"
-        first = false
+    columns.foreach { case (name, value) =>
+      if (!first) {
+        builder ++= ","
+      }
+      builder ++= s"$name:${value.toString}"
+      first = false
     }
     rowCount match {
       case None     => // nothing
@@ -76,10 +75,13 @@ case class TabularData(
 }
 
 object TabularData {
+
   /** Build a tabular data from a name type list. */
   def apply(columns: (String, DataType)*): TabularData = TabularData(ListMap(columns: _*), None)
 
-  implicit val encoder: Encoder[TabularData] = DataTypeJsonAdapter.typeEncoder.contramap { x: TabularData => x: DataType }
+  implicit val encoder: Encoder[TabularData] = DataTypeJsonAdapter.typeEncoder.contramap { x: TabularData =>
+    x: DataType
+  }
   implicit val decoder: Decoder[TabularData] = DataTypeJsonAdapter.typeDecoder.emap {
     case td: TabularData => Right(td)
     case other           => Left(s"Expected TabularData, got ${other.getClass.getSimpleName}")
@@ -88,6 +90,7 @@ object TabularData {
 
 /** Describes a fundamental type. */
 sealed trait FundamentalType extends DataType {
+
   /** Returns the simple string name of the fundamental type. */
   def name: String = DataTypeJsonAdapter.fundamentalTypeToName(this)
 
@@ -145,8 +148,10 @@ case class ImageComponent(
 sealed trait ImageFormat
 
 object ImageFormat {
+
   /** Image is plain encoded (bytes directly after each other, row after row). */
   case object Plain extends ImageFormat
+
   /** Image is in PNG Format. */
   case object Png extends ImageFormat
 }
@@ -160,10 +165,11 @@ case class Image(
 ) extends DataType {
 
   private def channelsToString: String = {
-    components.map {
-      case (channel, component) =>
+    components
+      .map { case (channel, component) =>
         channel.toString + ": " + component.componentType.toString
-    }.mkString(",")
+      }
+      .mkString(",")
   }
 
   override def toString: String = s"Image(${width}x${height}, [${channelsToString}])"
@@ -173,24 +179,25 @@ object Image {
 
   /** Convenience constructor for plain Images. */
   def plain(
-    width: Int,
-    height: Int,
-    components: (ImageChannel, FundamentalType)*
+      width: Int,
+      height: Int,
+      components: (ImageChannel, FundamentalType)*
   ): Image = {
-    Image(width, height,
-      ListMap(components.map {
-        case (channel, dataType) =>
-          channel -> ImageComponent(dataType)
+    Image(
+      width,
+      height,
+      ListMap(components.map { case (channel, dataType) =>
+        channel -> ImageComponent(dataType)
       }: _*)
     )
   }
 }
 
 /**
- * Data Type for Tensors
- * @param componentType underlying fundamental type (dtype in TensorFlow).
- * @param shape shape of the Tensor. No support for varying shape yet.
- */
+  * Data Type for Tensors
+  * @param componentType underlying fundamental type (dtype in TensorFlow).
+  * @param shape shape of the Tensor. No support for varying shape yet.
+  */
 case class Tensor(
     componentType: FundamentalType,
     shape: Seq[Int]
@@ -216,9 +223,9 @@ case class Nullable(
 object Nullable {
 
   /**
-   * If already nullable, returns the dataType, otherwise wrap it inside
-   * a Nullable
-   */
+    * If already nullable, returns the dataType, otherwise wrap it inside
+    * a Nullable
+    */
   def makeNullable(dataType: DataType): Nullable = {
     dataType match {
       case n: Nullable => n
@@ -227,10 +234,10 @@ object Nullable {
   }
 
   /**
-   * If in is nullable, call f on underlying and wrap in Nullable, otherwise
-   * call f on in.
-   * (Can be useful on functions which map values to nullable, if nullable given)
-   */
+    * If in is nullable, call f on underlying and wrap in Nullable, otherwise
+    * call f on in.
+    * (Can be useful on functions which map values to nullable, if nullable given)
+    */
   def mapIfNullable(in: DataType, f: DataType => DataType): DataType = {
     in match {
       case n: Nullable => Nullable.makeNullable(f(n.underlying))
@@ -248,9 +255,9 @@ object Nullable {
 }
 
 /**
- * A Array type.
- * Note: called ArrayT to make it distinguishable with Scala's Array.
- */
+  * A Array type.
+  * Note: called ArrayT to make it distinguishable with Scala's Array.
+  */
 case class ArrayT(
     underlying: DataType
 ) extends DataType {
@@ -275,10 +282,11 @@ case class Struct(
   }
 
   override def toString: String = {
-    s"Struct" + fields.map {
-      case (name, dt) =>
+    s"Struct" + fields
+      .map { case (name, dt) =>
         s"${name}:${dt}"
-    }.mkString("(", ",", ")")
+      }
+      .mkString("(", ",", ")")
   }
 }
 

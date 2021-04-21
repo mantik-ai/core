@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.sql.parser.AST.UnionNode
-import org.parboiled2.{ Parser, Rule1 }
+import org.parboiled2.{Parser, Rule1}
 
 private[parser] trait UnionParser extends ExpressionParser with InnerQueryParser {
   this: Parser =>
@@ -29,9 +29,8 @@ private[parser] trait UnionParser extends ExpressionParser with InnerQueryParser
     val first = next.head
     next.tail.foldLeft(
       AST.UnionNode(start, first.right, first.all)
-    ) {
-        case (current, next) =>
-          AST.UnionNode(current, next.right, next.all)
-      }
+    ) { case (current, next) =>
+      AST.UnionNode(current, next.right, next.all)
+    }
   }
 }

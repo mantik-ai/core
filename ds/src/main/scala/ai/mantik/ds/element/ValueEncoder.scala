@@ -4,9 +4,9 @@ import ai.mantik.ds.FundamentalType
 import FundamentalType._
 
 /**
- * Value encoder provides implicit information about implicit values
- * and can be used to construct primitives of them.
- */
+  * Value encoder provides implicit information about implicit values
+  * and can be used to construct primitives of them.
+  */
 trait ValueEncoder[T] {
   def fundamentalType: FundamentalType
   def wrap(x: T): Primitive[_]

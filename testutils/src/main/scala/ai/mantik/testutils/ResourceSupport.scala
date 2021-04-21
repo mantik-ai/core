@@ -1,6 +1,6 @@
 package ai.mantik.testutils
 
-import java.io.{ File, FileNotFoundException }
+import java.io.{File, FileNotFoundException}
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 

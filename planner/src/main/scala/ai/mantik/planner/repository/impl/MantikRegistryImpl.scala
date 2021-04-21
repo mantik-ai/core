@@ -1,11 +1,11 @@
 package ai.mantik.planner.repository.impl
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.errors.{ ErrorCodes, RemoteRegistryException }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.elements.errors.{ErrorCodes, RemoteRegistryException}
 import ai.mantik.elements.registry.api._
-import ai.mantik.elements.{ ItemId, MantikId, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{ItemId, MantikId, MantikHeader, NamedMantikId}
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
-import ai.mantik.planner.repository.{ CustomLoginToken, MantikArtifact, MantikRegistry, RemoteMantikRegistry }
+import ai.mantik.planner.repository.{CustomLoginToken, MantikArtifact, MantikRegistry, RemoteMantikRegistry}
 import akka.http.scaladsl.Http
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
@@ -13,23 +13,24 @@ import javax.inject.Inject
 import net.reactivecore.fhttp.akka.ApiClient
 
 import scala.concurrent.Future
-import scala.util.{ Success, Try }
+import scala.util.{Success, Try}
 
 private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRuntime)
-  extends ComponentBase with RemoteMantikRegistry {
+    extends ComponentBase
+    with RemoteMantikRegistry {
 
   private val registryCredentials = new DefaultRegistryCredentials(config)
 
   private val executor: ApiClient.RequestExecutor = { request =>
     val t0 = System.currentTimeMillis()
-    Http().singleRequest(request).andThen {
-      case Success(response) =>
-        val t1 = System.currentTimeMillis()
-        logger.debug(s"Calling ${request.method.name()} ${request.uri} ${response.status.intValue()} within ${t1 - t0}ms")
+    Http().singleRequest(request).andThen { case Success(response) =>
+      val t1 = System.currentTimeMillis()
+      logger.debug(s"Calling ${request.method.name()} ${request.uri} ${response.status.intValue()} within ${t1 - t0}ms")
     }
   }
   private val defaultApi = new MantikRegistryApi(registryCredentials.url, executor)
-  private val defaultTokenProvider = new MantikRegistryTokenProvider(defaultApi, registryCredentials.user, registryCredentials.password)
+  private val defaultTokenProvider =
+    new MantikRegistryTokenProvider(defaultApi, registryCredentials.user, registryCredentials.password)
 
   /** Provides a token. */
   private[mantik] def token(): Future[String] = defaultTokenProvider.getToken()
@@ -52,11 +53,19 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
     defaultCall(ensureMantikIdImpl(_, _, itemId, mantikId))
   }
 
-  private def ensureMantikIdImpl(api: MantikRegistryApi, token: String, itemId: ItemId, mantikId: NamedMantikId): Future[Boolean] = {
+  private def ensureMantikIdImpl(
+      api: MantikRegistryApi,
+      token: String,
+      itemId: ItemId,
+      mantikId: NamedMantikId
+  ): Future[Boolean] = {
     api.tag(token, ApiTagRequest(itemId, mantikId)).map(_.updated)
   }
 
-  private def decodeMantikArtifact(mantikId: MantikId, apiGetArtifactResponse: ApiGetArtifactResponse): Try[MantikArtifact] = {
+  private def decodeMantikArtifact(
+      mantikId: MantikId,
+      apiGetArtifactResponse: ApiGetArtifactResponse
+  ): Try[MantikArtifact] = {
     for {
       _ <- MantikHeader.fromYaml(apiGetArtifactResponse.mantikDefinition).toTry
     } yield {
@@ -77,11 +86,19 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
     api.file(token, fileId)
   }
 
-  override def addMantikArtifact(mantikArtifact: MantikArtifact, payload: Option[PayloadSource]): Future[MantikArtifact] = {
+  override def addMantikArtifact(
+      mantikArtifact: MantikArtifact,
+      payload: Option[PayloadSource]
+  ): Future[MantikArtifact] = {
     defaultCall(addMantikArtifactImpl(_, _, mantikArtifact, payload))
   }
 
-  private def addMantikArtifactImpl(api: MantikRegistryApi, token: String, mantikArtifact: MantikArtifact, payload: Option[PayloadSource]): Future[MantikArtifact] = {
+  private def addMantikArtifactImpl(
+      api: MantikRegistryApi,
+      token: String,
+      mantikArtifact: MantikArtifact,
+      payload: Option[PayloadSource]
+  ): Future[MantikArtifact] = {
     for {
       uploadResponse <- api.prepareUpload(
         token,
@@ -96,9 +113,14 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
         case Some((contentType, source)) =>
           // Akka HTTP Crashes on empty Chunks.
           val withoutEmptyChunks = source.filter(_.nonEmpty)
-          api.uploadFile(
-            token, mantikArtifact.itemId.toString, contentType, withoutEmptyChunks
-          ).map(response => Some(response.fileId))
+          api
+            .uploadFile(
+              token,
+              mantikArtifact.itemId.toString,
+              contentType,
+              withoutEmptyChunks
+            )
+            .map(response => Some(response.fileId))
         case None =>
           Future.successful(None)
       }
@@ -126,7 +148,10 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
       customCall(token, getPayloadImpl(_, _, fileId))
     }
 
-    override def addMantikArtifact(mantikArtifact: MantikArtifact, payload: Option[(String, Source[ByteString, _])]): Future[MantikArtifact] = {
+    override def addMantikArtifact(
+        mantikArtifact: MantikArtifact,
+        payload: Option[(String, Source[ByteString, _])]
+    ): Future[MantikArtifact] = {
       customCall(token, addMantikArtifactImpl(_, _, mantikArtifact, payload))
     }
 
@@ -138,9 +163,9 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
   }
 
   /**
-   * Runs a call on the default API.
-   * @param f called with API and Token
-   */
+    * Runs a call on the default API.
+    * @param f called with API and Token
+    */
   private def defaultCall[T](f: (MantikRegistryApi, String) => Future[T]): Future[T] = {
     for {
       token <- defaultTokenProvider.getToken()
@@ -149,10 +174,13 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
   }
 
   /**
-   * Runs a call on a own-logged-in-API API.
-   * @param f called with API and Token
-   */
-  private def customCall[T](customLoginToken: CustomLoginToken, f: (MantikRegistryApi, String) => Future[T]): Future[T] = {
+    * Runs a call on a own-logged-in-API API.
+    * @param f called with API and Token
+    */
+  private def customCall[T](
+      customLoginToken: CustomLoginToken,
+      f: (MantikRegistryApi, String) => Future[T]
+  ): Future[T] = {
     val subApi = new MantikRegistryApi(customLoginToken.url, executor)
     f(subApi, customLoginToken.token)
   }

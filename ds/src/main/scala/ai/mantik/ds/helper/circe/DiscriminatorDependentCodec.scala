@@ -9,12 +9,12 @@ import shapeless.Lazy
 import scala.reflect.ClassTag
 
 /**
- * Adds a discriminator for encoding multiple algebraic sub types into the same json.
- * Similar to https://circe.github.io/circe/codecs/adt.html
- * but we can choose the discriminator and values by our self, to make JSON spec simpler.
- *
- * This is for circe JSON, not Play JSON.
- */
+  * Adds a discriminator for encoding multiple algebraic sub types into the same json.
+  * Similar to https://circe.github.io/circe/codecs/adt.html
+  * but we can choose the discriminator and values by our self, to make JSON spec simpler.
+  *
+  * This is for circe JSON, not Play JSON.
+  */
 abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") extends ObjectEncoder[T] with Decoder[T] {
   protected case class SubType[X <: T](
       classTag: ClassTag[X],
@@ -29,12 +29,22 @@ abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") ex
   }
 
   /** Make a sub type with automatically derived encoders/decoders. */
-  protected def makeSubType[X <: T](kind: String, isDefault: Boolean = false)(implicit classTag: ClassTag[X], encoder: Lazy[DerivedObjectEncoder[X]], decoder: Lazy[DerivedDecoder[X]]): SubType[X] = {
+  protected def makeSubType[X <: T](
+      kind: String,
+      isDefault: Boolean = false
+  )(
+      implicit classTag: ClassTag[X],
+      encoder: Lazy[DerivedObjectEncoder[X]],
+      decoder: Lazy[DerivedDecoder[X]]
+  ): SubType[X] = {
     SubType(classTag, encoder.value, decoder.value, kind, isDefault)
   }
 
   /** Make a sub type with given encoders/decoders. */
-  protected def makeGivenSubType[X <: T](kind: String, isDefault: Boolean = false)(implicit classTag: ClassTag[X], encoder: ObjectEncoder[X], decoder: Decoder[X]): SubType[X] = {
+  protected def makeGivenSubType[X <: T](
+      kind: String,
+      isDefault: Boolean = false
+  )(implicit classTag: ClassTag[X], encoder: ObjectEncoder[X], decoder: Decoder[X]): SubType[X] = {
     SubType(classTag, encoder, decoder, kind, isDefault)
   }
 
@@ -57,9 +67,12 @@ abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") ex
     classTags.get(a.getClass) match {
       case None => throw new IllegalArgumentException(s"Object ${a.getClass.getSimpleName} is not registered")
       case Some(subType) =>
-        subType.rawEncode(a).+:(
-          discriminator, Json.fromString(subType.kind)
-        )
+        subType
+          .rawEncode(a)
+          .+:(
+            discriminator,
+            Json.fromString(subType.kind)
+          )
     }
   }
 

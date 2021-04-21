@@ -1,7 +1,7 @@
 package ai.mantik.ds.operations
 
 import ai.mantik.ds.element.Primitive
-import ai.mantik.ds.{ FundamentalType, TypeSamples }
+import ai.mantik.ds.{FundamentalType, TypeSamples}
 import ai.mantik.testutils.TestBase
 
 class BinaryFunctionSpec extends TestBase {
@@ -49,27 +49,30 @@ class BinaryFunctionSpec extends TestBase {
 
   it should "have handling for unsigned types for 8bit" in {
     val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int8).right.getOrElse(fail)
-    val unsigendDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint8).right.getOrElse(fail)
+    val unsigendDiv =
+      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint8).right.getOrElse(fail)
     signedDiv.op(Primitive(-1.toByte), Primitive(5.toByte)) shouldBe Primitive(0.toByte)
     unsigendDiv.op(Primitive(-1.toByte), Primitive(5.toByte)) shouldBe Primitive(51.toByte)
   }
 
   it should "have handling for unsigned types for 32bit" in {
     val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int32).right.getOrElse(fail)
-    val unsigendDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint32).right.getOrElse(fail)
+    val unsigendDiv =
+      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint32).right.getOrElse(fail)
     signedDiv.op(Primitive(-1), Primitive(5)) shouldBe Primitive(0)
     unsigendDiv.op(Primitive(-1), Primitive(5)) shouldBe Primitive(858993459)
   }
 
   it should "have handling for unsigned types for 64bit" in {
     val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int64).right.getOrElse(fail)
-    val unsigendDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint64).right.getOrElse(fail)
+    val unsigendDiv =
+      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint64).right.getOrElse(fail)
     signedDiv.op(Primitive(-1L), Primitive(5L)) shouldBe Primitive(0)
     unsigendDiv.op(Primitive(-1L), Primitive(5L)) shouldBe Primitive(3689348814741910323L)
   }
 
   private def isSpecialFloat(value: Primitive[_]): Boolean = {
     value.x == Float.NegativeInfinity || value.x == Float.PositiveInfinity || value.x == Float.NaN ||
-      value.x == Double.NegativeInfinity || value.x == Double.PositiveInfinity || value.x == Double.NaN
+    value.x == Double.NegativeInfinity || value.x == Double.PositiveInfinity || value.x == Double.NaN
   }
 }

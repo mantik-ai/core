@@ -1,6 +1,6 @@
 package ai.mantik.ds.element
 
-import ai.mantik.ds.{ FundamentalType, Image, ArrayT, Struct, Nullable, TabularData, Tensor }
+import ai.mantik.ds.{FundamentalType, Image, ArrayT, Struct, Nullable, TabularData, Tensor}
 
 /** Builder for tabular data */
 class TabularBuilder(tabularData: TabularData) {
@@ -13,7 +13,8 @@ class TabularBuilder(tabularData: TabularData) {
   }
 
   def result: TabularBundle = TabularBundle(
-    tabularData, rowBuilder.result()
+    tabularData,
+    rowBuilder.result()
   )
 
   private def addCheckedRow(values: Seq[Any]): Unit = {

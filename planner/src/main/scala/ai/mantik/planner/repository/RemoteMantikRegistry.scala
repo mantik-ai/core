@@ -1,9 +1,9 @@
 package ai.mantik.planner.repository
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.registry.api.ApiLoginResponse
-import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
+import ai.mantik.elements.{ItemId, MantikId, NamedMantikId}
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
 import ai.mantik.planner.repository.impl.MantikRegistryImpl
 import akka.stream.scaladsl.Source
@@ -23,10 +23,10 @@ case class CustomLoginToken(
 trait RemoteMantikRegistry extends MantikRegistry {
 
   /**
-   * Login into a custom URL.
-   * This login call is stateless and has no effect on the other operations which are
-   * using the default credentials.
-   */
+    * Login into a custom URL.
+    * This login call is stateless and has no effect on the other operations which are
+    * using the default credentials.
+    */
   def login(url: String, user: String, password: String): Future[ApiLoginResponse]
 
   /** Returns a copy with a custom url/token and no automatic token management. */
@@ -49,7 +49,10 @@ object RemoteMantikRegistry {
 
     override def getPayload(fileId: String): Future[PayloadSource] = NotFound
 
-    override def addMantikArtifact(mantikArtifact: MantikArtifact, payload: Option[(String, Source[ByteString, _])]): Future[MantikArtifact] = {
+    override def addMantikArtifact(
+        mantikArtifact: MantikArtifact,
+        payload: Option[(String, Source[ByteString, _])]
+    ): Future[MantikArtifact] = {
       NotFound
     }
 

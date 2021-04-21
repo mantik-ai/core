@@ -1,21 +1,22 @@
 package ai.mantik.elements.meta
 
-import ai.mantik.ds.element.{ SingleElementBundle, TabularBundle }
+import ai.mantik.ds.element.{SingleElementBundle, TabularBundle}
 import ai.mantik.ds.formats.json.JsonFormat
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, JsonObject }
+import io.circe.{Decoder, DecodingFailure, Encoder, HCursor, Json, JsonObject}
 
 /**
- * A Meta variable used in [[MetaVariableApplication]].
- * @param name name of the meta variable
- * @param value value of the meta variable.
- * @param fix if fix, a meta variable may not be changed anymore.
- */
+  * A Meta variable used in [[MetaVariableApplication]].
+  * @param name name of the meta variable
+  * @param value value of the meta variable.
+  * @param fix if fix, a meta variable may not be changed anymore.
+  */
 case class MetaVariable(
     name: String,
     value: SingleElementBundle,
     fix: Boolean = false
 ) {
+
   /** The json encoded value. */
   lazy val jsonValue: Json = JsonFormat.serializeBundleValue(value)
 }
@@ -24,10 +25,12 @@ object MetaVariable {
 
   implicit val encoder: Encoder[MetaVariable] = new Encoder[MetaVariable] {
     override def apply(a: MetaVariable): Json = {
-      Json.obj(
-        "name" -> Json.fromString(a.name),
-        "fix" -> Json.fromBoolean(a.fix)
-      ).deepMerge(
+      Json
+        .obj(
+          "name" -> Json.fromString(a.name),
+          "fix" -> Json.fromBoolean(a.fix)
+        )
+        .deepMerge(
           Json.fromJsonObject(JsonFormat.encodeObject(a.value))
         )
     }

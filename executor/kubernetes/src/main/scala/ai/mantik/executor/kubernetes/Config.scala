@@ -2,14 +2,14 @@ package ai.mantik.executor.kubernetes
 
 import ai.mantik.executor.common.CommonConfig
 import ai.mantik.executor.model.docker.DockerConfig
-import com.typesafe.config.{ Config => TypesafeConfig }
+import com.typesafe.config.{Config => TypesafeConfig}
 
 /**
- * Configuration for the execution.
- *
- * @param common common executor settings.
- * @param kubernetes kubernetes specific settings
- */
+  * Configuration for the execution.
+  *
+  * @param common common executor settings.
+  * @param kubernetes kubernetes specific settings
+  */
 case class Config(
     common: CommonConfig,
     kubernetes: KubernetesConfig

@@ -2,7 +2,7 @@ package ai.mantik.planner.repository.impl
 
 import java.nio.charset.StandardCharsets
 
-import ai.mantik.planner.utils.sqlite.{ QuillSqlite, SqliteEvolutions, SqliteEvolutionsSpecBase }
+import ai.mantik.planner.utils.sqlite.{QuillSqlite, SqliteEvolutions, SqliteEvolutionsSpecBase}
 import org.apache.commons.io.IOUtils
 
 class MantikDbEvolutionsSpec extends SqliteEvolutionsSpecBase {

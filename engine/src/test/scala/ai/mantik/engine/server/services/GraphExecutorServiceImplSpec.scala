@@ -3,13 +3,13 @@ package ai.mantik.engine.server.services
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.engine.protos.ds.BundleEncoding
-import ai.mantik.engine.protos.graph_executor.{ DeployItemRequest, FetchItemRequest, SaveItemRequest }
-import ai.mantik.engine.testutil.{ TestArtifacts, TestBaseWithSessions }
+import ai.mantik.engine.protos.graph_executor.{DeployItemRequest, FetchItemRequest, SaveItemRequest}
+import ai.mantik.engine.testutil.{TestArtifacts, TestBaseWithSessions}
 import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.repository.MantikArtifact
-import ai.mantik.planner.{ Algorithm, DataSet, DeploymentState, MantikItem, Pipeline, PlanOp, Source }
+import ai.mantik.planner.{Algorithm, DataSet, DeploymentState, MantikItem, Pipeline, PlanOp, Source}
 
 import scala.concurrent.Future
 
@@ -30,9 +30,11 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
         dataset
       )
       components.nextItemToReturnByExecutor = Future.successful(lit)
-      val response = await(graphExecutor.fetchDataSet(
-        FetchItemRequest(session1.id, dataset1Id, encoding)
-      ))
+      val response = await(
+        graphExecutor.fetchDataSet(
+          FetchItemRequest(session1.id, dataset1Id, encoding)
+        )
+      )
       val bundleDecoded = Converters.decodeBundle(response.bundle.get)
       bundleDecoded shouldBe lit
       components.lastPlan shouldBe components.planner.convert(dataset.fetch)
@@ -47,9 +49,15 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
       dataset
     )
     components.nextItemToReturnByExecutor = Future.successful(())
-    val response = await(graphExecutor.saveItem(SaveItemRequest(
-      session1.id, dataset1Id, "foo1"
-    )))
+    val response = await(
+      graphExecutor.saveItem(
+        SaveItemRequest(
+          session1.id,
+          dataset1Id,
+          "foo1"
+        )
+      )
+    )
     response.name shouldBe "foo1"
     response.mantikItemId shouldNot be(empty)
     components.lastPlan shouldBe components.planner.convert(dataset.tag("foo1").save())
@@ -57,12 +65,21 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
 
   "deploy" should "deploy elements" in new Env {
     val algorithm1Artifact = MantikArtifact(
-      MantikHeader.pure(AlgorithmDefinition(bridge = TestArtifacts.algoBridge1.namedId.get, `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
+      MantikHeader
+        .pure(
+          AlgorithmDefinition(
+            bridge = TestArtifacts.algoBridge1.namedId.get,
+            `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType)
+          )
+        )
+        .toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
-    val algorithm1 = MantikItem.fromMantikArtifact(algorithm1Artifact, components.stateManger, Seq(TestArtifacts.algoBridge1)).asInstanceOf[Algorithm]
+    val algorithm1 = MantikItem
+      .fromMantikArtifact(algorithm1Artifact, components.stateManger, Seq(TestArtifacts.algoBridge1))
+      .asInstanceOf[Algorithm]
     val pipeline1 = Pipeline.build(
       algorithm1
     )
@@ -77,20 +94,22 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
         externalUrl = Some("externalUrl1")
       )
     )
-    val response = await(graphExecutor.deployItem(
-      DeployItemRequest(
-        session1.id,
-        pipeline1Id,
-        nameHint = "nameHint1",
-        ingressName = "ingress1"
+    val response = await(
+      graphExecutor.deployItem(
+        DeployItemRequest(
+          session1.id,
+          pipeline1Id,
+          nameHint = "nameHint1",
+          ingressName = "ingress1"
+        )
       )
-    ))
+    )
     response.name shouldBe "name1"
     response.internalUrl shouldBe "internalUrl1"
     response.externalUrl shouldBe "externalUrl1"
     val ops = components.lastPlan.op.asInstanceOf[PlanOp.Sequential[_]].plans
-    val deployOp = ops.collectFirst {
-      case x: PlanOp.DeployPipeline => x
+    val deployOp = ops.collectFirst { case x: PlanOp.DeployPipeline =>
+      x
     }.get
     deployOp.serviceNameHint shouldBe Some("nameHint1")
     deployOp.ingress shouldBe Some("ingress1")

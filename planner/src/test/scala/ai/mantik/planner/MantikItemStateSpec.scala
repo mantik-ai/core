@@ -1,6 +1,6 @@
 package ai.mantik.planner
 
-import ai.mantik.elements.{ ItemId, NamedMantikId }
+import ai.mantik.elements.{ItemId, NamedMantikId}
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.testutils.TestBase
 
@@ -10,10 +10,13 @@ class MantikItemStateSpec extends TestBase {
     val name = NamedMantikId("foo/bar")
     val itemId = ItemId.generate()
     val algorithm = Algorithm(
-      Source(DefinitionSource.Loaded(
-        Some(name),
-        itemId
-      ), PayloadSource.Empty),
+      Source(
+        DefinitionSource.Loaded(
+          Some(name),
+          itemId
+        ),
+        PayloadSource.Empty
+      ),
       MantikItemSpec.sample.mantikHeader,
       MantikItemSpec.algoBridge
     )
@@ -33,10 +36,13 @@ class MantikItemStateSpec extends TestBase {
   it should "also work for anonymous items" in {
     val itemId = ItemId.generate()
     val algorithm = Algorithm(
-      Source(DefinitionSource.Loaded(
-        None,
-        itemId
-      ), PayloadSource.Loaded("file1", ContentTypes.ZipFileContentType)),
+      Source(
+        DefinitionSource.Loaded(
+          None,
+          itemId
+        ),
+        PayloadSource.Loaded("file1", ContentTypes.ZipFileContentType)
+      ),
       MantikItemSpec.sample.mantikHeader,
       MantikItemSpec.algoBridge
     )
@@ -59,7 +65,8 @@ class MantikItemStateSpec extends TestBase {
           otherName,
           DefinitionSource.Loaded(Some(name), itemId)
         ),
-        PayloadSource.Empty),
+        PayloadSource.Empty
+      ),
       MantikItemSpec.sample.mantikHeader,
       MantikItemSpec.algoBridge
     )
@@ -77,10 +84,13 @@ class MantikItemStateSpec extends TestBase {
     val name = NamedMantikId("foo/bar")
     val itemId = ItemId.generate()
     val algorithm = Algorithm(
-      Source(DefinitionSource.Loaded(
-        Some(name),
-        itemId
-      ), PayloadSource.Empty).derive,
+      Source(
+        DefinitionSource.Loaded(
+          Some(name),
+          itemId
+        ),
+        PayloadSource.Empty
+      ).derive,
       MantikItemSpec.sample.mantikHeader,
       MantikItemSpec.algoBridge
     )

@@ -1,10 +1,10 @@
 package com.example.examples
 
 import java.io.File
-import ai.mantik.ds.FundamentalType.{ Float64, Int32 }
-import ai.mantik.ds.{ TabularData, Tensor }
-import ai.mantik.ds.element.{ Bundle, TabularBundle, TensorElement }
-import ai.mantik.planner.{ DataSet, PlanningContext }
+import ai.mantik.ds.FundamentalType.{Float64, Int32}
+import ai.mantik.ds.{TabularData, Tensor}
+import ai.mantik.ds.element.{Bundle, TabularBundle, TensorElement}
+import ai.mantik.planner.{DataSet, PlanningContext}
 
 object TrainAlgorithm extends ExampleBase {
 
@@ -14,11 +14,12 @@ object TrainAlgorithm extends ExampleBase {
 
     def makeTensor(a: Double, b: Double): TensorElement[Double] = TensorElement(IndexedSeq(a, b))
 
-    val learningData: Bundle = TabularBundle.build(
-      TabularData(
-        "coordinates" -> Tensor(componentType = Float64, shape = List(2))
+    val learningData: Bundle = TabularBundle
+      .build(
+        TabularData(
+          "coordinates" -> Tensor(componentType = Float64, shape = List(2))
+        )
       )
-    )
       .row(makeTensor(1, 1))
       .row(makeTensor(2, 2))
       .row(makeTensor(1, 2))
@@ -37,11 +38,12 @@ object TrainAlgorithm extends ExampleBase {
 
     val trainedAgain = context.loadAlgorithm("kmeans_trained")
 
-    val sampleData = TabularBundle.build(
-      TabularData(
-        "coordinates" -> Tensor(componentType = Float64, shape = List(2))
+    val sampleData = TabularBundle
+      .build(
+        TabularData(
+          "coordinates" -> Tensor(componentType = Float64, shape = List(2))
+        )
       )
-    )
       .row(makeTensor(1, 1))
       .row(makeTensor(0, 0))
       .row(makeTensor(4, 4))

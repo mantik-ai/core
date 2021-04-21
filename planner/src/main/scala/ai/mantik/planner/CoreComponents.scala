@@ -1,6 +1,6 @@
 package ai.mantik.planner
 
-import ai.mantik.planner.repository.{ LocalMantikRegistry, MantikArtifactRetriever }
+import ai.mantik.planner.repository.{LocalMantikRegistry, MantikArtifactRetriever}
 import com.google.inject.ImplementedBy
 import javax.inject.Inject
 

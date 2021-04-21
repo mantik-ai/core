@@ -5,12 +5,25 @@ import java.nio.file.Paths
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, MantikDefinition, NamedMantikId, PipelineDefinition, PipelineStep }
+import ai.mantik.elements.{
+  AlgorithmDefinition,
+  BridgeDefinition,
+  DataSetDefinition,
+  MantikDefinition,
+  NamedMantikId,
+  PipelineDefinition,
+  PipelineStep
+}
 import ai.mantik.planner.BuiltInItems
-import ai.mantik.planner.repository.{ ContentTypes, FileRepositoryServer, MantikArtifact, RemoteMantikRegistry }
-import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalMantikRegistryImpl, LocalRepository, MantikArtifactRetrieverImpl }
-import ai.mantik.planner.util.{ ErrorCodeTestUtils, TestBaseWithAkkaRuntime }
-import ai.mantik.testutils.{ AkkaSupport, TempDirSupport, TestBase }
+import ai.mantik.planner.repository.{ContentTypes, FileRepositoryServer, MantikArtifact, RemoteMantikRegistry}
+import ai.mantik.planner.repository.impl.{
+  LocalFileRepository,
+  LocalMantikRegistryImpl,
+  LocalRepository,
+  MantikArtifactRetrieverImpl
+}
+import ai.mantik.planner.util.{ErrorCodeTestUtils, TestBaseWithAkkaRuntime}
+import ai.mantik.testutils.{AkkaSupport, TempDirSupport, TestBase}
 
 class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempDirSupport with ErrorCodeTestUtils {
 
@@ -83,21 +96,31 @@ class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempD
   }
 
   it should "read transitive dependencies" in new Env {
-    val bridge = MantikArtifact.makeFromDefinition(BridgeDefinition(
-      dockerImage = "foo1",
-      suitable = Seq(MantikDefinition.AlgorithmKind)
-    ), "bridge1")
-    val algorithm1 = MantikArtifact.makeFromDefinition(AlgorithmDefinition(
-      bridge = bridge.namedId.get,
-      `type` = FunctionType(
-        FundamentalType.Int32, FundamentalType.Int32
-      )
-    ), "algorithm1")
-    val pipeline = MantikArtifact.makeFromDefinition(PipelineDefinition(
-      steps = List(
-        PipelineStep.AlgorithmStep(algorithm1.namedId.get)
-      )
-    ), "pipeline1")
+    val bridge = MantikArtifact.makeFromDefinition(
+      BridgeDefinition(
+        dockerImage = "foo1",
+        suitable = Seq(MantikDefinition.AlgorithmKind)
+      ),
+      "bridge1"
+    )
+    val algorithm1 = MantikArtifact.makeFromDefinition(
+      AlgorithmDefinition(
+        bridge = bridge.namedId.get,
+        `type` = FunctionType(
+          FundamentalType.Int32,
+          FundamentalType.Int32
+        )
+      ),
+      "algorithm1"
+    )
+    val pipeline = MantikArtifact.makeFromDefinition(
+      PipelineDefinition(
+        steps = List(
+          PipelineStep.AlgorithmStep(algorithm1.namedId.get)
+        )
+      ),
+      "pipeline1"
+    )
     await(localRegistry.addMantikArtifact(bridge, None))
     await(localRegistry.addMantikArtifact(algorithm1, None))
     await(localRegistry.addMantikArtifact(pipeline, None))

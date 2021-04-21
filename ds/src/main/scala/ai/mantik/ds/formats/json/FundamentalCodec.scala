@@ -1,9 +1,9 @@
 package ai.mantik.ds.formats.json
 
 import ai.mantik.ds.FundamentalType
-import ai.mantik.ds.element.{ Element, Primitive, PrimitiveEncoder }
+import ai.mantik.ds.element.{Element, Primitive, PrimitiveEncoder}
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
+import io.circe.{Decoder, DecodingFailure, Encoder, HCursor, Json}
 import io.circe.syntax._
 
 /** Holds Codecs for Fundamental Data Types. */
@@ -28,9 +28,11 @@ private[json] object FundamentalCodec {
 
   /** A Simple fundamental codec with plain encoding/decoding. */
   class SimpleFundamentalCodec[FT <: FundamentalType, ST](
-      implicit
-      aux: PrimitiveEncoder.Aux[FT, ST], encoder: Encoder[ST], decoder: Decoder[ST]
-  ) extends Encoder[Element] with Decoder[Element] {
+      implicit aux: PrimitiveEncoder.Aux[FT, ST],
+      encoder: Encoder[ST],
+      decoder: Decoder[ST]
+  ) extends Encoder[Element]
+      with Decoder[Element] {
     override def apply(a: Element): Json = {
       a.asInstanceOf[Primitive[ST]].x.asJson
     }

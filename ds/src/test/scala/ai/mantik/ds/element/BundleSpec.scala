@@ -2,12 +2,12 @@ package ai.mantik.ds.element
 
 import java.io.File
 
-import ai.mantik.ds.{ FundamentalType, TabularData, Tensor, TypeSamples }
-import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
+import ai.mantik.ds.{FundamentalType, TabularData, Tensor, TypeSamples}
+import ai.mantik.ds.testutil.{GlobalAkkaSupport, TempDirSupport, TestBase}
 import PrimitiveEncoder._
 import ai.mantik.ds.Errors.EncodingException
 import ai.mantik.ds.helper.ZipUtils
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 
 import scala.concurrent.Future
@@ -56,14 +56,15 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
   }
 
   it should "be constructable" in {
-    val bundle = TabularBundle.build(
-      TabularData(
-        "x" -> FundamentalType.Int32,
-        "b" -> FundamentalType.BoolType,
-        "s" -> FundamentalType.StringType,
-        "n" -> FundamentalType.VoidType
+    val bundle = TabularBundle
+      .build(
+        TabularData(
+          "x" -> FundamentalType.Int32,
+          "b" -> FundamentalType.BoolType,
+          "s" -> FundamentalType.StringType,
+          "n" -> FundamentalType.VoidType
+        )
       )
-    )
       .row(1, true, "Hello World", ())
       .row(2, false, "How are you", ())
       .result
@@ -76,10 +77,16 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
       ),
       Vector(
         TabularRow(
-          Primitive(1), Primitive(true), Primitive("Hello World"), Primitive.unit
+          Primitive(1),
+          Primitive(true),
+          Primitive("Hello World"),
+          Primitive.unit
         ),
         TabularRow(
-          Primitive(2), Primitive(false), Primitive("How are you"), Primitive.unit
+          Primitive(2),
+          Primitive(false),
+          Primitive("How are you"),
+          Primitive.unit
         )
       )
     )
@@ -97,7 +104,8 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
 
   "fundamental" should "build fundamental bundles" in {
     Bundle.fundamental(5) shouldBe SingleElementBundle(
-      FundamentalType.Int32, Primitive(5)
+      FundamentalType.Int32,
+      Primitive(5)
     )
   }
 
@@ -162,41 +170,78 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     Bundle.fundamental(100).cast(FundamentalType.Float64) shouldBe Right(Bundle.fundamental(100.0))
     Bundle.void.cast(FundamentalType.Int32).left.getOrElse(fail) should include("No cast found")
     Bundle.fundamental(100).cast(FundamentalType.Float32).left.getOrElse(fail) should include("loose precision")
-    Bundle.fundamental(100).cast(FundamentalType.Float32, allowLoosing = true) shouldBe Right(Bundle.fundamental(100.0f))
+    Bundle.fundamental(100).cast(FundamentalType.Float32, allowLoosing = true) shouldBe Right(
+      Bundle.fundamental(100.0f)
+    )
     Bundle.fundamental("Hello").cast(FundamentalType.Int32).left.getOrElse(fail) should include("Cast failed")
   }
 
   "sorted" should "work" in {
     Bundle.fundamental(100).sorted shouldBe Bundle.fundamental(100)
 
-    val simple = TabularBundle.build(
-      TabularData(
-        "x" -> FundamentalType.Int32
+    val simple = TabularBundle
+      .build(
+        TabularData(
+          "x" -> FundamentalType.Int32
+        )
       )
-    ).row(2).row(1).result
+      .row(2)
+      .row(1)
+      .result
 
-    simple.sorted shouldBe TabularBundle.build(
-      TabularData(
-        "x" -> FundamentalType.Int32
+    simple.sorted shouldBe TabularBundle
+      .build(
+        TabularData(
+          "x" -> FundamentalType.Int32
+        )
       )
-    ).row(1).row(2).result
+      .row(1)
+      .row(2)
+      .result
 
-    val complex = TabularBundle.buildColumnWise.withPrimitives(
-      "a", 3, 1, 1
-    ).withPrimitives(
-        "b", "0", "a", "b"
-      ).result
+    val complex = TabularBundle.buildColumnWise
+      .withPrimitives(
+        "a",
+        3,
+        1,
+        1
+      )
+      .withPrimitives(
+        "b",
+        "0",
+        "a",
+        "b"
+      )
+      .result
 
-    val complexSorted = TabularBundle.buildColumnWise.withPrimitives(
-      "a", 1, 1, 3
-    ).withPrimitives(
-        "b", "a", "b", "0"
-      ).result
+    val complexSorted = TabularBundle.buildColumnWise
+      .withPrimitives(
+        "a",
+        1,
+        1,
+        3
+      )
+      .withPrimitives(
+        "b",
+        "a",
+        "b",
+        "0"
+      )
+      .result
 
-    complex.sorted shouldBe TabularBundle.buildColumnWise.withPrimitives(
-      "a", 1, 1, 3
-    ).withPrimitives(
-        "b", "a", "b", "0"
-      ).result
+    complex.sorted shouldBe TabularBundle.buildColumnWise
+      .withPrimitives(
+        "a",
+        1,
+        1,
+        3
+      )
+      .withPrimitives(
+        "b",
+        "a",
+        "b",
+        "0"
+      )
+      .result
   }
 }

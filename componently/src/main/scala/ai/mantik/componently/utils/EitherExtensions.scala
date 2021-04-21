@@ -24,7 +24,8 @@ object EitherExtensions {
     }
   }
 
-  implicit def toThrowableEither[L <: Throwable, R](in: Either[L, R]): ThrowableEitherExt[L, R] = new ThrowableEitherExt[L, R](in)
+  implicit def toThrowableEither[L <: Throwable, R](in: Either[L, R]): ThrowableEitherExt[L, R] =
+    new ThrowableEitherExt[L, R](in)
 
   implicit def toStringErrorEither[R](in: Either[String, R]): StringErrorEither[R] = new StringErrorEither[R](in)
 }

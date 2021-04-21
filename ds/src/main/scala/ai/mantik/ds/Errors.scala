@@ -1,6 +1,7 @@
 package ai.mantik.ds
 
 object Errors {
+
   /** A type with given name was not found. */
   class TypeNotFoundException(msg: String) extends RuntimeException(msg)
 

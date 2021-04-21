@@ -16,11 +16,22 @@ class MantikIdSpec extends TestBase {
   }
 
   val validNames = Seq(
-    "abcd", "abcd-foo", "abcd1234", "abcd_hole", "foo.bar"
+    "abcd",
+    "abcd-foo",
+    "abcd1234",
+    "abcd_hole",
+    "foo.bar"
   )
 
   val invalidNames = Seq(
-    "", "Invalid", "  invalid", "invalid ", "-invalid", "invalid-", "abcd/foo", "bob:bar"
+    "",
+    "Invalid",
+    "  invalid",
+    "invalid ",
+    "-invalid",
+    "invalid-",
+    "abcd/foo",
+    "bob:bar"
   )
 
   "validateName" should "work" in {
@@ -37,11 +48,22 @@ class MantikIdSpec extends TestBase {
   }
 
   val validVersions = Seq(
-    "head", "1.2", "2", "1-foo", NamedMantikId.DefaultVersion
+    "head",
+    "1.2",
+    "2",
+    "1-foo",
+    NamedMantikId.DefaultVersion
   )
 
   val invalidVersions = Seq(
-    "HEAD", " 1.2", "1.2 ", "-2", "2-", ".", ".2", "2."
+    "HEAD",
+    " 1.2",
+    "1.2 ",
+    "-2",
+    "2-",
+    ".",
+    ".2",
+    "2."
   )
 
   "validateVersion" should "work" in {
@@ -78,19 +100,17 @@ class MantikIdSpec extends TestBase {
   )
 
   "toString/fromString" should "decode various elements" in {
-    examples.foreach {
-      case (example, serialized) =>
-        example.violations shouldBe empty
-        example.toString shouldBe serialized
-        NamedMantikId.fromString(serialized) shouldBe example
+    examples.foreach { case (example, serialized) =>
+      example.violations shouldBe empty
+      example.toString shouldBe serialized
+      NamedMantikId.fromString(serialized) shouldBe example
     }
   }
 
   "JSON Encoding" should "work" in {
-    examples.foreach {
-      case (example, serialized) =>
-        example.asJson shouldBe Json.fromString(serialized)
-        Json.fromString(serialized).as[NamedMantikId] shouldBe Right(example)
+    examples.foreach { case (example, serialized) =>
+      example.asJson shouldBe Json.fromString(serialized)
+      Json.fromString(serialized).as[NamedMantikId] shouldBe Right(example)
     }
   }
 

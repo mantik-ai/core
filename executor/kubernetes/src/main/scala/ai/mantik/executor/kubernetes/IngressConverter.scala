@@ -1,6 +1,6 @@
 package ai.mantik.executor.kubernetes
 
-import skuber.{ ObjectMeta, Service }
+import skuber.{ObjectMeta, Service}
 import skuber.ext.Ingress
 
 /** Handles ingress conversions for Kubernetes */
@@ -12,7 +12,10 @@ case class IngressConverter(
 
   /** Builds the ingress for a (deployed) service. */
   def ingress(service: Service): Ingress = {
-    require(service.name.nonEmpty, "The service must have a name, either by defining it, or by creating it and using the returned service.")
+    require(
+      service.name.nonEmpty,
+      "The service must have a name, either by defining it, or by creating it and using the returned service."
+    )
 
     val annotations = config.kubernetes.ingressAnnotations.mapValues(interpolateIngressString)
 

@@ -8,9 +8,9 @@ import akka.stream.stage._
 object SameSizeFramer {
 
   /**
-   * Splits a stream of ByteStrings into a stream of ByteStrings of the same size.
-   * Unneeded elements at the end are ignored.
-   */
+    * Splits a stream of ByteStrings into a stream of ByteStrings of the same size.
+    * Unneeded elements at the end are ignored.
+    */
   def make(count: Int): Flow[ByteString, ByteString, NotUsed] = {
     Flow.fromGraph(new SameSizeFramer(count)).named("byteSkipper")
   }
@@ -24,7 +24,9 @@ private class SameSizeFramer(desiredSize: Int) extends GraphStage[FlowShape[Byte
 
   override val shape = FlowShape.of(in, out)
 
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) with InHandler with OutHandler {
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape)
+    with InHandler
+    with OutHandler {
     var buffer: ByteString = ByteString.empty
 
     override def onPush(): Unit = {
@@ -61,4 +63,3 @@ private class SameSizeFramer(desiredSize: Int) extends GraphStage[FlowShape[Byte
     }
   }
 }
-

@@ -54,8 +54,10 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
       await(dockerClient.removeVolume(volume.Name))
     }
 
-    val mantikNetworks = await(dockerClient.listNetworksFiltered(
-      ListNetworkRequestFilter.forLabels(LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue))
+    val mantikNetworks = await(
+      dockerClient.listNetworksFiltered(
+        ListNetworkRequestFilter.forLabels(LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue)
+      )
     )
     mantikNetworks.foreach { network =>
       logger.info(s"Killing network ${network.Name}")

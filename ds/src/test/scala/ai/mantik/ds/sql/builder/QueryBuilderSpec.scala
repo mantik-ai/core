@@ -3,8 +3,24 @@ package ai.mantik.ds.sql.builder
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.sql.JoinCondition.UsingColumn
-import ai.mantik.ds.sql.{ Alias, AnonymousInput, BinaryOperationExpression, CastExpression, ColumnExpression, Condition, ConstantExpression, Join, JoinCondition, JoinType, Query, Select, SelectProjection, SqlContext, Union }
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.sql.{
+  Alias,
+  AnonymousInput,
+  BinaryOperationExpression,
+  CastExpression,
+  ColumnExpression,
+  Condition,
+  ConstantExpression,
+  Join,
+  JoinCondition,
+  JoinType,
+  Query,
+  Select,
+  SelectProjection,
+  SqlContext,
+  Union
+}
+import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.testutils.TestBase
 
 class QueryBuilderSpec extends TestBase {
@@ -94,9 +110,11 @@ class QueryBuilderSpec extends TestBase {
   }
 
   it should "multi unions" in {
-    val result = QueryBuilder.buildQuery(
-      "SELECT 1 FROM $0 UNION SELECT 2 FROM $1 UNION ALL SELECT 3 FROM $1"
-    ).forceRight
+    val result = QueryBuilder
+      .buildQuery(
+        "SELECT 1 FROM $0 UNION SELECT 2 FROM $1 UNION ALL SELECT 3 FROM $1"
+      )
+      .forceRight
     result shouldBe Union(
       Union(
         Select(
@@ -136,11 +154,14 @@ class QueryBuilderSpec extends TestBase {
       AnonymousInput(simpleInput, 2),
       projections = Some(
         Vector(
-          SelectProjection("y", BinaryOperationExpression(
-            BinaryOperation.Add,
-            ColumnExpression(0, FundamentalType.Int32),
-            ConstantExpression(1)
-          ))
+          SelectProjection(
+            "y",
+            BinaryOperationExpression(
+              BinaryOperation.Add,
+              ColumnExpression(0, FundamentalType.Int32),
+              ConstantExpression(1)
+            )
+          )
         )
       )
     )
@@ -158,7 +179,8 @@ class QueryBuilderSpec extends TestBase {
               "b",
               ColumnExpression(0, FundamentalType.Int32)
             )
-          ))
+          )
+        )
       ),
       Some(
         Vector(
@@ -183,7 +205,9 @@ class QueryBuilderSpec extends TestBase {
         AnonymousInput(simpleInput, 2),
         AnonymousInput(otherInput, 3),
         JoinType.Left,
-        JoinCondition.Using(Vector(UsingColumn("x", leftId = 0, rightId = 0, dropId = 2, dataType = FundamentalType.Int32)))
+        JoinCondition.Using(
+          Vector(UsingColumn("x", leftId = 0, rightId = 0, dropId = 2, dataType = FundamentalType.Int32))
+        )
       )
     )
     reparseableTest(result)

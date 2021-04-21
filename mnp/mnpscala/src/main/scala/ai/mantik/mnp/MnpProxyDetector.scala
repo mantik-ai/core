@@ -1,8 +1,8 @@
 package ai.mantik.mnp
 
-import java.net.{ InetSocketAddress, SocketAddress, URL }
+import java.net.{InetSocketAddress, SocketAddress, URL}
 
-import io.grpc.{ HttpConnectProxiedSocketAddress, ProxiedSocketAddress, ProxyDetector }
+import io.grpc.{HttpConnectProxiedSocketAddress, ProxiedSocketAddress, ProxyDetector}
 
 /** Helper for tunneling MNP via Proxy */
 class MnpProxyDetector(proxyUrl: URL) extends ProxyDetector {
@@ -14,7 +14,8 @@ class MnpProxyDetector(proxyUrl: URL) extends ProxyDetector {
   }
 
   private val proxyAddress = new InetSocketAddress(
-    proxyUrl.getHost, port
+    proxyUrl.getHost,
+    port
   )
 
   override def proxyFor(targetServerAddress: SocketAddress): ProxiedSocketAddress = {

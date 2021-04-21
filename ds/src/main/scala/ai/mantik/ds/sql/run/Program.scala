@@ -1,23 +1,24 @@
 package ai.mantik.ds.sql.run
 
-import io.circe.{ Decoder, ObjectEncoder }
+import io.circe.{Decoder, ObjectEncoder}
 
 /**
- * A Program for running select statements.
- * It works using a Stack-Based mini virtual machine.
- *
- * @param args the number of arguments (can be more, but will be ignored).
- * @param retStackDepth the length on the stack at the end.
- * @param stackInitDepth how deep the stack should be pre-allocated.
- *
- * Note: argument names is part of communication protocol with a bridge.
- */
+  * A Program for running select statements.
+  * It works using a Stack-Based mini virtual machine.
+  *
+  * @param args the number of arguments (can be more, but will be ignored).
+  * @param retStackDepth the length on the stack at the end.
+  * @param stackInitDepth how deep the stack should be pre-allocated.
+  *
+  * Note: argument names is part of communication protocol with a bridge.
+  */
 case class Program(
     args: Int,
     retStackDepth: Int,
     stackInitDepth: Int,
     ops: Vector[OpCode]
 ) {
+
   /** Concatenates two programs, recalculating stack-depth */
   def ++(other: Program): Program = Program.fromOps(ops ++ other.ops)
 }
@@ -50,8 +51,8 @@ object Program {
   }
 
   private def getArgCount(ops: Vector[OpCode]): Int = {
-    (ops.collect {
-      case OpCode.Get(i) => i
+    (ops.collect { case OpCode.Get(i) =>
+      i
     } :+ -1).max + 1
   }
 

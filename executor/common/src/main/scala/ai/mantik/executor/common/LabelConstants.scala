@@ -17,6 +17,7 @@ object LabelConstants {
   val RoleLabelName = "ai.mantik.role"
 
   object role {
+
     /** Regular Worker */
     val worker = "worker"
 
@@ -31,6 +32,7 @@ object LabelConstants {
   val WorkerTypeLabelName = "ai.mantik.worker.type"
 
   object workerType {
+
     /** An MNP Worker */
     val mnpWorker = "mnp-worker"
 

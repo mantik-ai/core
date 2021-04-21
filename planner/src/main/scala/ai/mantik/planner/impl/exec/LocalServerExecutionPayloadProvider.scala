@@ -1,20 +1,22 @@
 package ai.mantik.planner.impl.exec
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.ItemId
-import ai.mantik.planner.repository.{ FileRepository, FileRepositoryServer, Repository }
+import ai.mantik.planner.repository.{FileRepository, FileRepositoryServer, Repository}
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 
 /**
- * Provides payload data via embedded HTTP Server (no security), useful for local docker running.
- * Note: all files are readable via HTTP.
- */
+  * Provides payload data via embedded HTTP Server (no security), useful for local docker running.
+  * Note: all files are readable via HTTP.
+  */
 @Singleton
 private[mantik] class LocalServerExecutionPayloadProvider @Inject() (
     fileRepository: FileRepository,
     repo: Repository
-)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with ExecutionPayloadProvider {
+)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase
+    with ExecutionPayloadProvider {
   case class TemporaryFileKey(
       fileId: String
   )

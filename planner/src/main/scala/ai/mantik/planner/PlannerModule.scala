@@ -1,17 +1,16 @@
 package ai.mantik.planner
 
 import ai.mantik.componently.AkkaRuntime
-import ai.mantik.planner.impl.exec.{ ExecutionPayloadProviderModule, MnpPlanExecutor }
-import ai.mantik.planner.impl.{ PlannerImpl, PlanningContextImpl }
+import ai.mantik.planner.impl.exec.{ExecutionPayloadProviderModule, MnpPlanExecutor}
+import ai.mantik.planner.impl.{PlannerImpl, PlanningContextImpl}
 import ai.mantik.planner.repository.RepositoryModule
 import com.google.inject.AbstractModule
 
 /**
- * Registers Modules inside the planner package.
- */
+  * Registers Modules inside the planner package.
+  */
 class PlannerModule(
-    implicit
-    akkaRuntime: AkkaRuntime
+    implicit akkaRuntime: AkkaRuntime
 ) extends AbstractModule {
 
   override def configure(): Unit = {

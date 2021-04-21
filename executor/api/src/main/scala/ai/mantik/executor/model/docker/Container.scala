@@ -1,7 +1,7 @@
 package ai.mantik.executor.model.docker
 
 import ai.mantik.componently.utils.Renderable
-import com.typesafe.config.{ Config, ConfigException }
+import com.typesafe.config.{Config, ConfigException}
 import io.circe.generic.JsonCodec
 
 /** Defines how a container is going to be started. */

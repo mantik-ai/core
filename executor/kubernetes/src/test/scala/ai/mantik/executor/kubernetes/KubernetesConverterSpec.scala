@@ -2,7 +2,7 @@ package ai.mantik.executor.kubernetes
 
 import java.nio.charset.StandardCharsets
 
-import ai.mantik.executor.model.docker.{ Container, DockerConfig, DockerLogin }
+import ai.mantik.executor.model.docker.{Container, DockerConfig, DockerLogin}
 import ai.mantik.testutils.TestBase
 import io.circe.Json
 
@@ -10,9 +10,18 @@ class KubernetesConverterSpec extends TestBase {
 
   "createImagePullPolicy" should "convert nice pull policies" in {
     KubernetesConverter.createImagePullPolicy(false, Container("foo")) shouldBe skuber.Container.PullPolicy.Always
-    KubernetesConverter.createImagePullPolicy(false, Container("foo:latest")) shouldBe skuber.Container.PullPolicy.Always
-    KubernetesConverter.createImagePullPolicy(false, Container("foo:master")) shouldBe skuber.Container.PullPolicy.IfNotPresent
-    KubernetesConverter.createImagePullPolicy(false, Container("foo:other")) shouldBe skuber.Container.PullPolicy.IfNotPresent
+    KubernetesConverter.createImagePullPolicy(
+      false,
+      Container("foo:latest")
+    ) shouldBe skuber.Container.PullPolicy.Always
+    KubernetesConverter.createImagePullPolicy(
+      false,
+      Container("foo:master")
+    ) shouldBe skuber.Container.PullPolicy.IfNotPresent
+    KubernetesConverter.createImagePullPolicy(
+      false,
+      Container("foo:other")
+    ) shouldBe skuber.Container.PullPolicy.IfNotPresent
   }
 
   it should "disable pulling if requested" in {
@@ -37,11 +46,14 @@ class KubernetesConverterSpec extends TestBase {
         namespacePrefix = "systemtest-"
       )
     )
-    val secrets = KubernetesConverter.pullSecret(
-      config, extraLogins = Seq(
-      DockerLogin("repo2", "user2", "password2")
-    )
-    ).get
+    val secrets = KubernetesConverter
+      .pullSecret(
+        config,
+        extraLogins = Seq(
+          DockerLogin("repo2", "user2", "password2")
+        )
+      )
+      .get
 
     val value = secrets.data.ensuring(_.size == 1)(".dockerconfigjson")
     val parsed = io.circe.parser.parse(new String(value, StandardCharsets.UTF_8)).right.get

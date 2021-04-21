@@ -4,17 +4,17 @@ import java.util.concurrent.ConcurrentLinkedDeque
 
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 /**
- * Helper for services to maintain a coordinated shutdown.
- * Services with resources can add their shutdown hook here.
- *
- * The cleanup is done in reverse order of adding shutdown hooks.
- *
- * The Idea is stolen from Play Framework.
- */
+  * Helper for services to maintain a coordinated shutdown.
+  * Services with resources can add their shutdown hook here.
+  *
+  * The cleanup is done in reverse order of adding shutdown hooks.
+  *
+  * The Idea is stolen from Play Framework.
+  */
 trait Lifecycle {
 
   /** Add a shutdown hook. The method f is called upon shutdown and shutdown waits until f is ready. */
@@ -43,11 +43,14 @@ object Lifecycle {
       if (first == null) {
         Future.successful(())
       } else {
-        first.apply().recover {
-          case NonFatal(e) => logger.error("Shutdown hook failed", e)
-        }.flatMap { _ =>
-          shutdownImpl()
-        }
+        first
+          .apply()
+          .recover { case NonFatal(e) =>
+            logger.error("Shutdown hook failed", e)
+          }
+          .flatMap { _ =>
+            shutdownImpl()
+          }
       }
     }
   }

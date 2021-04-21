@@ -1,14 +1,14 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.bridge.protocol.bridge.MantikInitConfiguration
-import ai.mantik.mnp.protocol.mnp.{ ConfigureInputPort, ConfigureOutputPort }
+import ai.mantik.mnp.protocol.mnp.{ConfigureInputPort, ConfigureOutputPort}
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.impl.exec.MnpExecutionPreparation._
 import ai.mantik.planner.repository.ContentTypes
-import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
+import ai.mantik.planner.repository.FileRepository.{FileGetResult, FileStorageResult}
 import ai.mantik.planner._
-import ai.mantik.planner.graph.{ Graph, Node, NodePortRef }
+import ai.mantik.planner.graph.{Graph, Node, NodePortRef}
 import akka.http.scaladsl.model.Uri
 
 /** Information for execution of a [[ai.mantik.planner.PlanOp.RunGraph]] */
@@ -20,6 +20,7 @@ case class MnpExecutionPreparation(
 )
 
 object MnpExecutionPreparation {
+
   /** A prepared session initializer */
   case class SessionInitializer(
       sessionId: String,
@@ -58,8 +59,8 @@ class MnpExecutionPreparer(
 ) {
 
   def build(): MnpExecutionPreparation = {
-    val initializers = graph.nodes.collect {
-      case (nodeId, Node(d: DockerContainer, _, _)) => nodeId -> buildSessionCall(nodeId, d)
+    val initializers = graph.nodes.collect { case (nodeId, Node(d: DockerContainer, _, _)) =>
+      nodeId -> buildSessionCall(nodeId, d)
     }
 
     val inputPushes = collectInputPushes()
@@ -86,33 +87,41 @@ class MnpExecutionPreparer(
       ConfigureInputPort(input.contentType)
     }
 
-    val outputPorts = graphNode.outputs.zipWithIndex.map {
-      case (output, outPort) =>
-        val forwarding = graph.links.collect {
-          case link if link.from.node == nodeId && link.from.port == outPort && graph.nodes(link.to.node).service.isInstanceOf[DockerContainer] =>
-            mnpUrlForResource(link.from, link.to)
-        }
-        val singleForwarding = forwarding match {
-          case x if x.isEmpty => None
-          case Seq(single)    => Some(single)
-          case multiple =>
-            throw new InconsistencyException(s"Only a single forwarding is allowed, broken plan? found ${multiple} as goal of ${nodeId}")
-        }
-        ConfigureOutputPort(
-          contentType = output.contentType,
-          destinationUrl = singleForwarding.getOrElse("")
-        )
+    val outputPorts = graphNode.outputs.zipWithIndex.map { case (output, outPort) =>
+      val forwarding = graph.links.collect {
+        case link
+            if link.from.node == nodeId && link.from.port == outPort && graph
+              .nodes(link.to.node)
+              .service
+              .isInstanceOf[DockerContainer] =>
+          mnpUrlForResource(link.from, link.to)
+      }
+      val singleForwarding = forwarding match {
+        case x if x.isEmpty => None
+        case Seq(single)    => Some(single)
+        case multiple =>
+          throw new InconsistencyException(
+            s"Only a single forwarding is allowed, broken plan? found ${multiple} as goal of ${nodeId}"
+          )
+      }
+      ConfigureOutputPort(
+        contentType = output.contentType,
+        destinationUrl = singleForwarding.getOrElse("")
+      )
     }
 
     val initConfiguration = MantikInitConfiguration(
       header = dockerContainer.mantikHeader.toJson,
       payloadContentType = inputData.map(_.contentType).getOrElse(""),
-      payload = inputData.map { data =>
-        val fullUrl = remoteFileUrls.getOrElse(nodeId, throw new InconsistencyException(s"No remote url found for node id ${nodeId}"))
-        MantikInitConfiguration.Payload.Url(fullUrl)
-      }.getOrElse(
-        MantikInitConfiguration.Payload.Empty
-      )
+      payload = inputData
+        .map { data =>
+          val fullUrl = remoteFileUrls
+            .getOrElse(nodeId, throw new InconsistencyException(s"No remote url found for node id ${nodeId}"))
+          MantikInitConfiguration.Payload.Url(fullUrl)
+        }
+        .getOrElse(
+          MantikInitConfiguration.Payload.Empty
+        )
     )
 
     MnpExecutionPreparation.SessionInitializer(sessionId, initConfiguration, inputPorts, outputPorts)
@@ -193,7 +202,7 @@ class MnpExecutionPreparer(
       /*
       Special case: A connection back to the container
       In Tests kubernetes sometimes has problems to resolve container pods own address
-      */
+       */
       val port = address.indexOf(':') match {
         case -1 => 8502
         case n  => address.substring(n + 1).toInt

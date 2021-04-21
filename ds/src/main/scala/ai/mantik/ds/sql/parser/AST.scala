@@ -1,6 +1,6 @@
 package ai.mantik.ds.sql.parser
 
-import ai.mantik.ds.{ FundamentalType, ImageChannel }
+import ai.mantik.ds.{FundamentalType, ImageChannel}
 
 /** Abstract syntax tree for the parser. */
 private[sql] object AST {
@@ -9,7 +9,8 @@ private[sql] object AST {
 
   case class SingleQuery(query: QueryNode) extends MultiQueryNode
 
-  case class Split(query: QueryNode, fractions: Vector[NumberNode], shuffleSeed: Option[NumberNode]) extends MultiQueryNode
+  case class Split(query: QueryNode, fractions: Vector[NumberNode], shuffleSeed: Option[NumberNode])
+      extends MultiQueryNode
 
   sealed trait QueryNode
 
@@ -101,10 +102,11 @@ private[sql] object AST {
   }
 
   /**
-   * Binary Operation like +,-,and,or,[]
-   * @param operation lowercased operation name
-   */
-  case class BinaryOperationNode(operation: String, left: ExpressionNode, right: ExpressionNode) extends ExpressionNode {
+    * Binary Operation like +,-,and,or,[]
+    * @param operation lowercased operation name
+    */
+  case class BinaryOperationNode(operation: String, left: ExpressionNode, right: ExpressionNode)
+      extends ExpressionNode {
     override def toString: String = {
       s"(${left} ${operation} ${right})"
     }
@@ -118,17 +120,21 @@ private[sql] object AST {
   }
 
   /**
-   * Type used for casting,
-   * Note: we do not support all types, and some are inferred in a later stage
-   */
+    * Type used for casting,
+    * Note: we do not support all types, and some are inferred in a later stage
+    */
   sealed trait TypeNode
   case class FundamentalTypeNode(ft: FundamentalType) extends TypeNode
+
   /** Converts something to a tensor (with optional underlying type change). */
   case class TensorTypeNode(underlying: Option[FundamentalType]) extends TypeNode
+
   /** Converts something to a image (with optional underlying type change). */
   case class ImageTypeNode(underlying: Option[FundamentalType], channel: Option[ImageChannel]) extends TypeNode
+
   /** Marks something as nullable */
   case class NullableTypeNode(underlying: TypeNode) extends TypeNode
+
   /** Marks something as array */
   case class ArrayTypeNode(underlying: TypeNode) extends TypeNode
 }

@@ -3,12 +3,12 @@ package ai.mantik.elements.errors
 import io.grpc.Status.Code
 
 /**
- * A (hierarchical) error code.
- *
- * In contrast to exceptions they can be transferred via gRpc and HTTP.
- *
- * @param code error code. Sub codes are handled by adding slashes.
- */
+  * A (hierarchical) error code.
+  *
+  * In contrast to exceptions they can be transferred via gRpc and HTTP.
+  *
+  * @param code error code. Sub codes are handled by adding slashes.
+  */
 class ErrorCode(
     val code: String,
     val grpcCode: Code = Code.UNKNOWN
@@ -44,8 +44,8 @@ class ErrorCode(
 
   /** Derive a new sub code taking over existing fields. */
   def derive(
-    subCode: String,
-    grpcCode: Option[Code] = None
+      subCode: String,
+      grpcCode: Option[Code] = None
   ): ErrorCode = {
     val fullCode = if (code == "") {
       subCode

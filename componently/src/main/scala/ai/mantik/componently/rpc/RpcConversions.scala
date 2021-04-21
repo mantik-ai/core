@@ -4,7 +4,7 @@ import java.time.Instant
 
 import akka.util.ByteString
 import akka.util.ccompat.IterableOnce
-import com.google.protobuf.{ Timestamp, ByteString => ProtoByteString }
+import com.google.protobuf.{Timestamp, ByteString => ProtoByteString}
 import io.grpc.Status.Code
 import io.grpc.StatusRuntimeException
 
@@ -18,9 +18,8 @@ object RpcConversions {
 
   /** Encode Akka ByteString into Protobuf variant. */
   def encodeByteString(bs: ByteString): ProtoByteString = {
-    bs.asByteBuffers.foldLeft(ProtoByteString.EMPTY) {
-      case (c, n) =>
-        c.concat(ProtoByteString.copyFrom(n))
+    bs.asByteBuffers.foldLeft(ProtoByteString.EMPTY) { case (c, n) =>
+      c.concat(ProtoByteString.copyFrom(n))
     }
   }
 
@@ -50,9 +49,13 @@ object RpcConversions {
 
   /** Encode a Java Instant into protobuf Timestamp */
   def encodeInstant(instant: Instant): Timestamp = {
-    Timestamp.newBuilder().setSeconds(
-      instant.getEpochSecond
-    ).setNanos(instant.getNano).build()
+    Timestamp
+      .newBuilder()
+      .setSeconds(
+        instant.getEpochSecond
+      )
+      .setNanos(instant.getNano)
+      .build()
   }
 
   /** Decode protobuf timestamp into Java Instant */

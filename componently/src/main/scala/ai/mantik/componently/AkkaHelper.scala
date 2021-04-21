@@ -9,8 +9,8 @@ import com.typesafe.config.Config
 import scala.concurrent.ExecutionContext
 
 /**
- * Helper for implementing [[Component]], gives implicit access to Akka Components
- */
+  * Helper for implementing [[Component]], gives implicit access to Akka Components
+  */
 trait AkkaHelper {
   self: Component =>
 
@@ -25,8 +25,8 @@ trait AkkaHelper {
 }
 
 /**
- * Similar to AkkaHelper trait, but can be imported where you do not want to change trait hierarchy.
- */
+  * Similar to AkkaHelper trait, but can be imported where you do not want to change trait hierarchy.
+  */
 object AkkaHelper {
   def config(implicit akkaRuntime: AkkaRuntime): Config = akkaRuntime.config
 

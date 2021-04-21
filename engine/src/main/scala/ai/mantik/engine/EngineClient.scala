@@ -1,6 +1,6 @@
 package ai.mantik.engine
 
-import ai.mantik.componently.{ AkkaRuntime, Component }
+import ai.mantik.componently.{AkkaRuntime, Component}
 import ai.mantik.engine.protos.engine.AboutServiceGrpc.AboutServiceBlockingStub
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderServiceBlockingStub
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorServiceBlockingStub
@@ -12,7 +12,7 @@ import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.Plan
 import com.google.protobuf.empty.Empty
 import com.typesafe.scalalogging.Logger
 import io.grpc.Status.Code
-import io.grpc.{ ManagedChannel, ManagedChannelBuilder, StatusRuntimeException }
+import io.grpc.{ManagedChannel, ManagedChannelBuilder, StatusRuntimeException}
 
 import scala.concurrent.Future
 
@@ -25,13 +25,14 @@ class EngineClient(address: String)(implicit val akkaRuntime: AkkaRuntime) exten
 
   val aboutService = new AboutServiceBlockingStub(channel)
 
-  val version = try {
-    aboutService.version(Empty())
-  } catch {
-    case e: StatusRuntimeException if e.getStatus.getCode == Code.UNAVAILABLE =>
-      logger.error("Could not connect to Mantik Engine, is the service running?!")
-      throw e
-  }
+  val version =
+    try {
+      aboutService.version(Empty())
+    } catch {
+      case e: StatusRuntimeException if e.getStatus.getCode == Code.UNAVAILABLE =>
+        logger.error("Could not connect to Mantik Engine, is the service running?!")
+        throw e
+    }
   logger.info(s"Connected to Mantik Engine ${version.version}")
 
   val sessionService = new SessionServiceBlockingStub(channel)

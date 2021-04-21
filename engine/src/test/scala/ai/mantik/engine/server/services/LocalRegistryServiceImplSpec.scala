@@ -2,13 +2,27 @@ package ai.mantik.engine.server.services
 
 import java.time.Instant
 
-import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
-import ai.mantik.ds.FundamentalType.{ Int32, StringType }
+import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
+import ai.mantik.ds.FundamentalType.{Int32, StringType}
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId }
-import ai.mantik.engine.protos.local_registry.{ AddArtifactRequest, AddArtifactResponse, GetArtifactRequest, GetArtifactWithPayloadResponse, ListArtifactsRequest, TagArtifactRequest }
+import ai.mantik.elements.{
+  AlgorithmDefinition,
+  DataSetDefinition,
+  ItemId,
+  MantikDefinition,
+  MantikHeader,
+  NamedMantikId
+}
+import ai.mantik.engine.protos.local_registry.{
+  AddArtifactRequest,
+  AddArtifactResponse,
+  GetArtifactRequest,
+  GetArtifactWithPayloadResponse,
+  ListArtifactsRequest,
+  TagArtifactRequest
+}
 import ai.mantik.engine.testutil.TestBaseWithSessions
-import ai.mantik.planner.repository.{ ContentTypes, DeploymentInfo, MantikArtifact, SubDeploymentInfo }
+import ai.mantik.planner.repository.{ContentTypes, DeploymentInfo, MantikArtifact, SubDeploymentInfo}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.protobuf.timestamp.Timestamp
@@ -24,18 +38,22 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     val localRepo = components.repository
 
     val item = MantikArtifact(
-      MantikHeader.pure(
-        AlgorithmDefinition(bridge = "some_stack", `type` = FunctionType(Int32, Int32))
-      ).toJson,
+      MantikHeader
+        .pure(
+          AlgorithmDefinition(bridge = "some_stack", `type` = FunctionType(Int32, Int32))
+        )
+        .toJson,
       fileId = Some("1234"),
       namedId = Some("item1"),
       itemId = ItemId.generate()
     )
 
     val item2 = item.copy(
-      mantikHeader = MantikHeader.pure(
-        DataSetDefinition(bridge = "format", `type` = StringType)
-      ).toJson,
+      mantikHeader = MantikHeader
+        .pure(
+          DataSetDefinition(bridge = "format", `type` = StringType)
+        )
+        .toJson,
       itemId = ItemId.generate(),
       namedId = None
     )
@@ -76,9 +94,13 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
   }
 
   it should "return a regular element" in new Env {
-    val back = Converters.decodeMantikArtifact(await(localRegistryServiceImpl.getArtifact(
-      GetArtifactRequest(item.namedId.get.toString)
-    )).artifact.get)
+    val back = Converters.decodeMantikArtifact(
+      await(
+        localRegistryServiceImpl.getArtifact(
+          GetArtifactRequest(item.namedId.get.toString)
+        )
+      ).artifact.get
+    )
     back shouldBe item
 
     withClue("It should work with item ids") {
@@ -90,9 +112,11 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
   }
 
   it should "return a deployed element" in new Env {
-    val back = await(localRegistryServiceImpl.getArtifact(
-      GetArtifactRequest("item3")
-    )).artifact.get.deploymentInfo.get
+    val back = await(
+      localRegistryServiceImpl.getArtifact(
+        GetArtifactRequest("item3")
+      )
+    ).artifact.get.deploymentInfo.get
 
     back.name shouldBe "abcd"
     back.internalUrl shouldBe "internal1"
@@ -102,42 +126,52 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
   }
 
   it should "list items" in new Env {
-    await(localRegistryServiceImpl.listArtifacts(
-      ListArtifactsRequest()
-    )).artifacts.map(Converters.decodeMantikArtifact) should contain theSameElementsAs Seq(
+    await(
+      localRegistryServiceImpl.listArtifacts(
+        ListArtifactsRequest()
+      )
+    ).artifacts.map(Converters.decodeMantikArtifact) should contain theSameElementsAs Seq(
       item,
       item3
     )
-    await(localRegistryServiceImpl.listArtifacts(
-      ListArtifactsRequest(anonymous = true)
-    )).artifacts.map(Converters.decodeMantikArtifact) should contain theSameElementsAs Seq(
+    await(
+      localRegistryServiceImpl.listArtifacts(
+        ListArtifactsRequest(anonymous = true)
+      )
+    ).artifacts.map(Converters.decodeMantikArtifact) should contain theSameElementsAs Seq(
       item,
       item2,
       item3
     )
-    await(localRegistryServiceImpl.listArtifacts(
-      ListArtifactsRequest(kind = MantikDefinition.DataSetKind, anonymous = true)
-    )).artifacts.map(Converters.decodeMantikArtifact) should contain theSameElementsAs Seq(
+    await(
+      localRegistryServiceImpl.listArtifacts(
+        ListArtifactsRequest(kind = MantikDefinition.DataSetKind, anonymous = true)
+      )
+    ).artifacts.map(Converters.decodeMantikArtifact) should contain theSameElementsAs Seq(
       item2
     )
   }
 
   "tagArtifact" should "tag artifacts" in new Env {
-    val response = await(localRegistryServiceImpl.tagArtifact(
-      TagArtifactRequest(
-        item.itemId.toString,
-        "foobar"
+    val response = await(
+      localRegistryServiceImpl.tagArtifact(
+        TagArtifactRequest(
+          item.itemId.toString,
+          "foobar"
+        )
       )
-    ))
+    )
     response.changed shouldBe true
     await(localRepo.get(NamedMantikId("foobar"))).itemId shouldBe item.itemId
 
-    val response2 = await(localRegistryServiceImpl.tagArtifact(
-      TagArtifactRequest(
-        item.itemId.toString,
-        "foobar"
+    val response2 = await(
+      localRegistryServiceImpl.tagArtifact(
+        TagArtifactRequest(
+          item.itemId.toString,
+          "foobar"
+        )
       )
-    ))
+    )
     response2.changed shouldBe false
   }
 
@@ -240,7 +274,8 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
 
     val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[GetArtifactWithPayloadResponse]()
     localRegistryServiceImpl.getArtifactWithPayload(
-      GetArtifactRequest(itemWithoutFile.namedId.get.toString), resultObserver
+      GetArtifactRequest(itemWithoutFile.namedId.get.toString),
+      resultObserver
     )
     val result = await(resultFuture)
     val back = Converters.decodeMantikArtifact(result.artifact.get)
@@ -256,16 +291,19 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
       ByteString(b)
     }
 
-    val itemToUse = await(components.localRegistry.addMantikArtifact(
-      item,
-      Some(
-        ContentTypes.ZipFileContentType -> Source.single(bytes)
+    val itemToUse = await(
+      components.localRegistry.addMantikArtifact(
+        item,
+        Some(
+          ContentTypes.ZipFileContentType -> Source.single(bytes)
+        )
       )
-    ))
+    )
 
     val (streamObserver, future) = StreamConversions.streamObserverCollector[GetArtifactWithPayloadResponse]()
     localRegistryServiceImpl.getArtifactWithPayload(
-      GetArtifactRequest(itemToUse.namedId.get.toString), streamObserver
+      GetArtifactRequest(itemToUse.namedId.get.toString),
+      streamObserver
     )
     val parts = await(future)
     parts.size shouldBe >=(2)

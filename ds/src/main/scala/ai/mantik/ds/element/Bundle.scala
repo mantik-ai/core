@@ -5,17 +5,17 @@ import ai.mantik.ds.converter.Cast.findCast
 import ai.mantik.ds.converter.StringPreviewGenerator
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.formats.messagepack.MessagePackReaderWriter
-import akka.stream.scaladsl.{ Compression, FileIO, Keep, Sink, Source }
+import akka.stream.scaladsl.{Compression, FileIO, Keep, Sink, Source}
 import akka.util.ByteString
-import io.circe.{ Decoder, Encoder, ObjectEncoder }
+import io.circe.{Decoder, Encoder, ObjectEncoder}
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
- * An in-memory data bundle
- *
- * This is either a [[TabularBundle]] or a [[SingleElementBundle]].
- */
+  * An in-memory data bundle
+  *
+  * This is either a [[TabularBundle]] or a [[SingleElementBundle]].
+  */
 sealed trait Bundle {
 
   /** The underlying data type. */
@@ -24,7 +24,7 @@ sealed trait Bundle {
   /** Returns the rows of the bundle. In case of single elements Vector[SingleElement] is returned. */
   def rows: Vector[RootElement]
 
-  /** Encode as stream  */
+  /** Encode as stream */
   def encode(withHeader: Boolean): Source[ByteString, _] = {
     val source = Source(rows)
     val encoder = new MessagePackReaderWriter(model, withHeader).encoder()
@@ -50,15 +50,15 @@ sealed trait Bundle {
   }
 
   /**
-   * Returns the single element contained in the bundle.
-   * This works only for Bundles which are not tabular.
-   */
+    * Returns the single element contained in the bundle.
+    * This works only for Bundles which are not tabular.
+    */
   def single: Option[Element]
 
   /**
-   * Convert a tabular bundle into a single element bundle by inserting a wrapped tabular element.
-   * SingleElementBundles are not touched.
-   */
+    * Convert a tabular bundle into a single element bundle by inserting a wrapped tabular element.
+    * SingleElementBundles are not touched.
+    */
   def toSingleElementBundle: SingleElementBundle
 
   /** Sort the bundle (noop for SingleElementBundle) */
@@ -75,12 +75,12 @@ case class SingleElementBundle(
   override def single: Option[Element] = Some(element)
 
   /**
-   * Cast this bundle to a new type.
-   * Note: loosing precision is only deducted from the types. It is possible
-   * that a cast is marked as loosing precision but it's not in practice
-   * (e.g. 100.0 (float64)--> 100 (int))
-   * @param allowLoosing if true, it's allowed when the cast looses precision.
-   */
+    * Cast this bundle to a new type.
+    * Note: loosing precision is only deducted from the types. It is possible
+    * that a cast is marked as loosing precision but it's not in practice
+    * (e.g. 100.0 (float64)--> 100 (int))
+    * @param allowLoosing if true, it's allowed when the cast looses precision.
+    */
   def cast(to: DataType, allowLoosing: Boolean = false): Either[String, SingleElementBundle] = {
     findCast(model, to) match {
       case Left(error) => Left(error)
@@ -131,9 +131,9 @@ object TabularBundle {
 object Bundle {
 
   /**
-   * Constructs a bundle from data type and elements.
-   * @throws IllegalArgumentException if the bundle is invalid.
-   */
+    * Constructs a bundle from data type and elements.
+    * @throws IllegalArgumentException if the bundle is invalid.
+    */
   def apply(model: DataType, elements: Vector[RootElement]): Bundle = {
     elements match {
       case Vector(s: SingleElement) => SingleElementBundle(model, s.element)
@@ -153,7 +153,8 @@ object Bundle {
   /** Deserializes the bundle from a stream without header. */
   def fromStreamWithoutHeader(dataType: DataType)(implicit ec: ExecutionContext): Sink[ByteString, Future[Bundle]] = {
     val readerWriter = new MessagePackReaderWriter(dataType, withHeader = false)
-    val sink: Sink[ByteString, Future[Seq[RootElement]]] = readerWriter.decoder().toMat(Sink.seq[RootElement])(Keep.right)
+    val sink: Sink[ByteString, Future[Seq[RootElement]]] =
+      readerWriter.decoder().toMat(Sink.seq[RootElement])(Keep.right)
     sink.mapMaterializedValue { elementsFuture =>
       elementsFuture.map { elements =>
         Bundle(
@@ -174,12 +175,11 @@ object Bundle {
     val decoder = MessagePackReaderWriter.autoFormatDecoder()
     val sink: Sink[ByteString, (Future[DataType], Future[Seq[RootElement]])] =
       decoder.toMat(Sink.seq)(Keep.both)
-    sink.mapMaterializedValue {
-      case (dataTypeFuture, elementsFuture) =>
-        for {
-          dataType <- dataTypeFuture
-          elements <- elementsFuture
-        } yield Bundle(dataType, elements.toVector)
+    sink.mapMaterializedValue { case (dataTypeFuture, elementsFuture) =>
+      for {
+        dataType <- dataTypeFuture
+        elements <- elementsFuture
+      } yield Bundle(dataType, elements.toVector)
     }
   }
 
@@ -201,6 +201,7 @@ object Bundle {
 
   /** JSON Encoder. */
   implicit val encoder: ObjectEncoder[Bundle] = JsonFormat
+
   /** JSON Decoder. */
   implicit val decoder: Decoder[Bundle] = JsonFormat
 }
@@ -215,4 +216,3 @@ object SingleElementBundle {
     case b: TabularBundle       => b.toSingleElementBundle
   }
 }
-

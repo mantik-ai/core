@@ -3,7 +3,7 @@ package ai.mantik.testutils
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model.headers.Accept
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, RequestEntity, Uri }
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, RequestEntity, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.util.ByteString
 
@@ -12,7 +12,7 @@ trait HttpSupport {
   self: TestBase with AkkaSupport =>
 
   protected def httpPost(url: String, contentType: String, in: ByteString): ByteString = {
-    import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, Uri }
+    import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
     import akka.http.scaladsl._
 
     logger.info(s"Accessing POST ${url}")

@@ -5,17 +5,17 @@ import java.time.Clock
 import ai.mantik.componently.AkkaRuntime
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.ExecutionContext
 
 /**
- * Helper trait for building testcases which provide an AkkaRuntime.
- * Provides a global akka runtime (outside of the testcases), whose shutdown
- * is at the end of the suite and a local one, whose shutdown is at the end of each test.
- *
- * (The trait exits, as we do not want to make componently a dependency of testutils).
- */
+  * Helper trait for building testcases which provide an AkkaRuntime.
+  * Provides a global akka runtime (outside of the testcases), whose shutdown
+  * is at the end of the suite and a local one, whose shutdown is at the end of each test.
+  *
+  * (The trait exits, as we do not want to make componently a dependency of testutils).
+  */
 trait GlobalLocalAkkaRuntime {
   // Must be provided by the testcase.
   implicit protected def actorSystem: ActorSystem

@@ -8,14 +8,14 @@ case class ListContainerRequestFilter(
 )
 
 object ListContainerRequestFilter {
+
   /**
-   * Build a filter for a given label key and value.
-   * For more information see Docker API specification.
-   */
+    * Build a filter for a given label key and value.
+    * For more information see Docker API specification.
+    */
   def forLabelKeyValue(keyValues: (String, String)*): ListContainerRequestFilter = {
-    val labels = keyValues.map {
-      case (key, value) =>
-        s"$key=$value"
+    val labels = keyValues.map { case (key, value) =>
+      s"$key=$value"
     }.toVector
     ListContainerRequestFilter(
       label = labels
@@ -35,4 +35,3 @@ case class ListContainerResponseRow(
     // Human readable status code
     Status: Option[String] = None
 )
-

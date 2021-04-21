@@ -2,7 +2,7 @@ package ai.mantik.elements.registry.api
 
 import java.time.Instant
 
-import ai.mantik.elements.{ ItemId, NamedMantikId }
+import ai.mantik.elements.{ItemId, NamedMantikId}
 import io.circe.generic.JsonCodec
 
 @JsonCodec
