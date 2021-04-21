@@ -19,7 +19,9 @@ private class MessagePackFramer extends GraphStage[FlowShape[ByteString, ByteStr
   val out = Outlet[ByteString]("MessagePackFramer.out")
   val shape = FlowShape.of(in, out)
 
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) with InHandler with OutHandler {
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape)
+    with InHandler
+    with OutHandler {
     var buffer: ByteString = ByteString.empty
 
     override def onPush(): Unit = {

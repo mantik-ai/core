@@ -2,22 +2,22 @@ package ai.mantik.planner.graph
 
 import ai.mantik.componently.utils.Renderable
 import io.circe.generic.semiauto
-import io.circe.{ Decoder, Encoder, ObjectEncoder }
+import io.circe.{Decoder, Encoder, ObjectEncoder}
 
 import scala.language.implicitConversions
 
 /**
- * Defines a Dataflow graph.
- * @tparam T The node data type.
- */
+  * Defines a Dataflow graph.
+  * @tparam T The node data type.
+  */
 case class Graph[+T](
     nodes: Map[String, Node[T]],
     links: Seq[Link] = Nil
 ) {
 
   /**
-   * Resolves a node input port
-   */
+    * Resolves a node input port
+    */
   def resolveInput(ref: NodePortRef): Option[(Node[T], NodePort)] = {
     for {
       node <- nodes.get(ref.node)
@@ -26,8 +26,8 @@ case class Graph[+T](
   }
 
   /**
-   * Resolve a node output port.
-   */
+    * Resolve a node output port.
+    */
   def resolveOutput(ref: NodePortRef): Option[(Node[T], NodePort)] = {
     for {
       node <- nodes.get(ref.node)
@@ -55,31 +55,29 @@ object Graph {
       val orderedNodes = value.nodes.toIndexedSeq.sortBy(_._1)
       val linksByNode = value.links.groupBy(_.from.node)
 
-      val items = orderedNodes.map {
-        case (key, value) =>
-
-          val links = linksByNode.get(key).getOrElse(Nil)
-          val linkTree = if (links.isEmpty) {
-            Renderable.Leaf("No Links")
-          } else {
-            Renderable.SubTree(
-              items = links.map { link =>
-                Renderable.Leaf(s"${link.from.node}/${link.from.port} -> ${link.to.node}/${link.to.port}")
-              }.toVector,
-              prefix = "- ",
-              title = Some("Links")
-            )
-
-          }
-
+      val items = orderedNodes.map { case (key, value) =>
+        val links = linksByNode.get(key).getOrElse(Nil)
+        val linkTree = if (links.isEmpty) {
+          Renderable.Leaf("No Links")
+        } else {
           Renderable.SubTree(
-            title = Some(s"Node ${key}"),
-            items = Vector(
-              Renderable.buildRenderTree(value),
-              linkTree
-            ),
-            prefix = "  "
+            items = links.map { link =>
+              Renderable.Leaf(s"${link.from.node}/${link.from.port} -> ${link.to.node}/${link.to.port}")
+            }.toVector,
+            prefix = "- ",
+            title = Some("Links")
           )
+
+        }
+
+        Renderable.SubTree(
+          title = Some(s"Node ${key}"),
+          items = Vector(
+            Renderable.buildRenderTree(value),
+            linkTree
+          ),
+          prefix = "  "
+        )
       }
       Renderable.SubTree(
         items,

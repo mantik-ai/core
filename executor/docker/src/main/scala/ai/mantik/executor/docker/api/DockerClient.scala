@@ -2,11 +2,11 @@ package ai.mantik.executor.docker.api
 
 import java.nio.file.Files
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.docker.api.structures._
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
-import akka.http.scaladsl.{ Http, HttpsConnectionContext }
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.{Http, HttpsConnectionContext}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import net.reactivecore.fhttp.akka.ApiClient
@@ -22,18 +22,22 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
     .derive(intermediateTempFile)
 
   private val httpExt = Http()
-  private val clientHttpsSettings: HttpsConnectionContext = connectSettings.sslConfigSettings.map { sslConfigSettings =>
-    val akkaSettings = AkkaSSLConfig().withSettings(sslConfigSettings)
-    httpExt.createClientHttpsContext(akkaSettings)
-  }.getOrElse {
-    httpExt.defaultClientHttpsContext
-  }
+  private val clientHttpsSettings: HttpsConnectionContext = connectSettings.sslConfigSettings
+    .map { sslConfigSettings =>
+      val akkaSettings = AkkaSSLConfig().withSettings(sslConfigSettings)
+      httpExt.createClientHttpsContext(akkaSettings)
+    }
+    .getOrElse {
+      httpExt.defaultClientHttpsContext
+    }
 
   private def executeRequest(request: HttpRequest): Future[HttpResponse] = {
     val t0 = System.currentTimeMillis()
     httpExt.singleRequest(request, clientHttpsSettings).map { response =>
       val t1 = System.currentTimeMillis()
-      logger.debug(s"Called ${request.method.name()} ${request.uri}: ${response.status.intValue()} ${t1 - t0}ms (${response.entity.contentType.value})")
+      logger.debug(
+        s"Called ${request.method.name()} ${request.uri}: ${response.status.intValue()} ${t1 - t0}ms (${response.entity.contentType.value})"
+      )
       response
     }
   }
@@ -75,14 +79,13 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
     wrapError("startContainer", apiClient.prepare(DockerApi.startContainer))
 
   // Parameters: containerId, stdout, stderr
-  val containerLogs: (String, Boolean, Boolean) => Future[String] = {
-    case (containerId, stdout, stderr) =>
-      // Workaround, Docker sends application/octet-stream
-      for {
-        logSource <- errorHandler("prepareContainerLogs", preparedContainerLogs(containerId, stdout, stderr))
-        collected <- logSource._2.runWith(Sink.seq)
-        combined = collected.foldLeft(ByteString.empty)(_ ++ _)
-      } yield combined.utf8String
+  val containerLogs: (String, Boolean, Boolean) => Future[String] = { case (containerId, stdout, stderr) =>
+    // Workaround, Docker sends application/octet-stream
+    for {
+      logSource <- errorHandler("prepareContainerLogs", preparedContainerLogs(containerId, stdout, stderr))
+      collected <- logSource._2.runWith(Sink.seq)
+      combined = collected.foldLeft(ByteString.empty)(_ ++ _)
+    } yield combined.utf8String
   }
 
   val containerWait: String => Future[ContainerWaitResponse] = {
@@ -131,16 +134,22 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
   val removeNetwork: String => Future[Unit] =
     wrapError("removeNetwork", apiClient.prepare(DockerApi.removeNetwork))
 
-  private def wrapError[A, R](op: String, f: A => Future[Either[(Int, ErrorResponse), R]]): A => Future[R] = {
-    args => errorHandler(op, f(args))
+  private def wrapError[A, R](op: String, f: A => Future[Either[(Int, ErrorResponse), R]]): A => Future[R] = { args =>
+    errorHandler(op, f(args))
   }
 
-  private def wrapError2[A1, A2, R](op: String, f: ((A1, A2)) => Future[Either[(Int, ErrorResponse), R]]): (A1, A2) => Future[R] = {
-    (a1, a2) => errorHandler(op, f(a1, a2))
+  private def wrapError2[A1, A2, R](
+      op: String,
+      f: ((A1, A2)) => Future[Either[(Int, ErrorResponse), R]]
+  ): (A1, A2) => Future[R] = { (a1, a2) =>
+    errorHandler(op, f(a1, a2))
   }
 
-  private def wrapError3[A1, A2, A3, R](op: String, f: ((A1, A2, A3)) => Future[Either[(Int, ErrorResponse), R]]): (A1, A2, A3) => Future[R] = {
-    (a1, a2, a3) => errorHandler(op, f(a1, a2, a3))
+  private def wrapError3[A1, A2, A3, R](
+      op: String,
+      f: ((A1, A2, A3)) => Future[Either[(Int, ErrorResponse), R]]
+  ): (A1, A2, A3) => Future[R] = { (a1, a2, a3) =>
+    errorHandler(op, f(a1, a2, a3))
   }
 
   private def errorHandler[R](op: String, in: Future[Either[(Int, ErrorResponse), R]]): Future[R] = {
@@ -157,8 +166,10 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
 }
 
 object DockerClient {
+
   /** A docker error as wrapped message in a RuntimeException. */
-  case class WrappedErrorResponse(code: Int, error: ErrorResponse, operation: String) extends RuntimeException(
-    s"Docker error: ${code} ${error.message} (operation=${operation})"
-  )
+  case class WrappedErrorResponse(code: Int, error: ErrorResponse, operation: String)
+      extends RuntimeException(
+        s"Docker error: ${code} ${error.message} (operation=${operation})"
+      )
 }

@@ -9,11 +9,11 @@ import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
 import skuber.json.apps.format.deployListFormat
-import skuber.{ ConfigMap, ListResource, Namespace, Pod }
+import skuber.{ConfigMap, ListResource, Namespace, Pod}
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 
 /** Helper for deleting Kubernetes content. Used for Integration Tests. */
 private[mantik] class KubernetesCleaner(rootClient: KubernetesClient, config: Config) {
@@ -23,7 +23,8 @@ private[mantik] class KubernetesCleaner(rootClient: KubernetesClient, config: Co
   /** Delete all managed Kubernetes content. For Integration Tests. */
   def deleteKubernetesContent(): Unit = {
     logger.info("Deleting Kubernetes Content...")
-    val pendingNamespaces = await("Get Namespaces", rootClient.getNamespaceNames).filter(_.startsWith(config.kubernetes.namespacePrefix))
+    val pendingNamespaces =
+      await("Get Namespaces", rootClient.getNamespaceNames).filter(_.startsWith(config.kubernetes.namespacePrefix))
     pendingNamespaces.foreach { namespace =>
       logger.info(s"Deleting namespace ${namespace}")
       val namespaced = rootClient.usingNamespace(namespace)

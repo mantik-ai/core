@@ -3,7 +3,7 @@ package ai.mantik.engine
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.componently.di.AkkaModule
 import ai.mantik.engine.buildinfo.BuildInfo
-import ai.mantik.engine.server.{ EngineServer, ServiceModule }
+import ai.mantik.engine.server.{EngineServer, ServiceModule}
 import com.google.inject.Guice
 import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler

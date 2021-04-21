@@ -1,8 +1,27 @@
 package ai.mantik.executor.docker.api
 
-import ai.mantik.executor.docker.api.structures.{ ContainerWaitResponse, CreateContainerRequest, CreateContainerResponse, CreateNetworkRequest, CreateNetworkResponse, CreateVolumeRequest, CreateVolumeResponse, InspectContainerResponse, InspectImageResult, InspectNetworkResult, InspectVolumeResponse, ListContainerRequestFilter, ListContainerResponseRow, ListNetworkRequestFilter, ListNetworkResponseRow, ListVolumeResponse, RemoveImageRow, VersionResponse }
-import io.circe.{ Decoder, Encoder, Json }
-import net.reactivecore.fhttp.{ ApiBuilder, Input, Output }
+import ai.mantik.executor.docker.api.structures.{
+  ContainerWaitResponse,
+  CreateContainerRequest,
+  CreateContainerResponse,
+  CreateNetworkRequest,
+  CreateNetworkResponse,
+  CreateVolumeRequest,
+  CreateVolumeResponse,
+  InspectContainerResponse,
+  InspectImageResult,
+  InspectNetworkResult,
+  InspectVolumeResponse,
+  ListContainerRequestFilter,
+  ListContainerResponseRow,
+  ListNetworkRequestFilter,
+  ListNetworkResponseRow,
+  ListVolumeResponse,
+  RemoveImageRow,
+  VersionResponse
+}
+import io.circe.{Decoder, Encoder, Json}
+import net.reactivecore.fhttp.{ApiBuilder, Input, Output}
 
 import scala.util.Try
 import io.circe.syntax._

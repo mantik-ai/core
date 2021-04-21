@@ -2,8 +2,18 @@ package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.operations.BinaryOperation
 import ai.mantik.ds.sql.Condition.IsNull
-import ai.mantik.ds.sql.{ ArrayGetExpression, BinaryExpression, BinaryOperationExpression, ColumnExpression, Condition, Expression, QueryTabularType, SizeExpression, StructAccessExpression }
-import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
+import ai.mantik.ds.sql.{
+  ArrayGetExpression,
+  BinaryExpression,
+  BinaryOperationExpression,
+  ColumnExpression,
+  Condition,
+  Expression,
+  QueryTabularType,
+  SizeExpression,
+  StructAccessExpression
+}
+import ai.mantik.ds.{DataType, FundamentalType, TabularData}
 import ai.mantik.ds.sql.parser.AST
 import ai.mantik.ds.sql.parser.AST.NullNode
 
@@ -72,11 +82,12 @@ private[sql] object ExpressionBuilder {
           input <- convertExpression(input, s.expression)
           inputStructure <- CastBuilder.ensureStruct(input, true)
           structure = inputStructure._2
-          _ <- if (structure.fields.contains(s.name)) {
-            Right(())
-          } else {
-            Left(s"Structure ${structure} doesn't contain field ${s.name}")
-          }
+          _ <-
+            if (structure.fields.contains(s.name)) {
+              Right(())
+            } else {
+              Left(s"Structure ${structure} doesn't contain field ${s.name}")
+            }
         } yield {
           StructAccessExpression(inputStructure._1, s.name)
         }
@@ -99,7 +110,11 @@ private[sql] object ExpressionBuilder {
   }
 
   private val binaryConditions: Seq[String] = Seq("=", "and", "or")
-  private def convertBinaryCondition(op: String, left: Expression, right: Expression): Either[String, Condition with BinaryExpression] = {
+  private def convertBinaryCondition(
+      op: String,
+      left: Expression,
+      right: Expression
+  ): Either[String, Condition with BinaryExpression] = {
     def asCondition(e: Expression): Either[String, Condition] = {
       e.asCondition match {
         case None     => Left(s"Expected condition got ${e}")
@@ -140,15 +155,20 @@ private[sql] object ExpressionBuilder {
     "/" -> BinaryOperation.Div
   )
 
-  def buildColumnExpressionByIdentifier(input: QueryTabularType, identifier: AST.IdentifierNode): Either[String, ColumnExpression] = {
-    findColumnByIdentifier(input, identifier).map {
-      case (columnId, dataType) =>
-        ColumnExpression(columnId, dataType)
+  def buildColumnExpressionByIdentifier(
+      input: QueryTabularType,
+      identifier: AST.IdentifierNode
+  ): Either[String, ColumnExpression] = {
+    findColumnByIdentifier(input, identifier).map { case (columnId, dataType) =>
+      ColumnExpression(columnId, dataType)
     }
   }
 
   /** Find a column by identifier */
-  def findColumnByIdentifier(input: QueryTabularType, identifier: AST.IdentifierNode): Either[String, (Int, DataType)] = {
+  def findColumnByIdentifier(
+      input: QueryTabularType,
+      identifier: AST.IdentifierNode
+  ): Either[String, (Int, DataType)] = {
     input.lookupColumn(identifier.name, caseSensitive = !identifier.ignoreCase).map { x => (x._1, x._2.dataType) }
   }
 }

@@ -3,19 +3,19 @@ package ai.mantik.engine.session
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
-import ai.mantik.planner.{ CoreComponents, MantikItem, PlanExecutor, Planner }
+import ai.mantik.planner.{CoreComponents, MantikItem, PlanExecutor, Planner}
 import javax.net.ssl.SSLEngineResult
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
 
 /**
- * A Single Mantik Engine Session.
- * @param id id of the session
- * @param components the core components as being viewed from the session.
- *        Note: it's possible that each session gets different instances to implement
- *        access controls.
- */
+  * A Single Mantik Engine Session.
+  * @param id id of the session
+  * @param components the core components as being viewed from the session.
+  *        Note: it's possible that each session gets different instances to implement
+  *        access controls.
+  */
 class Session(
     val id: String,
     val components: CoreComponents
@@ -62,8 +62,10 @@ class Session(
   def getItemAs[T <: MantikItem: ClassTag](id: String): T = {
     getItem(id) match {
       case Some(item: T) => item
-      case Some(otherItem) => EngineErrors.ItemUnexpectedType.throwIt(
-        s"Expected ${implicitly[ClassTag[T]].getClass.getSimpleName}, got ${otherItem.getClass.getSimpleName}")
+      case Some(otherItem) =>
+        EngineErrors.ItemUnexpectedType.throwIt(
+          s"Expected ${implicitly[ClassTag[T]].getClass.getSimpleName}, got ${otherItem.getClass.getSimpleName}"
+        )
       case None => EngineErrors.ItemNotFoundInSession.throwIt("Item not found ${id}")
     }
   }

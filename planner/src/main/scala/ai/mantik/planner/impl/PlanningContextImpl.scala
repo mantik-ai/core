@@ -1,19 +1,19 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.componently.utils.ConfigExtensions._
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.MantikAsyncException
-import ai.mantik.elements.{ MantikId, NamedMantikId }
+import ai.mantik.elements.{MantikId, NamedMantikId}
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.{ ExecutionPayloadProvider, MnpPlanExecutor }
-import ai.mantik.planner.repository.impl.{ LocalMantikRegistryImpl, MantikArtifactRetrieverImpl }
+import ai.mantik.planner.impl.exec.{ExecutionPayloadProvider, MnpPlanExecutor}
+import ai.mantik.planner.repository.impl.{LocalMantikRegistryImpl, MantikArtifactRetrieverImpl}
 import ai.mantik.planner.repository._
 
 import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 
 private[planner] class PlanningContextImpl @Inject() (
@@ -23,7 +23,9 @@ private[planner] class PlanningContextImpl @Inject() (
     val remoteRegistry: RemoteMantikRegistry,
     val retriever: MantikArtifactRetriever,
     val mantikItemStateManager: MantikItemStateManager
-)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanningContext {
+)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase
+    with PlanningContext {
   private val jobTimeout = config.getFiniteDuration("mantik.planner.jobTimeout")
 
   override def load(id: MantikId): MantikItem = {
@@ -62,16 +64,16 @@ private[planner] class PlanningContextImpl @Inject() (
 private[mantik] object PlanningContextImpl {
 
   /**
-   * Construct a context with components
-   * (for testing)
-   */
+    * Construct a context with components
+    * (for testing)
+    */
   def constructWithComponents(
-    repository: Repository,
-    fileRepository: FileRepository,
-    // fileRepositoryServer: FileRepositoryServer,
-    executor: Executor,
-    registry: RemoteMantikRegistry,
-    payloadProvider: ExecutionPayloadProvider
+      repository: Repository,
+      fileRepository: FileRepository,
+      // fileRepositoryServer: FileRepositoryServer,
+      executor: Executor,
+      registry: RemoteMantikRegistry,
+      payloadProvider: ExecutionPayloadProvider
   )(implicit akkaRuntime: AkkaRuntime): PlanningContextImpl = {
     val mantikItemStateManager = new MantikItemStateManager()
     val planner = new PlannerImpl(akkaRuntime.config, mantikItemStateManager)
@@ -87,7 +89,8 @@ private[mantik] object PlanningContextImpl {
       payloadProvider,
       mantikItemStateManager
     )
-    val context = new PlanningContextImpl(localRegistry, planner, planExecutor, registry, retriever, mantikItemStateManager)
+    val context =
+      new PlanningContextImpl(localRegistry, planner, planExecutor, registry, retriever, mantikItemStateManager)
     context
   }
 }

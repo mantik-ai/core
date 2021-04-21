@@ -21,21 +21,13 @@ val circeVersion = "0.11.1"
 val slf4jVersion = "1.7.25"
 val fhttpVersion = "0.2.2"
 
-import scalariform.formatter.preferences._
-val scalariformSettings = {
-  scalariformPreferences := scalariformPreferences.value
-    .setPreference(AlignSingleLineCaseStatements, true)
-    .setPreference(DoubleIndentConstructorArguments, true)
-    .setPreference(DanglingCloseParenthesis, Preserve)
-}
-
 val publishSettings = Seq(
   publishTo := {
     val nexus = "https://sonatype.rcxt.de/repository/mantik_maven/"
     if (isSnapshot.value)
       Some("snapshots" at nexus)
     else
-      Some("releases"  at nexus)
+      Some("releases" at nexus)
   },
   publishMavenStyle := true,
   credentials += (sys.env.get("SONATYPE_MANTIK_PASSWORD") match {
@@ -78,38 +70,42 @@ def enableProtocolBuffer = Seq(
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
   ),
   PB.targets in Compile := Seq(
-    scalapb.gen() -> (sourceManaged in Compile).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
+    scalapb
+      .gen() -> (sourceManaged in Compile).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
   )
 )
 
 def configureBuildInfo(packageName: String): Seq[Def.Setting[_]] =
   Seq(
     buildInfoKeys := Seq[BuildInfoKey](
-    name,
-    version,
-    scalaVersion,
-    BuildInfoKey("gitVersion", gitVersion),
-    BuildInfoKey("buildNum", buildNum)
+      name,
+      version,
+      scalaVersion,
+      BuildInfoKey("gitVersion", gitVersion),
+      BuildInfoKey("buildNum", buildNum)
     ),
     buildInfoPackage := packageName
   )
 
 // Initializes a sub project with common settings
 def makeProject(directory: String, id: String = "") = {
-  val idToUse = if (id.isEmpty){
+  import org.scalafmt.sbt.ScalafmtPlugin._
+
+  val idToUse = if (id.isEmpty) {
     directory.split("/").last
   } else {
     id
   }
-  sbt.Project(idToUse, file(directory))
+  sbt
+    .Project(idToUse, file(directory))
     .dependsOn(testutils % "it,test")
     .configs(IntegrationTest)
     .settings(
-      scalariformSettings,
       addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
       publishSettings,
       Defaults.itSettings,
-      IntegrationTest / testOptions += Tests.Argument("-oDF")
+      IntegrationTest / testOptions += Tests.Argument("-oDF"),
+      inConfig(IntegrationTest)(scalafmtConfigSettings)
     )
 }
 
@@ -121,29 +117,21 @@ lazy val ds = makeProject("ds")
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
       "io.circe" %% "circe-java8" % circeVersion,
-
       // Akka
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
-
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
-
       // Cats
       "org.typelevel" %% "cats-core" % "1.6.0",
-
       // Parboiled (Parsers)
       "org.parboiled" %% "parboiled" % "2.1.5",
-
       // https://mvnrepository.com/artifact/commons-io/commons-io
       "commons-io" % "commons-io" % "2.6",
-
       // MessagePack
       "org.msgpack" % "msgpack-core" % "0.8.16",
-
       // SLF4J Api
       "org.slf4j" % "slf4j-api" % slf4jVersion,
-
       // Guava
       "com.google.guava" % "guava" % "30.0-jre"
     )
@@ -161,13 +149,11 @@ lazy val util = makeProject("util")
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
-
       // Circe
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
       "io.circe" %% "circe-java8" % circeVersion,
       "io.circe" %% "circe-generic-extras" % circeVersion,
-
       "de.heikoseeberger" %% "akka-http-circe" % "1.25.2"
     )
   )
@@ -182,7 +168,7 @@ lazy val mnpScala = makeProject("mnp/mnpscala")
     publishSettings,
     enableProtocolBuffer,
     PB.protoSources in Compile := Seq(baseDirectory.value / "../protocol/protobuf")
-)
+  )
 
 lazy val elements = makeProject("elements")
   .dependsOn(ds, util)
@@ -203,16 +189,13 @@ lazy val componently = makeProject("componently")
     name := "componently",
     libraryDependencies ++= Seq(
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-
       // gRPC
       "io.grpc" % "grpc-stub" % scalapb.compiler.Version.grpcJavaVersion,
       "com.google.protobuf" % "protobuf-java" % scalapb.compiler.Version.protobufVersion,
-
       // Guice
       "com.google.inject" % "guice" % "4.2.2"
     )
   )
-
 
 lazy val executorApi = makeProject("executor/api", "executorApi")
   .dependsOn(componently)
@@ -262,19 +245,14 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
-
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
-
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
-
       // Kubernetes Client
       "io.skuber" %% "skuber" % "2.2.0",
-
       // Guava
       "com.google.guava" % "guava" % "27.1-jre",
-
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
     )
   )
@@ -297,7 +275,6 @@ lazy val planner = makeProject("planner")
     PB.protoSources in Compile += baseDirectory.value / "../bridge/protocol/protobuf"
   )
   .enablePlugins(BuildInfoPlugin)
-
 
 lazy val examples = makeProject("examples")
   .dependsOn(engine)
@@ -334,7 +311,7 @@ lazy val engineApp = makeProject("engine-app", "engineApp")
       // Logging
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "org.slf4j" % "jul-to-slf4j" % slf4jVersion,
-      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     )
   )
   .enablePlugins(JavaAppPackaging)

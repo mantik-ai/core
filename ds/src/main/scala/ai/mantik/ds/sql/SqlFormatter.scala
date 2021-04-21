@@ -86,13 +86,15 @@ object SqlFormatter {
         val formatter = new SqlFormatter(join.innerType)
         joinWithWhitespace("ON", formatter.formatExpression(condition))
       case JoinCondition.Using(columns) =>
-        val formattedColumns = columns.map { column =>
-          if (column.caseSensitive) {
-            "\"" + column.name + "\""
-          } else {
-            column.name
+        val formattedColumns = columns
+          .map { column =>
+            if (column.caseSensitive) {
+              "\"" + column.name + "\""
+            } else {
+              column.name
+            }
           }
-        }.mkString(", ")
+          .mkString(", ")
         joinWithWhitespace("USING", formattedColumns)
     }
     joinWithWhitespace(left, join.joinType.sqlName, "JOIN", right, condition)

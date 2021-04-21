@@ -2,7 +2,7 @@ package ai.mantik.planner.impl
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.ItemId
-import ai.mantik.planner.{ DataSet, MantikItemState }
+import ai.mantik.planner.{DataSet, MantikItemState}
 import ai.mantik.testutils.TestBase
 
 class MantikItemStateManagerSpec extends TestBase {
@@ -48,9 +48,11 @@ class MantikItemStateManagerSpec extends TestBase {
 
   "upsert" should "work" in new Env {
     val item1 = DataSet.literal(Bundle.fundamental(1))
-    manager.upsert(item1, _.copy(payloadFile = Some("baz"))) shouldBe MantikItemState.initializeFromSource(item1.source).copy(
-      payloadFile = Some("baz")
-    )
+    manager.upsert(item1, _.copy(payloadFile = Some("baz"))) shouldBe MantikItemState
+      .initializeFromSource(item1.source)
+      .copy(
+        payloadFile = Some("baz")
+      )
     val expected = MantikItemState.initializeFromSource(item1.source).copy(nameStored = true, payloadFile = Some("baz"))
     manager.upsert(item1, _.copy(nameStored = true)) shouldBe expected
     manager.get(item1.itemId) shouldBe Some(expected)

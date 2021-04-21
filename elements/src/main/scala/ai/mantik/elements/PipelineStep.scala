@@ -1,10 +1,11 @@
 package ai.mantik.elements
 
-import ai.mantik.ds.helper.circe.{ CirceJson, TrialDependentCodec }
-import io.circe.{ Decoder, Json, ObjectEncoder }
+import ai.mantik.ds.helper.circe.{CirceJson, TrialDependentCodec}
+import io.circe.{Decoder, Json, ObjectEncoder}
 
 /** A Single step within a [[PipelineDefinition]]. */
 sealed trait PipelineStep {
+
   /** Optional description. */
   def description: Option[String]
 }
@@ -30,7 +31,8 @@ object PipelineStep {
       description: Option[String] = None
   ) extends PipelineStep
 
-  implicit val metaVariableCodec: ObjectEncoder[MetaVariableSetting] with Decoder[MetaVariableSetting] = CirceJson.makeSimpleCodec[MetaVariableSetting]
+  implicit val metaVariableCodec: ObjectEncoder[MetaVariableSetting] with Decoder[MetaVariableSetting] =
+    CirceJson.makeSimpleCodec[MetaVariableSetting]
 
   implicit val codec = new TrialDependentCodec[PipelineStep] {
     override val subTypes: Seq[SubType[_ <: PipelineStep]] = Seq(

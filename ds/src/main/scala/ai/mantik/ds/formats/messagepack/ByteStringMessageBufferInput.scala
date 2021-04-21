@@ -1,14 +1,14 @@
 package ai.mantik.ds.formats.messagepack
 
 import akka.util.ByteString
-import org.msgpack.core.buffer.{ MessageBuffer, MessageBufferInput }
+import org.msgpack.core.buffer.{MessageBuffer, MessageBufferInput}
 
 import java.nio.ByteBuffer
 
 /**
- * Wraps a ByteString as MessageBuffer Input.
- * Note: data is read directly, do not modify MessageBufferInput or data arrays
- */
+  * Wraps a ByteString as MessageBuffer Input.
+  * Note: data is read directly, do not modify MessageBufferInput or data arrays
+  */
 private[messagepack] class ByteStringMessageBufferInput(byteString: ByteString) extends MessageBufferInput {
   val iterator = byteString.asByteBuffers.iterator
 

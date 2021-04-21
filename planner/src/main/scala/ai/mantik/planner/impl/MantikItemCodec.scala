@@ -1,22 +1,22 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.helper.circe.DiscriminatorDependentCodec
-import ai.mantik.ds.sql.{ MultiQuery, Query, Select, SingleQuery, SqlContext }
-import ai.mantik.ds.{ DataType, TabularData }
+import ai.mantik.ds.sql.{MultiQuery, Query, Select, SingleQuery, SqlContext}
+import ai.mantik.ds.{DataType, TabularData}
 import ai.mantik.elements._
-import ai.mantik.planner.pipelines.{ ResolvedPipeline, ResolvedPipelineStep }
+import ai.mantik.planner.pipelines.{ResolvedPipeline, ResolvedPipelineStep}
 import ai.mantik.planner.repository.Bridge
 import ai.mantik.planner._
-import ai.mantik.planner.pipelines.ResolvedPipelineStep.{ AlgorithmStep, SelectStep }
+import ai.mantik.planner.pipelines.ResolvedPipelineStep.{AlgorithmStep, SelectStep}
 import io.circe.generic.semiauto
-import io.circe.{ Decoder, Encoder, ObjectEncoder }
+import io.circe.{Decoder, Encoder, ObjectEncoder}
 
-import scala.reflect.{ ClassTag, classTag }
+import scala.reflect.{ClassTag, classTag}
 
 /**
- * Serialization Codec for Mantik Items
- * Note: the format is bound to the MantikItem class types. This should be simplified in future.
- */
+  * Serialization Codec for Mantik Items
+  * Note: the format is bound to the MantikItem class types. This should be simplified in future.
+  */
 private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[MantikItem]("type") {
   implicit private def selfEncoder: Encoder[MantikItem] = this
   implicit private def selfDecoder: Decoder[MantikItem] = this
@@ -34,13 +34,15 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     implicit val dataSetEncoder = pureDatasetEncoder
     implicit val dataSetDecoder = pureDatasetDecoder
 
-    private implicit val applicableMantikItemEncoder: Encoder[ApplicableMantikItem] = MantikItemCodec.this.contramap(x => x: MantikItem)
+    private implicit val applicableMantikItemEncoder: Encoder[ApplicableMantikItem] =
+      MantikItemCodec.this.contramap(x => x: MantikItem)
     private implicit val applicableMantikItemDecoder: Decoder[ApplicableMantikItem] = MantikItemCodec.this.emap {
       case a: ApplicableMantikItem => Right(a)
       case somethingElse           => Left(s"Expected ApplicableMantikItem, got ${somethingElse.getClass.getSimpleName}")
     }
 
-    private implicit val trainableItemEncoder: Encoder[TrainableAlgorithm] = MantikItemCodec.this.contramap(x => x: MantikItem)
+    private implicit val trainableItemEncoder: Encoder[TrainableAlgorithm] =
+      MantikItemCodec.this.contramap(x => x: MantikItem)
     private implicit val trainableItemDecoder: Decoder[TrainableAlgorithm] = MantikItemCodec.this.emap {
       case t: TrainableAlgorithm => Right(t)
       case somethingElse         => Left(s"Expected TrainableMantikItem, got ${somethingElse.getClass.getSimpleName}")
@@ -73,7 +75,8 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     case somethingElse => Left(s"Expected Bridge, got ${somethingElse.getClass.getSimpleName}")
   }
 
-  implicit def mantikItemCoreEncoder[T <: MantikDefinition]: Encoder[MantikItemCore[T]] = semiauto.deriveEncoder[MantikItemCore[T]]
+  implicit def mantikItemCoreEncoder[T <: MantikDefinition]: Encoder[MantikItemCore[T]] =
+    semiauto.deriveEncoder[MantikItemCore[T]]
   implicit def mantikItemCoreDecoder[T <: MantikDefinition: ClassTag]: Decoder[MantikItemCore[T]] = {
     implicit val headerDecoder = MantikHeader.decoder[T]
     semiauto.deriveDecoder[MantikItemCore[T]]
@@ -129,16 +132,17 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     semiauto.deriveDecoder[Bridge]
   }
 
-  implicit val resolvedPipelineStep: ObjectEncoder[ResolvedPipelineStep] with Decoder[ResolvedPipelineStep] = new DiscriminatorDependentCodec[ResolvedPipelineStep]() {
-    implicit val algoEncoder = pureAlgorithmEncoder
-    implicit val algoDecoder = pureAlgorithmDecoder
-    implicit val algorithmStepEncoder = semiauto.deriveEncoder[AlgorithmStep]
-    implicit val algorithmStepDecoder = semiauto.deriveDecoder[AlgorithmStep]
-    override val subTypes = Seq(
-      makeGivenSubType[AlgorithmStep]("algorithm"),
-      makeSubType[SelectStep]("select")
-    )
-  }
+  implicit val resolvedPipelineStep: ObjectEncoder[ResolvedPipelineStep] with Decoder[ResolvedPipelineStep] =
+    new DiscriminatorDependentCodec[ResolvedPipelineStep]() {
+      implicit val algoEncoder = pureAlgorithmEncoder
+      implicit val algoDecoder = pureAlgorithmDecoder
+      implicit val algorithmStepEncoder = semiauto.deriveEncoder[AlgorithmStep]
+      implicit val algorithmStepDecoder = semiauto.deriveDecoder[AlgorithmStep]
+      override val subTypes = Seq(
+        makeGivenSubType[AlgorithmStep]("algorithm"),
+        makeSubType[SelectStep]("select")
+      )
+    }
 
   implicit private val resolvedPipelineDefinitionEncoder: Encoder[ResolvedPipeline] = {
     semiauto.deriveEncoder[ResolvedPipeline]
@@ -157,7 +161,11 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
   override val subTypes = Seq(
     makeGivenSubType[DataSet]("dataset")(classTag[DataSet], pureDatasetEncoder, pureDatasetDecoder),
     makeGivenSubType[Algorithm]("algorithm")(classTag[Algorithm], pureAlgorithmEncoder, pureAlgorithmDecoder),
-    makeGivenSubType[TrainableAlgorithm]("trainable")(classTag[TrainableAlgorithm], pureTrainableEncoder, pureTrainableDecoder),
+    makeGivenSubType[TrainableAlgorithm]("trainable")(
+      classTag[TrainableAlgorithm],
+      pureTrainableEncoder,
+      pureTrainableDecoder
+    ),
     makeGivenSubType[Bridge]("bridge")(classTag[Bridge], pureBridgeEncoder, pureBridgeDecoder),
     makeGivenSubType[Pipeline]("pipeline")(classTag[Pipeline], purePipelineEncoder, purePipelineDecoder)
   )

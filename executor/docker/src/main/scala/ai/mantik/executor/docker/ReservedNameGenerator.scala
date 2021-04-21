@@ -2,12 +2,12 @@ package ai.mantik.executor.docker
 
 import ai.mantik.executor.docker.ReservedNameGenerator.SingleExecutableFuture
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
- * Helper class for generating names in an efficient manner.
- * Must be thread safe, however also be the single source of truth for Mantik Containers.
- */
+  * Helper class for generating names in an efficient manner.
+  * Must be thread safe, however also be the single source of truth for Mantik Containers.
+  */
 class ReservedNameGenerator(
     backend: ReservedNameGenerator.Backend,
     generatingSize: Int = 20
@@ -44,12 +44,11 @@ class ReservedNameGenerator(
 
   private def freeAfterUser[T](r: Future[String], user: String => Future[T]): Future[T] = {
     r.flatMap { reservedName =>
-      user(reservedName).andThen {
-        case _ =>
-          lock.synchronized {
-            reserved = reserved - reservedName
-            existingNames += reservedName
-          }
+      user(reservedName).andThen { case _ =>
+        lock.synchronized {
+          reserved = reserved - reservedName
+          existingNames += reservedName
+        }
       }
     }
   }
@@ -104,6 +103,7 @@ class ReservedNameGenerator(
 object ReservedNameGenerator {
 
   trait Backend {
+
     /** Lookup already taken Names. */
     def lookupAlreadyTaken(): Future[Set[String]]
 
@@ -123,11 +123,10 @@ object ReservedNameGenerator {
           case None =>
             val future = f
             current = Some(future)
-            future.andThen {
-              case _ =>
-                lock.synchronized {
-                  current = None
-                }
+            future.andThen { case _ =>
+              lock.synchronized {
+                current = None
+              }
             }
             future
         }

@@ -1,7 +1,7 @@
 package ai.mantik.planner.repository.impl
 
 import ai.mantik.elements.errors.MantikException
-import ai.mantik.planner.repository.{ ContentTypes, FileRepository }
+import ai.mantik.planner.repository.{ContentTypes, FileRepository}
 
 import scala.concurrent.duration._
 

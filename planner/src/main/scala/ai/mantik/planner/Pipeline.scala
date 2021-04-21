@@ -1,22 +1,27 @@
 package ai.mantik.planner
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver, ResolvedPipeline }
+import ai.mantik.planner.pipelines.{PipelineBuilder, PipelineResolver, ResolvedPipeline}
 import ai.mantik.componently.utils.EitherExtensions._
 import ai.mantik.ds.DataType
 import ai.mantik.ds.sql.Select
-import ai.mantik.elements.{ MantikHeader, PipelineDefinition }
+import ai.mantik.elements.{MantikHeader, PipelineDefinition}
 
 /**
- * A Pipeline, like an algorithm but resembles the combination of multiple algorithms after each other.
- *
- * They can be stored independently in the Repository and can be deployed.
- */
+  * A Pipeline, like an algorithm but resembles the combination of multiple algorithms after each other.
+  *
+  * They can be stored independently in the Repository and can be deployed.
+  */
 case class Pipeline private[planner] (
     core: MantikItemCore[PipelineDefinition],
     private[planner] val resolved: ResolvedPipeline
-) extends MantikItem with ApplicableMantikItem {
+) extends MantikItem
+    with ApplicableMantikItem {
 
-  def this(definitionSource: DefinitionSource, mantikHeader: MantikHeader[PipelineDefinition], resolved: ResolvedPipeline) = {
+  def this(
+      definitionSource: DefinitionSource,
+      mantikHeader: MantikHeader[PipelineDefinition],
+      resolved: ResolvedPipeline
+  ) = {
     this(MantikItemCore(Source(definitionSource, PayloadSource.Empty), mantikHeader), resolved)
   }
 
@@ -46,19 +51,20 @@ case class Pipeline private[planner] (
 object Pipeline {
 
   /**
-   * Build a pipeline from a list of algorithms.
-   * This will result in artificial child mantik ids.
-   * @throws IllegalArgumentException if data types do not match.
-   */
+    * Build a pipeline from a list of algorithms.
+    * This will result in artificial child mantik ids.
+    * @throws IllegalArgumentException if data types do not match.
+    */
   def build(
-    algorithm0: Algorithm, algorithms: Algorithm*
+      algorithm0: Algorithm,
+      algorithms: Algorithm*
   ): Pipeline = {
     PipelineBuilder.build((algorithm0 +: algorithms).map(Right(_))).force
   }
 
   /** Extended build operation. */
   def build(
-    steps: Either[Select, Algorithm]*
+      steps: Either[Select, Algorithm]*
   ): Pipeline = {
     PipelineBuilder.build(steps).force
   }
@@ -72,7 +78,8 @@ object Pipeline {
 
   /** Build a pipeline from a list of Pipeline steps and a possible input data type. */
   def buildFromSteps(
-    steps: Seq[PipelineBuildStep], inputDataType: Option[DataType] = None
+      steps: Seq[PipelineBuildStep],
+      inputDataType: Option[DataType] = None
   ): Pipeline = {
     PipelineBuilder.build(steps, inputDataType).force
   }

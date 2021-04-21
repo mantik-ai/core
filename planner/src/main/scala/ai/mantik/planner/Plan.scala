@@ -8,11 +8,11 @@ import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner.graph.{Graph, Node}
 
 /**
- * A plan is something which can be executed. They are created by the [[Planner]]
- * and are executed by the [[PlanExecutor]].
- *
- * They should be serializable in future (however this is tricky because of MantikItem references)
- */
+  * A plan is something which can be executed. They are created by the [[Planner]]
+  * and are executed by the [[PlanExecutor]].
+  *
+  * They should be serializable in future (however this is tricky because of MantikItem references)
+  */
 case class Plan[T](
     op: PlanOp[T],
     files: List[PlanFile],
@@ -45,9 +45,9 @@ case class PlanFile(
 }
 
 /**
- * A node in a planning graph.
- * Node: this is not yet the "real" node, as resolving by the [[PlanExecutor]] is missing.
- */
+  * A node in a planning graph.
+  * Node: this is not yet the "real" node, as resolving by the [[PlanExecutor]] is missing.
+  */
 sealed trait PlanNodeService
 
 object PlanNodeService {
@@ -56,7 +56,11 @@ object PlanNodeService {
   case class File(fileReference: PlanFileReference) extends PlanNodeService
 
   /** Represents a docker container in the graph. */
-  case class DockerContainer(container: Container, data: Option[PlanFileReference] = None, mantikHeader: MantikHeader[_ <: MantikDefinition]) extends PlanNodeService
+  case class DockerContainer(
+      container: Container,
+      data: Option[PlanFileReference] = None,
+      mantikHeader: MantikHeader[_ <: MantikDefinition]
+  ) extends PlanNodeService
 
   implicit val renderable = new Renderable[PlanNodeService] {
     override def buildRenderTree(value: PlanNodeService): Renderable.RenderTree = {
@@ -83,6 +87,7 @@ sealed trait PlanOp[T] {
 }
 
 object PlanOp {
+
   /** PlanOps which do not produce any values. */
   sealed trait ProceduralPlanOp extends PlanOp[Unit]
 
@@ -96,21 +101,27 @@ object PlanOp {
   case class RunGraph(graph: Graph[PlanNodeService]) extends ProceduralPlanOp
 
   /** Stores a Bundle Content as File. */
-  case class StoreBundleToFile(bundle: Bundle, fileReference: PlanFileReference) extends ProceduralPlanOp with BasicOp[Unit]
+  case class StoreBundleToFile(bundle: Bundle, fileReference: PlanFileReference)
+      extends ProceduralPlanOp
+      with BasicOp[Unit]
 
   /** Loads a Bundle from a File. */
-  case class LoadBundleFromFile(dataType: DataType, fileReference: PlanFileReference) extends PlanOp[Bundle] with BasicOp[Bundle]
+  case class LoadBundleFromFile(dataType: DataType, fileReference: PlanFileReference)
+      extends PlanOp[Bundle]
+      with BasicOp[Bundle]
 
   /** Add some mantik item (only the itemId) */
-  case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference]) extends ProceduralPlanOp with BasicOp[Unit]
+  case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference])
+      extends ProceduralPlanOp
+      with BasicOp[Unit]
 
-  /** Tag some Item.  */
+  /** Tag some Item. */
   case class TagMantikItem(item: MantikItem, id: NamedMantikId) extends ProceduralPlanOp with BasicOp[Unit]
 
   /**
-   * Push a Mantik Item to a remote registry.
-   * (Must be added first)
-   */
+    * Push a Mantik Item to a remote registry.
+    * (Must be added first)
+    */
   case class PushMantikItem(item: MantikItem) extends ProceduralPlanOp with BasicOp[Unit]
 
   /** Deploy an algorithm. */
@@ -127,12 +138,12 @@ object PlanOp {
       sub: Map[String, DeployPipelineSubItem],
       serviceId: String,
       serviceNameHint: Option[String],
-      ingress: Option[String],
+      ingress: Option[String]
   ) extends PlanOp[DeploymentState]
 
   /** A Dependent sub item of the pipeline */
   case class DeployPipelineSubItem(
-    node: Node[PlanNodeService.DockerContainer]
+      node: Node[PlanNodeService.DockerContainer]
   )
 
   /** Mark files as being cached. */
@@ -141,9 +152,9 @@ object PlanOp {
   }
 
   /**
-   * Run something sequentially, waiting for each other.
-   * The result of the last is returned.
-   */
+    * Run something sequentially, waiting for each other.
+    * The result of the last is returned.
+    */
   case class Sequential[T](prefix: Seq[PlanOp[_]], last: PlanOp[T]) extends PlanOp[T] {
     def size: Int = prefix.size + 1
 
@@ -162,9 +173,9 @@ object PlanOp {
   case class CopyFile(from: PlanFileReference, to: PlanFileReference) extends ProceduralPlanOp with BasicOp[Unit]
 
   /**
-   * Plan op which stores the result of the last operation into the memory.
-   * Also returns the value again to make it transparent
-   */
+    * Plan op which stores the result of the last operation into the memory.
+    * Also returns the value again to make it transparent
+    */
   case class MemoryWriter[T](memoryId: MemoryId) extends PlanOp[T] with BasicOp[T]
 
   /** Plan op which reads the result of another one from the memory. Must be called later. */
@@ -239,10 +250,11 @@ object PlanOp {
     override def buildRenderTree(value: PlanOp[T]): Renderable.RenderTree = {
       value match {
         case Empty => Renderable.buildRenderTree("empty")
-        case g: RunGraph => Renderable.keyValueList(
-          "RunGraph",
-          "graph" -> g.graph
-        )
+        case g: RunGraph =>
+          Renderable.keyValueList(
+            "RunGraph",
+            "graph" -> g.graph
+          )
         case Sequential(prefix, last) =>
           Renderable.SubTree(
             title = Some("Sequential"),

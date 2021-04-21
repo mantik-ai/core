@@ -1,21 +1,23 @@
 package ai.mantik.engine.server.services
 
-import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.InvalidMantikHeaderException
-import ai.mantik.elements.{ ItemId, MantikId, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{ItemId, MantikId, MantikHeader, NamedMantikId}
 import ai.mantik.engine.protos.local_registry.LocalRegistryServiceGrpc.LocalRegistryService
 import ai.mantik.engine.protos.local_registry._
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
-import ai.mantik.planner.repository.{ LocalMantikRegistry, MantikArtifact }
+import ai.mantik.planner.repository.{LocalMantikRegistry, MantikArtifact}
 import io.grpc.stub.StreamObserver
 import javax.inject.Inject
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegistry)(implicit akkaRuntime: AkkaRuntime)
-  extends ComponentBase with LocalRegistryService with RpcServiceBase {
+    extends ComponentBase
+    with LocalRegistryService
+    with RpcServiceBase {
 
   override def getArtifact(request: GetArtifactRequest): Future[GetArtifactResponse] = {
     handleErrors {
@@ -43,11 +45,13 @@ class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegist
 
   override def listArtifacts(request: ListArtifactsRequest): Future[ListArtifactResponse] = {
     handleErrors {
-      localMantikRegistry.list(
-        alsoAnonymous = request.anonymous,
-        deployedOnly = request.deployed,
-        kindFilter = RpcConversions.decodeOptionalString(request.kind)
-      ).map { items =>
+      localMantikRegistry
+        .list(
+          alsoAnonymous = request.anonymous,
+          deployedOnly = request.deployed,
+          kindFilter = RpcConversions.decodeOptionalString(request.kind)
+        )
+        .map { items =>
           ListArtifactResponse(
             items.map(Converters.encodeMantikArtifact)
           )
@@ -55,30 +59,38 @@ class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegist
     }
   }
 
-  override def addArtifact(responseObserver: StreamObserver[AddArtifactResponse]): StreamObserver[AddArtifactRequest] = {
-    StreamConversions.respondMultiInSingleOutWithHeader[AddArtifactRequest, AddArtifactResponse](translateError, responseObserver) {
-      case (header, source) =>
-        val namedId = RpcConversions.decodeOptionalString(header.namedMantikId).map(
+  override def addArtifact(
+      responseObserver: StreamObserver[AddArtifactResponse]
+  ): StreamObserver[AddArtifactRequest] = {
+    StreamConversions.respondMultiInSingleOutWithHeader[AddArtifactRequest, AddArtifactResponse](
+      translateError,
+      responseObserver
+    ) { case (header, source) =>
+      val namedId = RpcConversions
+        .decodeOptionalString(header.namedMantikId)
+        .map(
           NamedMantikId.apply
         )
-        val itemId = ItemId.generate()
-        val maybeContentType = RpcConversions.decodeOptionalString(header.contentType)
-        val mantikArtifact = MantikArtifact(
-          mantikHeader = header.mantikHeader,
-          fileId = None, // will be set by response
-          namedId = namedId,
-          itemId = itemId
-        )
-        mantikArtifact.parsedMantikHeader // force parsing
-        val maybePayloadSource: Option[PayloadSource] = maybeContentType.map { contentType =>
-          val decodedSource = source.map(r => RpcConversions.decodeByteString(r.payload))
-          contentType -> decodedSource
-        }
-        logger.info(s"Adding artifact ${mantikArtifact.mantikId} (payload=${maybeContentType})...")
-        localMantikRegistry.addMantikArtifact(
+      val itemId = ItemId.generate()
+      val maybeContentType = RpcConversions.decodeOptionalString(header.contentType)
+      val mantikArtifact = MantikArtifact(
+        mantikHeader = header.mantikHeader,
+        fileId = None, // will be set by response
+        namedId = namedId,
+        itemId = itemId
+      )
+      mantikArtifact.parsedMantikHeader // force parsing
+      val maybePayloadSource: Option[PayloadSource] = maybeContentType.map { contentType =>
+        val decodedSource = source.map(r => RpcConversions.decodeByteString(r.payload))
+        contentType -> decodedSource
+      }
+      logger.info(s"Adding artifact ${mantikArtifact.mantikId} (payload=${maybeContentType})...")
+      localMantikRegistry
+        .addMantikArtifact(
           mantikArtifact,
           maybePayloadSource
-        ).map { response =>
+        )
+        .map { response =>
           AddArtifactResponse(
             Some(Converters.encodeMantikArtifact(response))
           )
@@ -86,7 +98,10 @@ class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegist
     }
   }
 
-  override def getArtifactWithPayload(request: GetArtifactRequest, responseObserver: StreamObserver[GetArtifactWithPayloadResponse]): Unit = {
+  override def getArtifactWithPayload(
+      request: GetArtifactRequest,
+      responseObserver: StreamObserver[GetArtifactWithPayloadResponse]
+  ): Unit = {
     val mantikId = MantikId.decodeString(request.mantikId) match {
       case Left(failure) =>
         responseObserver.onError(encodeErrorIfPossible(failure))

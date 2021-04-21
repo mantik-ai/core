@@ -3,12 +3,12 @@ package ai.mantik.planner
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ ItemId, MantikHeader, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{ItemId, MantikHeader, TrainableAlgorithmDefinition}
 import ai.mantik.planner.repository.Bridge
 
 /**
- * A trainable algorithm
- */
+  * A trainable algorithm
+  */
 final case class TrainableAlgorithm(
     core: MantikItemCore[TrainableAlgorithmDefinition],
     trainedBridge: Bridge
@@ -24,9 +24,9 @@ final case class TrainableAlgorithm(
   def functionType: FunctionType = mantikHeader.definition.`type`
 
   /**
-   * Train this [[TrainableAlgorithm]] with given trainingData.
-   * @param cached if true, the result will be cached. This is important for if you want to access the training result and stats.
-   */
+    * Train this [[TrainableAlgorithm]] with given trainingData.
+    * @param cached if true, the result will be cached. This is important for if you want to access the training result and stats.
+    */
   def train(trainingData: DataSet, cached: Boolean = true): (Algorithm, DataSet) = {
     val adapted = trainingData.autoAdaptOrFail(trainingDataType)
 
@@ -54,9 +54,11 @@ final case class TrainableAlgorithm(
       trainedBridge
     ).withItemId(algorithmId)
 
-    val statsResult = DataSet.natural(Source.constructed(PayloadSource.Projection(result, 1)), statType).withItemId(
-      statsId
-    )
+    val statsResult = DataSet
+      .natural(Source.constructed(PayloadSource.Projection(result, 1)), statType)
+      .withItemId(
+        statsId
+      )
     (algorithmResult, statsResult)
   }
 
@@ -68,10 +70,10 @@ final case class TrainableAlgorithm(
 object TrainableAlgorithm {
 
   def apply(
-    source: Source,
-    mantikHeader: MantikHeader[TrainableAlgorithmDefinition],
-    bridge: Bridge,
-    trainedBridge: Bridge
+      source: Source,
+      mantikHeader: MantikHeader[TrainableAlgorithmDefinition],
+      bridge: Bridge,
+      trainedBridge: Bridge
   ): TrainableAlgorithm = {
     TrainableAlgorithm(MantikItemCore(source, mantikHeader, bridge), trainedBridge)
   }

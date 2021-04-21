@@ -13,9 +13,9 @@ import io.circe.syntax._
 import cats.implicits._
 
 /**
- * Bundle JSON Serializer.
- * TODO: There could be support for streaming encoding/decoding for better performance
- */
+  * Bundle JSON Serializer.
+  * TODO: There could be support for streaming encoding/decoding for better performance
+  */
 object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
 
   /** Raw Encoded value, used for decoding type in the first pass. */
@@ -105,9 +105,8 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
     }.toVector
     Encoder { data: IndexedSeq[Element] =>
       Json.fromValues(
-        data.zip(subEncoders).map {
-          case (cell, encoder) =>
-            encoder(cell)
+        data.zip(subEncoders).map { case (cell, encoder) =>
+          encoder(cell)
         }
       )
     }
@@ -186,13 +185,16 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
     new Decoder[Vector[Element]] {
       override def apply(c: HCursor): Result[Vector[Element]] = {
         c.values match {
-          case None                                => Left(DecodingFailure.apply("Expected array", c.history))
-          case Some(values) if values.size != size => Left(DecodingFailure.apply(s"Expected array of size ${size}, got ${values.size}", c.history))
+          case None => Left(DecodingFailure.apply("Expected array", c.history))
+          case Some(values) if values.size != size =>
+            Left(DecodingFailure.apply(s"Expected array of size ${size}, got ${values.size}", c.history))
           case Some(values) =>
-            values.toVector.zip(cellDecoders).map {
-              case (value, decoder) =>
+            values.toVector
+              .zip(cellDecoders)
+              .map { case (value, decoder) =>
                 decoder.decodeJson(value)
-            }.sequence
+              }
+              .sequence
         }
       }
     }
@@ -259,7 +261,9 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
             }
             val elements = builder.result()
             if (elements.length != elementCount) {
-              return Left(DecodingFailure(s"Invalid element count ${elements.length}, expected ${elementCount}", c.history))
+              return Left(
+                DecodingFailure(s"Invalid element count ${elements.length}, expected ${elementCount}", c.history)
+              )
             }
             Right(packer(elements))
         }

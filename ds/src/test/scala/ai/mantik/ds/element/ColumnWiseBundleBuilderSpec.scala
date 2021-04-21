@@ -1,6 +1,6 @@
 package ai.mantik.ds.element
 
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.testutils.TestBase
 
 class ColumnWiseBundleBuilderSpec extends TestBase {

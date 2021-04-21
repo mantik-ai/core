@@ -6,12 +6,15 @@ import ai.mantik.ds.element.{Bundle, TabularBundle}
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.elements.errors.{ErrorCodes, MantikException}
 import ai.mantik.planner.impl.{RemotePlanningContextImpl, RemotePlanningContextServerImpl}
-import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.{PlanningContextService, PlanningContextServiceStub}
+import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.{
+  PlanningContextService,
+  PlanningContextServiceStub
+}
 import ai.mantik.planner.{DataSet, MantikItem, PlanningContext}
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import io.grpc.netty.NettyServerBuilder
 
-abstract class PlanningContextSpecBase extends IntegrationTestBase  {
+abstract class PlanningContextSpecBase extends IntegrationTestBase {
 
   protected def planningContext: PlanningContext
 
@@ -21,13 +24,18 @@ abstract class PlanningContextSpecBase extends IntegrationTestBase  {
   }
 
   "load" should "load an mantik item" in {
-    intercept[MantikException]{
+    intercept[MantikException] {
       planningContext.loadDataSet("loadTest1")
     }.code shouldBe ErrorCodes.MantikItemNotFound
 
-    planningContext.execute(DataSet.literal(
-      Bundle.fundamental(10)
-    ).tag("loadTest1").save())
+    planningContext.execute(
+      DataSet
+        .literal(
+          Bundle.fundamental(10)
+        )
+        .tag("loadTest1")
+        .save()
+    )
 
     val got = planningContext.loadDataSet("loadTest1")
     got.mantikId shouldBe NamedMantikId("loadTest1")
@@ -36,7 +44,7 @@ abstract class PlanningContextSpecBase extends IntegrationTestBase  {
     got2 shouldBe got
 
     def checkBadType(f: (PlanningContext, String) => MantikItem): Unit = {
-      intercept[MantikException]{
+      intercept[MantikException] {
         f(planningContext, "loadTest1")
       }.code shouldBe ErrorCodes.MantikItemWrongType
     }
@@ -52,51 +60,66 @@ abstract class PlanningContextSpecBase extends IntegrationTestBase  {
 
   "execute" should "execute an operation" in {
     val simpleInput = DataSet.literal(
-      TabularBundle.buildColumnWise.withPrimitives(
-        "x", 1, 2, 3
-      ).result
+      TabularBundle.buildColumnWise
+        .withPrimitives(
+          "x",
+          1,
+          2,
+          3
+        )
+        .result
     )
     val increased = simpleInput.select("select x + 1 as y")
     val got = planningContext.execute(increased.fetch)
-    got shouldBe TabularBundle.buildColumnWise.withPrimitives(
-      "y", 2, 3, 4
-    ).result
+    got shouldBe TabularBundle.buildColumnWise
+      .withPrimitives(
+        "y",
+        2,
+        3,
+        4
+      )
+      .result
   }
 
   it should "handle async errors" in {
     val simpleInput = DataSet.literal(
-      TabularBundle.buildColumnWise.withPrimitives(
-        "x", "1", "2", "Bad Data"
-      ).result
+      TabularBundle.buildColumnWise
+        .withPrimitives(
+          "x",
+          "1",
+          "2",
+          "Bad Data"
+        )
+        .result
     )
     val converted = simpleInput.select("select cast (x AS INT32)")
-    intercept[MantikException]{
+    intercept[MantikException] {
       planningContext.execute(converted.fetch)
     }
   }
 
   "pushLocalItem" should "add a local item and use it's default name" in {
-    intercept[MantikException]{
+    intercept[MantikException] {
       planningContext.loadDataSet("mnist_dataset")
     }.code shouldBe ErrorCodes.MantikItemNotFound
 
     val name = planningContext.pushLocalMantikItem(Paths.get("bridge/binary/test/mnist"))
     name shouldBe NamedMantikId("mnist_test")
 
-    withClue("No exception expected"){
+    withClue("No exception expected") {
       planningContext.loadDataSet("mnist_test")
     }
   }
 
   it should "use the supplied name if given" in {
-    intercept[MantikException]{
+    intercept[MantikException] {
       planningContext.loadDataSet("foo")
     }.code shouldBe ErrorCodes.MantikItemNotFound
 
     val name = planningContext.pushLocalMantikItem(Paths.get("bridge/binary/test/mnist"), Some("foo"))
     name shouldBe NamedMantikId("foo")
 
-    withClue("No exception expected"){
+    withClue("No exception expected") {
       planningContext.loadDataSet("foo")
     }
   }
@@ -108,7 +131,8 @@ class PlanningContextSpec extends PlanningContextSpecBase {
 
 class RemotePlanningContextSpec extends PlanningContextSpecBase {
   private lazy val service = new RemotePlanningContextServerImpl(
-    context, retriever
+    context,
+    retriever
   )
 
   private lazy val grpcServer = {
@@ -121,7 +145,8 @@ class RemotePlanningContextSpec extends PlanningContextSpecBase {
     server
   }
 
-  private lazy val channel: ManagedChannel = ManagedChannelBuilder.forAddress("localhost", grpcServer.getPort).usePlaintext().build()
+  private lazy val channel: ManagedChannel =
+    ManagedChannelBuilder.forAddress("localhost", grpcServer.getPort).usePlaintext().build()
 
   override lazy val planningContext: PlanningContext = {
     val remoteContextStub = new PlanningContextServiceStub(channel)

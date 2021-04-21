@@ -13,7 +13,7 @@ class DockerConverter(
     config: DockerExecutorConfig,
     isolationSpace: String,
     internalId: String,
-    userId: String,
+    userId: String
 ) {
 
   val defaultLabels = Map(
@@ -39,9 +39,9 @@ class DockerConverter(
 
   /** Generate a worker container */
   def generateWorkerContainer(
-    containerName: String,
-    container: Container,
-    workerNetworkId: Option[String]
+      containerName: String,
+      container: Container,
+      workerNetworkId: Option[String]
   ): ContainerDefinition = {
     val resolved = config.common.dockerConfig.resolveContainer(container)
 
@@ -51,11 +51,13 @@ class DockerConverter(
       Labels = mnpWorkerLabels()
     )
 
-    val requestWithNetwork = workerNetworkId.map { networkId =>
-      request.withNetworkId(config.workerNetwork, networkId)
-    }.getOrElse(
-      request
-    )
+    val requestWithNetwork = workerNetworkId
+      .map { networkId =>
+        request.withNetworkId(config.workerNetwork, networkId)
+      }
+      .getOrElse(
+        request
+      )
 
     ContainerDefinition(
       containerName,
@@ -74,14 +76,15 @@ class DockerConverter(
 
   /** Generate an MNP preparer for a node. */
   def generateMnpPreparer(
-    mainContainerName: String,
-    initRequest: ByteString,
-    workerNetworkId: Option[String]
+      mainContainerName: String,
+      initRequest: ByteString,
+      workerNetworkId: Option[String]
   ): ContainerDefinition = {
     val preparerName = mainContainerName + "_init"
     val mainAddress = s"${mainContainerName}:8502"
     val parameters = Seq(
-      "--address", mainAddress
+      "--address",
+      mainAddress
     )
     val allParameters = config.common.mnpPreparer.parameters ++ parameters
     val encodedInitRequest = Base64.getEncoder.encodeToString(initRequest.toArray[Byte])
@@ -95,11 +98,13 @@ class DockerConverter(
       Env = Vector(envValue)
     )
 
-    val requestWithNetwork = workerNetworkId.map { networkId =>
-      request.withNetworkId(config.workerNetwork, networkId)
-    }.getOrElse(
-      request
-    )
+    val requestWithNetwork = workerNetworkId
+      .map { networkId =>
+        request.withNetworkId(config.workerNetwork, networkId)
+      }
+      .getOrElse(
+        request
+      )
 
     ContainerDefinition(
       preparerName,
@@ -110,9 +115,9 @@ class DockerConverter(
   }
 
   def generatePipelineContainer(
-    containerName: String,
-    pipelineDefinition: Json,
-    workerNetworkId: Option[String]
+      containerName: String,
+      pipelineDefinition: Json,
+      workerNetworkId: Option[String]
   ): ContainerDefinition = {
     val container = config.common.mnpPipelineController
     val pipelineEnv = "PIPELINE=" + pipelineDefinition.noSpaces
@@ -128,11 +133,13 @@ class DockerConverter(
       Env = Vector(pipelineEnv)
     )
 
-    val requestWithNetwork = workerNetworkId.map { networkId =>
-      request.withNetworkId(config.workerNetwork, networkId)
-    }.getOrElse(
-      request
-    )
+    val requestWithNetwork = workerNetworkId
+      .map { networkId =>
+        request.withNetworkId(config.workerNetwork, networkId)
+      }
+      .getOrElse(
+        request
+      )
 
     ContainerDefinition(
       containerName,

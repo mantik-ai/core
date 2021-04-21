@@ -1,9 +1,9 @@
 package ai.mantik.ds.converter
 
 import ai.mantik.ds.converter.DataTypeConverter.IdentityConverter
-import ai.mantik.ds.element.{ EmbeddedTabularElement, Primitive, TabularRow }
+import ai.mantik.ds.element.{EmbeddedTabularElement, Primitive, TabularRow}
 import ai.mantik.ds.testutil.TestBase
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{FundamentalType, TabularData}
 
 class DataTypeConverterSpec extends TestBase {
 
@@ -15,7 +15,8 @@ class DataTypeConverterSpec extends TestBase {
 
   "ConstantConverter" should "always return constnts" in {
     val c = DataTypeConverter.ConstantConverter(
-      FundamentalType.Int32, Primitive(3)
+      FundamentalType.Int32,
+      Primitive(3)
     )
     c.targetType shouldBe FundamentalType.Int32
     c.convert(Primitive(4)) shouldBe Primitive(3)
@@ -39,10 +40,12 @@ class DataTypeConverterSpec extends TestBase {
       )
     )
     val row = TabularRow(
-      Primitive(3), Primitive("in")
+      Primitive(3),
+      Primitive("in")
     )
     val expected = TabularRow(
-      Primitive(4), Primitive("boom")
+      Primitive(4),
+      Primitive("boom")
     )
 
     t.convert(

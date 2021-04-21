@@ -17,4 +17,3 @@ case class CreateVolumeResponse(
     Status: Option[Map[String, String]] = None,
     Labels: Option[Map[String, String]] = None
 )
-

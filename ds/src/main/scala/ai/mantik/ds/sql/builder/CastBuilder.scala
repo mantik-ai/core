@@ -3,8 +3,8 @@ package ai.mantik.ds.sql.builder
 import ai.mantik.ds.converter.Cast
 import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.ds.operations.BinaryOperation
-import ai.mantik.ds.sql.{ CastExpression, ConstantExpression, Expression }
-import ai.mantik.ds.{ ArrayT, DataType, FundamentalType, Image, ImageChannel, ImageFormat, Nullable, Struct, Tensor }
+import ai.mantik.ds.sql.{CastExpression, ConstantExpression, Expression}
+import ai.mantik.ds.{ArrayT, DataType, FundamentalType, Image, ImageChannel, ImageFormat, Nullable, Struct, Tensor}
 import ai.mantik.ds.sql.parser.AST
 
 import scala.util.control.NonFatal
@@ -144,10 +144,12 @@ private[sql] object CastBuilder {
             if (image.components.size == 1) {
               val singleComponent = image.components.head._2.componentType
               val underlying = maybeUnderlying.getOrElse(singleComponent)
-              Right(Tensor(
-                underlying,
-                List(image.height, image.width)
-              ))
+              Right(
+                Tensor(
+                  underlying,
+                  List(image.height, image.width)
+                )
+              )
             } else {
               Left(s"No cast from ${image} to tensor supported with multiple columns")
             }
@@ -159,7 +161,11 @@ private[sql] object CastBuilder {
     }
   }
 
-  private def buildToImageCast(from: DataType, maybeUnderlying: Option[FundamentalType], maybeChannel: Option[ImageChannel]): Either[String, DataType] = {
+  private def buildToImageCast(
+      from: DataType,
+      maybeUnderlying: Option[FundamentalType],
+      maybeChannel: Option[ImageChannel]
+  ): Either[String, DataType] = {
     val channel = maybeChannel.getOrElse(ImageChannel.Black)
     from match {
       case f: FundamentalType =>

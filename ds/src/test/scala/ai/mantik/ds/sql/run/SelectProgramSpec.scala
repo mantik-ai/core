@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.sql.Select
 import ai.mantik.ds.testutil.TestBase
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{FundamentalType, TabularData}
 import io.circe.syntax._
 
 class SelectProgramSpec extends TestBase {

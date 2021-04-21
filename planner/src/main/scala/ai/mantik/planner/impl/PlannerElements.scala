@@ -1,20 +1,20 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.sql.{ MultiQuery, Query, Select }
-import ai.mantik.executor.model.docker.{ Container, DockerConfig }
+import ai.mantik.ds.sql.{MultiQuery, Query, Select}
+import ai.mantik.executor.model.docker.{Container, DockerConfig}
 import ai.mantik.planner
-import ai.mantik.planner.Planner.{ InconsistencyException, PlannerException }
+import ai.mantik.planner.Planner.{InconsistencyException, PlannerException}
 import ai.mantik.planner._
 import ai.mantik.planner.graph._
-import ai.mantik.planner.repository.{ Bridge, ContentTypes }
+import ai.mantik.planner.repository.{Bridge, ContentTypes}
 import ai.mantik.planner.select.SelectMantikHeaderBuilder
-import cats.data.{ IRWST, State }
+import cats.data.{IRWST, State}
 import com.typesafe.config.Config
 
 /**
- * Raw Elements in Plan Construction.
- */
+  * Raw Elements in Plan Construction.
+  */
 class PlannerElements(config: Config) {
 
   private val dockerConfig = DockerConfig.parseFromConfig(config.getConfig("mantik.bridge.docker"))
@@ -72,24 +72,27 @@ class PlannerElements(config: Config) {
   }
 
   /**
-   * Generates the plan for a loaded Mantik DataSet.
-   * @param dataSet the dataSet
-   * @param file the file, if one is present.
-   */
+    * Generates the plan for a loaded Mantik DataSet.
+    * @param dataSet the dataSet
+    * @param file the file, if one is present.
+    */
   def dataSet(dataSet: DataSet, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
     val bridge = dataSet.bridge
     val dockerImage = bridge.mantikHeader.definition.dockerImage
     // If there is no docker image, then directly pipe through the dataset
     // TODO this is a hack to get natural DataSets working.
     if (dockerImage == "") {
-      val fileToUse = file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
+      val fileToUse =
+        file.getOrElse(throw new planner.Planner.NotAvailableException("No file given for natural file format"))
       loadFileNode(PlanFileWithContentType(fileToUse, ContentTypes.MantikBundleContentType))
     } else {
       val container = resolveBridge(bridge)
 
       val node = Node.source(
         PlanNodeService.DockerContainer(
-          container, data = file, dataSet.mantikHeader
+          container,
+          data = file,
+          dataSet.mantikHeader
         ),
         MantikBundleContentType
       )
@@ -118,12 +121,14 @@ class PlannerElements(config: Config) {
   /** Generate the docker container node SQL Query */
   def queryNode(query: MultiQuery): Node[PlanNodeService.DockerContainer] = {
     val header = SelectMantikHeaderBuilder.compileToMantikHeader(query) match {
-      case Left(error) => throw new FeatureNotSupported(s"Could not compile select statement ${query.toStatement}, ${error}")
-      case Right(ok)   => ok
+      case Left(error) =>
+        throw new FeatureNotSupported(s"Could not compile select statement ${query.toStatement}, ${error}")
+      case Right(ok) => ok
     }
     val resolvedBridge = resolveBridge(BuiltInItems.SelectBridge)
     val container = PlanNodeService.DockerContainer(
-      resolvedBridge, mantikHeader = header
+      resolvedBridge,
+      mantikHeader = header
     )
     val inputs = query.figureOutInputPorts match {
       case Left(error) => throw new InconsistencyException(s"Could not figure out input ports of query ${error}")
@@ -142,7 +147,9 @@ class PlannerElements(config: Config) {
     val container = resolveBridge(algorithm.bridge)
     Node(
       PlanNodeService.DockerContainer(
-        container, data = file, algorithm.mantikHeader
+        container,
+        data = file,
+        algorithm.mantikHeader
       ),
       inputs = Vector(NodePort(MantikBundleContentType)),
       outputs = Vector(NodePort(MantikBundleContentType))
@@ -150,12 +157,17 @@ class PlannerElements(config: Config) {
   }
 
   /** Generates the plan for a trainable algorithm. */
-  def trainableAlgorithm(trainableAlgorithm: TrainableAlgorithm, file: Option[PlanFileReference]): State[PlanningState, ResourcePlan] = {
+  def trainableAlgorithm(
+      trainableAlgorithm: TrainableAlgorithm,
+      file: Option[PlanFileReference]
+  ): State[PlanningState, ResourcePlan] = {
     val container = resolveBridge(trainableAlgorithm.bridge)
 
     val node = Node(
       PlanNodeService.DockerContainer(
-        container, data = file, mantikHeader = trainableAlgorithm.mantikHeader
+        container,
+        data = file,
+        mantikHeader = trainableAlgorithm.mantikHeader
       ),
       inputs = Vector(
         NodePort(MantikBundleContentType)

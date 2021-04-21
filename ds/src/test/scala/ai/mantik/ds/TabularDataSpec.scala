@@ -11,12 +11,12 @@ class TabularDataSpec extends TestBase {
       "foo" -> FundamentalType.Int8,
       "bar" -> FundamentalType.BoolType
     ) shouldBe TabularData(
-        columns = ListMap(
-          "foo" -> FundamentalType.Int8,
-          "bar" -> FundamentalType.BoolType
-        ),
-        rowCount = None
-      )
+      columns = ListMap(
+        "foo" -> FundamentalType.Int8,
+        "bar" -> FundamentalType.BoolType
+      ),
+      rowCount = None
+    )
   }
 
   it should "know it's order" in {

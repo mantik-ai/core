@@ -1,6 +1,6 @@
 package ai.mantik.ds.testutil
 
-import java.nio.file.{ Files, Path }
+import java.nio.file.{Files, Path}
 
 import org.apache.commons.io.FileUtils
 import org.scalatest.BeforeAndAfterEach

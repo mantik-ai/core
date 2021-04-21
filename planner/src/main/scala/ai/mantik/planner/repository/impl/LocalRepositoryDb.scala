@@ -6,8 +6,8 @@ import java.util.UUID
 import ai.mantik.planner.utils.sqlite.QuillSqlite
 
 /**
- * Contains the Database Adapter for the local Repository.
- */
+  * Contains the Database Adapter for the local Repository.
+  */
 private[impl] class LocalRepositoryDb(dbFile: Path) {
   import LocalRepositoryDb._
 

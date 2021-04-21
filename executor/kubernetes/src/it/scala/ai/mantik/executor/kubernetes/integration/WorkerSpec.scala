@@ -1,13 +1,19 @@
 package ai.mantik.executor.kubernetes.integration
 
-import ai.mantik.executor.model.{ListWorkerRequest, MnpWorkerDefinition, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest}
+import ai.mantik.executor.model.{
+  ListWorkerRequest,
+  MnpWorkerDefinition,
+  StartWorkerRequest,
+  StartWorkerResponse,
+  StopWorkerRequest
+}
 import ai.mantik.executor.model.docker.Container
 
 class WorkerSpec extends IntegrationTestBase {
 
   trait Env extends super.Env {
     def startWorker(id: String, isolationSpace: String): StartWorkerResponse = {
-      val startWorkerRequest = StartWorkerRequest (
+      val startWorkerRequest = StartWorkerRequest(
         isolationSpace = isolationSpace,
         id = id,
         definition = MnpWorkerDefinition(
@@ -28,9 +34,11 @@ class WorkerSpec extends IntegrationTestBase {
     val worker3 = startWorker("id2", isolationSpace)
     val worker4 = startWorker("id2", isolationSpace)
 
-    val workersResponse1 = await(executor.listWorkers(
-      ListWorkerRequest(isolationSpace)
-    ))
+    val workersResponse1 = await(
+      executor.listWorkers(
+        ListWorkerRequest(isolationSpace)
+      )
+    )
     workersResponse1.workers.size shouldBe 4
     workersResponse1.workers.map(_.id).distinct should contain theSameElementsAs Seq("id1", "id2")
     workersResponse1.workers.map(_.nodeName) should contain theSameElementsAs Seq(
@@ -40,28 +48,36 @@ class WorkerSpec extends IntegrationTestBase {
       worker4.nodeName
     )
 
-    val workerResponseDifferentSpace = await(executor.listWorkers(
-      ListWorkerRequest("other-space")
-    ))
+    val workerResponseDifferentSpace = await(
+      executor.listWorkers(
+        ListWorkerRequest("other-space")
+      )
+    )
     workerResponseDifferentSpace.workers shouldBe empty
 
-    val workerResponseById = await(executor.listWorkers(
-      ListWorkerRequest(isolationSpace, idFilter = Some("id1"))
-    ))
+    val workerResponseById = await(
+      executor.listWorkers(
+        ListWorkerRequest(isolationSpace, idFilter = Some("id1"))
+      )
+    )
     workerResponseById.workers.map(_.nodeName) should contain theSameElementsAs Seq(
       worker1.nodeName,
       worker2.nodeName
     )
 
-    val workerResponseByNameFilter = await(executor.listWorkers(
-      ListWorkerRequest(isolationSpace, nameFilter = Some(worker1.nodeName))
-    ))
+    val workerResponseByNameFilter = await(
+      executor.listWorkers(
+        ListWorkerRequest(isolationSpace, nameFilter = Some(worker1.nodeName))
+      )
+    )
     workerResponseByNameFilter.workers.ensuring(_.size == 1).head.nodeName shouldBe worker1.nodeName
 
     // doesn't affect, all there
-    await(executor.stopWorker(
-      StopWorkerRequest("other-space")
-    ))
+    await(
+      executor.stopWorker(
+        StopWorkerRequest("other-space")
+      )
+    )
     await(executor.listWorkers(ListWorkerRequest(isolationSpace))).workers.size shouldBe 4
 
     // Kill by Id
@@ -73,7 +89,8 @@ class WorkerSpec extends IntegrationTestBase {
     await(executor.listWorkers(ListWorkerRequest(isolationSpace))).workers.size shouldBe 2
 
     // Kill by Name
-    val removedByName = await(executor.stopWorker(StopWorkerRequest(isolationSpace, nameFilter = Some(worker3.nodeName))))
+    val removedByName =
+      await(executor.stopWorker(StopWorkerRequest(isolationSpace, nameFilter = Some(worker3.nodeName))))
     removedByName.removed.size shouldBe 1
     removedByName.removed.head.name shouldBe worker3.nodeName
     removedByName.removed.head.id shouldBe "id2"

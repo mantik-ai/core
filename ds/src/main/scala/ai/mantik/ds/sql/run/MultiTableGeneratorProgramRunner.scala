@@ -1,6 +1,6 @@
 package ai.mantik.ds.sql.run
 
-import ai.mantik.ds.element.{ TabularBundle, TabularRow }
+import ai.mantik.ds.element.{TabularBundle, TabularRow}
 import ai.mantik.ds.sql.run.MultiTableGeneratorProgramRunner.MultiQueryRunner
 import scala.collection.JavaConverters._
 
@@ -19,9 +19,8 @@ class MultiTableGeneratorProgramRunner(multiTableGeneratorProgram: MultiTableGen
 
     val results = multiQueryRunner(rowsVectors)
       .zip(multiTableGeneratorProgram.allResults)
-      .map {
-        case (rowIterator, tabularType) =>
-          TabularBundle(tabularType, rowIterator.toVector)
+      .map { case (rowIterator, tabularType) =>
+        TabularBundle(tabularType, rowIterator.toVector)
       }
 
     results
@@ -53,27 +52,28 @@ class MultiTableGeneratorProgramRunner(multiTableGeneratorProgram: MultiTableGen
       }
 
       val elementCount = collector.size
-      val borders: Vector[Int] = s.fractions.foldLeft(List(0)) {
-        case (current, fraction) =>
+      val borders: Vector[Int] = s.fractions
+        .foldLeft(List(0)) { case (current, fraction) =>
           val last = current.head
           (last + (fraction * elementCount).toInt) :: current
-      }.reverse.toVector :+ elementCount
+        }
+        .reverse
+        .toVector :+ elementCount
 
-      val iterators = borders.zip(borders.tail).map {
-        case (startIndex, endIndex) =>
-          new Iterator[TabularRow] {
-            var current = startIndex
+      val iterators = borders.zip(borders.tail).map { case (startIndex, endIndex) =>
+        new Iterator[TabularRow] {
+          var current = startIndex
 
-            override def hasNext: Boolean = {
-              current < endIndex
-            }
-
-            override def next(): TabularRow = {
-              val result = collector(current)
-              current += 1
-              result
-            }
+          override def hasNext: Boolean = {
+            current < endIndex
           }
+
+          override def next(): TabularRow = {
+            val result = collector(current)
+            current += 1
+            result
+          }
+        }
       }
 
       iterators

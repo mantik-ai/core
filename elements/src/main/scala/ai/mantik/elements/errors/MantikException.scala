@@ -1,9 +1,10 @@
 package ai.mantik.elements.errors
 
-import io.grpc.{ Metadata, StatusRuntimeException }
+import io.grpc.{Metadata, StatusRuntimeException}
 
 /** Base class for Mantik Exceptions. */
 class MantikException(val code: ErrorCode, msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {
+
   /** Serialize the exception into it's code and message. */
   def serialize(): (String, Option[String]) = code.code -> Option(getMessage).filter(_.nonEmpty)
 
@@ -21,15 +22,20 @@ class MantikException(val code: ErrorCode, msg: String, cause: Throwable = null)
 }
 
 /** Wraps an exception in async code to get a better stack trace */
-class MantikAsyncException(code: ErrorCode, msg: String, cause: Throwable = null) extends MantikException(code, msg, cause) {
+class MantikAsyncException(code: ErrorCode, msg: String, cause: Throwable = null)
+    extends MantikException(code, msg, cause) {
 
   def this(cause: Throwable) {
-    this({
-      cause match {
-        case m: MantikException => m.code
-        case other              => ErrorCodes.InternalError
-      }
-    }, cause.getMessage, cause)
+    this(
+      {
+        cause match {
+          case m: MantikException => m.code
+          case other              => ErrorCodes.InternalError
+        }
+      },
+      cause.getMessage,
+      cause
+    )
   }
 }
 
@@ -53,7 +59,10 @@ object MantikRemoteException {
   def fromGrpc(statusRuntimeException: StatusRuntimeException): MantikRemoteException = {
     Option(statusRuntimeException.getTrailers.get(MantikException.ErrorCodeMetaDataKey)) match {
       case None =>
-        val result = new MantikRemoteException(ErrorCodes.InternalError, s"Undecodable error, ${statusRuntimeException.getMessage}")
+        val result = new MantikRemoteException(
+          ErrorCodes.InternalError,
+          s"Undecodable error, ${statusRuntimeException.getMessage}"
+        )
         // interesting where the error codes from
         result.addBacktrace()
         result

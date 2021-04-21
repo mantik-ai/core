@@ -3,39 +3,42 @@ package ai.mantik.elements.meta
 import ai.mantik.ds.element.Bundle
 import ai.mantik.testutils.TestBase
 import io.circe.syntax._
-import io.circe.{ Json, JsonObject, parser }
+import io.circe.{Json, JsonObject, parser}
 
 class MetaJsonSpec extends TestBase {
 
-  val sample = parser.parse(
-    """
-      |{
-      | "metaVariables": [
-      |   {
-      |     "name": "foo",
-      |     "type": "int32",
-      |     "value": 5,
-      |     "fix": true
-      |   },
-      |   {
-      |     "name": "bar",
-      |     "type": "bool",
-      |     "value": true,
-      |     "fix": false
-      |   },
-      |   {
-      |     "name": "zzz",
-      |     "type": "int32",
-      |     "value": 100,
-      |     "fix": false
-      |   }
-      | ],
-      | "other": "code",
-      | "lala": "${foo}",
-      | "lulu": "${bar}"
-      |}
+  val sample = parser
+    .parse(
+      """
+        |{
+        | "metaVariables": [
+        |   {
+        |     "name": "foo",
+        |     "type": "int32",
+        |     "value": 5,
+        |     "fix": true
+        |   },
+        |   {
+        |     "name": "bar",
+        |     "type": "bool",
+        |     "value": true,
+        |     "fix": false
+        |   },
+        |   {
+        |     "name": "zzz",
+        |     "type": "int32",
+        |     "value": 100,
+        |     "fix": false
+        |   }
+        | ],
+        | "other": "code",
+        | "lala": "${foo}",
+        | "lulu": "${bar}"
+        |}
     """.stripMargin
-  ).right.getOrElse(fail)
+    )
+    .right
+    .getOrElse(fail)
 
   lazy val parsed = sample.as[MetaJson].getOrElse(fail)
 
@@ -54,11 +57,13 @@ class MetaJsonSpec extends TestBase {
   }
 
   it should "be applicable" in {
-    parsed.applied shouldBe Right(JsonObject(
-      "other" -> Json.fromString("code"),
-      "lala" -> Json.fromInt(5),
-      "lulu" -> Json.fromBoolean(true)
-    ))
+    parsed.applied shouldBe Right(
+      JsonObject(
+        "other" -> Json.fromString("code"),
+        "lala" -> Json.fromInt(5),
+        "lulu" -> Json.fromBoolean(true)
+      )
+    )
   }
 
   it should "not care if the element is missing" in {

@@ -2,7 +2,7 @@ package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.testutils.TestBase
-import io.circe.{ Decoder, Encoder }
+import io.circe.{Decoder, Encoder}
 import io.circe.syntax._
 
 class ActionSpec extends TestBase {

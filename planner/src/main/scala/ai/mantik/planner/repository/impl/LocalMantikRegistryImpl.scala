@@ -1,9 +1,9 @@
 package ai.mantik.planner.repository.impl
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
-import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId }
-import ai.mantik.planner.repository.{ FileRepository, LocalMantikRegistry, MantikArtifact, Repository }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.elements.errors.{ErrorCodes, MantikException}
+import ai.mantik.elements.{ItemId, MantikId, NamedMantikId}
+import ai.mantik.planner.repository.{FileRepository, LocalMantikRegistry, MantikArtifact, Repository}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import javax.inject.Inject
@@ -14,35 +14,42 @@ class LocalMantikRegistryImpl @Inject() (
     fileRepository: FileRepository,
     repository: Repository
 )(
-    implicit
-    akkaRuntime: AkkaRuntime
-) extends ComponentBase with LocalMantikRegistry {
+    implicit akkaRuntime: AkkaRuntime
+) extends ComponentBase
+    with LocalMantikRegistry {
 
   override def get(mantikId: MantikId): Future[MantikArtifact] = {
     repository.get(mantikId)
   }
 
   override def getPayload(fileId: String): Future[(String, Source[ByteString, _])] = {
-    fileRepository.loadFile(fileId).recover {
-      case e: MantikException if e.code.isA(FileRepository.NotFoundCode) =>
-        ErrorCodes.MantikItemPayloadNotFound.throwIt(s"Payload ${fileId} not found", e)
-    }.map { result =>
-      (result.contentType, result.source)
-    }
+    fileRepository
+      .loadFile(fileId)
+      .recover {
+        case e: MantikException if e.code.isA(FileRepository.NotFoundCode) =>
+          ErrorCodes.MantikItemPayloadNotFound.throwIt(s"Payload ${fileId} not found", e)
+      }
+      .map { result =>
+        (result.contentType, result.source)
+      }
   }
 
-  override def addMantikArtifact(mantikArtifact: MantikArtifact, payload: Option[(String, Source[ByteString, _])]): Future[MantikArtifact] = {
-    val fileStorage: Future[Option[(String, Future[Long])]] = payload.map {
-      case (contentType, source) =>
+  override def addMantikArtifact(
+      mantikArtifact: MantikArtifact,
+      payload: Option[(String, Source[ByteString, _])]
+  ): Future[MantikArtifact] = {
+    val fileStorage: Future[Option[(String, Future[Long])]] = payload
+      .map { case (contentType, source) =>
         for {
           storage <- fileRepository.requestFileStorage(contentType, temporary = false)
           sink <- fileRepository.storeFile(storage.fileId)
         } yield {
           Some(storage.fileId -> source.runWith(sink))
         }
-    }.getOrElse(
-      Future.successful(None)
-    )
+      }
+      .getOrElse(
+        Future.successful(None)
+      )
 
     for {
       storage <- fileStorage
@@ -58,7 +65,11 @@ class LocalMantikRegistryImpl @Inject() (
     repository.ensureMantikId(itemId, mantikId)
   }
 
-  override def list(alsoAnonymous: Boolean, deployedOnly: Boolean, kindFilter: Option[String]): Future[IndexedSeq[MantikArtifact]] = {
+  override def list(
+      alsoAnonymous: Boolean,
+      deployedOnly: Boolean,
+      kindFilter: Option[String]
+  ): Future[IndexedSeq[MantikArtifact]] = {
     repository.list(
       alsoAnonymous = alsoAnonymous,
       deployedOnly = deployedOnly,

@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.sql._
 import ai.mantik.ds.sql.run.JoinConditionAnalyzer.Analysis
-import ai.mantik.ds.{ DataType, Nullable, TabularData }
+import ai.mantik.ds.{DataType, Nullable, TabularData}
 
 import scala.collection.BitSet
 
@@ -40,7 +40,9 @@ private[sql] class JoinCompiler(join: Join) {
     )
   }
 
-  private def generateSources(analysis: JoinConditionAnalyzer.Analysis): Either[String, (SingleTableGeneratorProgram, SingleTableGeneratorProgram)] = {
+  private def generateSources(
+      analysis: JoinConditionAnalyzer.Analysis
+  ): Either[String, (SingleTableGeneratorProgram, SingleTableGeneratorProgram)] = {
     for {
       left <- Compiler.compile(join.left)
       right <- Compiler.compile(join.right)
@@ -57,16 +59,15 @@ private[sql] class JoinCompiler(join: Join) {
   }
 
   private def buildInputSource(
-    input: SingleTableGeneratorProgram,
-    groupingDataTypes: Vector[DataType],
-    groupingProgram: Program,
-    elementTypes: Vector[DataType],
-    elementProgram: Program
+      input: SingleTableGeneratorProgram,
+      groupingDataTypes: Vector[DataType],
+      groupingProgram: Program,
+      elementTypes: Vector[DataType],
+      elementProgram: Program
   ): SingleTableGeneratorProgram = {
     val fullDataType = groupingDataTypes ++ elementTypes
-    val asTabular = TabularData(fullDataType.zipWithIndex.map {
-      case (dt, i) =>
-        s"_${i}" -> dt
+    val asTabular = TabularData(fullDataType.zipWithIndex.map { case (dt, i) =>
+      s"_${i}" -> dt
     }: _*)
     val fullProgram = groupingProgram ++ elementProgram
     SelectProgram(
@@ -78,15 +79,16 @@ private[sql] class JoinCompiler(join: Join) {
   }
 
   /**
-   * Projets the elements into what is important for the program
-   * (Note: here is a lot of air for optimizing)
-   */
+    * Projets the elements into what is important for the program
+    * (Note: here is a lot of air for optimizing)
+    */
   private def elementProjector(): Either[String, ((Vector[DataType], Program), (Vector[DataType], Program))] = {
     join.joinType match {
       case JoinType.Inner => Right((makePureReturningProgram(join.left), makePureReturningProgram(join.right)))
       case JoinType.Left  => Right((makePureReturningProgram(join.left), makeNullableConversionProgram(join.right)))
       case JoinType.Right => Right((makeNullableConversionProgram(join.left), makePureReturningProgram(join.right)))
-      case JoinType.Outer => Right((makeNullableConversionProgram(join.left), makeNullableConversionProgram(join.right)))
+      case JoinType.Outer =>
+        Right((makeNullableConversionProgram(join.left), makeNullableConversionProgram(join.right)))
     }
   }
 
@@ -102,12 +104,11 @@ private[sql] class JoinCompiler(join: Join) {
 
   /** Returns a program which converts all columns into nullables. */
   private def makeNullableConversionProgram(query: Query): (Vector[DataType], Program) = {
-    val parts = query.resultingQueryType.columns.zipWithIndex.map {
-      case (c, id) =>
-        c.dataType match {
-          case Nullable(_) => c.dataType -> Vector(OpCode.Get(id))
-          case other       => Nullable(c.dataType) -> Vector(OpCode.Get(id), OpCode.Cast(c.dataType, Nullable(c.dataType)))
-        }
+    val parts = query.resultingQueryType.columns.zipWithIndex.map { case (c, id) =>
+      c.dataType match {
+        case Nullable(_) => c.dataType -> Vector(OpCode.Get(id))
+        case other       => Nullable(c.dataType) -> Vector(OpCode.Get(id), OpCode.Cast(c.dataType, Nullable(c.dataType)))
+      }
     }
     val dataTypes = parts.map(_._1)
     val ops = parts.flatMap(_._2)

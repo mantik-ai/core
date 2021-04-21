@@ -6,46 +6,54 @@ import java.util.concurrent.atomic.AtomicLong
 import ai.mantik.componently.AkkaHelper.materializer
 import akka.NotUsed
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import io.grpc.stub.StreamObserver
-import org.reactivestreams.{ Subscriber, Subscription }
+import org.reactivestreams.{Subscriber, Subscription}
 
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 /** Helper for converting gRpc Stream Fundamentals into Akka Counterparts. */
 object StreamConversions {
 
   /** Represents an akka source as Stream Observer. */
-  def pumpSourceIntoStreamObserver[T](in: Source[T, _], destination: StreamObserver[T])(implicit materializer: Materializer): Unit = {
+  def pumpSourceIntoStreamObserver[T](in: Source[T, _], destination: StreamObserver[T])(
+      implicit materializer: Materializer
+  ): Unit = {
     val sink = sinkFromStreamObserver(destination)
     in.runWith(sink)
   }
 
   /** Generates a Sink which forwards all to the given stream observer. */
   def sinkFromStreamObserver[T](destination: StreamObserver[T]): Sink[T, NotUsed] = {
-    sinkFromStreamObserverWithSpecialHandling[T, T, Unit](destination, identity, identity, initialState = (), stateUpdate = { (_, _) => () })
+    sinkFromStreamObserverWithSpecialHandling[T, T, Unit](
+      destination,
+      identity,
+      identity,
+      initialState = (),
+      stateUpdate = { (_, _) => () }
+    )
       .mapMaterializedValue(_ => NotUsed)
   }
 
   /**
-   * Generates a Sink from a stream observer with special handling for the first element.
-   * @param f function used for the first element.
-   * @param g function used for the rest of the elements.
-   * @param completer function used when the stream is complete
-   *
-   * @tparam U sink type
-   * @tparam T observer type
-   * @tparam S state type (from observer type)
-   */
+    * Generates a Sink from a stream observer with special handling for the first element.
+    * @param f function used for the first element.
+    * @param g function used for the rest of the elements.
+    * @param completer function used when the stream is complete
+    *
+    * @tparam U sink type
+    * @tparam T observer type
+    * @tparam S state type (from observer type)
+    */
   def sinkFromStreamObserverWithSpecialHandling[U, T, S](
-    destination: StreamObserver[T],
-    f: U => T,
-    g: U => T,
-    completer: Unit => Option[T] = { _: Unit => None },
-    initialState: S,
-    stateUpdate: (S, T) => S
+      destination: StreamObserver[T],
+      f: U => T,
+      g: U => T,
+      completer: Unit => Option[T] = { _: Unit => None },
+      initialState: S,
+      stateUpdate: (S, T) => S
   ): Sink[U, Future[S]] = {
     var subscribed = false
     var first = true
@@ -84,14 +92,15 @@ object StreamConversions {
         stateResult.trySuccess(state)
       }
     }
-    Sink.fromSubscriber(subscriber)
+    Sink
+      .fromSubscriber(subscriber)
       .mapMaterializedValue(_ => stateResult.future)
   }
 
   /**
-   * Build a stream observer, which splits the first element and calls f, which in turn creates an StreamObserver which is used
-   * for the rest of the objects
-   */
+    * Build a stream observer, which splits the first element and calls f, which in turn creates an StreamObserver which is used
+    * for the rest of the objects
+    */
   def splitFirst[T](f: Try[T] => StreamObserver[T]): StreamObserver[T] = {
     new StreamObserver[T] {
       var backend: StreamObserver[T] = _
@@ -218,9 +227,9 @@ object StreamConversions {
   }
 
   /**
-   * Generates a stream observer which collects many elements into a vector.
-   * Do not use in production.
-   */
+    * Generates a stream observer which collects many elements into a vector.
+    * Do not use in production.
+    */
   def streamObserverCollector[T](): (StreamObserver[T], Future[Vector[T]]) = {
     val collector = Vector.newBuilder[T]
     val promise = Promise[Vector[T]]
@@ -239,21 +248,21 @@ object StreamConversions {
   }
 
   /**
-   * Helper to implement streamy input functions with special treating for the first (header) element.
-   *
-   * The function f is called with the first element and the source of ALL elements (including the first)
-   *
-   * f is allowed to block, but not too long.
-   *
-   * @param errorHandler an error handling function.
-   * @param f handler function
-   * @return a A Stream Observer which handles the input type.
-   */
+    * Helper to implement streamy input functions with special treating for the first (header) element.
+    *
+    * The function f is called with the first element and the source of ALL elements (including the first)
+    *
+    * f is allowed to block, but not too long.
+    *
+    * @param errorHandler an error handling function.
+    * @param f handler function
+    * @return a A Stream Observer which handles the input type.
+    */
   def respondMultiInSingleOutWithHeader[Input, Output](
-    errorHandler: PartialFunction[Throwable, Throwable],
-    responseObserver: StreamObserver[Output]
+      errorHandler: PartialFunction[Throwable, Throwable],
+      responseObserver: StreamObserver[Output]
   )(
-    f: (Input, Source[Input, _]) => Future[Output]
+      f: (Input, Source[Input, _]) => Future[Output]
   )(implicit materializer: Materializer, ec: ExecutionContext): StreamObserver[Input] = {
 
     def encodeError(e: Throwable): Throwable = {
@@ -292,9 +301,9 @@ object StreamConversions {
 
   /** Respond to a multi out request. */
   def respondMultiOut[Output](
-    errorHandler: PartialFunction[Throwable, Throwable],
-    responseObserver: StreamObserver[Output],
-    source: Source[Output, _]
+      errorHandler: PartialFunction[Throwable, Throwable],
+      responseObserver: StreamObserver[Output],
+      source: Source[Output, _]
   )(implicit materializer: Materializer): Unit = {
     val sink = sinkFromStreamObserver(responseObserver)
     source.mapError(errorHandler).runWith(sink)
@@ -302,9 +311,9 @@ object StreamConversions {
 
   /** Call a multi out request. */
   def callMultiOut[Input, Output, R](
-    errorHandler: PartialFunction[Throwable, Throwable],
-    f: (Input, StreamObserver[Output]) => Unit,
-    argument: Input
+      errorHandler: PartialFunction[Throwable, Throwable],
+      f: (Input, StreamObserver[Output]) => Unit,
+      argument: Input
   )(handler: Sink[Output, R])(implicit materializer: Materializer): R = {
 
     try {
@@ -317,10 +326,10 @@ object StreamConversions {
   }
 
   /**
-   * Calls an gRpc resource with multiple input and a single output with special header handling
-   * @param f gRpc Function
-   * @param header the header to sent
-   */
+    * Calls an gRpc resource with multiple input and a single output with special header handling
+    * @param f gRpc Function
+    * @param header the header to sent
+    */
   def callMultiInSingleOutWithHeader[I, O](f: StreamObserver[O] => StreamObserver[I], header: I): Sink[I, Future[O]] = {
     // TODO: This should be simpler and should do real work at the moment the Sink is materialized ?!
     val (responseObserver, future) = StreamConversions.singleStreamObserverFuture[O]()

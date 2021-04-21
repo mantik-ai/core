@@ -5,27 +5,28 @@ import ai.mantik.ds.element._
 import ai.mantik.ds.helper.TableFormatter
 
 /**
- * Responsible for rendering a string preview of a value.
- * @param maxCellLength maximum length of cells.
- * @param maxRows maximum number of rows.
- */
+  * Responsible for rendering a string preview of a value.
+  * @param maxCellLength maximum length of cells.
+  * @param maxRows maximum number of rows.
+  */
 case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
 
   /**
-   * Render a Bundle.
-   * @throws IllegalArgumentException if the bundle is not consistent.
-   */
+    * Render a Bundle.
+    * @throws IllegalArgumentException if the bundle is not consistent.
+    */
   def render(bundle: Bundle): String = {
     bundle.model match {
       case table: TabularData =>
-        val rows = bundle.rows.collect {
-          case r: TabularRow => r
+        val rows = bundle.rows.collect { case r: TabularRow =>
+          r
         }
         renderTable(table, rows)
       case dataType =>
         val singleElement = bundle.rows match {
           case IndexedSeq(SingleElement(element)) => element
-          case other                              => throw new IllegalArgumentException(s"Expected single element, got ${other.size} different elements")
+          case other =>
+            throw new IllegalArgumentException(s"Expected single element, got ${other.size} different elements")
         }
         renderSingleElement(dataType, singleElement)
     }
@@ -47,9 +48,8 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
     val cellRenderers = table.columns.map { case (_, dataType) => locateCellRenderer(dataType) }
     val columnNames = table.columns.keys
     val renderedCells = rows.take(maxRows).map { row =>
-      row.columns.zip(cellRenderers).map {
-        case (cell, renderer) =>
-          renderer(cell)
+      row.columns.zip(cellRenderers).map { case (cell, renderer) =>
+        renderer(cell)
       }
     }
     val result = TableFormatter.format(columnNames.toSeq, renderedCells)
@@ -162,18 +162,16 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
   }
 
   private def renderEmbeddedTable(t: TabularData): Element => String = {
-    val columnRenderers = t.columns.map {
-      case (_, dataType) =>
-        locateCellRenderer(dataType)
+    val columnRenderers = t.columns.map { case (_, dataType) =>
+      locateCellRenderer(dataType)
     }.toSeq
 
     {
       case t: EmbeddedTabularElement =>
         val shape = List(t.rows.length, columnRenderers.size)
         val values = t.rows.view.flatMap { row =>
-          row.columns.view.zip(columnRenderers).map {
-            case (cell, cellRenderer) =>
-              cellRenderer(cell)
+          row.columns.view.zip(columnRenderers).map { case (cell, cellRenderer) =>
+            cellRenderer(cell)
           }
         }.iterator
         limitToCellLength(renderTensorLike(shape, values, maxCellLength))
@@ -204,9 +202,8 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
   }
 
   private def renderStruct(tuple: Struct): Element => String = {
-    val columnRenderers = tuple.fields.map {
-      case (_, dataType) =>
-        locateCellRenderer(dataType)
+    val columnRenderers = tuple.fields.map { case (_, dataType) =>
+      locateCellRenderer(dataType)
     }.toSeq
 
     {
@@ -214,10 +211,10 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
         val result = t.elements
           .zip(tuple.fields)
           .zip(columnRenderers)
-          .map {
-            case ((value, field), subRenderer) =>
-              field._1 + ":" + subRenderer(value)
-          }.mkString(",")
+          .map { case ((value, field), subRenderer) =>
+            field._1 + ":" + subRenderer(value)
+          }
+          .mkString(",")
         limitToCellLength(result)
       case x =>
         throw new IllegalArgumentException(s"Expected embedded tabular element, got ${x.getClass.getSimpleName}")

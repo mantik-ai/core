@@ -37,9 +37,11 @@ class DiscriminatorDependentCodecSpec extends TestBase {
   }
 
   it should "decode default values" in {
-    Json.obj(
-      "name" -> Json.fromString("bum")
-    ).as[Base] shouldBe Right(Foo("bum"))
+    Json
+      .obj(
+        "name" -> Json.fromString("bum")
+      )
+      .as[Base] shouldBe Right(Foo("bum"))
   }
 
 }

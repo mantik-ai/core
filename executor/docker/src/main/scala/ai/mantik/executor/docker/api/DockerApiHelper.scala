@@ -9,10 +9,10 @@ object DockerApiHelper {
   private val statusCodeExtractRegex = "^exited \\((\\d+)\\).*".r
 
   /**
-   * Try to decode the status code from human readable status field.
-   * This can be useful, if we want to know if a container failed
-   * from reading the container listing without further inspection.
-   */
+    * Try to decode the status code from human readable status field.
+    * This can be useful, if we want to know if a container failed
+    * from reading the container listing without further inspection.
+    */
   def decodeStatusCodeFromStatus(status: String): Option[Int] = {
     val lc = status.toLowerCase(Locale.US)
     lc match {

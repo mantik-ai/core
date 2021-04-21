@@ -1,9 +1,9 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.sql.SingleQuery
-import ai.mantik.elements.{ ItemId, MantikId, NamedMantikId, PipelineStep }
+import ai.mantik.elements.{ItemId, MantikId, NamedMantikId, PipelineStep}
 import ai.mantik.planner.PlanOp.DeployPipelineSubItem
-import ai.mantik.planner.Planner.{ InconsistencyException, PlannerException }
+import ai.mantik.planner.Planner.{InconsistencyException, PlannerException}
 import ai.mantik.planner._
 import ai.mantik.planner.pipelines.ResolvedPipelineStep
 import ai.mantik.planner.repository.ContentTypes
@@ -14,14 +14,15 @@ import com.typesafe.config.Config
 import javax.inject.Inject
 
 /**
- * Implementation of [[Planner]].
- *
- * Note: the implementation is using the [[State]] Monad for saving
- * the list of opened files (state class is [[PlanningState]].
- *
- * This way it's pure functional and easier to test.
- */
-private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateManager: MantikItemStateManager) extends Planner {
+  * Implementation of [[Planner]].
+  *
+  * Note: the implementation is using the [[State]] Monad for saving
+  * the list of opened files (state class is [[PlanningState]].
+  *
+  * This way it's pure functional and easier to test.
+  */
+private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateManager: MantikItemStateManager)
+    extends Planner {
 
   val elements = new PlannerElements(config)
   val resourcePlanBuilder = new ResourcePlanBuilder(elements, mantikItemStateManager)
@@ -81,7 +82,8 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
               for {
                 plan <- readPayloadFile(item)
                 withTag = plan.copy(preOp = PlanOp.combine(plan.preOp, PlanOp.TagMantikItem(item, n)))
-                _ <- PlanningState.modify(_.withOverrideFunc(item, mantikItemStateManager, _.copy(storedWithName = Some(n))))
+                _ <- PlanningState
+                  .modify(_.withOverrideFunc(item, mantikItemStateManager, _.copy(storedWithName = Some(n))))
               } yield {
                 withTag
               }
@@ -157,25 +159,30 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
 
   /** Store an item and also returns the file referencing to it. */
   def storeSingleItem(item: MantikItem): State[PlanningState, FilesPlan] = {
-    resourcePlanBuilder.translateItemPayloadSourceAsFiles(item.payloadSource, canBeTemporary = false).flatMap { filesPlan =>
-      val files = filesPlan.files
-      PlanningState.apply { state =>
-        val updatedState = state.withOverrideFunc(item, mantikItemStateManager, e => e.copy(
-          payloadAvailable = Some(files),
-          stored = true,
-          storedWithName = mantikItemStateManager.getOrInit(item).namedMantikItem.orElse(e.storedWithName)
-        )
-        )
-        val fileRef = files.headOption.map(_.ref)
-        val combinedOps = PlanOp.seq(
-          filesPlan.preOp,
-          PlanOp.AddMantikItem(item, fileRef)
-        )
-        updatedState -> FilesPlan(
-          combinedOps,
-          files
-        )
-      }
+    resourcePlanBuilder.translateItemPayloadSourceAsFiles(item.payloadSource, canBeTemporary = false).flatMap {
+      filesPlan =>
+        val files = filesPlan.files
+        PlanningState.apply { state =>
+          val updatedState = state.withOverrideFunc(
+            item,
+            mantikItemStateManager,
+            e =>
+              e.copy(
+                payloadAvailable = Some(files),
+                stored = true,
+                storedWithName = mantikItemStateManager.getOrInit(item).namedMantikItem.orElse(e.storedWithName)
+              )
+          )
+          val fileRef = files.headOption.map(_.ref)
+          val combinedOps = PlanOp.seq(
+            filesPlan.preOp,
+            PlanOp.AddMantikItem(item, fileRef)
+          )
+          updatedState -> FilesPlan(
+            combinedOps,
+            files
+          )
+        }
     }
   }
 
@@ -183,14 +190,17 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
   private def dependentItemsForSaving(item: MantikItem): List[MantikItem] = {
     item match {
       case p: Pipeline =>
-        p.resolved.steps.collect {
-          case a: ResolvedPipelineStep.AlgorithmStep => a.algorithm
+        p.resolved.steps.collect { case a: ResolvedPipelineStep.AlgorithmStep =>
+          a.algorithm
         }
       case _ => Nil
     }
   }
 
-  private def deployAlgorithm(algorithm: Algorithm, nameHint: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
+  private def deployAlgorithm(
+      algorithm: Algorithm,
+      nameHint: Option[String]
+  ): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
       state.overrideState(algorithm, mantikItemStateManager).deployed match {
         case Some(Left(existing)) =>
@@ -204,7 +214,9 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
           for {
             filePlan <- ensureItemStored(algorithm)
             memoryId <- PlanningState.apply(_.withNextMemoryId)
-            _ <- PlanningState.modify { _.withOverrideFunc(algorithm, mantikItemStateManager, _.copy(deployed = Some(Right(memoryId)))) }
+            _ <- PlanningState.modify {
+              _.withOverrideFunc(algorithm, mantikItemStateManager, _.copy(deployed = Some(Right(memoryId))))
+            }
           } yield {
             val file = filePlan.files.headOption
             val node = elements.algorithmNode(algorithm, file.map(_.ref))
@@ -227,7 +239,11 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
   }
 
   /** Deploy a pipeline. */
-  def deployPipeline(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
+  def deployPipeline(
+      pipeline: Pipeline,
+      nameHint: Option[String],
+      ingress: Option[String]
+  ): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
       state.overrideState(pipeline, mantikItemStateManager).deployed match {
         case Some(Left(existing)) =>
@@ -252,12 +268,22 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
     }
   }
 
-  private def buildPipelineDeployment(pipeline: Pipeline, nameHint: Option[String], ingress: Option[String]): State[PlanningState, PlanOp[DeploymentState]] = {
+  private def buildPipelineDeployment(
+      pipeline: Pipeline,
+      nameHint: Option[String],
+      ingress: Option[String]
+  ): State[PlanningState, PlanOp[DeploymentState]] = {
     for {
       memoryId <- PlanningState.apply(_.withNextMemoryId)
-      _ <- PlanningState.modify(_.withOverrideFunc(pipeline, mantikItemStateManager, _.copy(
-        deployed = Some(Right(memoryId))
-      )))
+      _ <- PlanningState.modify(
+        _.withOverrideFunc(
+          pipeline,
+          mantikItemStateManager,
+          _.copy(
+            deployed = Some(Right(memoryId))
+          )
+        )
+      )
     } yield {
       val serviceId = pipeline.itemId.toString
       val subDeployments = dependentStepsDeployment(pipeline)
@@ -276,19 +302,21 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
   /** Ensure that independent steps of a pipeline are deployed. */
   private def ensureIndependentStepsDeployed(pipeline: Pipeline): State[PlanningState, PlanOp[Unit]] = {
     val steps = pipeline.resolved.steps
-    steps.collect {
-      case ResolvedPipelineStep.AlgorithmStep(algorithm) => ensureAlgorithmDeployed(algorithm)
-    }.sequence.map { ops =>
-      PlanOp.Sequential(ops, PlanOp.Empty)
-    }
+    steps
+      .collect { case ResolvedPipelineStep.AlgorithmStep(algorithm) =>
+        ensureAlgorithmDeployed(algorithm)
+      }
+      .sequence
+      .map { ops =>
+        PlanOp.Sequential(ops, PlanOp.Empty)
+      }
   }
 
   private def dependentStepsDeployment(pipeline: Pipeline): Map[String, DeployPipelineSubItem] = {
     val steps = pipeline.resolved.steps.zipWithIndex
-    steps.collect {
-      case (ResolvedPipelineStep.SelectStep(select), idx) =>
-        val node = elements.queryNode(SingleQuery(select))
-        idx.toString -> DeployPipelineSubItem(node)
+    steps.collect { case (ResolvedPipelineStep.SelectStep(select), idx) =>
+      val node = elements.queryNode(SingleQuery(select))
+      idx.toString -> DeployPipelineSubItem(node)
     }.toMap
   }
 

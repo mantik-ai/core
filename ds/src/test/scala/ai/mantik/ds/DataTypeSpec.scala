@@ -27,14 +27,16 @@ class DataTypeSpec extends TestBase {
   }
 
   "images" should "serialize well" in {
-    toJson(Image(
-      100,
-      200,
-      ListMap(
-        ImageChannel.Red -> ImageComponent(FundamentalType.Uint8),
-        ImageChannel.Green -> ImageComponent(FundamentalType.Uint32)
+    toJson(
+      Image(
+        100,
+        200,
+        ListMap(
+          ImageChannel.Red -> ImageComponent(FundamentalType.Uint8),
+          ImageChannel.Green -> ImageComponent(FundamentalType.Uint32)
+        )
       )
-    )) shouldBe Json.obj(
+    ) shouldBe Json.obj(
       "type" -> Json.fromString("image"),
       "width" -> 100.asJson,
       "height" -> 200.asJson,
@@ -49,15 +51,17 @@ class DataTypeSpec extends TestBase {
       "format" -> Json.fromString("plain")
     )
 
-    toJson(Image(
-      100,
-      200,
-      ListMap(
-        ImageChannel.Red -> ImageComponent(FundamentalType.Uint8),
-        ImageChannel.Green -> ImageComponent(FundamentalType.Uint32)
-      ),
-      ImageFormat.Png
-    )) shouldBe Json.obj(
+    toJson(
+      Image(
+        100,
+        200,
+        ListMap(
+          ImageChannel.Red -> ImageComponent(FundamentalType.Uint8),
+          ImageChannel.Green -> ImageComponent(FundamentalType.Uint32)
+        ),
+        ImageFormat.Png
+      )
+    ) shouldBe Json.obj(
       "type" -> Json.fromString("image"),
       "width" -> 100.asJson,
       "height" -> 200.asJson,
@@ -81,30 +85,34 @@ class DataTypeSpec extends TestBase {
 
   "tabular data" should "serialize well" in {
     // Note: the ordering inside the JSON maps is important
-    toJson(TabularData(
-      ListMap(
-        "id" -> FundamentalType.Int32,
-        "name" -> FundamentalType.StringType
+    toJson(
+      TabularData(
+        ListMap(
+          "id" -> FundamentalType.Int32,
+          "name" -> FundamentalType.StringType
+        )
       )
-    )) shouldBe Json.obj(
+    ) shouldBe Json.obj(
       "columns" -> Json.obj(
         "id" -> "int32".asJson,
         "name" -> "string".asJson
       ),
       "type" -> "tabular".asJson
     )
-    toJson(TabularData(
-      ListMap(
-        "image" -> Image(
-          100,
-          200,
-          ListMap(
-            ImageChannel.Red -> ImageComponent(FundamentalType.Uint32)
+    toJson(
+      TabularData(
+        ListMap(
+          "image" -> Image(
+            100,
+            200,
+            ListMap(
+              ImageChannel.Red -> ImageComponent(FundamentalType.Uint32)
+            )
           )
-        )
-      ),
-      rowCount = Some(10000)
-    )) shouldBe Json.obj(
+        ),
+        rowCount = Some(10000)
+      )
+    ) shouldBe Json.obj(
       "columns" -> Json.obj(
         "image" -> Json.obj(
           "width" -> 100.asJson,
@@ -124,13 +132,17 @@ class DataTypeSpec extends TestBase {
   }
 
   "tensors" should "serialize well" in {
-    toJson(Tensor(
-      FundamentalType.Int32, Seq(1, 2)
-    )) shouldBe Json.obj(
+    toJson(
+      Tensor(
+        FundamentalType.Int32,
+        Seq(1, 2)
+      )
+    ) shouldBe Json.obj(
       "type" -> "tensor".asJson,
       "componentType" -> "int32".asJson,
       "shape" -> Json.arr(
-        1.asJson, 2.asJson
+        1.asJson,
+        2.asJson
       )
     )
   }
@@ -155,9 +167,10 @@ class DataTypeSpec extends TestBase {
     FundamentalType.Float32,
     FundamentalType.Float64,
     FundamentalType.VoidType,
-
     Image(
-      100, 200, components = ListMap(
+      100,
+      200,
+      components = ListMap(
         ImageChannel.Red -> ImageComponent(FundamentalType.Int8),
         ImageChannel.Green -> ImageComponent(FundamentalType.Int32),
         ImageChannel.Blue -> ImageComponent(FundamentalType.Int64),
@@ -165,7 +178,9 @@ class DataTypeSpec extends TestBase {
       )
     ),
     Image(
-      200, 100, components = ListMap(
+      200,
+      100,
+      components = ListMap(
         // note: switched components
         ImageChannel.Black -> ImageComponent(FundamentalType.Uint64),
         ImageChannel.Green -> ImageComponent(FundamentalType.Int32),
@@ -174,7 +189,9 @@ class DataTypeSpec extends TestBase {
       )
     ),
     Image(
-      100, 100, components = ListMap(
+      100,
+      100,
+      components = ListMap(
         ImageChannel.Black -> ImageComponent(FundamentalType.Uint8)
       ),
       format = ImageFormat.Png
@@ -184,7 +201,9 @@ class DataTypeSpec extends TestBase {
         "id" -> FundamentalType.Int64,
         "name" -> FundamentalType.StringType,
         "image" -> Image(
-          100, 200, components = ListMap(
+          100,
+          200,
+          components = ListMap(
             ImageChannel.Red -> ImageComponent(FundamentalType.Int8)
           )
         )
@@ -195,7 +214,9 @@ class DataTypeSpec extends TestBase {
         "name" -> FundamentalType.StringType,
         "id" -> FundamentalType.Int64,
         "image" -> Image(
-          100, 200, components = ListMap(
+          100,
+          200,
+          components = ListMap(
             ImageChannel.Red -> ImageComponent(FundamentalType.Int8)
           )
         )

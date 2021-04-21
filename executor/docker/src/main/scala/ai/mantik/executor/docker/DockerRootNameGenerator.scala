@@ -3,16 +3,18 @@ package ai.mantik.executor.docker
 import ai.mantik.executor.docker
 import ai.mantik.executor.docker.api.DockerClient
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Helper for generating root names. Genrates many names at once to not talk to docker too often. */
-class DockerRootNameGenerator(dockerClient: DockerClient)(implicit ec: ExecutionContext) extends ReservedNameGenerator(
-  new docker.DockerRootNameGenerator.DockerBackend(dockerClient)
-)
+class DockerRootNameGenerator(dockerClient: DockerClient)(implicit ec: ExecutionContext)
+    extends ReservedNameGenerator(
+      new docker.DockerRootNameGenerator.DockerBackend(dockerClient)
+    )
 
 object DockerRootNameGenerator {
 
-  class DockerBackend(dockerClient: DockerClient)(implicit val executionContext: ExecutionContext) extends ReservedNameGenerator.Backend {
+  class DockerBackend(dockerClient: DockerClient)(implicit val executionContext: ExecutionContext)
+      extends ReservedNameGenerator.Backend {
 
     override def lookupAlreadyTaken(): Future[Set[String]] = {
       dockerClient.listContainers(true).map { containers =>
@@ -26,9 +28,11 @@ object DockerRootNameGenerator {
       var i = 1
       while (i < maxLength) {
         val candidate = DockerNameGenerator.generateRootName(i, prefix)
-        if (!taken.exists { usedName =>
-          usedName.startsWith(candidate)
-        }) {
+        if (
+          !taken.exists { usedName =>
+            usedName.startsWith(candidate)
+          }
+        ) {
           return candidate
         }
         i += 1

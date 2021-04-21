@@ -1,16 +1,16 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.ds.element.{ Bundle, TabularBundle }
+import ai.mantik.ds.element.{Bundle, TabularBundle}
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.sql.Select
-import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.elements.{ AlgorithmDefinition, ItemId, MantikHeader }
+import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.elements.{AlgorithmDefinition, ItemId, MantikHeader}
 import ai.mantik.planner.impl.TestItems.algoBridge
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner._
 import ai.mantik.testutils.TestBase
 import io.circe.syntax._
-import io.circe.{ Decoder, Encoder }
+import io.circe.{Decoder, Encoder}
 
 class MantikItemCodecSpec extends TestBase {
 
@@ -28,7 +28,11 @@ class MantikItemCodecSpec extends TestBase {
   "algorithms" should "be serialized" in {
     serializationTest(
       Algorithm(
-        Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1,
+        Source(
+          DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()),
+          PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
+        ),
+        TestItems.algorithm1,
         TestItems.algoBridge
       )
     )
@@ -36,11 +40,14 @@ class MantikItemCodecSpec extends TestBase {
 
   "selects" should "be serialized" in {
     val bundle = DataSet.literal(
-      TabularBundle.build(
-        TabularData(
-          "x" -> FundamentalType.Int32
+      TabularBundle
+        .build(
+          TabularData(
+            "x" -> FundamentalType.Int32
+          )
         )
-      ).row(1).result
+        .row(1)
+        .result
     )
     val withSelect = bundle.select(
       "select x as y"
@@ -61,7 +68,11 @@ class MantikItemCodecSpec extends TestBase {
   "datasets" should "be serialized" in {
     serializationTest(
       DataSet(
-        Source(DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1,
+        Source(
+          DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()),
+          PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)
+        ),
+        TestItems.dataSet1,
         TestItems.formatBridge
       )
     )
@@ -112,25 +123,33 @@ class MantikItemCodecSpec extends TestBase {
     )
     val pipeline = Pipeline.build(
       Left(
-        Select.parse(
-          TabularData(
-            "x" -> FundamentalType.Int32
-          ),
-          "select x as y"
-        ).forceRight
+        Select
+          .parse(
+            TabularData(
+              "x" -> FundamentalType.Int32
+            ),
+            "select x as y"
+          )
+          .forceRight
       ),
-      Right(Algorithm(
-        Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)),
-        MantikHeader.pure(
-          AlgorithmDefinition(
-            bridge = algoBridge.mantikId,
-            `type` = FunctionType(
-              input = out1,
-              output = FundamentalType.StringType
+      Right(
+        Algorithm(
+          Source(
+            DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()),
+            PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
+          ),
+          MantikHeader.pure(
+            AlgorithmDefinition(
+              bridge = algoBridge.mantikId,
+              `type` = FunctionType(
+                input = out1,
+                output = FundamentalType.StringType
+              )
             )
-          )),
-        TestItems.algoBridge
-      ))
+          ),
+          TestItems.algoBridge
+        )
+      )
     )
 
     serializationTest(pipeline)

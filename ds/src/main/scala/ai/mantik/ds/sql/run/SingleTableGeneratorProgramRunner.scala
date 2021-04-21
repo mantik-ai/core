@@ -1,13 +1,13 @@
 package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.TabularData
-import ai.mantik.ds.element.{ TabularBundle, TabularRow }
-import ai.mantik.ds.sql.run.SingleTableGeneratorProgramRunner.{ QueryRunner, RowIterator, RowVector }
+import ai.mantik.ds.element.{TabularBundle, TabularRow}
+import ai.mantik.ds.sql.run.SingleTableGeneratorProgramRunner.{QueryRunner, RowIterator, RowVector}
 import cats.implicits._
 
 import scala.collection.mutable
 
-/** Executes SingleTableGeneratorProgram programs  */
+/** Executes SingleTableGeneratorProgram programs */
 class SingleTableGeneratorProgramRunner(tableGeneratorProgram: SingleTableGeneratorProgram) {
 
   /** Id of the maximum input source */

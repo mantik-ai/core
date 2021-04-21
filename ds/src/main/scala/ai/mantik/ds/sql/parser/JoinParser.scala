@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.parser
 
-import ai.mantik.ds.sql.parser.AST.{ JoinCondition, JoinNode, JoinType }
-import org.parboiled2.{ Parser, Rule1 }
+import ai.mantik.ds.sql.parser.AST.{JoinCondition, JoinNode, JoinType}
+import org.parboiled2.{Parser, Rule1}
 
 trait JoinParser extends ExpressionParser with InnerQueryParser {
   this: Parser =>
@@ -74,8 +74,9 @@ trait JoinParser extends ExpressionParser with InnerQueryParser {
 
   private def JoinUsing: Rule1[AST.JoinCondition.Using] = {
     rule {
-      keyword("using") ~ Identifier ~ zeroOrMore(keyword(",") ~ Identifier) ~> { (i0: AST.IdentifierNode, inext: Seq[AST.IdentifierNode]) =>
-        AST.JoinCondition.Using(i0 +: inext.toVector)
+      keyword("using") ~ Identifier ~ zeroOrMore(keyword(",") ~ Identifier) ~> {
+        (i0: AST.IdentifierNode, inext: Seq[AST.IdentifierNode]) =>
+          AST.JoinCondition.Using(i0 +: inext.toVector)
       }
     }
   }

@@ -1,23 +1,53 @@
 package ai.mantik.engine.server.services
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.ds.element.{ Bundle, SingleElementBundle }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.ds.element.{Bundle, SingleElementBundle}
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, MultiNodeResponse, NodeResponse, QueryRequest, SelectRequest, SetMetaVariableRequest, SplitRequest, TagRequest, TrainRequest, TrainResponse }
+import ai.mantik.engine.protos.graph_builder.{
+  ApplyRequest,
+  AutoUnionRequest,
+  BuildPipelineRequest,
+  CacheRequest,
+  GetRequest,
+  LiteralRequest,
+  MetaVariableValue,
+  MultiNodeResponse,
+  NodeResponse,
+  QueryRequest,
+  SelectRequest,
+  SetMetaVariableRequest,
+  SplitRequest,
+  TagRequest,
+  TrainRequest,
+  TrainResponse
+}
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
-import ai.mantik.engine.session.{ Session, SessionManager }
+import ai.mantik.engine.session.{Session, SessionManager}
 import ai.mantik.planner.impl.MantikItemStateManager
-import ai.mantik.planner.{ Algorithm, ApplicableMantikItem, BuiltInItems, DataSet, MantikItem, MantikItemState, Pipeline, TrainableAlgorithm }
+import ai.mantik.planner.{
+  Algorithm,
+  ApplicableMantikItem,
+  BuiltInItems,
+  DataSet,
+  MantikItem,
+  MantikItemState,
+  Pipeline,
+  TrainableAlgorithm
+}
 import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
 
 import javax.inject.Inject
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
-class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateManager: MantikItemStateManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphBuilderService with RpcServiceBase {
+class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateManager: MantikItemStateManager)(
+    implicit akkaRuntime: AkkaRuntime
+) extends ComponentBase
+    with GraphBuilderService
+    with RpcServiceBase {
 
   override def get(request: GetRequest): Future[NodeResponse] = handleErrors {
     for {
@@ -31,10 +61,10 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
   private def retrieve(session: Session, name: String): Future[MantikItem] = {
     BuiltInItems.readBuiltInItem(name) match {
       case Some(builtIn) => Future.successful(builtIn)
-      case None => session.components.retriever.get(name).map {
-        case (artifact, hull) =>
+      case None =>
+        session.components.retriever.get(name).map { case (artifact, hull) =>
           MantikItem.fromMantikArtifact(artifact, stateManager, hull)
-      }
+        }
     }
   }
 
@@ -60,9 +90,11 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
   override def literal(request: LiteralRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
-      bundle = Converters.decodeBundle(request.bundle.getOrElse(
-        throw new IllegalArgumentException("Missing Bundle")
-      ))
+      bundle = Converters.decodeBundle(
+        request.bundle.getOrElse(
+          throw new IllegalArgumentException("Missing Bundle")
+        )
+      )
     } yield {
       val dataset = DataSet.literal(bundle)
       placeInGraph(session, dataset)
@@ -153,9 +185,10 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
     } yield {
       val steps: Seq[Pipeline.PipelineBuildStep] = request.steps.map { step =>
         step.step match {
-          case Step.AlgorithmId(algorithmId) => Pipeline.PipelineBuildStep.AlgorithmBuildStep(session.getItemAs[Algorithm](algorithmId))
-          case Step.Select(statement)        => Pipeline.PipelineBuildStep.SelectBuildStep(statement)
-          case other                         => throw new IllegalArgumentException(s"Unexpected step ${other.getClass.getSimpleName}")
+          case Step.AlgorithmId(algorithmId) =>
+            Pipeline.PipelineBuildStep.AlgorithmBuildStep(session.getItemAs[Algorithm](algorithmId))
+          case Step.Select(statement) => Pipeline.PipelineBuildStep.SelectBuildStep(statement)
+          case other                  => throw new IllegalArgumentException(s"Unexpected step ${other.getClass.getSimpleName}")
         }
       }
       val inputType = request.inputType.map(Converters.decodeDataType)
@@ -186,7 +219,10 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
     }
   }
 
-  private def decodeMetaVariableBundles(item: MantikItem, request: SetMetaVariableRequest): Seq[(String, SingleElementBundle)] = {
+  private def decodeMetaVariableBundles(
+      item: MantikItem,
+      request: SetMetaVariableRequest
+  ): Seq[(String, SingleElementBundle)] = {
     def toSingle(bundle: Bundle): SingleElementBundle = {
       bundle match {
         case s: SingleElementBundle => s
@@ -201,9 +237,9 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
       val decodedValue = value.value match {
         case MetaVariableValue.Value.Json(json) =>
           val parsedJson = CirceJson.forceParseJson(json)
-          val parsedMetaValue = JsonFormat.deserializeBundleValue(metaVariable.value.model, parsedJson).fold(error =>
-            { throw new IllegalArgumentException("Could not parse value", error) }, { x => x }
-          )
+          val parsedMetaValue = JsonFormat
+            .deserializeBundleValue(metaVariable.value.model, parsedJson)
+            .fold(error => { throw new IllegalArgumentException("Could not parse value", error) }, { x => x })
           toSingle(parsedMetaValue)
         case b: MetaVariableValue.Value.Bundle =>
           toSingle(Converters.decodeBundle(b.value))

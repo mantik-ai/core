@@ -1,10 +1,10 @@
 package ai.mantik.ds.sql
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.{ DataType, TabularData }
-import ai.mantik.ds.element.{ Bundle, TabularBundle }
-import ai.mantik.ds.sql.builder.{ JoinBuilder, QueryBuilder, SelectBuilder }
-import ai.mantik.ds.sql.run.{ Compiler, SingleTableGeneratorProgramRunner }
+import ai.mantik.ds.{DataType, TabularData}
+import ai.mantik.ds.element.{Bundle, TabularBundle}
+import ai.mantik.ds.sql.builder.{JoinBuilder, QueryBuilder, SelectBuilder}
+import ai.mantik.ds.sql.run.{Compiler, SingleTableGeneratorProgramRunner}
 import cats.implicits._
 import org.slf4j.LoggerFactory
 
@@ -24,14 +24,15 @@ sealed trait Query {
   def run(inputs: TabularBundle*): Either[String, TabularBundle] = {
     for {
       tabularGenerator <- Compiler.compile(this)
-      result <- try {
-        val runner = new SingleTableGeneratorProgramRunner(tabularGenerator)
-        Right(runner.run(inputs.toVector))
-      } catch {
-        case NonFatal(e) =>
-          Query.logger.warn(s"Could not execute query", e)
-          Left(s"Query Execution failed ${e}")
-      }
+      result <-
+        try {
+          val runner = new SingleTableGeneratorProgramRunner(tabularGenerator)
+          Right(runner.run(inputs.toVector))
+        } catch {
+          case NonFatal(e) =>
+            Query.logger.warn(s"Could not execute query", e)
+            Left(s"Query Execution failed ${e}")
+        }
     } yield result
   }
 
@@ -49,12 +50,15 @@ sealed trait Query {
 
     val asMap = sub(this)
     val size = asMap.size
-    (0 until size).map { idx =>
-      asMap.get(idx) match {
-        case Some(td) => Right(td)
-        case None     => Left(s"Non Continous Input index ${idx}")
+    (0 until size)
+      .map { idx =>
+        asMap.get(idx) match {
+          case Some(td) => Right(td)
+          case None     => Left(s"Non Continous Input index ${idx}")
+        }
       }
-    }.toVector.sequence
+      .toVector
+      .sequence
   }
 }
 
@@ -64,7 +68,7 @@ object Query {
     QueryBuilder.buildQuery(statement)
   }
 
-  /** Run a statement on tabular arguments which can be referenced by $0, $1, ...  */
+  /** Run a statement on tabular arguments which can be referenced by $0, $1, ... */
   def run(statement: String, arguments: TabularBundle*): Either[String, TabularBundle] = {
     implicit val context = SqlContext(arguments.map(_.model).toVector)
     for {
@@ -75,11 +79,11 @@ object Query {
 }
 
 /**
- * Anonymous input (e.g. plain select on given TabularType)
- *
- * @param inputType type of input
- * @param slot      the anonymous slot (for multiple inputs)
- */
+  * Anonymous input (e.g. plain select on given TabularType)
+  *
+  * @param inputType type of input
+  * @param slot      the anonymous slot (for multiple inputs)
+  */
 case class AnonymousInput(
     inputType: TabularData,
     slot: Int = 0
@@ -88,16 +92,16 @@ case class AnonymousInput(
 }
 
 /**
- * A Select selects elements from a stream of tabular rows.
- * (Like in SQL Selects), transforms and filters them
- *
- * Mantik only supports a subset of SQL Selects yet, however
- * it's a design goal that improvements should be solved similar to
- * SQL if applicable.
- *
- * @param projections the columns which are returned, if None all are returned.
- * @param selection   AND-concatenated filters
- */
+  * A Select selects elements from a stream of tabular rows.
+  * (Like in SQL Selects), transforms and filters them
+  *
+  * Mantik only supports a subset of SQL Selects yet, however
+  * it's a design goal that improvements should be solved similar to
+  * SQL if applicable.
+  *
+  * @param projections the columns which are returned, if None all are returned.
+  * @param selection   AND-concatenated filters
+  */
 case class Select(
     input: Query,
     projections: Option[Vector[SelectProjection]] = None,
@@ -122,6 +126,7 @@ case class Select(
 }
 
 object Select {
+
   /** Build a select statement. */
   def parse(input: TabularData, statement: String): Either[String, Select] = {
     SelectBuilder.buildSelect(input, statement)
@@ -133,11 +138,11 @@ object Select {
   }
 
   /**
-   * Parse and run a select statement.
-   *
-   * @throws IllegalArgumentException on invalid select statements or non tabular bundles
-   * @throws FeatureNotSupported      when the statement can be parsed, but not executed.
-   */
+    * Parse and run a select statement.
+    *
+    * @throws IllegalArgumentException on invalid select statements or non tabular bundles
+    * @throws FeatureNotSupported      when the statement can be parsed, but not executed.
+    */
   def run(input: TabularBundle, statement: String): Bundle = {
     val tabularData = input.model
     val select = SelectBuilder.buildSelect(tabularData, statement) match {
@@ -194,13 +199,13 @@ object JoinType {
 }
 
 /**
- * A Join Query
- *
- * @param left                      left query
- * @param right                     right query
- * @param joinType                  kind of join
- * @param condition                 condition Join Condition
- */
+  * A Join Query
+  *
+  * @param left                      left query
+  * @param right                     right query
+  * @param joinType                  kind of join
+  * @param condition                 condition Join Condition
+  */
 case class Join(
     left: Query,
     right: Query,
@@ -224,10 +229,10 @@ object Join {
 
   /** Build an anonymous join using given columns from two anonymous data sources. */
   def anonymousFromUsing(
-    left: TabularData,
-    right: TabularData,
-    using: Seq[String],
-    joinType: JoinType
+      left: TabularData,
+      right: TabularData,
+      using: Seq[String],
+      joinType: JoinType
   ): Either[String, Join] = {
     JoinBuilder.buildAnonymousUsing(left, right, using, joinType)
   }
@@ -247,14 +252,14 @@ object JoinCondition {
   ) extends JoinCondition
 
   /**
-   * Defines a column used in Using-Comparison.
-   * @param name name of the column
-   * @param caseSensitive if true the column name is case sensitive
-   * @param leftId resolved id on the left side
-   * @param rightId resolved id on the right side
-   * @param dropId which id of the inner model is dropped in the result
-   * @param dataType comparison datatype
-   */
+    * Defines a column used in Using-Comparison.
+    * @param name name of the column
+    * @param caseSensitive if true the column name is case sensitive
+    * @param leftId resolved id on the left side
+    * @param rightId resolved id on the right side
+    * @param dropId which id of the inner model is dropped in the result
+    * @param dataType comparison datatype
+    */
   case class UsingColumn(
       name: String,
       caseSensitive: Boolean = false,

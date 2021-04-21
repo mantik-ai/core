@@ -1,6 +1,6 @@
 package ai.mantik.engine.testutil
 
-import ai.mantik.engine.session.{ Session, SessionManager }
+import ai.mantik.engine.session.{Session, SessionManager}
 
 abstract class TestBaseWithSessions extends TestBaseWithAkkaRuntime {
 

@@ -2,9 +2,9 @@ package com.example.examples
 
 import java.io.File
 import java.nio.file.Paths
-import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.element.{ Bundle, TabularBundle }
-import ai.mantik.planner.{ DataSet, PlanningContext }
+import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.element.{Bundle, TabularBundle}
+import ai.mantik.planner.{DataSet, PlanningContext}
 
 object DataSetTransformation extends ExampleBase {
 
@@ -15,13 +15,15 @@ object DataSetTransformation extends ExampleBase {
     context.pushLocalMantikItem(sampleFile)
 
     val dataset = DataSet.literal(
-      TabularBundle.build(
-        TabularData(
-          "x" -> FundamentalType.Float64
+      TabularBundle
+        .build(
+          TabularData(
+            "x" -> FundamentalType.Float64
+          )
         )
-      )
         .row(1.0)
-        .row(2.0).result
+        .row(2.0)
+        .result
     )
 
     val transformation = context.loadAlgorithm("double_multiply")

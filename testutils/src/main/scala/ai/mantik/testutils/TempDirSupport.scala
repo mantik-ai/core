@@ -1,6 +1,6 @@
 package ai.mantik.testutils
 
-import java.nio.file.{ Files, Path }
+import java.nio.file.{Files, Path}
 
 import org.apache.commons.io.FileUtils
 import org.scalatest.BeforeAndAfterEach
@@ -29,31 +29,34 @@ trait TempDirSupport extends BeforeAndAfterEach {
   }
 
   /**
-   * Compares equalaity of two directories.
-   *
-   * Source: https://stackoverflow.com/questions/14522239/test-two-directory-trees-for-equality
-   * Modified for scala test
-   * @param one first directory
-   * @param other second directory
-   */
+    * Compares equalaity of two directories.
+    *
+    * Source: https://stackoverflow.com/questions/14522239/test-two-directory-trees-for-equality
+    * Modified for scala test
+    * @param one first directory
+    * @param other second directory
+    */
   def verifyDirsAreEqual(one: Path, other: Path): Unit = {
-    import java.nio.file.{ FileVisitResult, Files, SimpleFileVisitor }
+    import java.nio.file.{FileVisitResult, Files, SimpleFileVisitor}
     import java.nio.file.attribute.BasicFileAttributes
     import java.util
 
-    Files.walkFileTree(one, new SimpleFileVisitor[Path]() {
-      override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
-        val result = super.visitFile(file, attrs)
-        // get the relative file name from path "one"
-        val relativize = one.relativize(file)
-        // construct the path for the counterpart file in "other"
-        val fileInOther = other.resolve(relativize)
-        val otherBytes = Files.readAllBytes(fileInOther)
-        val thisBytes = Files.readAllBytes(file)
-        if (!util.Arrays.equals(otherBytes, thisBytes)) fail(file + " is not equal to " + fileInOther)
-        logger.info(s"Compared ${file} with ${fileInOther}")
-        result
+    Files.walkFileTree(
+      one,
+      new SimpleFileVisitor[Path]() {
+        override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+          val result = super.visitFile(file, attrs)
+          // get the relative file name from path "one"
+          val relativize = one.relativize(file)
+          // construct the path for the counterpart file in "other"
+          val fileInOther = other.resolve(relativize)
+          val otherBytes = Files.readAllBytes(fileInOther)
+          val thisBytes = Files.readAllBytes(file)
+          if (!util.Arrays.equals(otherBytes, thisBytes)) fail(file + " is not equal to " + fileInOther)
+          logger.info(s"Compared ${file} with ${fileInOther}")
+          result
+        }
       }
-    })
+    )
   }
 }

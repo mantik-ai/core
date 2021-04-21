@@ -7,4 +7,3 @@ case class InspectImageResult(
     Id: String,
     Parent: String
 )
-

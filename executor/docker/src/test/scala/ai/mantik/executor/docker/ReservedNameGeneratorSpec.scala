@@ -1,10 +1,10 @@
 package ai.mantik.executor.docker
 
-import ai.mantik.testutils.{ AkkaSupport, TestBase }
+import ai.mantik.testutils.{AkkaSupport, TestBase}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 
 class ReservedNameGeneratorSpec extends TestBase with AkkaSupport {

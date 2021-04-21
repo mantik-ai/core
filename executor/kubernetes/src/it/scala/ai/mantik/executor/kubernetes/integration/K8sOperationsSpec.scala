@@ -63,7 +63,8 @@ class K8sOperationsSpec extends KubernetesTestBase {
 
   "sendKillPatch" should "work" in new Env {
     val podSpec = Pod.apply(
-      "pod1", Pod.Spec(
+      "pod1",
+      Pod.Spec(
         containers = List(
           Container(
             name = "main",
@@ -162,15 +163,15 @@ class K8sOperationsSpec extends KubernetesTestBase {
       spec = Some(
         Deployment.Spec(
           selector = LabelSelector(
-            LabelSelector.IsEqualRequirement(LabelConstants.InternalIdLabelName, labels(LabelConstants.InternalIdLabelName))
+            LabelSelector
+              .IsEqualRequirement(LabelConstants.InternalIdLabelName, labels(LabelConstants.InternalIdLabelName))
           ),
-          template =
-            Pod.Template.Spec(
-              metadata = ObjectMeta(
-                labels = labels
-              ),
-              spec = Some(longRunningPod.withRestartPolicy(RestartPolicy.Always))
-            )
+          template = Pod.Template.Spec(
+            metadata = ObjectMeta(
+              labels = labels
+            ),
+            spec = Some(longRunningPod.withRestartPolicy(RestartPolicy.Always))
+          )
         )
       )
     )

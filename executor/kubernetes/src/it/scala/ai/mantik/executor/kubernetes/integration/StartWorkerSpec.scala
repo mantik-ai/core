@@ -11,7 +11,6 @@ import skuber.{Pod, Service}
 
 class StartWorkerSpec extends IntegrationTestBase with StartWorkerSpecBase {
 
-
   override protected def checkEmptyNow(): Unit = {
     val ops = new K8sOperations(config, _kubernetesClient)
     val ns = config.kubernetes.namespacePrefix + isolationSpace

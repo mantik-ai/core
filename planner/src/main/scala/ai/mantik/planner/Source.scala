@@ -1,14 +1,15 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.sql.{ MultiQuery, Query, Select }
-import ai.mantik.elements.{ ItemId, NamedMantikId }
+import ai.mantik.ds.sql.{MultiQuery, Query, Select}
+import ai.mantik.elements.{ItemId, NamedMantikId}
 
 /** Defines where a MantikItem comes from. */
 case class Source(
     definition: DefinitionSource,
     payload: PayloadSource
 ) {
+
   /** Creates a derived source with the same payload. */
   def derive: Source = Source(DefinitionSource.Derived(definition), payload)
 }
@@ -17,23 +18,29 @@ object Source {
 
   /** Creates a source for a constructed element. */
   def constructed(payloadSource: PayloadSource = PayloadSource.Empty): Source = Source(
-    DefinitionSource.Constructed(), payloadSource
+    DefinitionSource.Constructed(),
+    payloadSource
   )
 }
 
 /** Represents the way [[MantikItem]](s) get their Definition data from. */
 sealed trait DefinitionSource {
+
   /** Returns true if the source is indicating that the name is stored. */
   def nameStored: Boolean = false
+
   /** Returns tre if the source is indicating that the item is stored. */
   def itemStored: Boolean = false
+
   /** Returns a name if the source indicates that the item has one. */
   def name: Option[NamedMantikId] = None
+
   /** Returns an item id if the source indicates that the item has one. */
   def storedItemId: Option[ItemId] = None
 }
 
 object DefinitionSource {
+
   /** The item was loaded from the repository. */
   case class Loaded(mantikId: Option[NamedMantikId], itemId: ItemId) extends DefinitionSource {
     override def nameStored: Boolean = mantikId.isDefined
@@ -106,9 +113,9 @@ object PayloadSource {
   case class BundleLiteral(content: Bundle) extends Literal()
 
   /**
-   * It's the result of some operation.
-   * If projection is > 0, the non main result is used.
-   */
+    * It's the result of some operation.
+    * If projection is > 0, the non main result is used.
+    */
   case class OperationResult(op: Operation) extends PayloadSource {
     override def resultCount: Int = op.resultCount
   }
@@ -119,9 +126,9 @@ object PayloadSource {
   }
 
   /**
-   * A Cached source value.
-   * @param siblings the parallel elements which are evaluated at the same time.
-   */
+    * A Cached source value.
+    * @param siblings the parallel elements which are evaluated at the same time.
+    */
   case class Cached(
       source: PayloadSource,
       siblings: Vector[ItemId]

@@ -8,8 +8,8 @@ import akka.actor.ActorSystem
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future, Promise, TimeoutException }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
+import scala.util.{Failure, Success}
 
 object FutureHelper {
 
@@ -28,12 +28,14 @@ object FutureHelper {
   }
 
   /**
-   * Let a future with [[TimeoutException]] if it takes too long.
-   * Note: the inner code of the future will still run, as they are not cancellable.
-   * @param operationName an operation name, which will be displayed in the exception.
-   * @return the future which will fail with timeout.
-   */
-  def addTimeout[T](future: Future[T], operationName: String = "Future", timeout: FiniteDuration)(implicit akkaRuntime: AkkaRuntime): Future[T] = {
+    * Let a future with [[TimeoutException]] if it takes too long.
+    * Note: the inner code of the future will still run, as they are not cancellable.
+    * @param operationName an operation name, which will be displayed in the exception.
+    * @return the future which will fail with timeout.
+    */
+  def addTimeout[T](future: Future[T], operationName: String = "Future", timeout: FiniteDuration)(
+      implicit akkaRuntime: AkkaRuntime
+  ): Future[T] = {
     implicit def ec = akkaRuntime.executionContext
     val promise = Promise[T]
     val cancellable = akkaRuntime.actorSystem.scheduler.scheduleOnce(timeout) {
@@ -47,12 +49,14 @@ object FutureHelper {
   }
 
   /**
-   * Runs a function `f` on a given list, each after each other. Each method receives the state returned by the function before.
-   * @param in input data for the function
-   * @param s0 initial state
-   * @param f method consuming the current state and current element of in and returning a future to the next state.
-   */
-  def afterEachOtherStateful[T, S](in: Iterable[T], s0: S)(f: (S, T) => Future[S])(implicit ec: ExecutionContext): Future[S] = {
+    * Runs a function `f` on a given list, each after each other. Each method receives the state returned by the function before.
+    * @param in input data for the function
+    * @param s0 initial state
+    * @param f method consuming the current state and current element of in and returning a future to the next state.
+    */
+  def afterEachOtherStateful[T, S](in: Iterable[T], s0: S)(
+      f: (S, T) => Future[S]
+  )(implicit ec: ExecutionContext): Future[S] = {
     val result = Promise[S]
     def continueRunning(pending: List[T], lastResult: S): Unit = {
       pending match {
@@ -72,18 +76,19 @@ object FutureHelper {
 
   /** Runs f after each other, eventually leading to a map operation. */
   def afterEachOther[T, X](in: Iterable[T])(f: T => Future[X])(implicit ec: ExecutionContext): Future[Vector[X]] = {
-    afterEachOtherStateful(in, Vector.empty[X]) {
-      case (s, i) =>
-        f(i).map { x =>
-          s :+ x
-        }
+    afterEachOtherStateful(in, Vector.empty[X]) { case (s, i) =>
+      f(i).map { x =>
+        s :+ x
+      }
     }
   }
 
   /**
-   * Try `f` multiple times within a given timeout.
-   */
-  def tryMultipleTimes[T](timeout: FiniteDuration, tryAgainWaitDuration: FiniteDuration)(f: => Future[Option[T]])(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[T] = {
+    * Try `f` multiple times within a given timeout.
+    */
+  def tryMultipleTimes[T](timeout: FiniteDuration, tryAgainWaitDuration: FiniteDuration)(
+      f: => Future[Option[T]]
+  )(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[T] = {
     val result = Promise[T]
     val clock = Clock.systemUTC()
     val finalTimeout = clock.instant().plus(timeout.toMillis, ChronoUnit.MILLIS)

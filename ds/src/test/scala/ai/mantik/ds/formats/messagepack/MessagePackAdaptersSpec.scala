@@ -6,7 +6,7 @@ import ai.mantik.ds.formats.messagepack.MessagePackAdapters.AnonymousMessagePack
 import ai.mantik.ds.element._
 import ai.mantik.ds.testutil.TestBase
 import akka.util.ByteString
-import org.msgpack.core.{ MessageFormat, MessagePack }
+import org.msgpack.core.{MessageFormat, MessagePack}
 import ai.mantik.ds.element.PrimitiveEncoder._
 
 import scala.collection.immutable.ListMap
@@ -15,13 +15,14 @@ class MessagePackAdaptersSpec extends TestBase {
 
   val samples: Seq[(DataType, Element)] = TypeSamples.fundamentalSamples ++ Seq(
     Image(
-      4, 5,
+      4,
+      5,
       ListMap(
         ImageChannel.Black -> ImageComponent(Uint8)
       )
     ) -> ImageElement(
-        ByteString((for (i <- 0 until 20) yield i.toByte): _*)
-      )
+      ByteString((for (i <- 0 until 20) yield i.toByte): _*)
+    )
   )
 
   /** Test serialization, returns the serialized message pack code. */
@@ -44,7 +45,7 @@ class MessagePackAdaptersSpec extends TestBase {
 
   it should "decode float32 encapsulated in float64" in {
     // Workaround #61
-    val bytes = ByteString(0xCB, 0x40, 0x54, 0x7F, 0xA9, 0x80, 0x00, 0x00, 0x00)
+    val bytes = ByteString(0xcb, 0x40, 0x54, 0x7f, 0xa9, 0x80, 0x00, 0x00, 0x00)
     val adapter = MessagePackAdapters.lookupAdapter(FundamentalType.Float32)
     val unpacker = MessagePack.newDefaultUnpacker(bytes.toArray)
     adapter.read(unpacker) shouldBe ValueEncoder.wrap(81.9947204589844.toFloat)
@@ -80,8 +81,8 @@ class MessagePackAdaptersSpec extends TestBase {
     nextFormat shouldBe MessageFormat.UINT32
 
     for {
-      x <- Seq(0, -10, -20, -40, -80, -120, -240, -4000, -8000, -16000, -32000,
-        -64000, -5000000, 20, 40, 60, 80, 100, 500000)
+      x <- Seq(0, -10, -20, -40, -80, -120, -240, -4000, -8000, -16000, -32000, -64000, -5000000, 20, 40, 60, 80, 100,
+        500000)
     } {
       testSerializationAndBack(
         adapter,
@@ -101,8 +102,8 @@ class MessagePackAdaptersSpec extends TestBase {
     nextFormat shouldBe MessageFormat.UINT64
 
     for {
-      x <- Seq(0, -10, -20, -40, -80, -120, -24000, -4000, -8000, -16000, -32000, -64000,
-        -50000000, 20, 40, 60, 80, 100, 500000)
+      x <- Seq(0, -10, -20, -40, -80, -120, -24000, -4000, -8000, -16000, -32000, -64000, -50000000, 20, 40, 60, 80,
+        100, 500000)
     } {
       testSerializationAndBack(
         adapter,

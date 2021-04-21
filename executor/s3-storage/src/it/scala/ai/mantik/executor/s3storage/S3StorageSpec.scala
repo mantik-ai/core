@@ -12,11 +12,12 @@ import java.util.UUID
 import scala.concurrent.duration._
 import scala.util.Random
 
-class S3StorageSpec extends TestBase with AkkaSupport with  HttpSupport {
+class S3StorageSpec extends TestBase with AkkaSupport with HttpSupport {
   implicit def akkaRuntime: AkkaRuntime = AkkaRuntime.fromRunning(typesafeConfig)
 
   trait Env {
-    val s3Config = S3Config.fromTypesafe(typesafeConfig)
+    val s3Config = S3Config
+      .fromTypesafe(typesafeConfig)
       .withTestTag()
     val s3Storage = new S3Storage(s3Config)
   }
@@ -39,11 +40,11 @@ class S3StorageSpec extends TestBase with AkkaSupport with  HttpSupport {
     await(s3Storage.deleteFile(randomName)).found.forall(_ == true) shouldBe true
 
     val resultAgain = s3Storage.getFile(randomName)
-    awaitException[Errors.NotFoundException]{
+    awaitException[Errors.NotFoundException] {
       resultAgain
     }
 
-    withClue("Delete should not fail if the file is not existing"){
+    withClue("Delete should not fail if the file is not existing") {
       await(s3Storage.deleteFile(randomName)).found.forall(_ == false) shouldBe true
     }
   }
@@ -81,7 +82,6 @@ class S3StorageSpec extends TestBase with AkkaSupport with  HttpSupport {
     val (response, _) = httpGet(url)
     response.status.intValue() shouldBe 403
 
-
     val aclResult = await(s3Storage.setAcl(anotherName, true))
 
     withClue("When ACL workaround is activated, the public copy should also have tags.") {
@@ -108,7 +108,6 @@ class S3StorageSpec extends TestBase with AkkaSupport with  HttpSupport {
     val url = s3Storage.getUrl(anotherName)
     val (response, _) = httpGet(url)
     response.status.intValue() shouldBe 403
-
 
     val aclResult = await(s3Storage.setAcl(anotherName, true))
     val (response2, _) = httpGet(aclResult.url)

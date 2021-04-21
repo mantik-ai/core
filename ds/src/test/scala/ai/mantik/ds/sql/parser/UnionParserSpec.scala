@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.parser
 
 import ai.mantik.ds.sql.parser.AST.UnionNode
-import org.parboiled2.{ Parser, ParserInput }
+import org.parboiled2.{Parser, ParserInput}
 
 class UnionParserSpec extends ParserTestBase {
   class ParserImpl(val input: ParserInput) extends Parser with UnionParser with AnonymousOnlyInnerQueryParser
@@ -14,15 +14,21 @@ class UnionParserSpec extends ParserTestBase {
     }
   }
 
-  parseUnionTest("$0 UNION $1", AST.UnionNode(
-    AST.AnonymousReference(0),
-    AST.AnonymousReference(1),
-    false
-  ))
+  parseUnionTest(
+    "$0 UNION $1",
+    AST.UnionNode(
+      AST.AnonymousReference(0),
+      AST.AnonymousReference(1),
+      false
+    )
+  )
 
-  parseUnionTest("$1 UNION ALL $2", AST.UnionNode(
-    AST.AnonymousReference(1),
-    AST.AnonymousReference(2),
-    true
-  ))
+  parseUnionTest(
+    "$1 UNION ALL $2",
+    AST.UnionNode(
+      AST.AnonymousReference(1),
+      AST.AnonymousReference(2),
+      true
+    )
+  )
 }

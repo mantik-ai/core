@@ -1,8 +1,8 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.ds.element.{ Bundle, TabularBundle }
-import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.elements.{ ItemId, NamedMantikId }
+import ai.mantik.ds.element.{Bundle, TabularBundle}
+import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.elements.{ItemId, NamedMantikId}
 import ai.mantik.planner._
 import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.testutils.TestBase
@@ -21,16 +21,28 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     }
 
     val algorithm1 = Algorithm(
-      Source(DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1,
+      Source(
+        DefinitionSource.Loaded(Some("algo1:version1"), ItemId.generate()),
+        PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
+      ),
+      TestItems.algorithm1,
       TestItems.algoBridge
     )
     val dataset1 = DataSet(
-      Source(DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()), PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)), TestItems.dataSet1,
+      Source(
+        DefinitionSource.Loaded(Some("dataset1:version1"), ItemId.generate()),
+        PayloadSource.Loaded("dataset1", ContentTypes.MantikBundleContentType)
+      ),
+      TestItems.dataSet1,
       TestItems.formatBridge
     )
 
     // Create a Source for loaded Items
-    def makeLoadedSource(file: String, contentType: String = ContentTypes.MantikBundleContentType, mantikId: NamedMantikId = "item1234"): Source = {
+    def makeLoadedSource(
+        file: String,
+        contentType: String = ContentTypes.MantikBundleContentType,
+        mantikId: NamedMantikId = "item1234"
+    ): Source = {
       Source(
         DefinitionSource.Loaded(Some(mantikId), ItemId.generate()),
         PayloadSource.Loaded(file, contentType)
@@ -38,11 +50,12 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     }
   }
 
-  private val lit = TabularBundle.build(
-    TabularData(
-      "x" -> FundamentalType.Int32
+  private val lit = TabularBundle
+    .build(
+      TabularData(
+        "x" -> FundamentalType.Int32
+      )
     )
-  )
     .row(1)
     .result
 
@@ -50,7 +63,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val ds = DataSet.literal(lit)
     val (state, result) = runWithEmptyState(planner.storeSingleItem(ds))
     splitOps(result.preOp).find(_.isInstanceOf[PlanOp.AddMantikItem]).get shouldBe PlanOp.AddMantikItem(
-      ds, Some(PlanFileReference(1))
+      ds,
+      Some(PlanFileReference(1))
     )
     result.files.head.ref shouldBe PlanFileReference(1)
     state.files.head.ref shouldBe PlanFileReference(1)
@@ -120,7 +134,9 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       Source(
         DefinitionSource.Constructed(),
         PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
-      ), TestItems.algorithm1, TestItems.algoBridge
+      ),
+      TestItems.algorithm1,
+      TestItems.algoBridge
     )
     val pipe = Pipeline.build(unstored)
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
@@ -140,7 +156,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     plan.op shouldBe PlanOp.seq(
       PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
       PlanOp.AddMantikItem(
-        item, Some(PlanFileReference(1))
+        item,
+        Some(PlanFileReference(1))
       )
     )
   }
@@ -156,7 +173,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     plan.op shouldBe PlanOp.seq(
       PlanOp.StoreBundleToFile(lit, PlanFileReference(1)),
       PlanOp.AddMantikItem(
-        item, Some(PlanFileReference(1))
+        item,
+        Some(PlanFileReference(1))
       )
     )
   }
@@ -166,7 +184,9 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       Source(
         DefinitionSource.Constructed(),
         PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
-      ), TestItems.algorithm1, TestItems.algoBridge
+      ),
+      TestItems.algorithm1,
+      TestItems.algoBridge
     )
     val pipeline = Pipeline.build(
       algorithm2
@@ -204,7 +224,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       PlanOp.AddMantikItem(
         pipeline,
         None
-      ))
+      )
+    )
   }
 
   it should "tag an item if it was loaded before and is just going to be resaved" in new Env {
@@ -216,7 +237,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     )
     splitOps(plan.op) shouldBe Seq(
       PlanOp.TagMantikItem(
-        tagged, "newname"
+        tagged,
+        "newname"
       )
     )
   }
@@ -237,7 +259,8 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
   }
 
   it should "also work if it has to convert a executed dataset" in new Env {
-    val inner = DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2, TestItems.formatBridge)
+    val inner =
+      DataSet(makeLoadedSource("file1", ContentTypes.ZipFileContentType), TestItems.dataSet2, TestItems.formatBridge)
     val plan = planner.convert(
       Action.FetchAction(
         inner
@@ -276,7 +299,9 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
 
   it should "save a non-loaded algorithm first" in new Env {
     val algorithm2 = Algorithm(
-      Source(DefinitionSource.Constructed(), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)), TestItems.algorithm1, TestItems.algoBridge
+      Source(DefinitionSource.Constructed(), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)),
+      TestItems.algorithm1,
+      TestItems.algoBridge
     )
     val deployAction = algorithm2.deploy()
     val plan = planner.convert(deployAction)
@@ -309,7 +334,14 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     plan.files.size shouldBe 3 // push, cache, calculation
     plan.files shouldBe List(
       PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true),
-      PlanFile(PlanFileReference(2), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true, cacheItemId = Some(expectedItemId)),
+      PlanFile(
+        PlanFileReference(2),
+        ContentTypes.MantikBundleContentType,
+        read = true,
+        write = true,
+        temporary = true,
+        cacheItemId = Some(expectedItemId)
+      ),
       PlanFile(PlanFileReference(3), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true)
     )
     plan.cachedItems shouldBe Set(Vector(expectedItemId))
@@ -344,9 +376,21 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
       // literal
       PlanFile(PlanFileReference(1), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true),
       // cache
-      PlanFile(PlanFileReference(2), ContentTypes.MantikBundleContentType, read = true, write = true, temporary = true, cacheItemId = Some(expectedItemId)),
+      PlanFile(
+        PlanFileReference(2),
+        ContentTypes.MantikBundleContentType,
+        read = true,
+        write = true,
+        temporary = true,
+        cacheItemId = Some(expectedItemId)
+      ),
       // copied cache for saving
-      PlanFile(PlanFileReference(3), ContentTypes.MantikBundleContentType, read = true, write = true) // also readable, because it can be used in later invocations
+      PlanFile(
+        PlanFileReference(3),
+        ContentTypes.MantikBundleContentType,
+        read = true,
+        write = true
+      ) // also readable, because it can be used in later invocations
     )
     val parts = splitOps(plan.op)
     parts.size shouldBe 5

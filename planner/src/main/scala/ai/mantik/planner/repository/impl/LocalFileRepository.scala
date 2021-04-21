@@ -1,25 +1,25 @@
 package ai.mantik.planner.repository.impl
 
-import java.io.{ File, FileNotFoundException }
+import java.io.{File, FileNotFoundException}
 import java.nio.charset.StandardCharsets
-import java.nio.file.{ CopyOption, Files, Path, StandardCopyOption }
-import java.time.temporal.{ ChronoUnit, Temporal, TemporalUnit }
-import java.time.{ Clock, Instant }
+import java.nio.file.{CopyOption, Files, Path, StandardCopyOption}
+import java.time.temporal.{ChronoUnit, Temporal, TemporalUnit}
+import java.time.{Clock, Instant}
 import java.util.UUID
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.planner.repository.FileRepository
-import ai.mantik.planner.repository.FileRepository.{ FileGetResult, FileStorageResult }
+import ai.mantik.planner.repository.FileRepository.{FileGetResult, FileStorageResult}
 import ai.mantik.planner.repository.impl.LocalFileRepository.FileMetaData
-import akka.stream.scaladsl.{ FileIO, Sink, Source }
+import akka.stream.scaladsl.{FileIO, Sink, Source}
 import akka.util.ByteString
-import io.circe.{ Decoder, Encoder }
+import io.circe.{Decoder, Encoder}
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import io.circe.syntax._
 import io.circe.parser
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
@@ -30,18 +30,20 @@ import akka.NotUsed
 import scala.util.Try
 
 /**
- * A FileRepository which is using a local file system for storing files.
- *
- * Note:
- * File operations are not always synchronized. It tries to mimic a little bit of collision safety
- * by writing new files to ".part" files and then rename it (which is atomic on most modern file systems).
- * However it's possible to construct a clash in meta data overriding. In practice the risk should be small
- * when used with a local user .
- *
- * Temporary files are cleaned up periodically. This should scale to some 1000 files but not more.
- */
+  * A FileRepository which is using a local file system for storing files.
+  *
+  * Note:
+  * File operations are not always synchronized. It tries to mimic a little bit of collision safety
+  * by writing new files to ".part" files and then rename it (which is atomic on most modern file systems).
+  * However it's possible to construct a clash in meta data overriding. In practice the risk should be small
+  * when used with a local user .
+  *
+  * Temporary files are cleaned up periodically. This should scale to some 1000 files but not more.
+  */
 @Singleton
-class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with FileRepository {
+class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase
+    with FileRepository {
 
   @Inject
   def this()(implicit akkaRuntime: AkkaRuntime) {
@@ -61,7 +63,10 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
       Files.createDirectories(directory)
     } catch {
       case e: Exception =>
-        throw new ConfigurationException("Could not create directory for local file repository. Check configuration.", e)
+        throw new ConfigurationException(
+          "Could not create directory for local file repository. Check configuration.",
+          e
+        )
     }
   }
 
@@ -69,8 +74,8 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     10.seconds,
     cleanupInterval
   ) {
-      removeTimeoutedFiles()
-    }
+    removeTimeoutedFiles()
+  }
 
   addShutdownHook {
     timeoutScheduler.cancel()
@@ -169,7 +174,9 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
         FileRepository.NotFoundCode.throwIt(s"File ${from} doesn't exist")
       }
       if (fromMeta.contentType != toMeta.contentType) {
-        FileRepository.InvalidContentType.throwIt(s"Content Type from=${fromMeta.contentType} to=${toMeta.contentType} mismatch")
+        FileRepository.InvalidContentType.throwIt(
+          s"Content Type from=${fromMeta.contentType} to=${toMeta.contentType} mismatch"
+        )
       }
       Files.copy(fromName, toName)
       val newMeta = toMeta.copy(
@@ -200,13 +207,14 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
   }
 
   private def loadMeta(id: String): FileMetaData = {
-    val metaJson = try {
-      FileUtils.readFileToString(metaFileName(id).toFile, StandardCharsets.UTF_8)
-    } catch {
-      case e: FileNotFoundException =>
-        logger.debug(s"File ${id} not found when loading meta data")
-        FileRepository.NotFoundCode.throwIt(s"File with id ${id} not found")
-    }
+    val metaJson =
+      try {
+        FileUtils.readFileToString(metaFileName(id).toFile, StandardCharsets.UTF_8)
+      } catch {
+        case e: FileNotFoundException =>
+          logger.debug(s"File ${id} not found when loading meta data")
+          FileRepository.NotFoundCode.throwIt(s"File with id ${id} not found")
+      }
     val parsed = parser.parse(metaJson).flatMap(_.as[FileMetaData]) match {
       case Left(error) => throw new RuntimeException("Could not parse Metadata", error)
       case Right(ok)   => ok
@@ -273,9 +281,10 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
 }
 
 @Singleton
-class TempFileRepository @Inject() (implicit akkaRuntime: AkkaRuntime) extends LocalFileRepository(
-  Files.createTempDirectory("mantik_simple_storage")
-) {
+class TempFileRepository @Inject() (implicit akkaRuntime: AkkaRuntime)
+    extends LocalFileRepository(
+      Files.createTempDirectory("mantik_simple_storage")
+    ) {
 
   addShutdownHook {
     FileUtils.deleteDirectory(directory.toFile)
@@ -298,5 +307,6 @@ object LocalFileRepository {
   )
 
   import io.circe.java8.time._
-  implicit val metaDataFormat: Encoder[FileMetaData] with Decoder[FileMetaData] = CirceJson.makeSimpleCodec[FileMetaData]
+  implicit val metaDataFormat: Encoder[FileMetaData] with Decoder[FileMetaData] =
+    CirceJson.makeSimpleCodec[FileMetaData]
 }

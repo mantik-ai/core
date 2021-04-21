@@ -1,8 +1,8 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.{ FundamentalType, Nullable }
-import ai.mantik.ds.element.{ Bundle, NullElement, SingleElementBundle }
-import ai.mantik.ds.sql.{ ConstantExpression, Expression }
+import ai.mantik.ds.{FundamentalType, Nullable}
+import ai.mantik.ds.element.{Bundle, NullElement, SingleElementBundle}
+import ai.mantik.ds.sql.{ConstantExpression, Expression}
 import ai.mantik.ds.sql.parser.AST
 
 /** Handles Cast-Relevant conversion Routines. */

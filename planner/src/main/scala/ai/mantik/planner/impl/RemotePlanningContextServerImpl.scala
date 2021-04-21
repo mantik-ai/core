@@ -1,17 +1,17 @@
 package ai.mantik.planner.impl
 
-import ai.mantik.componently.rpc.{ RpcConversions, StreamConversions }
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.NamedMantikId
 import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.PlanningContextService
 import ai.mantik.planner.protos.planning_context._
 import ai.mantik.planner.repository.MantikArtifactRetriever
 import ai.mantik.planner.repository.rpc.Conversions
-import ai.mantik.planner.{ Action, MantikItem, PlanningContext }
+import ai.mantik.planner.{Action, MantikItem, PlanningContext}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import io.circe.syntax._
-import io.circe.{ Encoder, Json, Printer }
+import io.circe.{Encoder, Json, Printer}
 import io.grpc.stub.StreamObserver
 
 import javax.inject.Inject
@@ -22,7 +22,9 @@ import scala.util.control.NonFatal
 class RemotePlanningContextServerImpl @Inject() (
     context: PlanningContext,
     retriever: MantikArtifactRetriever
-)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanningContextService {
+)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase
+    with PlanningContextService {
   override def load(request: LoadItemRequest): Future[LoadItemResponse] = {
     Conversions.encodeErrorsIn {
       Future {
@@ -97,22 +99,27 @@ class RemotePlanningContextServerImpl @Inject() (
     }
   }
 
-  override def addLocalMantikItem(responseObserver: StreamObserver[AddLocalMantikItemResponse]): StreamObserver[AddLocalMantikItemRequest] = {
-    StreamConversions.respondMultiInSingleOutWithHeader[AddLocalMantikItemRequest, AddLocalMantikItemResponse](Conversions.decodeErrors, responseObserver) {
-      case (header, source) =>
-        Conversions.encodeErrorsIn {
-          val mantikId: Option[NamedMantikId] = RpcConversions.decodeOptionalString(header.id).map(NamedMantikId.fromString)
-          val payloadSource: Option[(String, Source[ByteString, _])] = if (header.contentType.isEmpty) {
-            None
-          } else {
-            Some(header.contentType -> source.map { e => RpcConversions.decodeByteString(e.data) })
-          }
-          retriever.addMantikItemToRepository(header.mantikHeader, mantikId, payloadSource).map { artifact =>
-            AddLocalMantikItemResponse(
-              id = Conversions.encodeMantikId(artifact.mantikId)
-            )
-          }
+  override def addLocalMantikItem(
+      responseObserver: StreamObserver[AddLocalMantikItemResponse]
+  ): StreamObserver[AddLocalMantikItemRequest] = {
+    StreamConversions.respondMultiInSingleOutWithHeader[AddLocalMantikItemRequest, AddLocalMantikItemResponse](
+      Conversions.decodeErrors,
+      responseObserver
+    ) { case (header, source) =>
+      Conversions.encodeErrorsIn {
+        val mantikId: Option[NamedMantikId] =
+          RpcConversions.decodeOptionalString(header.id).map(NamedMantikId.fromString)
+        val payloadSource: Option[(String, Source[ByteString, _])] = if (header.contentType.isEmpty) {
+          None
+        } else {
+          Some(header.contentType -> source.map { e => RpcConversions.decodeByteString(e.data) })
         }
+        retriever.addMantikItemToRepository(header.mantikHeader, mantikId, payloadSource).map { artifact =>
+          AddLocalMantikItemResponse(
+            id = Conversions.encodeMantikId(artifact.mantikId)
+          )
+        }
+      }
     }
   }
 }

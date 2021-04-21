@@ -1,7 +1,7 @@
 package ai.mantik.ds.converter.casthelper
 
-import ai.mantik.ds.element.{ Primitive, PrimitiveEncoder, TensorElement }
-import ai.mantik.ds.{ FundamentalType, Tensor }
+import ai.mantik.ds.element.{Primitive, PrimitiveEncoder, TensorElement}
+import ai.mantik.ds.{FundamentalType, Tensor}
 
 /** Packs and unpacks Tensors. */
 private[ds] object TensorHelper {
@@ -20,11 +20,14 @@ private[ds] object TensorHelper {
       unpacker: TensorElement[_] => IndexedSeq[Primitive[_]]
   )
 
-  private def makeTensorPrimitiveConverter[FT <: FundamentalType, ST](ft: FT)(implicit aux: PrimitiveEncoder.Aux[FT, ST]): TensorPrimitiveConverter = TensorPrimitiveConverter(
-    ft,
-    p => TensorElement(p.map(aux.unwrap)),
-    t => t.elements.map(x => aux.wrap(x.asInstanceOf[ST]))
-  )
+  private def makeTensorPrimitiveConverter[FT <: FundamentalType, ST](
+      ft: FT
+  )(implicit aux: PrimitiveEncoder.Aux[FT, ST]): TensorPrimitiveConverter =
+    TensorPrimitiveConverter(
+      ft,
+      p => TensorElement(p.map(aux.unwrap)),
+      t => t.elements.map(x => aux.wrap(x.asInstanceOf[ST]))
+    )
 
   private lazy val tensorPrimitiveConverters: Map[FundamentalType, TensorPrimitiveConverter] = Seq(
     makeTensorPrimitiveConverter(FundamentalType.Uint8),

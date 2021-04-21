@@ -4,14 +4,15 @@ import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.docker.api.DockerClient
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
-import ai.mantik.executor.{ Executor, ExecutorForIntegrationTest }
-import com.typesafe.config.{ Config => TypesafeConfig }
+import ai.mantik.executor.{Executor, ExecutorForIntegrationTest}
+import com.typesafe.config.{Config => TypesafeConfig}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 
-class DockerExecutorForIntegrationTest(config: TypesafeConfig)(implicit akkaRuntime: AkkaRuntime) extends ExecutorForIntegrationTest {
+class DockerExecutorForIntegrationTest(config: TypesafeConfig)(implicit akkaRuntime: AkkaRuntime)
+    extends ExecutorForIntegrationTest {
   val logger = Logger(getClass)
 
   val executorConfig = DockerExecutorConfig.fromTypesafeConfig(config)
@@ -31,9 +32,14 @@ class DockerExecutorForIntegrationTest(config: TypesafeConfig)(implicit akkaRunt
     def await[T](f: Future[T]): T = {
       Await.result(f, 60.seconds)
     }
-    val mantikContainers = await(dockerClient.listContainersFiltered(true, ListContainerRequestFilter.forLabelKeyValue(
-      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
-    )))
+    val mantikContainers = await(
+      dockerClient.listContainersFiltered(
+        true,
+        ListContainerRequestFilter.forLabelKeyValue(
+          LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
+        )
+      )
+    )
 
     if (mantikContainers.isEmpty) {
       logger.info("No old mantik containers to kill")

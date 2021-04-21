@@ -55,7 +55,8 @@ abstract class SqliteEvolutionsSpecBase extends TestBaseWithAkkaRuntime with Tem
     val evolutionSchemas = extractDatabases(db2)
     db2.shutdown()
     ensureSameElements(
-      directSchemas, evolutionSchemas
+      directSchemas,
+      evolutionSchemas
     )
   }
 
@@ -70,14 +71,16 @@ abstract class SqliteEvolutionsSpecBase extends TestBaseWithAkkaRuntime with Tem
   private def cleanupSchema(schema: String): String = {
     // argh, sqlite formats them different if columns are appended ?!
     // it's also showing comments
-    schema.linesIterator.map { line =>
-      val trimmed = line.trim
-      // drop optional comment
-      trimmed.indexOf("--") match {
-        case -1 => trimmed
-        case n  => trimmed.take(n).trim
+    schema.linesIterator
+      .map { line =>
+        val trimmed = line.trim
+        // drop optional comment
+        trimmed.indexOf("--") match {
+          case -1 => trimmed
+          case n  => trimmed.take(n).trim
+        }
       }
-    }.mkString(" ")
+      .mkString(" ")
       .replace(" ,", ",")
       .replace(", ", ",")
       .replace(" )", ")")

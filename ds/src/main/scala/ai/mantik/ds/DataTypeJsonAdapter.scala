@@ -1,7 +1,7 @@
 package ai.mantik.ds
 
 import ai.mantik.ds.Errors.TypeNotFoundException
-import ai.mantik.ds.helper.circe.{ CirceJson, DiscriminatorDependentCodec, EnumDiscriminatorCodec, ExtraCirceCodecs }
+import ai.mantik.ds.helper.circe.{CirceJson, DiscriminatorDependentCodec, EnumDiscriminatorCodec, ExtraCirceCodecs}
 import io.circe.Decoder.Result
 import io.circe._
 import io.circe.syntax._
@@ -9,13 +9,13 @@ import io.circe.syntax._
 import scala.collection.immutable.ListMap
 
 /**
- * Serialization format for data types
- *
- * Principle:
- * - Strings are reserved for fundamental types
- * - Objects without 'type' are reserved for tabular types
- * - all other have a 'type' flag
- */
+  * Serialization format for data types
+  *
+  * Principle:
+  * - Strings are reserved for fundamental types
+  * - Objects without 'type' are reserved for tabular types
+  * - all other have a 'type' flag
+  */
 private[ds] object DataTypeJsonAdapter {
 
   implicit val FundamentalTypeCodec = new EnumDiscriminatorCodec[FundamentalType](

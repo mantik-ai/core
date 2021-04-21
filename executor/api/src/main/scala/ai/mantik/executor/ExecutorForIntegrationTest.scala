@@ -1,6 +1,7 @@
 package ai.mantik.executor
 
 trait ExecutorForIntegrationTest {
+
   /** Returns the executor to use. */
   def executor: Executor
 

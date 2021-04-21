@@ -5,18 +5,20 @@ import io.circe.Decoder.Result
 import io.circe._
 
 /**
- * Encodes the values of a trivial disjunct enum hierarchy into a Json string.
- * Note: is using circe json.
- *
- * TODO: Circe's [[KeyDecoder]] and [[KeyEncoder]] somehow have a similar meaning however
- * they are abstract classes so we cannot easily mix them together. Maybe it's a good idea to clean up.
- */
+  * Encodes the values of a trivial disjunct enum hierarchy into a Json string.
+  * Note: is using circe json.
+  *
+  * TODO: Circe's [[KeyDecoder]] and [[KeyEncoder]] somehow have a similar meaning however
+  * they are abstract classes so we cannot easily mix them together. Maybe it's a good idea to clean up.
+  */
 class EnumDiscriminatorCodec[T](val mapping: Seq[(String, T)]) extends Encoder[T] with Decoder[T] {
 
   private val DecodeMap: Map[String, T] = mapping.toMap
     .ensuring(_.size == mapping.size, "There may be no duplicates in mapping")
 
-  private val EncodeMap: Map[T, String] = mapping.map(x => (x._2, x._1)).toMap
+  private val EncodeMap: Map[T, String] = mapping
+    .map(x => (x._2, x._1))
+    .toMap
     .ensuring(_.size == mapping.size, "There may be no duplicates in mapping")
 
   def elementToString(element: T): String = {
@@ -44,6 +46,7 @@ class EnumDiscriminatorCodec[T](val mapping: Seq[(String, T)]) extends Encoder[T
 }
 
 object EnumDiscriminatorCodec {
+
   /** An element which is about to serialize wasn't registered. */
   class UnregisteredElementException(msg: String) extends RuntimeException
 }

@@ -8,7 +8,7 @@ import ai.mantik.engine.protos.local_registry.LocalRegistryServiceGrpc.LocalRegi
 import ai.mantik.engine.protos.remote_registry.RemoteRegistryServiceGrpc.RemoteRegistryService
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionService
 import ai.mantik.engine.server.services._
-import ai.mantik.engine.session.{ SessionManager, SessionManagerForLocalRunning }
+import ai.mantik.engine.session.{SessionManager, SessionManagerForLocalRunning}
 import ai.mantik.planner.impl.RemotePlanningContextServerImpl
 import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.PlanningContextService
 import com.google.inject.AbstractModule

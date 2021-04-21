@@ -6,9 +6,8 @@ private[sql] object ExpressionTransformation {
   /** Fold expressions, from outer to inner, left to right */
   def foldTree[T](expression: Expression)(x0: T)(f: (T, Expression) => T): T = {
     val afterThis = f(x0, expression)
-    expression.dependencies.foldLeft(afterThis) {
-      case (c, n) =>
-        foldTree(n)(c)(f)
+    expression.dependencies.foldLeft(afterThis) { case (c, n) =>
+      foldTree(n)(c)(f)
     }
   }
 

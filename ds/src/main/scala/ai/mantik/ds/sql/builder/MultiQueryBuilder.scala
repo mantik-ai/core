@@ -2,7 +2,7 @@ package ai.mantik.ds.sql.builder
 
 import ai.mantik.ds.sql.parser.AST
 import ai.mantik.ds.sql.parser.QueryParser
-import ai.mantik.ds.sql.{ MultiQuery, SingleQuery, Split, SqlContext }
+import ai.mantik.ds.sql.{MultiQuery, SingleQuery, Split, SqlContext}
 import cats.implicits._
 
 import scala.util.control.NonFatal

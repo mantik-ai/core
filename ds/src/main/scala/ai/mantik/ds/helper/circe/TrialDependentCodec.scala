@@ -9,9 +9,9 @@ import shapeless.Lazy
 import scala.reflect.ClassTag
 
 /**
- * A JSON codec which is built from other codecs and just tries them out during decoding.
- * Similar to [[DiscriminatorDependentCodec]] but without the kind type as they are all distinct.
- */
+  * A JSON codec which is built from other codecs and just tries them out during decoding.
+  * Similar to [[DiscriminatorDependentCodec]] but without the kind type as they are all distinct.
+  */
 abstract class TrialDependentCodec[T] extends ObjectEncoder[T] with Decoder[T] {
   protected case class SubType[X <: T](
       classTag: ClassTag[X],
@@ -24,12 +24,20 @@ abstract class TrialDependentCodec[T] extends ObjectEncoder[T] with Decoder[T] {
   }
 
   /** Make a sub type with automatically derived encoders/decoders. */
-  protected def makeSubType[X <: T]()(implicit classTag: ClassTag[X], encoder: Lazy[DerivedObjectEncoder[X]], decoder: Lazy[DerivedDecoder[X]]): SubType[X] = {
+  protected def makeSubType[X <: T]()(
+      implicit classTag: ClassTag[X],
+      encoder: Lazy[DerivedObjectEncoder[X]],
+      decoder: Lazy[DerivedDecoder[X]]
+  ): SubType[X] = {
     SubType(classTag, encoder.value, decoder.value)
   }
 
   /** Make a sub type with given encoders/decoders. */
-  protected def makeGivenSubType[X <: T]()(implicit classTag: ClassTag[X], encoder: ObjectEncoder[X], decoder: Decoder[X]): SubType[X] = {
+  protected def makeGivenSubType[X <: T]()(
+      implicit classTag: ClassTag[X],
+      encoder: ObjectEncoder[X],
+      decoder: Decoder[X]
+  ): SubType[X] = {
     SubType(classTag, encoder, decoder)
   }
 

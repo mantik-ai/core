@@ -37,7 +37,10 @@ object CirceJson {
   }
 
   /** Auto generates a Encoder/Decoder for Circe JSON. */
-  def makeSimpleCodec[T](implicit encoder: Lazy[DerivedObjectEncoder[T]], decoder: Lazy[DerivedDecoder[T]]): ObjectEncoder[T] with Decoder[T] = {
+  def makeSimpleCodec[T](
+      implicit encoder: Lazy[DerivedObjectEncoder[T]],
+      decoder: Lazy[DerivedDecoder[T]]
+  ): ObjectEncoder[T] with Decoder[T] = {
     val encoderImpl = encoder.value
     val decoderImpl = decoder.value
     new ObjectEncoder[T] with Decoder[T] {

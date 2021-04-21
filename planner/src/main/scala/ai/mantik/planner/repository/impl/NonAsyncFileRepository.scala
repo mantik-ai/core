@@ -2,10 +2,10 @@ package ai.mantik.planner.repository.impl
 
 import ai.mantik.planner.repository.FileRepository
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 /** Helper which converts the async API into a sync API for testcases. */
@@ -20,7 +20,9 @@ trait NonAsyncFileRepository extends FileRepository {
     await(Source.single(bytes).runWith(sink))
   }
 
-  def requestAndStoreSync(temp: Boolean, contentType: String, bytes: ByteString)(implicit materializer: Materializer): FileRepository.FileStorageResult = {
+  def requestAndStoreSync(temp: Boolean, contentType: String, bytes: ByteString)(
+      implicit materializer: Materializer
+  ): FileRepository.FileStorageResult = {
     val storageResult = requestFileStorageSync(contentType, temp)
     storeFileSync(storageResult.fileId, bytes)
     storageResult

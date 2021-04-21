@@ -1,6 +1,6 @@
 package ai.mantik.ds.sql.parser
 
-import org.parboiled2.{ Parser, Rule1 }
+import org.parboiled2.{Parser, Rule1}
 
 trait AliasParser {
   self: Parser with ExpressionParser =>
@@ -26,9 +26,11 @@ trait AliasParser {
   }
 
   def withOptionalAlias(query: AST.QueryNode, alias: Option[String]): AST.QueryNode = {
-    alias.map { alias =>
-      AST.AliasNode(query, alias)
-    }.getOrElse(query)
+    alias
+      .map { alias =>
+        AST.AliasNode(query, alias)
+      }
+      .getOrElse(query)
   }
 
 }

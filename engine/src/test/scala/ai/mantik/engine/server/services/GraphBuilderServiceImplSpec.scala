@@ -4,19 +4,44 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.ds.sql.Split
-import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
-import ai.mantik.elements.errors.{ ErrorCodes, MantikException, MantikRemoteException }
-import ai.mantik.{ elements, planner }
-import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId, PipelineDefinition, PipelineStep, TrainableAlgorithmDefinition }
+import ai.mantik.ds.{DataType, FundamentalType, TabularData}
+import ai.mantik.elements.errors.{ErrorCodes, MantikException, MantikRemoteException}
+import ai.mantik.{elements, planner}
+import ai.mantik.elements.{
+  AlgorithmDefinition,
+  BridgeDefinition,
+  DataSetDefinition,
+  ItemId,
+  MantikHeader,
+  NamedMantikId,
+  PipelineDefinition,
+  PipelineStep,
+  TrainableAlgorithmDefinition
+}
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
-import ai.mantik.engine.protos.graph_builder.{ ApplyRequest, AutoUnionRequest, BuildPipelineRequest, BuildPipelineStep, CacheRequest, GetRequest, LiteralRequest, MetaVariableValue, QueryRequest, SelectRequest, SetMetaVariableRequest, SplitRequest, TagRequest, TrainRequest }
+import ai.mantik.engine.protos.graph_builder.{
+  ApplyRequest,
+  AutoUnionRequest,
+  BuildPipelineRequest,
+  BuildPipelineStep,
+  CacheRequest,
+  GetRequest,
+  LiteralRequest,
+  MetaVariableValue,
+  QueryRequest,
+  SelectRequest,
+  SetMetaVariableRequest,
+  SplitRequest,
+  TagRequest,
+  TrainRequest
+}
 import ai.mantik.engine.protos.items.ObjectKind
-import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
-import ai.mantik.engine.testutil.{ DummyComponents, TestArtifacts, TestBaseWithSessions }
+import ai.mantik.engine.session.{EngineErrors, Session, SessionManager}
+import ai.mantik.engine.testutil.{DummyComponents, TestArtifacts, TestBaseWithSessions}
 import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.repository.MantikArtifact
-import ai.mantik.planner.{ Algorithm, BuiltInItems, DataSet, MantikItem, Operation, PayloadSource, Pipeline }
+import ai.mantik.planner.{Algorithm, BuiltInItems, DataSet, MantikItem, Operation, PayloadSource, Pipeline}
 import io.grpc.StatusRuntimeException
 
 class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
@@ -32,58 +57,85 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val session2 = await(sessionManager.create())
 
     val dataset1 = MantikArtifact(
-      MantikHeader.pure(DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = FundamentalType.Int32)).toJson,
+      MantikHeader
+        .pure(DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = FundamentalType.Int32))
+        .toJson,
       fileId = Some("1234"),
       namedId = Some(NamedMantikId("Dataset1")),
       itemId = ItemId.generate()
     )
     val dataset2 = MantikArtifact(
-      MantikHeader.pure(elements.DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = TabularData(
-        "x" -> FundamentalType.Int32
-      ))).toJson,
+      MantikHeader
+        .pure(
+          elements.DataSetDefinition(
+            bridge = BuiltInItems.NaturalBridgeName,
+            `type` = TabularData(
+              "x" -> FundamentalType.Int32
+            )
+          )
+        )
+        .toJson,
       fileId = Some("1234"),
       namedId = Some(NamedMantikId("Dataset2")),
       itemId = ItemId.generate()
     )
     val dataset3 = MantikArtifact(
-      MantikHeader.pure(elements.DataSetDefinition(bridge = BuiltInItems.NaturalBridgeName, `type` = TabularData(
-        "y" -> FundamentalType.Int32
-      ))).toJson,
+      MantikHeader
+        .pure(
+          elements.DataSetDefinition(
+            bridge = BuiltInItems.NaturalBridgeName,
+            `type` = TabularData(
+              "y" -> FundamentalType.Int32
+            )
+          )
+        )
+        .toJson,
       fileId = Some("1234"),
       namedId = Some(NamedMantikId("Dataset3")),
       itemId = ItemId.generate()
     )
     val algorithm1 = MantikArtifact(
-      MantikHeader.pure(AlgorithmDefinition(bridge = TestArtifacts.algoBridge1.namedId.get, `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType))).toJson,
+      MantikHeader
+        .pure(
+          AlgorithmDefinition(
+            bridge = TestArtifacts.algoBridge1.namedId.get,
+            `type` = FunctionType(FundamentalType.Int32, FundamentalType.StringType)
+          )
+        )
+        .toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
     )
     val trainable1 = MantikArtifact(
-      MantikHeader.pure(
-        TrainableAlgorithmDefinition(
-          bridge = TestArtifacts.trainingBridge1.namedId.get,
-          trainedBridge = Some(TestArtifacts.trainedBridge1.namedId.get),
-          trainingType = FundamentalType.Int32,
-          statType = FundamentalType.Float32,
-          `type` = FunctionType(
-            input = FundamentalType.Int32,
-            output = FundamentalType.StringType
+      MantikHeader
+        .pure(
+          TrainableAlgorithmDefinition(
+            bridge = TestArtifacts.trainingBridge1.namedId.get,
+            trainedBridge = Some(TestArtifacts.trainedBridge1.namedId.get),
+            trainingType = FundamentalType.Int32,
+            statType = FundamentalType.Float32,
+            `type` = FunctionType(
+              input = FundamentalType.Int32,
+              output = FundamentalType.StringType
+            )
           )
         )
-      ).toJson,
+        .toJson,
       fileId = Some("5000"),
       namedId = Some(NamedMantikId("Trainable1")),
       itemId = ItemId.generate()
     )
     val pipeline1 = MantikArtifact(
-      MantikHeader.pure(
-        PipelineDefinition(
-          steps = List(
-            PipelineStep.AlgorithmStep("Algorithm1")
+      MantikHeader
+        .pure(
+          PipelineDefinition(
+            steps = List(
+              PipelineStep.AlgorithmStep("Algorithm1")
+            )
           )
         )
-      ).toJson,
+        .toJson,
       fileId = None,
       namedId = Some(NamedMantikId("Pipeline1")),
       itemId = ItemId.generate()
@@ -100,12 +152,18 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   "get" should "place elements from the repo in the graph" in new Env {
-    MantikRemoteException.fromGrpc(awaitException[StatusRuntimeException] {
-      graphBuilder.get(GetRequest("123", "foo"))
-    }).code.isA(EngineErrors.SessionNotFound) shouldBe true
-    MantikRemoteException.fromGrpc(awaitException[StatusRuntimeException] {
-      graphBuilder.get(GetRequest(session1.id, "foo"))
-    }).code.isA(ErrorCodes.MantikItemNotFound) shouldBe true
+    MantikRemoteException
+      .fromGrpc(awaitException[StatusRuntimeException] {
+        graphBuilder.get(GetRequest("123", "foo"))
+      })
+      .code
+      .isA(EngineErrors.SessionNotFound) shouldBe true
+    MantikRemoteException
+      .fromGrpc(awaitException[StatusRuntimeException] {
+        graphBuilder.get(GetRequest(session1.id, "foo"))
+      })
+      .code
+      .isA(ErrorCodes.MantikItemNotFound) shouldBe true
     val response = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
     response.itemId shouldBe "1"
     response.item.get.kind shouldBe ObjectKind.KIND_DATASET
@@ -167,9 +225,11 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   "algorithmApply" should "apply algorithms upon datasets" in new Env {
     val ds1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
     val algo1 = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
-    val applied = await(graphBuilder.algorithmApply(
-      ApplyRequest(session1.id, ds1.itemId, algo1.itemId)
-    ))
+    val applied = await(
+      graphBuilder.algorithmApply(
+        ApplyRequest(session1.id, ds1.itemId, algo1.itemId)
+      )
+    )
     applied.itemId shouldBe "3"
     applied.item.get.kind shouldBe ObjectKind.KIND_DATASET
     applied.item.get.getDataset.`type`.get.json shouldBe "\"string\""
@@ -181,9 +241,11 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   it should "apply pipelines upon datasets" in new Env {
     val ds1 = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
     val pipe1 = await(graphBuilder.get(GetRequest(session1.id, pipeline1.mantikId.toString)))
-    val applied = await(graphBuilder.algorithmApply(
-      ApplyRequest(session1.id, ds1.itemId, pipe1.itemId)
-    ))
+    val applied = await(
+      graphBuilder.algorithmApply(
+        ApplyRequest(session1.id, ds1.itemId, pipe1.itemId)
+      )
+    )
     applied.itemId shouldBe "3"
     applied.item.get.kind shouldBe ObjectKind.KIND_DATASET
     applied.item.get.getDataset.`type`.get.json shouldBe "\"string\""
@@ -248,37 +310,47 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
       val dataset = await(graphBuilder.get(GetRequest(session1.id, dataset1.mantikId.toString)))
       val trainable = await(graphBuilder.get(GetRequest(session1.id, trainable1.mantikId.toString)))
 
-      val result = await(graphBuilder.train(
-        TrainRequest(
-          sessionId = session1.id,
-          trainableId = trainable.itemId,
-          trainingDatasetId = dataset.itemId,
-          noCaching = !withCaching
+      val result = await(
+        graphBuilder.train(
+          TrainRequest(
+            sessionId = session1.id,
+            trainableId = trainable.itemId,
+            trainingDatasetId = dataset.itemId,
+            noCaching = !withCaching
+          )
         )
-      ))
+      )
       val underlyingStat = session1.getItemAs[DataSet](result.statDataset.get.itemId)
       underlyingStat.dataType shouldBe FundamentalType.Float32
       val underlyingTrainable = session1.getItemAs[Algorithm](result.trainedAlgorithm.get.itemId)
       underlyingTrainable.bridgeMantikId shouldBe TestArtifacts.trainedBridge1.namedId.get
       if (withCaching) {
         underlyingStat.payloadSource.asInstanceOf[PayloadSource.Projection].source shouldBe an[PayloadSource.Cached]
-        underlyingTrainable.payloadSource.asInstanceOf[PayloadSource.Projection].source shouldBe an[PayloadSource.Cached]
+        underlyingTrainable.payloadSource
+          .asInstanceOf[PayloadSource.Projection]
+          .source shouldBe an[PayloadSource.Cached]
       } else {
-        underlyingStat.payloadSource.asInstanceOf[PayloadSource.Projection].source shouldBe an[PayloadSource.OperationResult]
-        underlyingTrainable.payloadSource.asInstanceOf[PayloadSource.Projection].source shouldBe an[PayloadSource.OperationResult]
+        underlyingStat.payloadSource
+          .asInstanceOf[PayloadSource.Projection]
+          .source shouldBe an[PayloadSource.OperationResult]
+        underlyingTrainable.payloadSource
+          .asInstanceOf[PayloadSource.Projection]
+          .source shouldBe an[PayloadSource.OperationResult]
       }
     }
   }
 
   "select" should "create select statements" in new Env {
     val dataset = await(graphBuilder.get(GetRequest(session1.id, dataset2.mantikId.toString)))
-    val selected = await(graphBuilder.select(
-      SelectRequest(
-        sessionId = session1.id,
-        dataset.itemId,
-        selectQuery = "select CAST(x as INT64) as y"
+    val selected = await(
+      graphBuilder.select(
+        SelectRequest(
+          sessionId = session1.id,
+          dataset.itemId,
+          selectQuery = "select CAST(x as INT64) as y"
+        )
       )
-    ))
+    )
     selected.itemId shouldBe "2"
     selected.item.get.kind shouldBe ObjectKind.KIND_DATASET
     selected.item.get.getDataset.`type`.get.json shouldBe TabularData(
@@ -291,25 +363,29 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     val underlyingDs2 = session1.getItemAs[DataSet](ds2.itemId)
     val ds3 = await(graphBuilder.get(GetRequest(session1.id, dataset3.mantikId.toString)))
     val underlyingDs3 = session1.getItemAs[DataSet](ds3.itemId)
-    val union1 = await(graphBuilder.autoUnion(
-      AutoUnionRequest(
-        sessionId = session1.id,
-        ds2.itemId,
-        ds3.itemId,
-        all = false
+    val union1 = await(
+      graphBuilder.autoUnion(
+        AutoUnionRequest(
+          sessionId = session1.id,
+          ds2.itemId,
+          ds3.itemId,
+          all = false
+        )
       )
-    ))
+    )
     val underlying1 = session1.getItemAs[DataSet](union1.itemId)
     underlying1 shouldBe underlyingDs2.autoUnion(underlyingDs3, all = false).withItemId(underlying1.itemId)
 
-    val union2 = await(graphBuilder.autoUnion(
-      AutoUnionRequest(
-        sessionId = session1.id,
-        ds2.itemId,
-        ds3.itemId,
-        all = true
+    val union2 = await(
+      graphBuilder.autoUnion(
+        AutoUnionRequest(
+          sessionId = session1.id,
+          ds2.itemId,
+          ds3.itemId,
+          all = true
+        )
       )
-    ))
+    )
     val underlying2 = session1.getItemAs[DataSet](union2.itemId)
     underlying2 shouldBe underlyingDs2.autoUnion(underlyingDs3, all = true).withItemId(underlying2.itemId)
   }
@@ -323,13 +399,15 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
 
     // Note: this statement doesn't make much sense
     val statement = "SELECT l.x, r.y FROM $0 AS l LEFT JOIN $1 AS r ON l.x = r.y"
-    val joined = await(graphBuilder.sqlQuery(
-      QueryRequest(
-        sessionId = session1.id,
-        statement = statement,
-        datasetIds = Seq(ds2.itemId, ds3.itemId)
+    val joined = await(
+      graphBuilder.sqlQuery(
+        QueryRequest(
+          sessionId = session1.id,
+          statement = statement,
+          datasetIds = Seq(ds2.itemId, ds3.itemId)
+        )
       )
-    ))
+    )
     val underlying = session1.getItemAs[DataSet](joined.itemId)
     underlying shouldBe DataSet.query(statement, underlyingDs2, underlyingDs3).withItemId(underlying.itemId)
   }
@@ -357,9 +435,12 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     underlying.foreach { u =>
       val query = u.payloadSource
         .asInstanceOf[PayloadSource.Projection]
-        .source.asInstanceOf[PayloadSource.Cached]
-        .source.asInstanceOf[PayloadSource.OperationResult]
-        .op.asInstanceOf[Operation.SqlQueryOperation]
+        .source
+        .asInstanceOf[PayloadSource.Cached]
+        .source
+        .asInstanceOf[PayloadSource.OperationResult]
+        .op
+        .asInstanceOf[Operation.SqlQueryOperation]
       val split = query.query.asInstanceOf[Split]
       split.fractions shouldBe Seq(0.5, 0.3)
       split.shuffleSeed shouldBe None
@@ -387,25 +468,28 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     }
     val expected = underlyingDs2.split(Seq(0.5, 0.3), shuffleSeed = Some(14), cached = false)
     underlying.size shouldBe expected.size
-    underlying.zip(expected).foreach {
-      case (u, e) =>
-        u shouldBe e.withItemId(u.itemId)
+    underlying.zip(expected).foreach { case (u, e) =>
+      u shouldBe e.withItemId(u.itemId)
     }
   }
 
   trait EnvForPipeline extends PlainEnv {
     val algorithm1 = MantikArtifact(
-      MantikHeader.pure(elements.AlgorithmDefinition(
-        bridge = TestArtifacts.algoBridge1.namedId.get,
-        `type` = FunctionType(
-          input = TabularData(
-            "x" -> FundamentalType.Int32
-          ),
-          output = TabularData(
-            "y" -> FundamentalType.Float64
+      MantikHeader
+        .pure(
+          elements.AlgorithmDefinition(
+            bridge = TestArtifacts.algoBridge1.namedId.get,
+            `type` = FunctionType(
+              input = TabularData(
+                "x" -> FundamentalType.Int32
+              ),
+              output = TabularData(
+                "y" -> FundamentalType.Float64
+              )
+            )
           )
         )
-      )).toJson,
+        .toJson,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
@@ -416,45 +500,49 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   }
 
   "buildPipeline" should "work" in new EnvForPipeline {
-    val pipeItem = await(graphBuilder.buildPipeline(
-      BuildPipelineRequest(
-        session1.id,
-        Seq(
-          BuildPipelineStep(
-            Step.AlgorithmId(algorithm1Item.itemId)
-          ),
-          BuildPipelineStep(
-            Step.Select("select y as string")
+    val pipeItem = await(
+      graphBuilder.buildPipeline(
+        BuildPipelineRequest(
+          session1.id,
+          Seq(
+            BuildPipelineStep(
+              Step.AlgorithmId(algorithm1Item.itemId)
+            ),
+            BuildPipelineStep(
+              Step.Select("select y as string")
+            )
           )
         )
       )
-    ))
+    )
     pipeItem.item.get.kind shouldBe ObjectKind.KIND_PIPELINE
     val realPipeline = session1.getItemAs[Pipeline](pipeItem.itemId)
     realPipeline.stepCount shouldBe 2
   }
 
   it should "work with starting type" in new EnvForPipeline {
-    val pipeItem = await(graphBuilder.buildPipeline(
-      BuildPipelineRequest(
-        session1.id,
-        Seq(
-          BuildPipelineStep(
-            Step.Select("select CAST (x as int32)")
+    val pipeItem = await(
+      graphBuilder.buildPipeline(
+        BuildPipelineRequest(
+          session1.id,
+          Seq(
+            BuildPipelineStep(
+              Step.Select("select CAST (x as int32)")
+            ),
+            BuildPipelineStep(
+              Step.AlgorithmId(algorithm1Item.itemId)
+            )
           ),
-          BuildPipelineStep(
-            Step.AlgorithmId(algorithm1Item.itemId)
-          )
-        ),
-        inputType = Some(
-          Converters.encodeDataType(
-            TabularData(
-              "x" -> FundamentalType.Uint8
+          inputType = Some(
+            Converters.encodeDataType(
+              TabularData(
+                "x" -> FundamentalType.Uint8
+              )
             )
           )
         )
       )
-    ))
+    )
     pipeItem.item.get.kind shouldBe ObjectKind.KIND_PIPELINE
     val realPipeline = session1.getItemAs[Pipeline](pipeItem.itemId)
     realPipeline.stepCount shouldBe 2
@@ -471,18 +559,18 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   "setMetaVariables" should "work" in new PlainEnv {
     val algorithm1 = MantikArtifact(
       s"""kind: algorithm
-          |bridge: ${TestArtifacts.algoBridge1.namedId.get}
-          |type:
-          |  input: int32
-          |  output: int32
-          |metaVariables:
-          |  - name: a
-          |    type: string
-          |    value: "hello"
-          |  - name: b
-          |    type: int32
-          |    value: 42
-          |""".stripMargin,
+         |bridge: ${TestArtifacts.algoBridge1.namedId.get}
+         |type:
+         |  input: int32
+         |  output: int32
+         |metaVariables:
+         |  - name: a
+         |    type: string
+         |    value: "hello"
+         |  - name: b
+         |    type: int32
+         |    value: 42
+         |""".stripMargin,
       fileId = Some("1236"),
       namedId = Some(NamedMantikId("Algorithm1")),
       itemId = ItemId.generate()
@@ -490,35 +578,63 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
     await(components.repository.store(TestArtifacts.algoBridge1))
     await(components.repository.store(algorithm1))
     val algorithm = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
-    val nameChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(
-      sessionId = session1.id,
-      itemId = algorithm.itemId,
-      values = Seq(
-        // type1: directly use JSON
-        MetaVariableValue("a", MetaVariableValue.Value.Json("\"boom\""))
+    val nameChanged = await(
+      graphBuilder.setMetaVariables(
+        SetMetaVariableRequest(
+          sessionId = session1.id,
+          itemId = algorithm.itemId,
+          values = Seq(
+            // type1: directly use JSON
+            MetaVariableValue("a", MetaVariableValue.Value.Json("\"boom\""))
+          )
+        )
       )
-    )))
+    )
     val nameChangedBack = session1.getItemAs[Algorithm](nameChanged.itemId)
     nameChangedBack.mantikHeader.metaJson.metaVariable("a").get.value shouldBe Bundle.fundamental("boom")
-    val intChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(
-      sessionId = session1.id,
-      itemId = algorithm.itemId,
-      values = Seq(
-        // type1: directly use JSON
-        MetaVariableValue("b", MetaVariableValue.Value.Bundle(Converters.encodeBundle(Bundle.fundamental(100), BundleEncoding.ENCODING_MSG_PACK))
+    val intChanged = await(
+      graphBuilder.setMetaVariables(
+        SetMetaVariableRequest(
+          sessionId = session1.id,
+          itemId = algorithm.itemId,
+          values = Seq(
+            // type1: directly use JSON
+            MetaVariableValue(
+              "b",
+              MetaVariableValue.Value.Bundle(
+                Converters.encodeBundle(Bundle.fundamental(100), BundleEncoding.ENCODING_MSG_PACK)
+              )
+            )
+          )
         )
-      ))))
+      )
+    )
     val intChangedBack = session1.getItemAs[Algorithm](intChanged.itemId)
     intChangedBack.mantikHeader.metaJson.metaVariable("b").get.value shouldBe Bundle.fundamental(100)
 
-    val bothChanged = await(graphBuilder.setMetaVariables(SetMetaVariableRequest(
-      sessionId = session1.id,
-      itemId = algorithm.itemId,
-      values = Seq(
-        // type1: directly use JSON
-        MetaVariableValue("b", MetaVariableValue.Value.Bundle(Converters.encodeBundle(Bundle.fundamental(123), BundleEncoding.ENCODING_MSG_PACK))),
-        MetaVariableValue("a", MetaVariableValue.Value.Bundle(Converters.encodeBundle(Bundle.fundamental("Bam"), BundleEncoding.ENCODING_JSON)))
-      ))))
+    val bothChanged = await(
+      graphBuilder.setMetaVariables(
+        SetMetaVariableRequest(
+          sessionId = session1.id,
+          itemId = algorithm.itemId,
+          values = Seq(
+            // type1: directly use JSON
+            MetaVariableValue(
+              "b",
+              MetaVariableValue.Value.Bundle(
+                Converters.encodeBundle(Bundle.fundamental(123), BundleEncoding.ENCODING_MSG_PACK)
+              )
+            ),
+            MetaVariableValue(
+              "a",
+              MetaVariableValue.Value.Bundle(
+                Converters.encodeBundle(Bundle.fundamental("Bam"), BundleEncoding.ENCODING_JSON)
+              )
+            )
+          )
+        )
+      )
+    )
     val bothChangedBack = session1.getItemAs[Algorithm](bothChanged.itemId)
     bothChangedBack.mantikHeader.metaJson.metaVariables.map { x => x.name -> x.value }.toMap shouldBe Map(
       "a" -> Bundle.fundamental("Bam"),

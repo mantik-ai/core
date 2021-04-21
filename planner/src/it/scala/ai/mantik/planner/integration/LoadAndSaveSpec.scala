@@ -8,7 +8,8 @@ class LoadAndSaveSpec extends IntegrationTestBase {
 
   it should "be possible to load and save an item" in {
 
-    val item = DataSet.literal(Bundle.fundamental(100))
+    val item = DataSet
+      .literal(Bundle.fundamental(100))
       .tag("item1")
 
     context.execute(item.save())

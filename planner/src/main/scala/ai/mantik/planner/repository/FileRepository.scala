@@ -1,9 +1,9 @@
 package ai.mantik.planner.repository
 
 import ai.mantik.componently.Component
-import ai.mantik.elements.errors.{ ErrorCode, ErrorCodes, MantikException }
+import ai.mantik.elements.errors.{ErrorCode, ErrorCodes, MantikException}
 import akka.NotUsed
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import io.grpc.Status.Code
 
@@ -16,9 +16,9 @@ private[mantik] trait FileRepository extends Component {
   def requestFileStorage(contentType: String, temporary: Boolean): Future[FileRepository.FileStorageResult]
 
   /**
-   * Request the loading of a file.
-   * @param optimistic if true, the file handle will also be returned, if the file is not yet existant.
-   */
+    * Request the loading of a file.
+    * @param optimistic if true, the file handle will also be returned, if the file is not yet existant.
+    */
   def requestFileGet(id: String, optimistic: Boolean = false): Future[FileRepository.FileGetResult]
 
   /** Request storing a file (must be requested at first). */
@@ -28,9 +28,9 @@ private[mantik] trait FileRepository extends Component {
   def deleteFile(id: String): Future[Boolean]
 
   /**
-   * Request retrieval of a file.
-   * @return content type and file source
-   */
+    * Request retrieval of a file.
+    * @return content type and file source
+    */
   def loadFile(id: String): Future[FileRepository.LoadFileResult]
 
   /** Request copying a file. */
@@ -78,9 +78,9 @@ object FileRepository {
   )
 
   /**
-   * Returns the path, under which the FileRepositoryServer serves files of a fileId.
-   * Do not change, without changing the server.
-   */
+    * Returns the path, under which the FileRepositoryServer serves files of a fileId.
+    * Do not change, without changing the server.
+    */
   def makePath(id: String): String = {
     "files/" + id
   }

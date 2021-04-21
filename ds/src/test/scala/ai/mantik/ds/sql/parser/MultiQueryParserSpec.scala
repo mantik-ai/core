@@ -1,10 +1,13 @@
 package ai.mantik.ds.sql.parser
 
-import org.parboiled2.{ Parser, ParserInput, Rule1 }
+import org.parboiled2.{Parser, ParserInput, Rule1}
 
 class MultiQueryParserSpec extends ParserTestBase {
   class FullParser(val input: ParserInput)
-    extends Parser with SelectParser with AnonymousOnlyInnerQueryParser with MultiQueryParser {
+      extends Parser
+      with SelectParser
+      with AnonymousOnlyInnerQueryParser
+      with MultiQueryParser {
     override def BracketInnerQuery: Rule1[AST.QueryNode] = rule {
       symbolw('(') ~ Query ~ symbolw(')')
     }

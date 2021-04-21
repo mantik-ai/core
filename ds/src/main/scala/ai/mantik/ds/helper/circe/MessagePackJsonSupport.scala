@@ -3,8 +3,8 @@ package ai.mantik.ds.helper.circe
 import java.io.IOException
 
 import akka.util.ByteString
-import io.circe.{ Json, JsonNumber, JsonObject }
-import org.msgpack.core.{ MessagePack, MessagePacker, MessageUnpacker }
+import io.circe.{Json, JsonNumber, JsonObject}
+import org.msgpack.core.{MessagePack, MessagePacker, MessageUnpacker}
 import org.msgpack.value.ValueType
 
 /** Helper for reading/writing JSON in MessagePack. */
@@ -27,10 +27,9 @@ object MessagePackJsonSupport {
   def writeJsonToMessagePack(out: MessagePacker, json: Json): Unit = {
     def writeJsonObject(o: JsonObject): Unit = {
       out.packMapHeader(o.size)
-      o.toIterable.foreach {
-        case (key, value) =>
-          out.packString(key)
-          writeJsonValue(value)
+      o.toIterable.foreach { case (key, value) =>
+        out.packString(key)
+        writeJsonValue(value)
       }
     }
 
@@ -70,9 +69,9 @@ object MessagePackJsonSupport {
   }
 
   /**
-   * Read a Circe JSON from MessageUnpacker.
-   * @throws IOException on unexpected format.
-   */
+    * Read a Circe JSON from MessageUnpacker.
+    * @throws IOException on unexpected format.
+    */
   @throws[IOException]
   def readJsonToMessagePack(in: MessageUnpacker): Json = {
     in.getNextFormat.getValueType match {

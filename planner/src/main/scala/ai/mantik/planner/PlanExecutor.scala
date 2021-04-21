@@ -6,9 +6,9 @@ import scala.concurrent.Future
 trait PlanExecutor {
 
   /**
-   * Execute a Plan.
-   * @return a future to a plans result which can be casted accordingly.
-   */
+    * Execute a Plan.
+    * @return a future to a plans result which can be casted accordingly.
+    */
   def execute[T](plan: Plan[T]): Future[T]
 }
 

@@ -1,6 +1,6 @@
 package ai.mantik.ds.sql
 
-import ai.mantik.ds.{ FundamentalType, TabularData }
+import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.testutils.TestBase
 
 class QuerySpec extends TestBase {
@@ -17,8 +17,9 @@ class QuerySpec extends TestBase {
       input2,
       true
     ).flat shouldBe Vector(
-        input1, input2
-      )
+      input1,
+      input2
+    )
 
     Union(
       Union(
@@ -39,7 +40,9 @@ class QuerySpec extends TestBase {
         ),
         input3,
         true
-      ), input4, true
+      ),
+      input4,
+      true
     ).flat shouldBe Vector(input1, input2, input3, input4)
 
     Union(

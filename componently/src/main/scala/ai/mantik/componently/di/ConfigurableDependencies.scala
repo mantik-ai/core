@@ -2,7 +2,7 @@ package ai.mantik.componently.di
 
 import ai.mantik.componently.AkkaRuntime
 import com.google.inject.AbstractModule
-import javax.inject.{ Provider, Singleton }
+import javax.inject.{Provider, Singleton}
 
 import scala.reflect.ClassTag
 
@@ -20,14 +20,17 @@ abstract class ConfigurableDependencies(implicit akkaRuntime: AkkaRuntime) exten
 
   /** Responsible for retrieving the implementation. */
   protected sealed trait ProviderLike
+
   /** Retrieves the implementation by class instance. */
   private case class ClassProvider(clazz: Class[AnyRef]) extends ProviderLike
+
   /** Retrieves the implementation by class name. */
   private case class ClassName(className: String) extends ProviderLike
+
   /**
-   * Retrieves the implementation by providing a full qualified name of a provider clazz.
-   * Can be used for lookup of classes outside the current JAR.
-   */
+    * Retrieves the implementation by providing a full qualified name of a provider clazz.
+    * Can be used for lookup of classes outside the current JAR.
+    */
   private case class LookupProvider(providerName: String, asSingleton: Boolean = false) extends ProviderLike
 
   /** To be implemented: different variants which can be injected. */
@@ -43,22 +46,28 @@ abstract class ConfigurableDependencies(implicit akkaRuntime: AkkaRuntime) exten
   }
 
   import scala.language.implicitConversions
-  protected implicit def classToClassProvider(x: Class[_ <: AnyRef]): ProviderLike = ClassProvider(x.asInstanceOf[Class[AnyRef]])
+  protected implicit def classToClassProvider(x: Class[_ <: AnyRef]): ProviderLike = ClassProvider(
+    x.asInstanceOf[Class[AnyRef]]
+  )
 
   protected implicit def classNameToClassProvider(name: String): ProviderLike = ClassName(name)
 
-  def provider(fullClassName: String, asSingleton: Boolean = false): ProviderLike = LookupProvider(fullClassName, asSingleton)
+  def provider(fullClassName: String, asSingleton: Boolean = false): ProviderLike =
+    LookupProvider(fullClassName, asSingleton)
 
   override final def configure(): Unit = {
     val value = akkaRuntime.config.getString(configKey)
     variants.foreach { classes =>
-      val provider = classes.versions.collectFirst {
-        case (name, provider) if name == value => provider
-      }.getOrElse {
-        throw new RuntimeException(
-          s"Invalid value ${value} for ${configKey} for class ${classes.interface.getName}, valid ${classes.versions.map(_._1)}"
-        )
-      }
+      val provider = classes.versions
+        .collectFirst {
+          case (name, provider) if name == value => provider
+        }
+        .getOrElse {
+          throw new RuntimeException(
+            s"Invalid value ${value} for ${configKey} for class ${classes.interface.getName}, valid ${classes.versions
+              .map(_._1)}"
+          )
+        }
       bind(classes.interface, provider)
     }
   }

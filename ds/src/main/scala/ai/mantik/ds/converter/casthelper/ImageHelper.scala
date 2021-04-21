@@ -2,9 +2,9 @@ package ai.mantik.ds.converter.casthelper
 
 import java.nio.ByteOrder
 
-import ai.mantik.ds.element.{ ImageElement, Primitive }
-import ai.mantik.ds.{ FundamentalType, Image, ImageFormat }
-import akka.util.{ ByteIterator, ByteString, ByteStringBuilder }
+import ai.mantik.ds.element.{ImageElement, Primitive}
+import ai.mantik.ds.{FundamentalType, Image, ImageFormat}
+import akka.util.{ByteIterator, ByteString, ByteStringBuilder}
 
 /** Packs and unpacks images. */
 private[converter] object ImageHelper {
@@ -18,15 +18,16 @@ private[converter] object ImageHelper {
     if (image.format != ImageFormat.Plain) {
       return Left("Only plain images can be converted")
     }
-    buildReader(singleComponent).map { reader => i: ImageElement => {
-      val builder = IndexedSeq.newBuilder[Primitive[_]]
-      builder.sizeHint(image.width * image.height)
-      val it = i.bytes.iterator
-      while (it.hasNext) {
-        builder += reader(it)
+    buildReader(singleComponent).map { reader => i: ImageElement =>
+      {
+        val builder = IndexedSeq.newBuilder[Primitive[_]]
+        builder.sizeHint(image.width * image.height)
+        val it = i.bytes.iterator
+        while (it.hasNext) {
+          builder += reader(it)
+        }
+        builder.result()
       }
-      builder.result()
-    }
     }
   }
 
@@ -41,17 +42,16 @@ private[converter] object ImageHelper {
     for {
       writer <- buildWriter(singleComponent)
       bs <- byteSize(singleComponent)
-    } yield {
-      elements: IndexedSeq[Primitive[_]] =>
-        {
-          val builder = ByteString.newBuilder
-          builder.sizeHint(image.width * image.height * bs)
-          val it = elements.iterator
-          while (it.hasNext) {
-            writer(it.next(), builder)
-          }
-          ImageElement(builder.result())
+    } yield { elements: IndexedSeq[Primitive[_]] =>
+      {
+        val builder = ByteString.newBuilder
+        builder.sizeHint(image.width * image.height * bs)
+        val it = elements.iterator
+        while (it.hasNext) {
+          writer(it.next(), builder)
         }
+        ImageElement(builder.result())
+      }
     }
   }
 

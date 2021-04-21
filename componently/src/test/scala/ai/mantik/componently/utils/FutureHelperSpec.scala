@@ -1,9 +1,9 @@
 package ai.mantik.componently.utils
 
-import ai.mantik.testutils.{ AkkaSupport, TestBase }
+import ai.mantik.testutils.{AkkaSupport, TestBase}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, TimeoutException }
+import scala.concurrent.{Future, TimeoutException}
 
 class FutureHelperSpec extends TestBase with AkkaSupport {
 

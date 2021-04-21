@@ -1,7 +1,7 @@
 package ai.mantik.elements
 
 import ai.mantik.testutils.TestBase
-import io.circe.{ Json, parser }
+import io.circe.{Json, parser}
 import io.circe.syntax._
 
 class PipelineStepSpec extends TestBase {
@@ -23,11 +23,14 @@ class PipelineStepSpec extends TestBase {
     parsed shouldBe PipelineStep.AlgorithmStep(
       description = Some("What a nice algorithm"),
       algorithm = "foo:123",
-      metaVariables = Some(List(
-        PipelineStep.MetaVariableSetting(
-          "foo", Json.fromInt(123)
+      metaVariables = Some(
+        List(
+          PipelineStep.MetaVariableSetting(
+            "foo",
+            Json.fromInt(123)
+          )
         )
-      ))
+      )
     )
     parsed.asJson.as[PipelineStep].forceRight shouldBe parsed
   }
@@ -39,7 +42,8 @@ class PipelineStepSpec extends TestBase {
         |  "algorithm":"foo"
         |}
       """.stripMargin
-    val parsed = parser.parse(example)
+    val parsed = parser
+      .parse(example)
       .forceRight
       .as[PipelineStep]
       .forceRight

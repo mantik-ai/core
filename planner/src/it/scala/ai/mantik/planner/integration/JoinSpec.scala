@@ -28,13 +28,15 @@ class JoinSpec extends IntegrationTestBase {
 
   it should "do a simple left join" in {
     val result = DataSet.literal(sample1).join(DataSet.literal(sample2), Seq("x"), JoinType.Left).fetch.run()
-    result.sorted shouldBe TabularBundle.build(
-      TabularData(
-        "x" -> FundamentalType.Int32,
-        "y" -> FundamentalType.StringType,
-        "z" -> Nullable(FundamentalType.StringType)
+    result.sorted shouldBe TabularBundle
+      .build(
+        TabularData(
+          "x" -> FundamentalType.Int32,
+          "y" -> FundamentalType.StringType,
+          "z" -> Nullable(FundamentalType.StringType)
+        )
       )
-    ).row(1, "a", "Hello")
+      .row(1, "a", "Hello")
       .row(2, "b", "World")
       .row(3, "c", NullElement)
       .result
@@ -43,13 +45,15 @@ class JoinSpec extends IntegrationTestBase {
 
   it should "do a simple right join" in {
     val result = DataSet.literal(sample1).join(DataSet.literal(sample2), Seq("x"), JoinType.Right).fetch.run()
-    result.sorted shouldBe TabularBundle.build(
-      TabularData(
-        "y" -> Nullable(FundamentalType.StringType),
-        "x" -> FundamentalType.Int32,
-        "z" -> FundamentalType.StringType
+    result.sorted shouldBe TabularBundle
+      .build(
+        TabularData(
+          "y" -> Nullable(FundamentalType.StringType),
+          "x" -> FundamentalType.Int32,
+          "z" -> FundamentalType.StringType
+        )
       )
-    ).row("a", 1, "Hello")
+      .row("a", 1, "Hello")
       .row("b", 2, "World")
       .row(NullElement, 4, "!")
       .result
@@ -70,7 +74,9 @@ class JoinSpec extends IntegrationTestBase {
 
   it should "work in complexer queries" in {
     val result = DataSet.query(
-      "SELECT l.x, r.z FROM $0 AS l LEFT JOIN $1 AS r ON l.x = r.x", DataSet.literal(sample1), DataSet.literal(sample2)
+      "SELECT l.x, r.z FROM $0 AS l LEFT JOIN $1 AS r ON l.x = r.x",
+      DataSet.literal(sample1),
+      DataSet.literal(sample2)
     )
     result.forceDataTypeTabular() shouldBe TabularData(
       "x" -> FundamentalType.Int32,
@@ -78,9 +84,11 @@ class JoinSpec extends IntegrationTestBase {
     )
     val fetched = result.fetch.run()
 
-    fetched.sorted shouldBe TabularBundle.build(
-      result.forceDataTypeTabular()
-    ).row(1, "Hello")
+    fetched.sorted shouldBe TabularBundle
+      .build(
+        result.forceDataTypeTabular()
+      )
+      .row(1, "Hello")
       .row(2, "World")
       .row(3, NullElement)
       .result
@@ -89,16 +97,18 @@ class JoinSpec extends IntegrationTestBase {
   // Disabled as it takes time
   ignore should "work with some more elements" in {
     // Measurement, took 15sec (Go in Docker), Scala 2s
-    val CountLeft  = 700000
+    val CountLeft = 700000
     val CountRight = 500000
     val left = TabularBundle(
       TabularData(
         "id" -> FundamentalType.Int32,
         "name" -> FundamentalType.StringType
       ),
-      rows = (for (i <- 0 until CountLeft) yield TabularRow(
-        Primitive(i), Primitive(s"Name${i}")
-      )).toVector
+      rows = (for (i <- 0 until CountLeft)
+        yield TabularRow(
+          Primitive(i),
+          Primitive(s"Name${i}")
+        )).toVector
     )
     val right = TabularBundle(
       TabularData(
@@ -108,7 +118,8 @@ class JoinSpec extends IntegrationTestBase {
       rows = (for (i <- 0 until CountLeft) yield {
         val rightId = CountRight - i
         TabularRow(
-          Primitive(rightId), Primitive(s"Address${rightId}")
+          Primitive(rightId),
+          Primitive(s"Address${rightId}")
         )
       }).toVector
     )
@@ -117,7 +128,9 @@ class JoinSpec extends IntegrationTestBase {
     val rightDs = DataSet.literal(right)
     val statement = "SELECT l.id, l.name, r.address FROM $0 AS l LEFT JOIN $1 AS r ON l.id = r.id"
     val joined = DataSet.query(
-      statement, leftDs, rightDs
+      statement,
+      leftDs,
+      rightDs
     )
     val t0 = System.currentTimeMillis()
     val result = joined.fetch.run()

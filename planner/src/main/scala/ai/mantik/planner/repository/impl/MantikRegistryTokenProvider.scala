@@ -3,14 +3,14 @@ package ai.mantik.planner.repository.impl
 import java.time.Instant
 
 import ai.mantik.componently.utils.SecretReader
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.registry.api._
 import ai.mantik.planner.buildinfo.BuildInfo
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 /** Provides tokens for talking to the mantik registry */
 class MantikRegistryTokenProvider(
@@ -18,9 +18,9 @@ class MantikRegistryTokenProvider(
     user: String,
     password: SecretReader
 )(
-    implicit
-    akkaRuntime: AkkaRuntime
-) extends ComponentBase with FailFastCirceSupport {
+    implicit akkaRuntime: AkkaRuntime
+) extends ComponentBase
+    with FailFastCirceSupport {
 
   // Used by ensureToken
   private object tokenLock
@@ -42,7 +42,7 @@ class MantikRegistryTokenProvider(
           // Case 2: Is there a process looking for a token?
           tokenInProgress match {
             case Some(process) => return process
-            case None =>
+            case None          =>
               // ensure a new process
               val newProcess = updateTokenExecute()
               tokenInProgress = Some(newProcess)
@@ -80,13 +80,14 @@ class MantikRegistryTokenProvider(
         }
     }
 
-    loginResponse.map(_.token).recoverWith {
-      case exception => Future.failed(ErrorCodes.RemoteRegistryCouldNotGetToken.toException("Could not get token", exception))
+    loginResponse.map(_.token).recoverWith { case exception =>
+      Future.failed(ErrorCodes.RemoteRegistryCouldNotGetToken.toException("Could not get token", exception))
     }
   }
 }
 
 object MantikRegistryTokenProvider {
+
   /** Request identification which is sent to the remote registry. */
   val Requester = s"MantikEngine ${BuildInfo.gitVersion}"
 }

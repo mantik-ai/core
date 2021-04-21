@@ -1,6 +1,6 @@
 package ai.mantik.ds.helper.akka
 
-import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TestBase }
+import ai.mantik.ds.testutil.{GlobalAkkaSupport, TestBase}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 

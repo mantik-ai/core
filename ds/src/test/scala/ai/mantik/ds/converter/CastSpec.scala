@@ -1,7 +1,18 @@
 package ai.mantik.ds.converter
 
 import ai.mantik.ds
-import ai.mantik.ds.element.{ Bundle, ImageElement, ArrayElement, StructElement, NullElement, Primitive, SingleElementBundle, SomeElement, TensorElement, ValueEncoder }
+import ai.mantik.ds.element.{
+  Bundle,
+  ImageElement,
+  ArrayElement,
+  StructElement,
+  NullElement,
+  Primitive,
+  SingleElementBundle,
+  SomeElement,
+  TensorElement,
+  ValueEncoder
+}
 import ai.mantik.ds._
 import ai.mantik.testutils.TestBase
 import akka.util.ByteString
@@ -96,7 +107,9 @@ class CastSpec extends TestBase {
     c.canFail shouldBe false
     c.op(ValueEncoder.wrap(3)) shouldBe TensorElement(IndexedSeq(3L))
 
-    Cast.findCast(FundamentalType.Int32, Tensor(FundamentalType.Int64, List(2, 3))).isLeft shouldBe true // invalid shape
+    Cast
+      .findCast(FundamentalType.Int32, Tensor(FundamentalType.Int64, List(2, 3)))
+      .isLeft shouldBe true // invalid shape
   }
 
   it should "cast tensors to primitives" in {
@@ -107,7 +120,9 @@ class CastSpec extends TestBase {
     c.canFail shouldBe false
     c.op(TensorElement(IndexedSeq(3L))) shouldBe ValueEncoder.wrap(3)
 
-    Cast.findCast(Tensor(FundamentalType.Int64, List(2, 3)), FundamentalType.Int32).isLeft shouldBe true // invalid shape
+    Cast
+      .findCast(Tensor(FundamentalType.Int64, List(2, 3)), FundamentalType.Int32)
+      .isLeft shouldBe true // invalid shape
   }
 
   it should "cast images to tensors" in {
@@ -130,10 +145,13 @@ class CastSpec extends TestBase {
   }
 
   it should "cast tensors to flat tensors" in {
-    val c = Cast.findCast(
-      Tensor(FundamentalType.Int32, List(3, 2)),
-      Tensor(FundamentalType.Int32, List(6))
-    ).right.getOrElse(fail())
+    val c = Cast
+      .findCast(
+        Tensor(FundamentalType.Int32, List(3, 2)),
+        Tensor(FundamentalType.Int32, List(6))
+      )
+      .right
+      .getOrElse(fail())
     c.canFail shouldBe false
     c.loosing shouldBe false
     c.from shouldBe Tensor(FundamentalType.Int32, List(3, 2))
@@ -143,10 +161,13 @@ class CastSpec extends TestBase {
   }
 
   it should "cast tensor sub types" in {
-    val c = Cast.findCast(
-      Tensor(FundamentalType.Int32, List(3, 2)),
-      Tensor(FundamentalType.Int8, List(2, 3))
-    ).right.getOrElse(fail())
+    val c = Cast
+      .findCast(
+        Tensor(FundamentalType.Int32, List(3, 2)),
+        Tensor(FundamentalType.Int8, List(2, 3))
+      )
+      .right
+      .getOrElse(fail())
     c.canFail shouldBe false
     c.loosing shouldBe true
     c.from shouldBe Tensor(FundamentalType.Int32, List(3, 2))
@@ -157,14 +178,20 @@ class CastSpec extends TestBase {
   it should "cast image sub types" in {
     val from = TypeSamples.image._1
     val to = Image(
-      2, 3, ListMap(ImageChannel.Red -> ImageComponent(FundamentalType.Int32))
+      2,
+      3,
+      ListMap(ImageChannel.Red -> ImageComponent(FundamentalType.Int32))
     )
     val invalid1 = Image(
-      3, 3, ListMap(ImageChannel.Black -> ImageComponent(FundamentalType.Uint8))
+      3,
+      3,
+      ListMap(ImageChannel.Black -> ImageComponent(FundamentalType.Uint8))
     ) // wrong size
 
     val invalid2 = Image(
-      2, 3, ListMap(
+      2,
+      3,
+      ListMap(
         ImageChannel.Black -> ImageComponent(FundamentalType.Uint8),
         ImageChannel.Blue -> ImageComponent(FundamentalType.Uint8)
       )
@@ -179,20 +206,17 @@ class CastSpec extends TestBase {
     c.loosing shouldBe false
     val casted = c.op(TypeSamples.image._2).asInstanceOf[ImageElement]
     casted.bytes shouldBe ByteString(
-      0, 0, 0, 1,
-      0, 0, 0, 2,
-      0, 0, 0, 3,
-      0, 0, 0, 4,
-      0, 0, 0, 5,
-      0, 0, 0, 6
+      0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0, 6
     )
   }
 
   it should "work for nulls" in {
-    val c = Cast.findCast(
-      FundamentalType.Int32,
-      Nullable(FundamentalType.Int32)
-    ).forceRight
+    val c = Cast
+      .findCast(
+        FundamentalType.Int32,
+        Nullable(FundamentalType.Int32)
+      )
+      .forceRight
 
     c.loosing shouldBe false
     c.canFail shouldBe false
@@ -200,10 +224,12 @@ class CastSpec extends TestBase {
 
     c.convert(Primitive(100)) shouldBe SomeElement(Primitive(100))
 
-    val c2 = Cast.findCast(
-      Nullable(FundamentalType.Int32),
-      FundamentalType.Int32
-    ).forceRight
+    val c2 = Cast
+      .findCast(
+        Nullable(FundamentalType.Int32),
+        FundamentalType.Int32
+      )
+      .forceRight
 
     c2.canFail shouldBe true
     c2.loosing shouldBe false
@@ -215,35 +241,42 @@ class CastSpec extends TestBase {
     }
 
     // Special case, needed for some SQL Operations
-    val c3 = Cast.findCast(
-      Nullable(FundamentalType.VoidType),
-      Nullable(FundamentalType.Float32)
-    ).forceRight
+    val c3 = Cast
+      .findCast(
+        Nullable(FundamentalType.VoidType),
+        Nullable(FundamentalType.Float32)
+      )
+      .forceRight
     c3.canFail shouldBe false
     c3.loosing shouldBe true
     c3.isSafe shouldBe false
     c3.convert(NullElement) shouldBe NullElement
     c3.convert(Primitive.unit) shouldBe NullElement
 
-    val c4 = Cast.findCast(
-      FundamentalType.Int8,
-      Nullable(FundamentalType.Int32)
-    ).forceRight
+    val c4 = Cast
+      .findCast(
+        FundamentalType.Int8,
+        Nullable(FundamentalType.Int32)
+      )
+      .forceRight
     c4.canFail shouldBe false
     c4.loosing shouldBe false
     c4.convert(Primitive(8: Byte)) shouldBe SomeElement(Primitive(8))
   }
 
   it should "work for arrays" in {
-    val c = Cast.findCast(
-      ArrayT(FundamentalType.Int64),
-      ArrayT(FundamentalType.Int32)
-    ).forceRight
+    val c = Cast
+      .findCast(
+        ArrayT(FundamentalType.Int64),
+        ArrayT(FundamentalType.Int32)
+      )
+      .forceRight
     c.canFail shouldBe false
     c.loosing shouldBe true
     c.isSafe shouldBe false
     c.convert(ArrayElement(Primitive(100L), Primitive(200L))) shouldBe ArrayElement(
-      Primitive(100), Primitive(200)
+      Primitive(100),
+      Primitive(200)
     )
   }
 
@@ -257,35 +290,43 @@ class CastSpec extends TestBase {
       "b" -> FundamentalType.Float32
     )
 
-    val c = Cast.findCast(
-      a, b
-    ).forceRight
+    val c = Cast
+      .findCast(
+        a,
+        b
+      )
+      .forceRight
 
     c.canFail shouldBe true
     c.loosing shouldBe false
 
     c.convert(StructElement(Primitive(100), Primitive("3.14"))) shouldBe StructElement(
-      Primitive(100L), Primitive(3.14f)
+      Primitive(100L),
+      Primitive(3.14f)
     )
   }
 
   it should "be usable to pack and unpack" in {
-    val c = Cast.findCast(
-      FundamentalType.Int32,
-      Struct(
-        "a" -> FundamentalType.Int64
+    val c = Cast
+      .findCast(
+        FundamentalType.Int32,
+        Struct(
+          "a" -> FundamentalType.Int64
+        )
       )
-    ).forceRight
+      .forceRight
     c.canFail shouldBe false
     c.loosing shouldBe false
     c.convert(Primitive(100)) shouldBe StructElement(Primitive(100L))
 
-    val c2 = Cast.findCast(
-      Struct(
-        "a" -> FundamentalType.Int32
-      ),
-      FundamentalType.StringType
-    ).forceRight
+    val c2 = Cast
+      .findCast(
+        Struct(
+          "a" -> FundamentalType.Int32
+        ),
+        FundamentalType.StringType
+      )
+      .forceRight
     c2.canFail shouldBe false
     c2.loosing shouldBe false
     c2.convert(StructElement(Primitive(100))) shouldBe Primitive("100")

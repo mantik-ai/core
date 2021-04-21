@@ -1,22 +1,23 @@
 package ai.mantik.planner.repository
 
-import java.net.{ Inet4Address, InetAddress, NetworkInterface }
+import java.net.{Inet4Address, InetAddress, NetworkInterface}
 
 import ai.mantik.componently.utils.HostPort
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.MantikException
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ HttpEntity, MediaType, MediaTypes }
+import akka.http.scaladsl.model.{HttpEntity, MediaType, MediaTypes}
 import akka.http.scaladsl.server.Directives._
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 /** HTTP Server for FileRepository, to make it accessible from Executor. */
 @Singleton
-private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileRepository)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
+private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileRepository)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase {
   val HelloMessage = "This is the Mantik FileRepositoryServer"
 
   private val subConfig = config.getConfig("mantik.fileRepositoryServer")
@@ -46,7 +47,7 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
             req.entity.dataBytes.runWith(sink)
           }
           onComplete(result) {
-            case Success(_) => complete(200, "")
+            case Success(_)                                                           => complete(200, "")
             case Failure(e: MantikException) if e.code == FileRepository.NotFoundCode => complete(404, "File not found")
             case Failure(other) =>
               logger.error("Error on adding file", other)
@@ -71,7 +72,8 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
               complete(500, "Internal server error")
           }
         }
-    }, path("") {
+    },
+    path("") {
       get {
         complete("File Repository")
       }

@@ -1,10 +1,10 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.FundamentalType.Int32
-import ai.mantik.ds.element.{ Bundle, Primitive, SingleElement }
+import ai.mantik.ds.element.{Bundle, Primitive, SingleElement}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.planner.graph.{ Graph, Link, Node, NodePort, NodePortRef }
-import ai.mantik.planner.{ PlanFileReference, PlanNodeService, PlanOp }
+import ai.mantik.planner.graph.{Graph, Link, Node, NodePort, NodePortRef}
+import ai.mantik.planner.{PlanFileReference, PlanNodeService, PlanOp}
 import ai.mantik.testutils.TestBase
 
 class ResourcePlanSpec extends TestBase {

@@ -7,11 +7,18 @@ import ai.mantik.ds.FundamentalType.StringType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikHeader, NamedMantikId }
+import ai.mantik.elements.{
+  AlgorithmDefinition,
+  DataSetDefinition,
+  ItemId,
+  MantikDefinition,
+  MantikHeader,
+  NamedMantikId
+}
 import ai.mantik.planner.impl.TestItems
 import ai.mantik.planner.repository
-import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository, SubDeploymentInfo }
-import ai.mantik.planner.util.{ ErrorCodeTestUtils, TestBaseWithAkkaRuntime }
+import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact, Repository, SubDeploymentInfo}
+import ai.mantik.planner.util.{ErrorCodeTestUtils, TestBaseWithAkkaRuntime}
 import ai.mantik.testutils.FakeClock
 
 /** Common tests for repositories. */
@@ -27,18 +34,24 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
   }
 
   val artifact1 = repository.MantikArtifact(
-    mantikHeader = MantikHeader.pure(AlgorithmDefinition(
-      bridge = "stack1",
-      `type` = FunctionType(
-        input = FundamentalType.Int32,
-        output = FundamentalType.Int64
+    mantikHeader = MantikHeader
+      .pure(
+        AlgorithmDefinition(
+          bridge = "stack1",
+          `type` = FunctionType(
+            input = FundamentalType.Int32,
+            output = FundamentalType.Int64
+          )
+        )
       )
-    )).toJson,
+      .toJson,
     fileId = Some("1234"),
-    namedId = Some(NamedMantikId(
-      name = "func1",
-      version = "version1"
-    )),
+    namedId = Some(
+      NamedMantikId(
+        name = "func1",
+        version = "version1"
+      )
+    ),
     itemId = ItemId.generate()
   )
 
@@ -66,32 +79,42 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
   )
 
   val artifact1DifferentVersion = artifact1.copy(
-    namedId = Some(artifact1.namedId.get.copy(
-      version = "version2"
-    )),
+    namedId = Some(
+      artifact1.namedId.get.copy(
+        version = "version2"
+      )
+    ),
     itemId = ItemId.generate()
   )
 
   val artifact1DifferentName = artifact1.copy(
-    namedId = Some(artifact1.namedId.get.copy(
-      name = "other_name"
-    )),
+    namedId = Some(
+      artifact1.namedId.get.copy(
+        name = "other_name"
+      )
+    ),
     itemId = ItemId.generate()
   )
 
   val artifact2 = MantikArtifact(
-    mantikHeader = MantikHeader.pure(elements.AlgorithmDefinition(
-      bridge = "stack2",
-      `type` = FunctionType(
-        input = FundamentalType.Int32,
-        output = FundamentalType.Int64
+    mantikHeader = MantikHeader
+      .pure(
+        elements.AlgorithmDefinition(
+          bridge = "stack2",
+          `type` = FunctionType(
+            input = FundamentalType.Int32,
+            output = FundamentalType.Int64
+          )
+        )
       )
-    )).toJson,
+      .toJson,
     fileId = None,
-    namedId = Some(NamedMantikId(
-      name = "func2",
-      version = "version2"
-    )),
+    namedId = Some(
+      NamedMantikId(
+        name = "func2",
+        version = "version2"
+      )
+    ),
     itemId = ItemId.generate()
   )
 
@@ -211,11 +234,15 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
     withRepo { repo =>
       await(repo.store(artifact1))
       val updated = artifact1.copy(
-        mantikHeader = MantikHeader.pure(
-          artifact1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition].copy(
-            bridge = "other_stack"
+        mantikHeader = MantikHeader
+          .pure(
+            artifact1.parsedMantikHeader.definition
+              .asInstanceOf[AlgorithmDefinition]
+              .copy(
+                bridge = "other_stack"
+              )
           )
-        ).toJson,
+          .toJson,
         itemId = ItemId.generate()
       )
       await(repo.store(updated))
@@ -227,11 +254,15 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
     withRepo { repo =>
       await(repo.store(artifact1))
       val updated = artifact1.copy(
-        mantikHeader = MantikHeader.pure(
-          artifact1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition].copy(
-            bridge = "other_stack"
+        mantikHeader = MantikHeader
+          .pure(
+            artifact1.parsedMantikHeader.definition
+              .asInstanceOf[AlgorithmDefinition]
+              .copy(
+                bridge = "other_stack"
+              )
           )
-        ).toJson
+          .toJson
       )
       awaitErrorCode(ErrorCodes.MantikItemConflict) {
         repo.store(updated)
@@ -351,25 +382,33 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
       await(repo.store(artifact3))
 
       val artifact4 = artifact1.copy(
-        mantikHeader = MantikHeader.pure(
-          DataSetDefinition(bridge = "natural", `type` = StringType)
-        ).toJson,
+        mantikHeader = MantikHeader
+          .pure(
+            DataSetDefinition(bridge = "natural", `type` = StringType)
+          )
+          .toJson,
         itemId = ItemId.generate(),
         namedId = Some("dataset1")
       )
       await(repo.store(artifact4))
 
       await(repo.list()) should contain theSameElementsAs Seq(
-        artifact1, artifact3, artifact4
+        artifact1,
+        artifact3,
+        artifact4
       )
       await(repo.list(alsoAnonymous = true)) should contain theSameElementsAs Seq(
-        artifact1, artifact2, artifact3, artifact4
+        artifact1,
+        artifact2,
+        artifact3,
+        artifact4
       )
       await(repo.list(deployedOnly = true)) should contain theSameElementsAs Seq(
         artifact3
       )
       await(repo.list(kindFilter = Some(MantikDefinition.AlgorithmKind))) should contain theSameElementsAs Seq(
-        artifact1, artifact3
+        artifact1,
+        artifact3
       )
       await(repo.list(kindFilter = Some(MantikDefinition.DataSetKind))) should contain theSameElementsAs Seq(
         artifact4

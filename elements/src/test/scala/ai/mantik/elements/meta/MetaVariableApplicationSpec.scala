@@ -2,7 +2,7 @@ package ai.mantik.elements.meta
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.testutils.TestBase
-import io.circe.{ Json, parser }
+import io.circe.{Json, parser}
 
 class MetaVariableApplicationSpec extends TestBase {
 
@@ -23,33 +23,39 @@ class MetaVariableApplicationSpec extends TestBase {
   }
 
   it should "work for a complicated use case" in {
-    val json1 = parser.parse(
-      """
-        |{
-        | "a": null,
-        | "b": 1,
-        | "c": false,
-        | "d": {
-        |   "e": "${foo}",
-        |   "h": ["${bar}"]
-        | }
-        |}
+    val json1 = parser
+      .parse(
+        """
+          |{
+          | "a": null,
+          | "b": 1,
+          | "c": false,
+          | "d": {
+          |   "e": "${foo}",
+          |   "h": ["${bar}"]
+          | }
+          |}
       """.stripMargin
-    ).right.getOrElse(fail)
+      )
+      .right
+      .getOrElse(fail)
 
-    val expected = parser.parse(
-      """
-        |{
-        | "a": null,
-        | "b": 1,
-        | "c": false,
-        | "d": {
-        |   "e": 100,
-        |   "h": ["Hi"]
-        | }
-        |}
+    val expected = parser
+      .parse(
+        """
+          |{
+          | "a": null,
+          | "b": 1,
+          | "c": false,
+          | "d": {
+          |   "e": 100,
+          |   "h": ["Hi"]
+          | }
+          |}
       """.stripMargin
-    ).right.getOrElse(fail)
+      )
+      .right
+      .getOrElse(fail)
 
     transformation.apply(json1) shouldBe Right(expected)
   }

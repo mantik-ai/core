@@ -15,8 +15,9 @@ trait BinaryOperationParser {
   def BaseExpression: Rule1[ExpressionNode]
 
   def Prio6BinaryOperation: Rule1[ExpressionNode] = rule {
-    BaseExpression ~ zeroOrMore(SquareBracketExpression) ~> { (a: ExpressionNode, brackets: immutable.Seq[ExpressionNode]) =>
-      makeBinaryOperationNode(a, brackets.map(x => ("[]", x)))
+    BaseExpression ~ zeroOrMore(SquareBracketExpression) ~> {
+      (a: ExpressionNode, brackets: immutable.Seq[ExpressionNode]) =>
+        makeBinaryOperationNode(a, brackets.map(x => ("[]", x)))
     }
   }
 
@@ -56,8 +57,8 @@ trait BinaryOperationParser {
       (ignoreCase("is") ~ Whitespace ~ ignoreCase("not")) |
         (ignoreCase("is") ~ Whitespace)
     ) ~ Whitespace ~> { s: String =>
-        s.trim.toLowerCase.filterNot(_.isWhitespace)
-      }
+      s.trim.toLowerCase.filterNot(_.isWhitespace)
+    }
   }
 
   def Prio2BinaryOperation: Rule1[ExpressionNode] = rule {
@@ -85,9 +86,8 @@ trait BinaryOperationParser {
 
   val makeBinaryOperationNode: (ExpressionNode, immutable.Seq[(String, ExpressionNode)]) => ExpressionNode = { (b, e) =>
     // Left-Associative
-    e.foldLeft(b) {
-      case (current, (op, next)) =>
-        BinaryOperationNode(op.trim.toLowerCase, current, next)
+    e.foldLeft(b) { case (current, (op, next)) =>
+      BinaryOperationNode(op.trim.toLowerCase, current, next)
     }
   }
 

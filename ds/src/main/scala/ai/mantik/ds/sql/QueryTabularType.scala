@@ -3,24 +3,28 @@ package ai.mantik.ds.sql
 import java.util.Locale
 
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.{ DataType, Nullable, TabularData }
+import ai.mantik.ds.{DataType, Nullable, TabularData}
 
-import scala.collection.{ BitSet, mutable }
+import scala.collection.{BitSet, mutable}
 
 /**
- * Resulting type of a query.
- * Similar to [[ai.mantik.ds.TabularData]] but with support for alias and duplicates
- */
+  * Resulting type of a query.
+  * Similar to [[ai.mantik.ds.TabularData]] but with support for alias and duplicates
+  */
 case class QueryTabularType(
     columns: Vector[QueryColumn]
 ) {
 
   /**
-   * Lookup a column.
-   * @param name name may use column alias with dot.
-   * @return index and column instance.
-   */
-  def lookupColumn(name: String, caseSensitive: Boolean = false, fromLeft: Boolean = true): Either[String, (Int, QueryColumn)] = {
+    * Lookup a column.
+    * @param name name may use column alias with dot.
+    * @return index and column instance.
+    */
+  def lookupColumn(
+      name: String,
+      caseSensitive: Boolean = false,
+      fromLeft: Boolean = true
+  ): Either[String, (Int, QueryColumn)] = {
     val (alias, plainName) = name.indexOf('.') match {
       case -1 => (None, name)
       case n  => (Some(name.take(n)), name.drop(n + 1))
@@ -91,7 +95,8 @@ case class QueryTabularType(
         (0 until MaxTrials).map(column.name + _).find { x =>
           !existingKeys.contains(key(column.copy(name = x)))
         } match {
-          case None     => throw new FeatureNotSupported(s"Could not find a shadow name for ${column.name}, tried ${MaxTrials}")
+          case None =>
+            throw new FeatureNotSupported(s"Could not find a shadow name for ${column.name}, tried ${MaxTrials}")
           case Some(ok) => ok
         }
       } else {
@@ -137,23 +142,22 @@ case class QueryTabularType(
 }
 
 object QueryTabularType {
+
   /** Initialize from TabularData */
   def fromTabularData(tabularData: TabularData, alias: Option[String] = None): QueryTabularType = {
-    val columns = tabularData.columns.map {
-      case (name, dataType) =>
-        QueryColumn(name = name, alias = alias, dataType = dataType)
+    val columns = tabularData.columns.map { case (name, dataType) =>
+      QueryColumn(name = name, alias = alias, dataType = dataType)
     }.toVector
     QueryTabularType(columns)
   }
 
   /**
-   * Convenience Constructor from a list of columns.
-   * the alias is automatically deduced if there is a dot in the column name.
-   */
+    * Convenience Constructor from a list of columns.
+    * the alias is automatically deduced if there is a dot in the column name.
+    */
   def apply(columns: (String, DataType)*): QueryTabularType = {
-    val transformed = columns.map {
-      case (fullName, dataType) =>
-        QueryColumn(fullName, dataType)
+    val transformed = columns.map { case (fullName, dataType) =>
+      QueryColumn(fullName, dataType)
     }.toVector
     QueryTabularType(transformed)
   }

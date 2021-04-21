@@ -2,7 +2,7 @@ package ai.mantik.planner.repository
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.componently.di.ConfigurableDependencies
-import ai.mantik.planner.repository.impl.{ LocalFileRepository, LocalRepository, TempFileRepository, TempRepository }
+import ai.mantik.planner.repository.impl.{LocalFileRepository, LocalRepository, TempFileRepository, TempRepository}
 
 class RepositoryModule(implicit akkaRuntime: AkkaRuntime) extends ConfigurableDependencies {
 

@@ -1,7 +1,7 @@
 package ai.mantik.ds
 
 import ai.mantik.ds.FundamentalType._
-import ai.mantik.ds.element.{ Element, ImageElement, ArrayElement, StructElement, Primitive }
+import ai.mantik.ds.element.{Element, ImageElement, ArrayElement, StructElement, Primitive}
 import akka.util.ByteString
 
 import scala.collection.immutable.ListMap
@@ -50,6 +50,6 @@ object TypeSamples {
       "x" -> FundamentalType.Int32,
       "y" -> FundamentalType.StringType
     ),
-      StructElement(IndexedSeq(Primitive(3), Primitive("World")))
+    StructElement(IndexedSeq(Primitive(3), Primitive("World")))
   )
 }

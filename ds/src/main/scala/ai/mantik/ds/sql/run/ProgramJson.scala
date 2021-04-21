@@ -3,7 +3,7 @@ package ai.mantik.ds.sql.run
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.SingleElementBundle
 import io.circe.Decoder.Result
-import io.circe.{ ArrayEncoder, Decoder, DecodingFailure, HCursor, Json, JsonObject, ObjectEncoder }
+import io.circe.{ArrayEncoder, Decoder, DecodingFailure, HCursor, Json, JsonObject, ObjectEncoder}
 import io.circe.syntax._
 import io.circe.generic.semiauto
 import scala.annotation.tailrec
@@ -30,6 +30,7 @@ object ProgramJson {
 
   /** Encoder for Programs. */
   implicit val programEncoder: ObjectEncoder[Program] = semiauto.deriveEncoder[Program]
+
   /** Decoder for Programs */
   implicit val programDecoder: Decoder[Program] = semiauto.deriveDecoder[Program]
 

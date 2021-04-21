@@ -1,23 +1,36 @@
 package ai.mantik.planner
 
-import ai.mantik.ds.element.{ Bundle, SingleElementBundle, ValueEncoder }
+import ai.mantik.ds.element.{Bundle, SingleElementBundle, ValueEncoder}
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{ AlgorithmDefinition, BridgeDefinition, DataSetDefinition, ItemId, MantikDefinition, MantikDefinitionWithBridge, MantikDefinitionWithoutBridge, MantikHeader, MantikId, NamedMantikId, PipelineDefinition, TrainableAlgorithmDefinition }
-import ai.mantik.planner.pipelines.{ PipelineBuilder, PipelineResolver }
+import ai.mantik.elements.{
+  AlgorithmDefinition,
+  BridgeDefinition,
+  DataSetDefinition,
+  ItemId,
+  MantikDefinition,
+  MantikDefinitionWithBridge,
+  MantikDefinitionWithoutBridge,
+  MantikHeader,
+  MantikId,
+  NamedMantikId,
+  PipelineDefinition,
+  TrainableAlgorithmDefinition
+}
+import ai.mantik.planner.pipelines.{PipelineBuilder, PipelineResolver}
 import ai.mantik.elements.meta.MetaVariableException
-import ai.mantik.planner.impl.{ MantikItemCodec, MantikItemStateManager }
-import ai.mantik.planner.repository.{ Bridge, ContentTypes, MantikArtifact }
+import ai.mantik.planner.impl.{MantikItemCodec, MantikItemStateManager}
+import ai.mantik.planner.repository.{Bridge, ContentTypes, MantikArtifact}
 import ai.mantik.planner.utils.AtomicReference
-import io.circe.{ Decoder, Encoder }
+import io.circe.{Decoder, Encoder}
 
 import scala.reflect.ClassTag
 
 /**
- * A single Item inside the Planner API.
- * Can represent data or algorithms.
- * Can be serialized to JSON.
- */
+  * A single Item inside the Planner API.
+  * Can represent data or algorithms.
+  * Can be serialized to JSON.
+  */
 trait MantikItem {
   type DefinitionType <: MantikDefinition
   type OwnType <: MantikItem
@@ -26,20 +39,23 @@ trait MantikItem {
 
   /** Returns where the Item comes from. */
   private[mantik] def source: Source = core.source
+
   /** Returns where the item payload comes from. */
   private[mantik] def payloadSource: PayloadSource = source.payload
+
   /** Returns where the mantikHeader / item comes from. */
   private[mantik] def definitionSource: DefinitionSource = source.definition
+
   /** Returns the item's MantikHeader with definition. */
   private[mantik] def mantikHeader: MantikHeader[DefinitionType] = core.mantikHeader
 
   /**
-   * Tag the item, giving it an additional name.
-   *
-   * Note: this will only have an effect, if the Item is saved or pushed.
-   *
-   * @return the tagged item.
-   */
+    * Tag the item, giving it an additional name.
+    *
+    * Note: this will only have an effect, if the Item is saved or pushed.
+    *
+    * @return the tagged item.
+    */
   def tag(name: NamedMantikId): OwnType = withCore(
     core.copy(
       source = source.copy(
@@ -49,9 +65,9 @@ trait MantikItem {
   )
 
   /**
-   * Explicitly set the item Id.
-   * Note: this may be dangerous (itemIds are referenced from MantikState etc.)
-   */
+    * Explicitly set the item Id.
+    * Note: this may be dangerous (itemIds are referenced from MantikState etc.)
+    */
   private[mantik] def withItemId(itemId: ItemId): OwnType = withCore(
     core.copy(itemId = itemId)
   )
@@ -63,32 +79,32 @@ trait MantikItem {
   def push(): Action.PushAction = Action.PushAction(this)
 
   /**
-   * Returns the [[ItemId]] of the item.
-   */
+    * Returns the [[ItemId]] of the item.
+    */
   def itemId: ItemId = core.itemId
 
   /**
-   * Returns the mantik id.
-   * (Note: if it was stored after generating, it may not reflect the name)
-   */
+    * Returns the mantik id.
+    * (Note: if it was stored after generating, it may not reflect the name)
+    */
   def mantikId: MantikId = source.definition.name.getOrElse(itemId)
 
   /**
-   * Update Meta Variables.
-   *
-   * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]])
-   */
+    * Update Meta Variables.
+    *
+    * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]])
+    */
   def withMetaValues(values: (String, SingleElementBundle)*): OwnType = {
     val updatedMantikHeader = mantikHeader.withMetaValues(values: _*)
     withMantikHeader(updatedMantikHeader)
   }
 
   /**
-   * Convenience function to udpate a single meta value.
-   * Types are matched automatically if possible
-   *
-   * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]]
-   */
+    * Convenience function to udpate a single meta value.
+    * Types are matched automatically if possible
+    *
+    * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]]
+    */
   def withMetaValue[T: ValueEncoder](name: String, value: T): OwnType = {
     withMetaValues(name -> Bundle.fundamental(value))
   }
@@ -126,7 +142,11 @@ case class MantikItemCore[T <: MantikDefinition](
 )
 
 object MantikItemCore {
-  def apply[T <: MantikDefinitionWithBridge](source: Source, mantikHeader: MantikHeader[T], bridge: Bridge): MantikItemCore[T] = {
+  def apply[T <: MantikDefinitionWithBridge](
+      source: Source,
+      mantikHeader: MantikHeader[T],
+      bridge: Bridge
+  ): MantikItemCore[T] = {
     MantikItemCore(source, mantikHeader, Some(bridge), generateItemId(source))
   }
 
@@ -170,7 +190,9 @@ trait ApplicableMantikItem extends MantikItem {
 
   /** Deploy the item. */
   def deploy(ingressName: Option[String] = None, nameHint: Option[String] = None): Action.Deploy = Action.Deploy(
-    this, nameHint = nameHint, ingressName = ingressName
+    this,
+    nameHint = nameHint,
+    ingressName = ingressName
   )
 }
 
@@ -181,18 +203,20 @@ object MantikItem {
   implicit val decoder: Decoder[MantikItem] = MantikItemCodec
 
   /**
-   * Convert a (loaded) [[MantikArtifact]] to a [[MantikItem]].
-   * @param defaultItemLookup if true, default items are favorized.
-   */
+    * Convert a (loaded) [[MantikArtifact]] to a [[MantikItem]].
+    * @param defaultItemLookup if true, default items are favorized.
+    */
   private[mantik] def fromMantikArtifact(
-    artifact: MantikArtifact,
-    mantikItemStateManager: MantikItemStateManager,
-    hull: Seq[MantikArtifact] = Seq.empty,
-    defaultItemLookup: Boolean = true
+      artifact: MantikArtifact,
+      mantikItemStateManager: MantikItemStateManager,
+      hull: Seq[MantikArtifact] = Seq.empty,
+      defaultItemLookup: Boolean = true
   ): MantikItem = {
-    val payloadSource = artifact.fileId.map { fileId =>
-      PayloadSource.Loaded(fileId, ContentTypes.ZipFileContentType)
-    }.getOrElse(PayloadSource.Empty)
+    val payloadSource = artifact.fileId
+      .map { fileId =>
+        PayloadSource.Loaded(fileId, ContentTypes.ZipFileContentType)
+      }
+      .getOrElse(PayloadSource.Empty)
 
     val source = Source(
       DefinitionSource.Loaded(artifact.namedId, artifact.itemId),
@@ -219,8 +243,10 @@ object MantikItem {
       case _: DataSetDefinition   => DataSet(forceExtract)
       case _: TrainableAlgorithmDefinition =>
         val extracted = forceExtract[TrainableAlgorithmDefinition]
-        val trainedBridge = extracted.mantikHeader.definition.trainedBridge.map(forceBridge(_, MantikDefinition.AlgorithmKind))
-          .orElse(bridge).getOrElse {
+        val trainedBridge = extracted.mantikHeader.definition.trainedBridge
+          .map(forceBridge(_, MantikDefinition.AlgorithmKind))
+          .orElse(bridge)
+          .getOrElse {
             ErrorCodes.MantikItemInvalidBridge.throwIt("Missing bridge for trainable algorithm definition")
           }
         TrainableAlgorithm(forceExtract, trainedBridge)
@@ -229,21 +255,28 @@ object MantikItem {
           val subHull = hull.filter(_.itemId != item.itemId)
           item.mantikId -> fromMantikArtifact(item, mantikItemStateManager, subHull)
         }.toMap
-        PipelineBuilder.buildOrFailFromMantikHeader(source.definition, forceExtract[PipelineDefinition].mantikHeader, referenced)
+        PipelineBuilder.buildOrFailFromMantikHeader(
+          source.definition,
+          forceExtract[PipelineDefinition].mantikHeader,
+          referenced
+        )
       case _: BridgeDefinition =>
         Bridge(forceExtract)
     }
 
     artifact.deploymentInfo.foreach { deploymentInfo =>
-      mantikItemStateManager.upsert(item, _.copy(
-        deployment = Some(
-          DeploymentState(
-            name = deploymentInfo.name,
-            internalUrl = deploymentInfo.internalUrl,
-            externalUrl = deploymentInfo.externalUrl
+      mantikItemStateManager.upsert(
+        item,
+        _.copy(
+          deployment = Some(
+            DeploymentState(
+              name = deploymentInfo.name,
+              internalUrl = deploymentInfo.internalUrl,
+              externalUrl = deploymentInfo.externalUrl
+            )
           )
         )
-      ))
+      )
     }
 
     item

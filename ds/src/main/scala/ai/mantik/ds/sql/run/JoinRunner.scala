@@ -1,11 +1,11 @@
 package ai.mantik.ds.sql.run
 
-import ai.mantik.ds.element.{ Element, NullElement, Primitive, TabularRow }
+import ai.mantik.ds.element.{Element, NullElement, Primitive, TabularRow}
 import ai.mantik.ds.sql.JoinType
 import ai.mantik.ds.sql.run.SingleTableGeneratorProgramRunner.RowIterator
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
-import com.google.common.collect.{ HashMultimap, Multimap }
+import scala.concurrent.{Await, ExecutionContext, Future}
+import com.google.common.collect.{HashMultimap, Multimap}
 
 import scala.concurrent.duration.Duration
 import scala.collection.JavaConverters._
@@ -40,10 +40,10 @@ class JoinRunner(joinProgram: JoinProgram) {
   }
 
   private def executeJoin(
-    leftGrouped: GroupedData,
-    rightGrouped: GroupedData,
-    isLeftLike: Boolean,
-    isRightLike: Boolean
+      leftGrouped: GroupedData,
+      rightGrouped: GroupedData,
+      isLeftLike: Boolean,
+      isRightLike: Boolean
   ): Iterator[ElementSeq] = {
 
     val rightEmpty = if (isLeftLike) {
@@ -94,10 +94,10 @@ class JoinRunner(joinProgram: JoinProgram) {
   }
 
   /**
-   * Iteraete through grouped data
-   * @param f function with key and full row for accessing sub elements mapping to results
-   * @return iterate through results
-   */
+    * Iteraete through grouped data
+    * @param f function with key and full row for accessing sub elements mapping to results
+    * @return iterate through results
+    */
   private def iterateGrouped[T](grouped: GroupedData)(f: (ElementSeq, ElementSeq) => Iterator[T]): Iterator[T] = {
     grouped.entries().iterator().asScala.flatMap { entry =>
       val key = entry.getKey
@@ -108,14 +108,19 @@ class JoinRunner(joinProgram: JoinProgram) {
   }
 
   private def findMatching(
-    key: ElementSeq,
-    grouped: GroupedData,
-    builder: ElementSeq => ElementSeq,
-    filter: ElementSeq => Boolean
+      key: ElementSeq,
+      grouped: GroupedData,
+      builder: ElementSeq => ElementSeq,
+      filter: ElementSeq => Boolean
   ): Iterator[ElementSeq] = {
-    grouped.get(key).iterator().asScala.map { candidate =>
-      builder(key ++ candidate)
-    }.filter(filter)
+    grouped
+      .get(key)
+      .iterator()
+      .asScala
+      .map { candidate =>
+        builder(key ++ candidate)
+      }
+      .filter(filter)
   }
 
   private def filterOk(columns: IndexedSeq[Element]): Boolean = {

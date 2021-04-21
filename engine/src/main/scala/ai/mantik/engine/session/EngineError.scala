@@ -4,6 +4,7 @@ import ai.mantik.elements.errors.ErrorCode
 import io.grpc.Status.Code
 
 object EngineErrors {
+
   /** There was an engine specific error. */
   val EngineError = new ErrorCode("Engine")
 

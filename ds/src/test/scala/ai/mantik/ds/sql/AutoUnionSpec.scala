@@ -7,7 +7,6 @@ import ai.mantik.testutils.TestBase
 
 class AutoUnionSpec extends TestBase {
 
-
   val type1 = TabularData(
     "x" -> FundamentalType.Int32,
     "y" -> FundamentalType.StringType
@@ -17,7 +16,7 @@ class AutoUnionSpec extends TestBase {
     "x" -> FundamentalType.Int8,
     "z" -> FundamentalType.BoolType
   )
-  for {unionAll <- Seq(false, true)} {
+  for { unionAll <- Seq(false, true) } {
 
     it should s"create simple unions for same type (all=$unionAll)" in {
       AutoUnion.autoUnion(type1, type1, unionAll).forceRight shouldBe Union(
@@ -35,35 +34,38 @@ class AutoUnionSpec extends TestBase {
           Some(
             Vector(
               SelectProjection("x", ColumnExpression(0, FundamentalType.Int32)),
-              SelectProjection("y", CastExpression(
-                ColumnExpression(1, FundamentalType.StringType), Nullable(FundamentalType.StringType))
+              SelectProjection(
+                "y",
+                CastExpression(ColumnExpression(1, FundamentalType.StringType), Nullable(FundamentalType.StringType))
               ),
-              SelectProjection("z",
+              SelectProjection(
+                "z",
                 CastExpression(
                   ConstantExpression(Bundle.voidNull),
                   Nullable(FundamentalType.BoolType)
                 )
               )
             )
-          )),
+          )
+        ),
         Select(
           AnonymousInput(type2, 1),
           Some(
             Vector(
-              SelectProjection("x", CastExpression(
-                ColumnExpression(0, FundamentalType.Int8), FundamentalType.Int32)
-              ),
-              SelectProjection("y",
+              SelectProjection("x", CastExpression(ColumnExpression(0, FundamentalType.Int8), FundamentalType.Int32)),
+              SelectProjection(
+                "y",
                 CastExpression(
                   ConstantExpression(Bundle.voidNull),
                   Nullable(FundamentalType.StringType)
                 )
               ),
-              SelectProjection("z", CastExpression(
-                ColumnExpression(1, FundamentalType.BoolType), Nullable(FundamentalType.BoolType))
+              SelectProjection(
+                "z",
+                CastExpression(ColumnExpression(1, FundamentalType.BoolType), Nullable(FundamentalType.BoolType))
               )
             )
-          ),
+          )
         ),
         unionAll
       )

@@ -1,7 +1,17 @@
 package ai.mantik.ds.formats.json
 
-import ai.mantik.ds.{ DataType, FundamentalType, Nullable, TabularData, Tensor, TypeSamples }
-import ai.mantik.ds.element.{ Bundle, Element, EmbeddedTabularElement, NullElement, Primitive, SingleElementBundle, SomeElement, TabularBundle, TensorElement }
+import ai.mantik.ds.{DataType, FundamentalType, Nullable, TabularData, Tensor, TypeSamples}
+import ai.mantik.ds.element.{
+  Bundle,
+  Element,
+  EmbeddedTabularElement,
+  NullElement,
+  Primitive,
+  SingleElementBundle,
+  SomeElement,
+  TabularBundle,
+  TensorElement
+}
 import ai.mantik.ds.testutil.TestBase
 import io.circe.Json
 import io.circe.syntax._
@@ -10,12 +20,13 @@ class JsonFormatSpec extends TestBase {
 
   val valueSample = Bundle.fundamental(100)
 
-  val tableSample = TabularBundle.build(
-    TabularData(
-      "x" -> FundamentalType.Int32,
-      "s" -> FundamentalType.StringType
+  val tableSample = TabularBundle
+    .build(
+      TabularData(
+        "x" -> FundamentalType.Int32,
+        "s" -> FundamentalType.StringType
+      )
     )
-  )
     .row(1, "Hello")
     .row(2, "World")
     .result
@@ -65,11 +76,15 @@ class JsonFormatSpec extends TestBase {
       val serialized = JsonFormat.serializeBundle(bundle)
       withClue(s"It should work for ${t}") {
         val deserialized = JsonFormat.deserializeBundle(serialized)
-        if (t == FundamentalType.Float32 && (v.x == Float.NaN || v.x == Float.NegativeInfinity || v.x == Float.PositiveInfinity)) {
+        if (
+          t == FundamentalType.Float32 && (v.x == Float.NaN || v.x == Float.NegativeInfinity || v.x == Float.PositiveInfinity)
+        ) {
           // io.circe translates them all to null and parses them to NaN
           // also, equals on NaN is always false
           deserialized.right.get.single.get.asInstanceOf[Primitive[Float]].x.isNaN shouldBe true
-        } else if (t == FundamentalType.Float64 && (v.x == Float.NaN || v.x == Float.NegativeInfinity || v.x == Float.PositiveInfinity)) {
+        } else if (
+          t == FundamentalType.Float64 && (v.x == Float.NaN || v.x == Float.NegativeInfinity || v.x == Float.PositiveInfinity)
+        ) {
           // the same for doubles
           deserialized.right.get.single.get.asInstanceOf[Primitive[Double]].x.isNaN shouldBe true
         } else {
@@ -85,12 +100,14 @@ class JsonFormatSpec extends TestBase {
     val deserialized = JsonFormat.deserializeBundle(serialized)
     deserialized shouldBe Right(single)
 
-    val tabular = TabularBundle.build(
-      TabularData(
-        "x" -> t,
-        "y" -> FundamentalType.StringType
+    val tabular = TabularBundle
+      .build(
+        TabularData(
+          "x" -> t,
+          "y" -> FundamentalType.StringType
+        )
       )
-    ).row(v, "1")
+      .row(v, "1")
       .row(v, "2")
       .result
     val serializedTabular = JsonFormat.serializeBundle(tabular)
@@ -127,12 +144,14 @@ class JsonFormatSpec extends TestBase {
     val decoded = JsonFormat.deserializeBundle(encoded)
     decoded shouldBe Right(tableSample) // it decodes not to a single bundle, as the encoding is the same.
 
-    val sample2 = TabularBundle.build(
-      TabularData(
-        "x" -> tableSample.model,
-        "s" -> FundamentalType.StringType
+    val sample2 = TabularBundle
+      .build(
+        TabularData(
+          "x" -> tableSample.model,
+          "s" -> FundamentalType.StringType
+        )
       )
-    ).row(EmbeddedTabularElement(tableSample.rows), "Hello")
+      .row(EmbeddedTabularElement(tableSample.rows), "Hello")
       .row(EmbeddedTabularElement(Vector.empty), "World")
       .result
     val encodedEmbedded = JsonFormat.serializeBundle(sample2)

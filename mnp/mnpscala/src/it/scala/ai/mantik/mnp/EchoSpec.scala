@@ -70,14 +70,15 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
         states += s
       }
 
-
-      val session = await(client.initSession(
-        "session1",
-        None,
-        List(ConfigureInputPort("content1")),
-        List(ConfigureOutputPort("content2")),
-        callback
-      ))
+      val session = await(
+        client.initSession(
+          "session1",
+          None,
+          List(ConfigureInputPort("content1")),
+          List(ConfigureOutputPort("content2")),
+          callback
+        )
+      )
 
       states.result() shouldBe Vector(SessionState.SS_INITIALIZING, SessionState.SS_STARTING_UP)
 
@@ -86,14 +87,12 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
       val sink1 = task.push(0)
       val result = Source.single(HelloWorld).runWith(sink1)
 
-
       val source1 = task.pull(0)
       val collected = collectByteSource(source1)
       collected shouldBe HelloWorld
 
       val (bytes, response) = await(result)
       bytes shouldBe HelloWorld.size
-
 
       val quitResponse = await(session.quit())
     }
@@ -115,12 +114,14 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
 
   it should "do a mor complex scenario" in new Env {
     withClient { client =>
-      val session = await(client.initSession(
-        "session1",
-        None,
-        List(ConfigureInputPort("content1"), ConfigureInputPort("content2")),
-        List(ConfigureOutputPort("reverseContent1"), ConfigureOutputPort("reverseContent2"))
-      ))
+      val session = await(
+        client.initSession(
+          "session1",
+          None,
+          List(ConfigureInputPort("content1"), ConfigureInputPort("content2")),
+          List(ConfigureOutputPort("reverseContent1"), ConfigureOutputPort("reverseContent2"))
+        )
+      )
 
       val task = session.task("task2")
 

@@ -3,7 +3,7 @@ package ai.mantik.planner
 import java.nio.file.Path
 
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{ MantikId, NamedMantikId }
+import ai.mantik.elements.{MantikId, NamedMantikId}
 
 import scala.reflect.ClassTag
 
@@ -48,10 +48,10 @@ trait PlanningContext {
   }
 
   /**
-   * Push a local mantik item including payload to the repository.
-   * There must be a MantikItem present.
-   * @return Mantik id which was used in the end.
-   */
+    * Push a local mantik item including payload to the repository.
+    * There must be a MantikItem present.
+    * @return Mantik id which was used in the end.
+    */
   def pushLocalMantikItem(dir: Path, id: Option[NamedMantikId] = None): MantikId
 
   /** Returns the internal state of a MantikItem */

@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.parser
 
-import ai.mantik.ds.sql.parser.AST.{ AnonymousReference, ExpressionNode, QueryNode, SelectColumnNode, SelectNode }
-import org.parboiled2.{ ParseError, Parser, ParserInput, Rule1 }
+import ai.mantik.ds.sql.parser.AST.{AnonymousReference, ExpressionNode, QueryNode, SelectColumnNode, SelectNode}
+import org.parboiled2.{ParseError, Parser, ParserInput, Rule1}
 
 import scala.collection.immutable
 
@@ -10,10 +10,9 @@ private[parser] trait SelectParser extends ExpressionParser with InnerQueryParse
   def Select: Rule1[SelectNode] = rule {
     (keyword("select") ~ SelectColumns ~
       optional(keyword("from") ~ SelectLikeInnerQuery) ~
-      optional(keyword("where") ~ Expression)
-    ) ~> { (columns, from, where) =>
-        SelectNode(columns, where, from)
-      }
+      optional(keyword("where") ~ Expression)) ~> { (columns, from, where) =>
+      SelectNode(columns, where, from)
+    }
   }
 
   def SelectColumns: Rule1[Vector[SelectColumnNode]] = rule {

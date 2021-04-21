@@ -3,18 +3,18 @@ package ai.mantik.planner.impl.exec
 import java.util.UUID
 import ai.mantik.bridge.protocol.bridge.MantikInitConfiguration
 import ai.mantik.componently.utils.FutureHelper
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.Executor
-import ai.mantik.executor.model.docker.{ Container, DockerConfig }
+import ai.mantik.executor.model.docker.{Container, DockerConfig}
 import ai.mantik.executor.model._
 import ai.mantik.mnp.protocol.mnp._
-import ai.mantik.mnp.{ MnpClient, MnpSession, SessionInitException }
+import ai.mantik.mnp.{MnpClient, MnpSession, SessionInitException}
 import ai.mantik.planner
 import ai.mantik.planner.PlanExecutor.PlanExecutorException
-import ai.mantik.planner.graph.{ Graph, Node }
+import ai.mantik.planner.graph.{Graph, Node}
 import ai.mantik.planner.impl.MantikItemStateManager
-import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{ InputPush, OutputPull }
-import ai.mantik.planner.pipelines.{ PipelineRuntimeDefinition, ResolvedPipelineStep }
+import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{InputPush, OutputPull}
+import ai.mantik.planner.pipelines.{PipelineRuntimeDefinition, ResolvedPipelineStep}
 import ai.mantik.planner.repository._
 import ai.mantik.planner._
 import ai.mantik.planner.repository.FileRepository.FileGetResult
@@ -25,11 +25,11 @@ import com.google.protobuf.any.Any
 import io.circe.syntax._
 import io.grpc.ManagedChannel
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 /** Naive MNP Implementation of an Executor. */
 class MnpPlanExecutor(
@@ -41,7 +41,9 @@ class MnpPlanExecutor(
     artifactRetriever: MantikArtifactRetriever,
     payloadExecutorProvider: ExecutionPayloadProvider,
     mantikItemStateManager: MantikItemStateManager
-)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with PlanExecutor {
+)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase
+    with PlanExecutor {
 
   /** Session Name inside deployed items. */
   val DeployedSessionName = "deployed"
@@ -59,12 +61,12 @@ class MnpPlanExecutor(
   @Singleton
   @Inject
   def this(
-    fileRepository: FileRepository,
-    repository: Repository,
-    executor: Executor,
-    retriever: MantikArtifactRetriever,
-    payloadExecutorProvider: ExecutionPayloadProvider,
-    mantikItemStateManager: MantikItemStateManager
+      fileRepository: FileRepository,
+      repository: Repository,
+      executor: Executor,
+      retriever: MantikArtifactRetriever,
+      payloadExecutorProvider: ExecutionPayloadProvider,
+      mantikItemStateManager: MantikItemStateManager
   )(implicit akkaRuntime: AkkaRuntime) {
     this(
       fileRepository,
@@ -95,14 +97,12 @@ class MnpPlanExecutor(
     }
   }
 
-  def executeOp[T](planOp: PlanOp[T])(implicit
-    files: ExecutionOpenFiles,
-    memory: Memory,
-    containerMapping: ContainerMapping
-  ): Future[T] = {
+  def executeOp[T](
+      planOp: PlanOp[T]
+  )(implicit files: ExecutionOpenFiles, memory: Memory, containerMapping: ContainerMapping): Future[T] = {
     try {
-      executeOpInner(planOp).andThen {
-        case Success(value) => memory.setLast(value)
+      executeOpInner(planOp).andThen { case Success(value) =>
+        memory.setLast(value)
       }
     } catch {
       case NonFatal(e) =>
@@ -110,24 +110,24 @@ class MnpPlanExecutor(
     }
   }
 
-  private def executeOpInner[T](planOp: PlanOp[T])(implicit
-    files: ExecutionOpenFiles,
-    memory: Memory,
-    containerMapping: ContainerMapping): Future[T] = {
+  private def executeOpInner[T](
+      planOp: PlanOp[T]
+  )(implicit files: ExecutionOpenFiles, memory: Memory, containerMapping: ContainerMapping): Future[T] = {
     planOp match {
       case basic: PlanOp.BasicOp[T] =>
         basicOpExecutor.execute(basic)
       case PlanOp.Sequential(parts, last) =>
-        FutureHelper.time(logger, s"Running ${parts.length} sub tasks") {
-          FutureHelper.afterEachOtherStateful(parts, memory.getLastOrNull()) {
-            case (_, part) =>
+        FutureHelper
+          .time(logger, s"Running ${parts.length} sub tasks") {
+            FutureHelper.afterEachOtherStateful(parts, memory.getLastOrNull()) { case (_, part) =>
               executeOp(part)
+            }
           }
-        }.flatMap { _ =>
-          FutureHelper.time(logger, s"Running last part") {
-            executeOp(last)
+          .flatMap { _ =>
+            FutureHelper.time(logger, s"Running last part") {
+              executeOp(last)
+            }
           }
-        }
       case PlanOp.RunGraph(graph) =>
         runGraph(graph)
       case da: PlanOp.DeployAlgorithm =>
@@ -155,9 +155,9 @@ class MnpPlanExecutor(
     val runGraphs: Vector[PlanOp.RunGraph] = plan.op.foldLeftDown(
       Vector.empty[PlanOp.RunGraph]
     ) {
-        case (v, op: PlanOp.RunGraph) => v :+ op
-        case (v, _)                   => v
-      }
+      case (v, op: PlanOp.RunGraph) => v :+ op
+      case (v, _)                   => v
+    }
 
     val containers = (for {
       runGraph <- runGraphs
@@ -172,15 +172,17 @@ class MnpPlanExecutor(
 
     logger.info(s"Spinning up ${containers.size} containers")
 
-    containers.traverse { container =>
-      startWorker(grpcProxy, jobId, container).map { reservedContainer =>
-        container -> reservedContainer
+    containers
+      .traverse { container =>
+        startWorker(grpcProxy, jobId, container).map { reservedContainer =>
+          container -> reservedContainer
+        }
       }
-    }.map { responses =>
-      ContainerMapping(
-        responses.toMap
-      )
-    }
+      .map { responses =>
+        ContainerMapping(
+          responses.toMap
+        )
+      }
   }
 
   /** Spin up a container and creates a connection to it. */
@@ -202,7 +204,9 @@ class MnpPlanExecutor(
       (address, aboutResponse, channel, mnpClient) <- buildConnection(grpcProxy, response.nodeName)
     } yield {
       val t1 = System.currentTimeMillis()
-      logger.info(s"Spinned up worker ${response.nodeName} image=${container.image} about=${aboutResponse.name} within ${t1 - t0}ms")
+      logger.info(
+        s"Spinned up worker ${response.nodeName} image=${container.image} about=${aboutResponse.name} within ${t1 - t0}ms"
+      )
       ReservedContainer(
         response.nodeName,
         container.image,
@@ -215,40 +219,48 @@ class MnpPlanExecutor(
   }
 
   /**
-   * Build a connection to the container.
-   * @return address, about response, mnp channel and mnp client.
-   */
-  private def buildConnection(grpcProxy: GrpcProxy, nodeName: String): Future[(String, AboutResponse, ManagedChannel, MnpClient)] = {
+    * Build a connection to the container.
+    * @return address, about response, mnp channel and mnp client.
+    */
+  private def buildConnection(
+      grpcProxy: GrpcProxy,
+      nodeName: String
+  ): Future[(String, AboutResponse, ManagedChannel, MnpClient)] = {
     val address = s"${nodeName}:8502" // TODO: Configurable
     Future {
       grpcProxy.proxyUrl match {
         case Some(proxy) => MnpClient.connectViaProxy(proxy, address)
         case None        => MnpClient.connect(address)
       }
-    }.flatMap {
-      case (channel, client) =>
-        // TODO: Configurable
-        FutureHelper.tryMultipleTimes(30.seconds, 200.milliseconds) {
+    }.flatMap { case (channel, client) =>
+      // TODO: Configurable
+      FutureHelper
+        .tryMultipleTimes(30.seconds, 200.milliseconds) {
           client.about().transform {
             case Success(aboutResponse) => Success(Some(aboutResponse))
             case Failure(e)             => Success(None)
           }
-        }.map { aboutResponse =>
+        }
+        .map { aboutResponse =>
           (address, aboutResponse, channel, client)
         }
     }
   }
 
   private def stopContainers(jobId: String): Future[Unit] = {
-    executor.stopWorker(StopWorkerRequest(
-      isolationSpace, idFilter = Some(jobId)
-    )).map { _ => () }
+    executor
+      .stopWorker(
+        StopWorkerRequest(
+          isolationSpace,
+          idFilter = Some(jobId)
+        )
+      )
+      .map { _ => () }
   }
 
   private def runGraph(graph: Graph[PlanNodeService])(
-    implicit
-    containerMapping: ContainerMapping,
-    files: ExecutionOpenFiles
+      implicit containerMapping: ContainerMapping,
+      files: ExecutionOpenFiles
   ): Future[Unit] = {
     val graphId = UUID.randomUUID().toString
     val containerAddresses: Map[String, String] = graph.nodes.collect {
@@ -258,9 +270,12 @@ class MnpPlanExecutor(
     val taskId = "evaluation"
 
     withGraphRemoteFiles(graph, files) { remoteFiles =>
-
       val preparation: MnpExecutionPreparation = new MnpExecutionPreparer(
-        graphId, graph, containerAddresses, files, remoteFiles
+        graphId,
+        graph,
+        containerAddresses,
+        files,
+        remoteFiles
       ).build()
 
       for {
@@ -278,8 +293,8 @@ class MnpPlanExecutor(
 
   /** Provides temporary remote files for a graph. Files will be deleted afterwards. */
   private def withGraphRemoteFiles[T](
-    graph: Graph[PlanNodeService],
-    files: ExecutionOpenFiles
+      graph: Graph[PlanNodeService],
+      files: ExecutionOpenFiles
   )(f: Map[String, String] => Future[T]): Future[T] = {
     val fileMapping: Vector[(String, String)] = graph.nodes.collect {
       case (nodeId, Node(d: PlanNodeService.DockerContainer, _, _)) if d.data.isDefined =>
@@ -290,9 +305,8 @@ class MnpPlanExecutor(
     // Tricky, we want remote files to be deleted when something fails
 
     val t0 = System.currentTimeMillis()
-    val uploads = fileMapping.map {
-      case (nodeId, fileId) =>
-        payloadExecutorProvider.provideTemporary(fileId)
+    val uploads = fileMapping.map { case (nodeId, fileId) =>
+      payloadExecutorProvider.provideTemporary(fileId)
     }
 
     manyFuturesWithResult(uploads).flatMap { results =>
@@ -300,13 +314,13 @@ class MnpPlanExecutor(
       val failed = results.count(_.isFailure)
       logger.debug(s"Uploaded ${uploads.size} temporaries, failed: ${failed} within ${t1 - t0}ms")
 
-      val firstFailure = results.collectFirst {
-        case Failure(err) => err
+      val firstFailure = results.collectFirst { case Failure(err) =>
+        err
       }
-      val successes: Vector[(String, payloadExecutorProvider.TemporaryFileKey, String)] = fileMapping.zip(results).collect {
-        case ((nodeId, _), Success((key, url))) =>
+      val successes: Vector[(String, payloadExecutorProvider.TemporaryFileKey, String)] =
+        fileMapping.zip(results).collect { case ((nodeId, _), Success((key, url))) =>
           (nodeId, key, url)
-      }
+        }
 
       val inner = if (failed > 0) {
         logger.warn(s"There were ${failed} failed uploads", firstFailure.get)
@@ -351,14 +365,14 @@ class MnpPlanExecutor(
         case Success(value) =>
           val sorted = value.sortBy(_._1)
           logger.debug(s"Periodic Task Status, size=${sorted.size}")
-          sorted.zipWithIndex.foreach {
-            case ((nodeId, mnpUrl, queryResponse), idx) =>
-              val error = if (queryResponse.error.nonEmpty) {
-                s"Error: ${queryResponse.error}"
-              } else ""
-              logger.debug(
-                s"${idx + 1}/${sorted.size} ${nodeId} ${mnpUrl} ${error} ${queryResponse.state.toString()} " +
-                  s"input:${formatPortList(queryResponse.inputs)} outputs: ${formatPortList(queryResponse.outputs)}")
+          sorted.zipWithIndex.foreach { case ((nodeId, mnpUrl, queryResponse), idx) =>
+            val error = if (queryResponse.error.nonEmpty) {
+              s"Error: ${queryResponse.error}"
+            } else ""
+            logger.debug(
+              s"${idx + 1}/${sorted.size} ${nodeId} ${mnpUrl} ${error} ${queryResponse.state.toString()} " +
+                s"input:${formatPortList(queryResponse.inputs)} outputs: ${formatPortList(queryResponse.outputs)}"
+            )
           }
       }
     }
@@ -383,36 +397,50 @@ class MnpPlanExecutor(
   }
 
   private def initializeSessions(
-    graph: Graph[PlanNodeService],
-    containerMapping: ContainerMapping,
-    preparation: MnpExecutionPreparation
+      graph: Graph[PlanNodeService],
+      containerMapping: ContainerMapping,
+      preparation: MnpExecutionPreparation
   ): Future[Map[String, MnpSession]] = {
-    val futures = preparation.sessionInitializers.map {
-      case (nodeId, initializer) =>
-        val container = graph.nodes(nodeId).service.asInstanceOf[PlanNodeService.DockerContainer].container
-        val reservedContainer = containerMapping.containers(container)
-        initializeSession(reservedContainer, initializer).map { session =>
-          nodeId -> session
-        }
+    val futures = preparation.sessionInitializers.map { case (nodeId, initializer) =>
+      val container = graph.nodes(nodeId).service.asInstanceOf[PlanNodeService.DockerContainer].container
+      val reservedContainer = containerMapping.containers(container)
+      initializeSession(reservedContainer, initializer).map { session =>
+        nodeId -> session
+      }
     }
     Future.sequence(futures).map(_.toMap)
   }
 
-  private def initializeSession(container: ReservedContainer, initializer: MnpExecutionPreparation.SessionInitializer): Future[MnpSession] = {
-    logger.debug(s"Initializing session ${container.mnpClient.address}/${initializer.sessionId}, ${initializer.config.header}")
-    logger.debug(s"Associated payload: ${initializer.config.payload} (contentType: ${initializer.config.payloadContentType})")
-    container.mnpClient.initSession(
-      initializer.sessionId,
-      Some(initializer.config),
-      initializer.inputPorts,
-      initializer.outputPorts
-    ).recover {
-        case e: SessionInitException =>
-          throw new PlanExecutorException(s"Could not init MNP session on ${container.address} (image=${container.image})", e)
+  private def initializeSession(
+      container: ReservedContainer,
+      initializer: MnpExecutionPreparation.SessionInitializer
+  ): Future[MnpSession] = {
+    logger.debug(
+      s"Initializing session ${container.mnpClient.address}/${initializer.sessionId}, ${initializer.config.header}"
+    )
+    logger.debug(
+      s"Associated payload: ${initializer.config.payload} (contentType: ${initializer.config.payloadContentType})"
+    )
+    container.mnpClient
+      .initSession(
+        initializer.sessionId,
+        Some(initializer.config),
+        initializer.inputPorts,
+        initializer.outputPorts
+      )
+      .recover { case e: SessionInitException =>
+        throw new PlanExecutorException(
+          s"Could not init MNP session on ${container.address} (image=${container.image})",
+          e
+        )
       }
   }
 
-  private def runLinks(taskId: String, sessions: Map[String, MnpSession], preparation: MnpExecutionPreparation): Future[Unit] = {
+  private def runLinks(
+      taskId: String,
+      sessions: Map[String, MnpSession],
+      preparation: MnpExecutionPreparation
+  ): Future[Unit] = {
     // TODO: The FileService should copy the files to and from MNP, not the Executor.
     // However in this early stage they are the same process anyway.
     val inputPushFutures = preparation.inputPushs.map { inputPush =>
@@ -426,44 +454,60 @@ class MnpPlanExecutor(
       logger.debug(s"Sending Query Task to ${session.mnpUrl}/${taskId}")
       session.task(taskId).query(true)
     }
-    Future.sequence(inputPushFutures ++ outputPullFutures ++ queryTaskFutures).map {
-      _ => ()
+    Future.sequence(inputPushFutures ++ outputPullFutures ++ queryTaskFutures).map { _ =>
+      ()
     }
   }
 
   private def runInputPush(taskId: String, session: MnpSession, inputPush: InputPush): Future[Unit] = {
-    logger.debug(s"Starting push from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}")
-    fileRepository.loadFile(inputPush.fileGetResult.fileId).flatMap { result =>
-      val runTask = session.task(taskId)
-      val sink = runTask.push(inputPush.portId)
-      result.source.runWith(sink)
-    }.map {
-      case (bytes, response) =>
-        logger.debug(s"Pushed ${bytes} from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}")
-    }
+    logger.debug(
+      s"Starting push from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}"
+    )
+    fileRepository
+      .loadFile(inputPush.fileGetResult.fileId)
+      .flatMap { result =>
+        val runTask = session.task(taskId)
+        val sink = runTask.push(inputPush.portId)
+        result.source.runWith(sink)
+      }
+      .map { case (bytes, response) =>
+        logger.debug(
+          s"Pushed ${bytes} from ${inputPush.fileGetResult.fileId} to ${session.mnpUrl}/${taskId}/${inputPush.portId}"
+        )
+      }
   }
 
   private def runOutputPull(taskId: String, session: MnpSession, outputPull: OutputPull): Future[Unit] = {
-    logger.debug(s"Starting pull from ${session.mnpUrl}/${taskId}/${outputPull.portId} to ${outputPull.fileStorageResult.fileId}")
-    fileRepository.storeFile(outputPull.fileStorageResult.fileId).flatMap { fileSink =>
-      val runTask = session.task(taskId)
-      val source = runTask.pull(outputPull.portId)
-      source.runWith(fileSink)
-    }.map { bytes =>
-      logger.debug(s"Pulled ${bytes} from ${session.mnpUrl}/${taskId}/${outputPull.portId} to ${outputPull.fileStorageResult.fileId}")
-    }
+    logger.debug(
+      s"Starting pull from ${session.mnpUrl}/${taskId}/${outputPull.portId} to ${outputPull.fileStorageResult.fileId}"
+    )
+    fileRepository
+      .storeFile(outputPull.fileStorageResult.fileId)
+      .flatMap { fileSink =>
+        val runTask = session.task(taskId)
+        val source = runTask.pull(outputPull.portId)
+        source.runWith(fileSink)
+      }
+      .map { bytes =>
+        logger.debug(
+          s"Pulled ${bytes} from ${session.mnpUrl}/${taskId}/${outputPull.portId} to ${outputPull.fileStorageResult.fileId}"
+        )
+      }
   }
 
   private def shutdownSessions(sessions: Map[String, MnpSession]): Future[Unit] = {
-    Future.sequence(
-      sessions.map {
-        case (_, session) =>
+    Future
+      .sequence(
+        sessions.map { case (_, session) =>
           session.quit()
-      }
-    ).map(_ => ())
+        }
+      )
+      .map(_ => ())
   }
 
-  private def deployAlgorithm(deployAlgorithm: PlanOp.DeployAlgorithm)(implicit files: ExecutionOpenFiles): Future[DeploymentState] = {
+  private def deployAlgorithm(
+      deployAlgorithm: PlanOp.DeployAlgorithm
+  )(implicit files: ExecutionOpenFiles): Future[DeploymentState] = {
     val payloadData = deployAlgorithm.node.service.data.map(files.resolveFileRead)
     payloadExecutorProvider.providePermanent(deployAlgorithm.item.itemId).flatMap { payloadUrl =>
       val initCall = buildInitCallForDeployment(deployAlgorithm.node, payloadData, payloadUrl)
@@ -501,9 +545,9 @@ class MnpPlanExecutor(
   }
 
   private def buildInitCallForDeployment(
-    node: Node[PlanNodeService.DockerContainer],
-    payloadData: Option[FileGetResult],
-    payloadUrl: Option[String]
+      node: Node[PlanNodeService.DockerContainer],
+      payloadData: Option[FileGetResult],
+      payloadUrl: Option[String]
   ): InitRequest = {
     val inputPorts: Vector[ConfigureInputPort] = node.inputs.map { inputPort =>
       ConfigureInputPort(inputPort.contentType)
@@ -515,11 +559,13 @@ class MnpPlanExecutor(
     val initConfiguration = MantikInitConfiguration(
       header = node.service.mantikHeader.toJson,
       payloadContentType = payloadData.map(_.contentType).getOrElse(""),
-      payload = payloadUrl.map { url =>
-        MantikInitConfiguration.Payload.Url(url)
-      }.getOrElse(
-        MantikInitConfiguration.Payload.Empty
-      )
+      payload = payloadUrl
+        .map { url =>
+          MantikInitConfiguration.Payload.Url(url)
+        }
+        .getOrElse(
+          MantikInitConfiguration.Payload.Empty
+        )
     )
 
     InitRequest(
@@ -574,39 +620,44 @@ class MnpPlanExecutor(
         _ = mantikItemStateManager.upsert(dp.item, _.copy(deployment = Some(deploymentState)))
         _ <- repository.setDeploymentInfo(dp.item.itemId, Some(deploymentInfo))
       } yield {
-        logger.info(s"Deployed pipeline ${dp.serviceId} to ${deploymentInfo.internalUrl} (external=${deploymentInfo.externalUrl})")
+        logger.info(
+          s"Deployed pipeline ${dp.serviceId} to ${deploymentInfo.internalUrl} (external=${deploymentInfo.externalUrl})"
+        )
         deploymentState
       }
     }
   }
 
   private def deployPipelineSubNodes(dp: PlanOp.DeployPipeline): Future[Map[String, StartWorkerResponse]] = {
-    val subRequests: Map[String, Future[StartWorkerResponse]] = dp.sub.map {
-      case (key, subItem) =>
-        val initCall = buildInitCallForDeployment(subItem.node, None, None)
-        val nameHint = "mantik-sub-" + subItem.node.service.container.simpleImageName
-        val startWorkerRequest = StartWorkerRequest(
-          isolationSpace = isolationSpace,
-          id = dp.serviceId,
-          definition = MnpWorkerDefinition(
-            container = subItem.node.service.container,
-            extraLogins = dockerConfig.logins,
-            initializer = Some(ByteString(initCall.toByteArray))
-          ),
-          keepRunning = true,
-          nameHint = Some(nameHint),
-          ingressName = None
-        )
-        key -> executor.startWorker(startWorkerRequest)
+    val subRequests: Map[String, Future[StartWorkerResponse]] = dp.sub.map { case (key, subItem) =>
+      val initCall = buildInitCallForDeployment(subItem.node, None, None)
+      val nameHint = "mantik-sub-" + subItem.node.service.container.simpleImageName
+      val startWorkerRequest = StartWorkerRequest(
+        isolationSpace = isolationSpace,
+        id = dp.serviceId,
+        definition = MnpWorkerDefinition(
+          container = subItem.node.service.container,
+          extraLogins = dockerConfig.logins,
+          initializer = Some(ByteString(initCall.toByteArray))
+        ),
+        keepRunning = true,
+        nameHint = Some(nameHint),
+        ingressName = None
+      )
+      key -> executor.startWorker(startWorkerRequest)
     }
 
-    Future.sequence(subRequests.map {
-      case (key, f) =>
+    Future
+      .sequence(subRequests.map { case (key, f) =>
         f.map(result => key -> result)
-    }).map(_.toMap)
+      })
+      .map(_.toMap)
   }
 
-  private def buildPipelineRuntimeDefinition(dp: PlanOp.DeployPipeline, subDeployments: Map[String, SubDeploymentState]): PipelineRuntimeDefinition = {
+  private def buildPipelineRuntimeDefinition(
+      dp: PlanOp.DeployPipeline,
+      subDeployments: Map[String, SubDeploymentState]
+  ): PipelineRuntimeDefinition = {
     def extractStep(step: ResolvedPipelineStep, stepId: Int): PipelineRuntimeDefinition.Step = {
       step match {
         case ResolvedPipelineStep.AlgorithmStep(algorithm) =>

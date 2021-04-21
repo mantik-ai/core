@@ -1,18 +1,19 @@
 package com.example.examples
-import ai.mantik.ds.{ FundamentalType, TabularData }
-import ai.mantik.ds.element.{ Bundle, TabularBundle }
-import ai.mantik.planner.{ DataSet, PlanningContext }
+import ai.mantik.ds.{FundamentalType, TabularData}
+import ai.mantik.ds.element.{Bundle, TabularBundle}
+import ai.mantik.planner.{DataSet, PlanningContext}
 
 object SelectSample extends ExampleBase {
 
   override protected def run(implicit context: PlanningContext): Unit = {
-    val bundle = TabularBundle.build(
-      TabularData(
-        "x" -> FundamentalType.Int32,
-        "y" -> FundamentalType.Int32,
-        "s" -> FundamentalType.StringType
+    val bundle = TabularBundle
+      .build(
+        TabularData(
+          "x" -> FundamentalType.Int32,
+          "y" -> FundamentalType.Int32,
+          "s" -> FundamentalType.StringType
+        )
       )
-    )
       .row(100, 200, "Hello")
       .row(100, 300, "World")
       .row(200, 400, "!!!!")

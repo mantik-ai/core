@@ -3,7 +3,7 @@ package ai.mantik.planner.impl
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.funcational.FunctionType
 import ai.mantik.elements
-import ai.mantik.elements.{ AlgorithmDefinition, DataSetDefinition, MantikHeader, TrainableAlgorithmDefinition }
+import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, MantikHeader, TrainableAlgorithmDefinition}
 import ai.mantik.planner.repository.Bridge
 import ai.mantik.planner.util.FakeBridges
 

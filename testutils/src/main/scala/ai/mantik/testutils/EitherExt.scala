@@ -1,11 +1,11 @@
 package ai.mantik.testutils
 
-import org.scalatest.{ Assertions, EitherValues }
+import org.scalatest.{Assertions, EitherValues}
 
 /**
- * Adds helpers for unpacking Either.
- * Like [[EitherValues]] but with more debug output.
- */
+  * Adds helpers for unpacking Either.
+  * Like [[EitherValues]] but with more debug output.
+  */
 trait EitherExt {
   self: Assertions =>
 

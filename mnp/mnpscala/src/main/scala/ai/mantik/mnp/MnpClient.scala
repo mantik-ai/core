@@ -1,16 +1,31 @@
 package ai.mantik.mnp
 
-import java.net.{ MalformedURLException, SocketAddress, URL }
+import java.net.{MalformedURLException, SocketAddress, URL}
 
-import ai.mantik.mnp.protocol.mnp.{ AboutResponse, ConfigureInputPort, ConfigureOutputPort, InitRequest, InitResponse, QuitRequest, QuitResponse, SessionState }
-import ai.mantik.mnp.protocol.mnp.MnpServiceGrpc.{ MnpService, MnpServiceStub }
+import ai.mantik.mnp.protocol.mnp.{
+  AboutResponse,
+  ConfigureInputPort,
+  ConfigureOutputPort,
+  InitRequest,
+  InitResponse,
+  QuitRequest,
+  QuitResponse,
+  SessionState
+}
+import ai.mantik.mnp.protocol.mnp.MnpServiceGrpc.{MnpService, MnpServiceStub}
 import com.google.protobuf.any.Any
 import com.google.protobuf.empty.Empty
-import io.grpc.{ HttpConnectProxiedSocketAddress, ManagedChannel, ManagedChannelBuilder, ProxiedSocketAddress, ProxyDetector }
+import io.grpc.{
+  HttpConnectProxiedSocketAddress,
+  ManagedChannel,
+  ManagedChannelBuilder,
+  ProxiedSocketAddress,
+  ProxyDetector
+}
 import io.grpc.stub.StreamObserver
-import scalapb.{ GeneratedMessage, GeneratedMessageCompanion, Message }
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 /** Small shim on top of MnpService to make it better usable. */
 class MnpClient(val address: String, mnpService: MnpService) {
@@ -24,15 +39,15 @@ class MnpClient(val address: String, mnpService: MnpService) {
   }
 
   /**
-   * Initialize a new MNP Session.
-   * Can throw [[SessionInitException]] when the init fails on remote side
-   */
+    * Initialize a new MNP Session.
+    * Can throw [[SessionInitException]] when the init fails on remote side
+    */
   def initSession[T <: GeneratedMessage](
-    sessionId: String,
-    config: Option[T],
-    inputs: Seq[ConfigureInputPort],
-    outputs: Seq[ConfigureOutputPort],
-    callback: SessionState => Unit = s => {}
+      sessionId: String,
+      config: Option[T],
+      inputs: Seq[ConfigureInputPort],
+      outputs: Seq[ConfigureOutputPort],
+      callback: SessionState => Unit = s => {}
   ): Future[MnpSession] = {
     val serializedConfig = config.map { config =>
       Any.pack(config)
@@ -91,7 +106,8 @@ object MnpClient {
   def connect(address: String): (ManagedChannel, MnpClient) = {
     val channel: ManagedChannel = ManagedChannelBuilder
       .forTarget(address)
-      .usePlaintext().build()
+      .usePlaintext()
+      .build()
     (channel, forChannel(address, channel))
   }
 
@@ -102,7 +118,8 @@ object MnpClient {
     val channel: ManagedChannel = ManagedChannelBuilder
       .forTarget(address)
       .proxyDetector(proxyDetector)
-      .usePlaintext().build()
+      .usePlaintext()
+      .build()
     (channel, forChannel(address, channel))
   }
 }

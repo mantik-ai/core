@@ -5,11 +5,11 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.planner.PlanOp
 import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.impl.MantikItemStateManager
-import ai.mantik.planner.repository.{ ContentTypes, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository }
+import ai.mantik.planner.repository.{ContentTypes, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository}
 import akka.stream.Materializer
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 
 class BasicOpExecutor(
@@ -49,25 +49,31 @@ class BasicOpExecutor(
         val namedId = state.namedMantikItem
         val artifact = MantikArtifact(mantikHeader.toJson, fileId, namedId, item.itemId)
         FutureHelper.time(logger, s"Adding Mantik Item $id") {
-          repository.store(artifact).andThen {
-            case Success(_) =>
-              mantikItemStateManager.update(id, _.copy(
+          repository.store(artifact).andThen { case Success(_) =>
+            mantikItemStateManager.update(
+              id,
+              _.copy(
                 itemStored = true,
                 nameStored = namedId.isDefined,
                 namedMantikItem = namedId,
                 payloadFile = fileId
-              ))
+              )
+            )
           }
         }
       case PlanOp.TagMantikItem(item, id) =>
         FutureHelper.time(logger, s"Tagging Mantik Item") {
-          repository.ensureMantikId(item.itemId, id).andThen {
-            case Success(_) =>
-              mantikItemStateManager.update(item.itemId, _.copy(
-                namedMantikItem = Some(id)
+          repository
+            .ensureMantikId(item.itemId, id)
+            .andThen { case Success(_) =>
+              mantikItemStateManager.update(
+                item.itemId,
+                _.copy(
+                  namedMantikItem = Some(id)
+                )
               )
-              )
-          }.map(_ => ())
+            }
+            .map(_ => ())
         }
       case PlanOp.PushMantikItem(item) =>
         val state = mantikItemStateManager.getOrInit(item)
@@ -75,15 +81,16 @@ class BasicOpExecutor(
           throw new InconsistencyException("Item is not stored")
         }
         val mantikId = item.mantikId
-        FutureHelper.time(logger, s"Pushing Artifact ${mantikId}") {
-          artifactRetriever.push(mantikId)
-        }.map { _ => () }
+        FutureHelper
+          .time(logger, s"Pushing Artifact ${mantikId}") {
+            artifactRetriever.push(mantikId)
+          }
+          .map { _ => () }
       case cacheOp: PlanOp.MarkCached =>
-        cacheOp.files.foreach {
-          case (itemId, fileRef) =>
-            val resolved = files.resolveFileId(fileRef)
-            mantikItemStateManager.updateOrFresh(itemId, _.copy(cacheFile = Some(resolved)))
-            ()
+        cacheOp.files.foreach { case (itemId, fileRef) =>
+          val resolved = files.resolveFileId(fileRef)
+          mantikItemStateManager.updateOrFresh(itemId, _.copy(cacheFile = Some(resolved)))
+          ()
         }
         Future.successful(())
       case c: PlanOp.Const[T] =>

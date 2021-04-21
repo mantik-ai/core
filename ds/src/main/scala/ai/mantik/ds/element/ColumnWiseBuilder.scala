@@ -1,6 +1,6 @@
 package ai.mantik.ds.element
 
-import ai.mantik.ds.{ DataType, TabularData }
+import ai.mantik.ds.{DataType, TabularData}
 
 /** A Builder for [[ai.mantik.ds.element.TabularBundle]] which builds column wise. */
 case class ColumnWiseBundleBuilder(private val columnsRev: List[(String, DataType, IndexedSeq[Element])] = Nil) {
@@ -9,9 +9,8 @@ case class ColumnWiseBundleBuilder(private val columnsRev: List[(String, DataTyp
     val columns = columnsRev.reverse
     val rowCount = columns.head._3.length
 
-    val tabularDataType = TabularData(columns.map {
-      case (columnName, dataType, _) =>
-        columnName -> dataType
+    val tabularDataType = TabularData(columns.map { case (columnName, dataType, _) =>
+      columnName -> dataType
     }: _*)
 
     val rows = for {

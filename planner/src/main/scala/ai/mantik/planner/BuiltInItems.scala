@@ -1,7 +1,7 @@
 package ai.mantik.planner
 
-import ai.mantik.elements.{ BridgeDefinition, ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId }
-import ai.mantik.planner.repository.{ Bridge, ContentTypes }
+import ai.mantik.elements.{BridgeDefinition, ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId}
+import ai.mantik.planner.repository.{Bridge, ContentTypes}
 
 /** Built in Items in Mantik */
 object BuiltInItems {
@@ -16,9 +16,9 @@ object BuiltInItems {
   val SelectBridgeName = NamedMantikId(account = BuiltInAccount, name = "select")
 
   /**
-   * Look for a Built In Item
-   * @return the item if it was found.
-   */
+    * Look for a Built In Item
+    * @return the item if it was found.
+    */
   def readBuiltInItem(mantikId: MantikId): Option[MantikItem] = {
     mantikId match {
       case NaturalBridgeName => Some(NaturalBridge)

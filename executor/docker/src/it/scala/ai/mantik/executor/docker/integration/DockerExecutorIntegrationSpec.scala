@@ -8,7 +8,16 @@ import ai.mantik.executor.common.test.integration.TestData
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
 import ai.mantik.executor.docker.{DockerConstants, DockerExecutor, DockerExecutorConfig}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{ListWorkerRequest, MnpWorkerDefinition, PublishServiceRequest, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest, WorkerState, WorkerType}
+import ai.mantik.executor.model.{
+  ListWorkerRequest,
+  MnpWorkerDefinition,
+  PublishServiceRequest,
+  StartWorkerRequest,
+  StartWorkerResponse,
+  StopWorkerRequest,
+  WorkerState,
+  WorkerType
+}
 import akka.util.ByteString
 import io.circe.syntax._
 
@@ -58,7 +67,7 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
 
   trait EnvForWorkers extends Env {
     def startWorker(id: String, isolationSpace: String): StartWorkerResponse = {
-      val startWorkerRequest = StartWorkerRequest (
+      val startWorkerRequest = StartWorkerRequest(
         isolationSpace = isolationSpace,
         id = id,
         definition = MnpWorkerDefinition(
@@ -82,16 +91,21 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     container.Labels(LabelConstants.WorkerTypeLabelName) shouldBe LabelConstants.workerType.mnpWorker
 
     eventually {
-      val containerAgain = await(dockerClient.listContainersFiltered(true, ListContainerRequestFilter.forLabelKeyValue(
-        LabelConstants.UserIdLabelName -> "foo"
-      )))
+      val containerAgain = await(
+        dockerClient.listContainersFiltered(
+          true,
+          ListContainerRequestFilter.forLabelKeyValue(
+            LabelConstants.UserIdLabelName -> "foo"
+          )
+        )
+      )
       println(containerAgain.asJson)
       containerAgain.head.State shouldBe "running"
     }
   }
 
   it should "be possible to initialize an MNP Node directly" in new Env {
-    val startWorkerRequest = StartWorkerRequest (
+    val startWorkerRequest = StartWorkerRequest(
       isolationSpace = "start_with_init",
       id = "startme",
       definition = MnpWorkerDefinition(
@@ -129,7 +143,9 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     response3.workers.head.id shouldBe "x1"
 
     // name filter
-    val response4 = await(dockerExecutor.listWorkers(ListWorkerRequest("other_isolation", nameFilter = Some(startResponse2.nodeName))))
+    val response4 = await(
+      dockerExecutor.listWorkers(ListWorkerRequest("other_isolation", nameFilter = Some(startResponse2.nodeName)))
+    )
     response4.workers.size shouldBe 1
     response4.workers.head.id shouldBe "x2"
 
@@ -157,7 +173,9 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     }
 
     // by name
-    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", nameFilter = Some(container2.nodeName), remove = false)))
+    await(
+      dockerExecutor.stopWorker(StopWorkerRequest("stop_test", nameFilter = Some(container2.nodeName), remove = false))
+    )
     eventually {
       val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test", idFilter = Some("x2"))))
       listResponse.workers.head.state shouldBe an[WorkerState.Failed]

@@ -1,7 +1,7 @@
 package ai.mantik.executor.model.docker
 
 import com.typesafe.config.ConfigException.WrongType
-import com.typesafe.config.{ Config, ConfigException, ConfigObject }
+import com.typesafe.config.{Config, ConfigException, ConfigObject}
 import io.circe.generic.JsonCodec
 
 /** Common configuration for interacting with docker images. */

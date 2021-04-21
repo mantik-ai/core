@@ -3,7 +3,7 @@ package ai.mantik.engine.server
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.engine.protos.debug.DebugServiceGrpc
 import ai.mantik.engine.protos.debug.DebugServiceGrpc.DebugService
 import ai.mantik.engine.protos.engine.AboutServiceGrpc
@@ -36,7 +36,8 @@ class EngineServer @Inject() (
     remoteRegistryService: RemoteRegistryService,
     remotePlanningContext: PlanningContextService,
     executor: Executor
-)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
+)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase {
 
   val port = config.getInt("mantik.engine.server.port")
   private val interface = config.getString("mantik.engine.server.interface")

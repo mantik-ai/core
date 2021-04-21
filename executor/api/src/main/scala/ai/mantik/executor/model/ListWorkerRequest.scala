@@ -4,8 +4,8 @@ import ai.mantik.executor.model.docker.Container
 import io.circe.generic.JsonCodec
 
 /**
- * Request current workers.
- */
+  * Request current workers.
+  */
 @JsonCodec
 case class ListWorkerRequest(
     isolationSpace: String,

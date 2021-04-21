@@ -1,7 +1,7 @@
 package ai.mantik.elements.registry.api
 
-import ai.mantik.elements.{ MantikId, NamedMantikId }
-import net.reactivecore.fhttp.{ ApiBuilder, Output }
+import ai.mantik.elements.{MantikId, NamedMantikId}
+import net.reactivecore.fhttp.{ApiBuilder, Output}
 
 import scala.util.Try
 
@@ -49,10 +49,10 @@ object MantikRegistryApiCalls extends ApiBuilder {
   }
 
   /**
-   * Retrieve an artifact file.
-   *
-   * @return content type and byte source.
-   */
+    * Retrieve an artifact file.
+    *
+    * @return content type and byte source.
+    */
   val file = add {
     get("artifact", "file")
       .expecting(input.AddHeader(TokenHeaderName))
@@ -72,11 +72,12 @@ object MantikRegistryApiCalls extends ApiBuilder {
   val uploadFile = add {
     post("artifact", "file")
       .expecting(input.AddHeader(TokenHeaderName))
-      .expecting(input.Multipart.make(
-        input.Multipart.MultipartText("itemId"),
-        input.Multipart.MultipartFile("file", fileName = Some("file"))
-      ))
+      .expecting(
+        input.Multipart.make(
+          input.Multipart.MultipartText("itemId"),
+          input.Multipart.MultipartFile("file", fileName = Some("file"))
+        )
+      )
       .responding(withErrorType(output.circe[ApiFileUploadResponse]()))
   }
 }
-

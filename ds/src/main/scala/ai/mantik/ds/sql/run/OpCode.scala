@@ -1,7 +1,7 @@
 package ai.mantik.ds.sql.run
 
-import ai.mantik.ds.{ DataType, FundamentalType }
-import ai.mantik.ds.element.{ SingleElementBundle }
+import ai.mantik.ds.{DataType, FundamentalType}
+import ai.mantik.ds.element.{SingleElementBundle}
 import ai.mantik.ds.operations.BinaryOperation
 
 /** A Single OpCode in a stack based interpretation Machine. */
@@ -36,8 +36,8 @@ object OpCode {
   case object Pop extends OpCode(PopCode, consuming = 1, producing = 0)
 
   /**
-   * Casts types
-   */
+    * Casts types
+    */
   case class Cast(from: DataType, to: DataType) extends OpCode(CastCode)
 
   // Logic Operations
@@ -62,17 +62,19 @@ object OpCode {
   case object ReturnOnFalse extends OpCode(ReturnOnFalseCode, consuming = 0, producing = 0)
 
   /** Executes a binary operation. */
-  case class BinaryOp(dataType: DataType, op: BinaryOperation) extends OpCode(BinaryOpCode, consuming = 2, producing = 1)
+  case class BinaryOp(dataType: DataType, op: BinaryOperation)
+      extends OpCode(BinaryOpCode, consuming = 2, producing = 1)
 
   /**
-   * Unpack a nullable value, if it's a null then emits a null and jump for a given offset
-   * @param drop if not null, then additional n elements are dropped from the stack
-   */
+    * Unpack a nullable value, if it's a null then emits a null and jump for a given offset
+    * @param drop if not null, then additional n elements are dropped from the stack
+    */
   case class UnpackNullableJump(offset: Int, drop: Int = 0) extends OpCode(UnpackNullableJumpCode, consuming = 1 + drop)
+
   /**
-   * Wraps a value into a Nullable.
-   * (Note: some platforms may do nothing here, if they dont distinguish between Nullable and Value itself.
-   */
+    * Wraps a value into a Nullable.
+    * (Note: some platforms may do nothing here, if they dont distinguish between Nullable and Value itself.
+    */
   case object PackNullable extends OpCode(PackNullableCode)
 
   case object ArrayGet extends OpCode(ArrayGetCode, consuming = 2)

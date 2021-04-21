@@ -1,6 +1,6 @@
 package ai.mantik.engine.testutil
 
-import ai.mantik.elements.{ BridgeDefinition, MantikDefinition }
+import ai.mantik.elements.{BridgeDefinition, MantikDefinition}
 import ai.mantik.planner.repository.MantikArtifact
 
 object TestArtifacts {
@@ -8,8 +8,7 @@ object TestArtifacts {
   val algoBridge1 = MantikArtifact.makeFromDefinition(
     BridgeDefinition(
       dockerImage = "algo_image1",
-      suitable = Seq(MantikDefinition.AlgorithmKind
-      )
+      suitable = Seq(MantikDefinition.AlgorithmKind)
     ),
     "algo_bridge1"
   )

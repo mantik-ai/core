@@ -1,19 +1,19 @@
 package ai.mantik.elements
 
 import ai.mantik.ds.element.SingleElementBundle
-import ai.mantik.elements.errors.{ ErrorCodes, InvalidMantikHeaderException, MantikException }
-import ai.mantik.elements.meta.{ MetaJson, MetaVariableException }
+import ai.mantik.elements.errors.{ErrorCodes, InvalidMantikHeaderException, MantikException}
+import ai.mantik.elements.meta.{MetaJson, MetaVariableException}
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, Error, HCursor, Json, JsonObject, ObjectEncoder }
+import io.circe.{Decoder, DecodingFailure, Error, HCursor, Json, JsonObject, ObjectEncoder}
 import io.circe.syntax._
 import io.circe.yaml.syntax._
-import io.circe.yaml.{ Printer, parser => YamlParser }
+import io.circe.yaml.{Printer, parser => YamlParser}
 
 import scala.reflect.ClassTag
 
 /**
- * A MantikHeader file. Contains one Mantik Definition together with it's JSON representation.
- */
+  * A MantikHeader file. Contains one Mantik Definition together with it's JSON representation.
+  */
 case class MantikHeader[T <: MantikDefinition](
     definition: T,
     metaJson: MetaJson,
@@ -21,20 +21,22 @@ case class MantikHeader[T <: MantikDefinition](
 ) {
 
   /** Returns the definition, if applicable. */
-  def definitionAs[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[MantikException, T] = cast[T].right.map(_.definition)
+  def definitionAs[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[MantikException, T] =
+    cast[T].right.map(_.definition)
 
   def cast[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[MantikException, MantikHeader[T]] = {
     definition match {
       case x: T => Right(MantikHeader[T](x, metaJson, header))
-      case _ => Left(
-        ErrorCodes.MantikItemWrongType.toException(
-          s"Expected ${ct.runtimeClass.getSimpleName}, got ${definition.getClass.getSimpleName}"
+      case _ =>
+        Left(
+          ErrorCodes.MantikItemWrongType.toException(
+            s"Expected ${ct.runtimeClass.getSimpleName}, got ${definition.getClass.getSimpleName}"
+          )
         )
-      )
     }
   }
 
-  /** Returns Yaml code  */
+  /** Returns Yaml code */
   def toYaml: String = {
     Printer(preserveOrder = true).pretty(toJsonValue)
   }
@@ -54,9 +56,9 @@ case class MantikHeader[T <: MantikDefinition](
   }
 
   /**
-   * Update Meta Variable Values
-   * @throws MetaVariableException see [[MetaJson.withMetaValues]].
-   */
+    * Update Meta Variable Values
+    * @throws MetaVariableException see [[MetaJson.withMetaValues]].
+    */
   def withMetaValues(values: (String, SingleElementBundle)*): MantikHeader[T] = {
     val updatedJson = metaJson.withMetaValues(values: _*)
     val resultCandidate = for {
@@ -111,7 +113,9 @@ object MantikHeader {
   }
 
   /** Parse a YAML File, expecting a single definition only. */
-  def fromYamlWithType[T <: MantikDefinition](content: String)(implicit classTag: ClassTag[T]): Either[MantikException, MantikHeader[T]] = {
+  def fromYamlWithType[T <: MantikDefinition](
+      content: String
+  )(implicit classTag: ClassTag[T]): Either[MantikException, MantikHeader[T]] = {
     for {
       parsed <- fromYaml(content)
       casted <- parsed.cast[T]
@@ -133,7 +137,9 @@ object MantikHeader {
   }
 
   /** Generate the mantikHeader for a trained algorithm out of a trainable algorithm definition. */
-  def generateTrainedMantikHeader(trainable: MantikHeader[TrainableAlgorithmDefinition]): Either[MantikException, MantikHeader[AlgorithmDefinition]] = {
+  def generateTrainedMantikHeader(
+      trainable: MantikHeader[TrainableAlgorithmDefinition]
+  ): Either[MantikException, MantikHeader[AlgorithmDefinition]] = {
     val trainedBridge = trainable.definition.trainedBridge.getOrElse(
       trainable.definition.bridge // if no override given, use the same bridge
     )

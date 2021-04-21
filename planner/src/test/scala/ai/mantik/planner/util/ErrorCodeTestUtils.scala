@@ -1,6 +1,6 @@
 package ai.mantik.planner.util
 
-import ai.mantik.elements.errors.{ ErrorCode, MantikException }
+import ai.mantik.elements.errors.{ErrorCode, MantikException}
 import ai.mantik.testutils.TestBase
 
 import scala.concurrent.Future

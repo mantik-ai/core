@@ -13,16 +13,18 @@ class HelloMnpBridgeSpec extends IntegrationTestBase {
   private val MnpPort = 8502
 
   it should "initialize" in {
-    val startResponse = await(executor.startWorker(
-      StartWorkerRequest(
-        isolationSpace,
-        "id1",
-        MnpWorkerDefinition(
-          Container(
-            BuiltInItems.SelectBridge.mantikHeader.definition.dockerImage
+    val startResponse = await(
+      executor.startWorker(
+        StartWorkerRequest(
+          isolationSpace,
+          "id1",
+          MnpWorkerDefinition(
+            Container(
+              BuiltInItems.SelectBridge.mantikHeader.definition.dockerImage
+            )
           )
         )
-      ))
+      )
     )
     logger.info(s"Started container ${startResponse.nodeName}")
 
@@ -45,7 +47,7 @@ class HelloMnpBridgeSpec extends IntegrationTestBase {
         val response = await(client.about())
         response.name shouldNot be(empty)
       }
-    } finally  {
+    } finally {
       channel.shutdownNow()
     }
   }

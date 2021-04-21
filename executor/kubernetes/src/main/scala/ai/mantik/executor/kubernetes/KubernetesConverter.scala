@@ -3,12 +3,12 @@ package ai.mantik.executor.kubernetes
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import ai.mantik.executor.common.LabelConstants
-import ai.mantik.executor.model.{ MnpPipelineDefinition, MnpWorkerDefinition, StartWorkerRequest }
+import ai.mantik.executor.model.{MnpPipelineDefinition, MnpWorkerDefinition, StartWorkerRequest}
 import ai.mantik.executor.model.docker.DockerLogin
 import io.circe.Json
 import skuber.apps.v1.Deployment
 import skuber.ext.Ingress
-import skuber.{ Container, EnvVar, LabelSelector, ObjectMeta, Pod, Secret, Service }
+import skuber.{Container, EnvVar, LabelSelector, ObjectMeta, Pod, Secret, Service}
 
 /** Converts requests into Kubernetes Structures */
 case class KubernetesConverter(
@@ -16,9 +16,11 @@ case class KubernetesConverter(
     kubernetesHost: String
 ) {
   def convertStartWorkRequest(internalId: String, startWorkerRequest: StartWorkerRequest): Workload = {
-    val nameHintPrefix = startWorkerRequest.nameHint.map { nameHint =>
-      KubernetesNamer.escapeNodeName(nameHint) + "-"
-    }.getOrElse("")
+    val nameHintPrefix = startWorkerRequest.nameHint
+      .map { nameHint =>
+        KubernetesNamer.escapeNodeName(nameHint) + "-"
+      }
+      .getOrElse("")
 
     startWorkerRequest.definition match {
       case wd: MnpWorkerDefinition   => createMnpWorker(internalId, nameHintPrefix, startWorkerRequest, wd)
@@ -27,10 +29,10 @@ case class KubernetesConverter(
   }
 
   private def createMnpWorker(
-    internalId: String,
-    nameHintPrefix: String,
-    startWorkerRequest: StartWorkerRequest,
-    definition: MnpWorkerDefinition
+      internalId: String,
+      nameHintPrefix: String,
+      startWorkerRequest: StartWorkerRequest,
+      definition: MnpWorkerDefinition
   ): Workload = {
 
     val mainLabels = Map(
@@ -62,9 +64,9 @@ case class KubernetesConverter(
   }
 
   private def generateWorkerPod(
-    mainLabels: Map[String, String],
-    nameHintPrefix: String,
-    definition: MnpWorkerDefinition
+      mainLabels: Map[String, String],
+      nameHintPrefix: String,
+      definition: MnpWorkerDefinition
   ): Pod = {
     val podSpec = generateMnpWorkerPodSpec(definition)
     Pod(
@@ -79,9 +81,9 @@ case class KubernetesConverter(
   }
 
   private def generateWorkerDeployment(
-    mainLabels: Map[String, String],
-    nameHintPrefix: String,
-    definition: MnpWorkerDefinition
+      mainLabels: Map[String, String],
+      nameHintPrefix: String,
+      definition: MnpWorkerDefinition
   ): Deployment = {
     val id = mainLabels(LabelConstants.InternalIdLabelName)
     Deployment(
@@ -95,21 +97,20 @@ case class KubernetesConverter(
             LabelSelector.IsEqualRequirement(LabelConstants.ManagedByLabelName, LabelConstants.ManagedByLabelValue),
             LabelSelector.IsEqualRequirement(LabelConstants.InternalIdLabelName, id)
           ),
-          template =
-            Pod.Template.Spec(
-              metadata = ObjectMeta(
-                labels = mainLabels,
-                generateName = nameHintPrefix + "worker"
-              ),
-              spec = Some(generateMnpWorkerPodSpec(definition))
-            )
+          template = Pod.Template.Spec(
+            metadata = ObjectMeta(
+              labels = mainLabels,
+              generateName = nameHintPrefix + "worker"
+            ),
+            spec = Some(generateMnpWorkerPodSpec(definition))
+          )
         )
       )
     )
   }
 
   private def generateMnpWorkerPodSpec(
-    definition: MnpWorkerDefinition
+      definition: MnpWorkerDefinition
   ): skuber.Pod.Spec = {
     val workerContainer = generateMnpWorkerContainer(definition)
     val maybePreparer = generateMnpPreparer(definition)
@@ -119,7 +120,7 @@ case class KubernetesConverter(
   }
 
   private def generateMnpWorkerContainer(
-    definition: MnpWorkerDefinition
+      definition: MnpWorkerDefinition
   ): skuber.Container = {
     val resolvedContainer = config.dockerConfig.resolveContainer(definition.container)
     skuber.Container(
@@ -131,12 +132,15 @@ case class KubernetesConverter(
   }
 
   private def generateMnpPreparer(
-    definition: MnpWorkerDefinition
+      definition: MnpWorkerDefinition
   ): Option[skuber.Container] = {
     definition.initializer.map { initRequest =>
       val mainAddress = s"localhost:8502"
       val parameters = Seq(
-        "--address", mainAddress, "--keepRunning", "true"
+        "--address",
+        mainAddress,
+        "--keepRunning",
+        "true"
       )
       val allParameters = config.common.mnpPreparer.parameters ++ parameters
       val encodedInitRequest = Base64.getEncoder.encodeToString(initRequest.toArray[Byte])
@@ -148,15 +152,16 @@ case class KubernetesConverter(
         env = List(
           EnvVar("MNP_INIT", encodedInitRequest)
         ),
-        imagePullPolicy = KubernetesConverter.createImagePullPolicy(config.common.disablePull, config.common.mnpPreparer)
+        imagePullPolicy =
+          KubernetesConverter.createImagePullPolicy(config.common.disablePull, config.common.mnpPreparer)
       )
     }
   }
 
   private def generateWorkerService(
-    internalId: String,
-    mainLabels: Map[String, String],
-    nameHintPrefix: String
+      internalId: String,
+      mainLabels: Map[String, String],
+      nameHintPrefix: String
   ): Service = {
     Service(
       metadata = ObjectMeta(
@@ -179,10 +184,10 @@ case class KubernetesConverter(
   }
 
   def createMnpPipeline(
-    internalId: String,
-    nameHintPrefix: String,
-    request: StartWorkerRequest,
-    definition: MnpPipelineDefinition
+      internalId: String,
+      nameHintPrefix: String,
+      request: StartWorkerRequest,
+      definition: MnpPipelineDefinition
   ): Workload = {
 
     val mainLabels = Map(
@@ -214,14 +219,13 @@ case class KubernetesConverter(
                 LabelSelector.IsEqualRequirement(LabelConstants.ManagedByLabelName, LabelConstants.ManagedByLabelValue),
                 LabelSelector.IsEqualRequirement(LabelConstants.InternalIdLabelName, internalId)
               ),
-              template =
-                Pod.Template.Spec(
-                  metadata = ObjectMeta(
-                    generateName = nameHintPrefix + "pipeline",
-                    labels = mainLabels
-                  ),
-                  spec = Some(podSpec)
-                )
+              template = Pod.Template.Spec(
+                metadata = ObjectMeta(
+                  generateName = nameHintPrefix + "pipeline",
+                  labels = mainLabels
+                ),
+                spec = Some(podSpec)
+              )
             )
           )
         )
@@ -367,7 +371,10 @@ object KubernetesConverter {
     }
   }
 
-  def createImagePullPolicy(disablePull: Boolean, container: ai.mantik.executor.model.docker.Container): Container.PullPolicy.Value = {
+  def createImagePullPolicy(
+      disablePull: Boolean,
+      container: ai.mantik.executor.model.docker.Container
+  ): Container.PullPolicy.Value = {
     if (disablePull) {
       return Container.PullPolicy.Never
     }

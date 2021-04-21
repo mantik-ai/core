@@ -1,14 +1,14 @@
 package ai.mantik.planner.impl.exec
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.ItemId
 import ai.mantik.executor.ExecutorFileStorage
-import ai.mantik.planner.repository.{ FileRepository, Repository }
+import ai.mantik.planner.repository.{FileRepository, Repository}
 import akka.stream.scaladsl.Keep
 
-import java.time.temporal.{ ChronoUnit, UnsupportedTemporalTypeException }
-import javax.inject.{ Inject, Singleton }
-import scala.concurrent.{ Future, duration }
+import java.time.temporal.{ChronoUnit, UnsupportedTemporalTypeException}
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{Future, duration}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 
@@ -18,9 +18,11 @@ private[mantik] class ExecutorStorageExecutionPayloadProvider @Inject() (
     fileRepository: FileRepository,
     repo: Repository,
     storage: ExecutorFileStorage
-)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with ExecutionPayloadProvider {
+)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase
+    with ExecutionPayloadProvider {
 
-  /**  Duration how long temporary files are shared for executor nodes */
+  /** Duration how long temporary files are shared for executor nodes */
   val temporaryStorageTimeout: FiniteDuration = temporalConfig("mantik.planner.temporaryFileShareDuration")
 
   private def temporalConfig(key: String): FiniteDuration = {
@@ -49,14 +51,15 @@ private[mantik] class ExecutorStorageExecutionPayloadProvider @Inject() (
         case None =>
           // We have to upload the file
           uploadFile(fileId).flatMap { remoteFileId =>
-            shareTemporaryFile(remoteFileId).map { url =>
-              TemporaryFileKey(uploaded = true, remoteFileId) -> url
-            }.recoverWith {
-              case NonFatal(e) =>
+            shareTemporaryFile(remoteFileId)
+              .map { url =>
+                TemporaryFileKey(uploaded = true, remoteFileId) -> url
+              }
+              .recoverWith { case NonFatal(e) =>
                 logger.warn(s"Sharing of file ${remoteFileId} failed, deleting it again")
                 storage.deleteFile(remoteFileId)
                 Future.failed(e)
-            }
+              }
           }
         case Some(remoteFileId) =>
           // File is already deployed, let's use that.
@@ -85,7 +88,8 @@ private[mantik] class ExecutorStorageExecutionPayloadProvider @Inject() (
 
   /** Shares file, returns URL */
   private def shareTemporaryFile(remoteFileId: String): Future[String] = {
-    storage.shareFile(remoteFileId, temporaryStorageTimeout)
+    storage
+      .shareFile(remoteFileId, temporaryStorageTimeout)
       .map(_.url)
   }
 
@@ -93,11 +97,10 @@ private[mantik] class ExecutorStorageExecutionPayloadProvider @Inject() (
     val futures = keys.map { key =>
       if (key.uploaded) {
         logger.debug(s"Deleting temporary file ${key.remoteFileId}")
-        storage.deleteFile(key.remoteFileId).recover {
-          case NonFatal(e) =>
-            // Now it's up to the user to delete that file :(
-            logger.error(s"Could not delete remote temporary file ${key.remoteFileId}", e)
-            Future.successful(())
+        storage.deleteFile(key.remoteFileId).recover { case NonFatal(e) =>
+          // Now it's up to the user to delete that file :(
+          logger.error(s"Could not delete remote temporary file ${key.remoteFileId}", e)
+          Future.successful(())
         }
       } else {
         Future.successful(())
@@ -111,7 +114,6 @@ private[mantik] class ExecutorStorageExecutionPayloadProvider @Inject() (
   override def providePermanent(itemId: ItemId): Future[Option[String]] = {
     logger.debug(s"Permanently sharing ${itemId}")
     repo.get(itemId).flatMap { item =>
-
       item.fileId match {
         case None => Future.successful(None)
         case Some(fileId) =>
@@ -166,4 +168,3 @@ private[mantik] class ExecutorStorageExecutionPayloadProvider @Inject() (
     } yield (())
   }
 }
-

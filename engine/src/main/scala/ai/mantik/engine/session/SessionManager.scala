@@ -4,10 +4,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Base trait for sessions as being managed by the [[SessionManager]]. */
 trait SessionBase {
+
   /** Returns the id of the session. */
   def id: String
 
@@ -16,11 +17,11 @@ trait SessionBase {
 }
 
 /**
- * Manages lifecycle of [[Session]].
- * @param sessionFactory method for creating new sessions with a given name.
- *
- * TODO: Session Timeout.
- */
+  * Manages lifecycle of [[Session]].
+  * @param sessionFactory method for creating new sessions with a given name.
+  *
+  * TODO: Session Timeout.
+  */
 class SessionManagerBase[S <: SessionBase](sessionFactory: String => S)(implicit ec: ExecutionContext) {
 
   private val logger = LoggerFactory.getLogger(getClass)
@@ -66,4 +67,5 @@ class SessionManagerBase[S <: SessionBase](sessionFactory: String => S)(implicit
 
 }
 
-class SessionManager(sessionFactory: String => Session)(implicit ec: ExecutionContext) extends SessionManagerBase[Session](sessionFactory)
+class SessionManager(sessionFactory: String => Session)(implicit ec: ExecutionContext)
+    extends SessionManagerBase[Session](sessionFactory)

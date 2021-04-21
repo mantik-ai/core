@@ -9,13 +9,13 @@ import MessageFormat._
 object MessagePackHelpers {
 
   /**
-   * Returns the number of consumable bytes which form a single message pack message.
-   * Note: code is partly copy and pasted (and converted to Scala) from MessagePack library code.
-   * See MessageUnpacker.skipValue
-   *
-   * TODO: If MessagePack has ever an event driven approach https://github.com/msgpack/msgpack-java/issues/92
-   * we can remove all this.
-   */
+    * Returns the number of consumable bytes which form a single message pack message.
+    * Note: code is partly copy and pasted (and converted to Scala) from MessagePack library code.
+    * See MessageUnpacker.skipValue
+    *
+    * TODO: If MessagePack has ever an event driven approach https://github.com/msgpack/msgpack-java/issues/92
+    * we can remove all this.
+    */
   def consumableBytes(bytes: ByteString): Option[Int] = {
     implicit val byteOrdering = ByteOrder.BIG_ENDIAN
     val byteIterator = bytes.iterator

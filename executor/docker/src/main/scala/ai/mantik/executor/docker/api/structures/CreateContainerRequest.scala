@@ -12,10 +12,12 @@ case class CreateContainerRequest(
     HostConfig: CreateContainerHostConfig = CreateContainerHostConfig(),
     NetworkingConfig: CreateContainerNetworkingConfig = CreateContainerNetworkingConfig()
 ) {
+
   /** Add a network association */
   def withNetwork(
-    networkName: String,
-    createContainerNetworkSpecificConfig: CreateContainerNetworkSpecificConfig): CreateContainerRequest = {
+      networkName: String,
+      createContainerNetworkSpecificConfig: CreateContainerNetworkSpecificConfig
+  ): CreateContainerRequest = {
     copy(
       NetworkingConfig = NetworkingConfig.copy(
         EndpointsConfig = NetworkingConfig.EndpointsConfig + (networkName -> createContainerNetworkSpecificConfig)
@@ -25,9 +27,10 @@ case class CreateContainerRequest(
 
   def withNetworkId(networkName: String, networkId: String): CreateContainerRequest = {
     withNetwork(
-      networkName, CreateContainerNetworkSpecificConfig(
-      NetworkID = Some(networkId)
-    )
+      networkName,
+      CreateContainerNetworkSpecificConfig(
+        NetworkID = Some(networkId)
+      )
     )
   }
 }

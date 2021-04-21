@@ -9,9 +9,9 @@ import scala.concurrent.Future
 trait Executor extends Component {
 
   /**
-   * Publish a external service to the cluster.
-   * Note: this only for simplifying local deployments.
-   */
+    * Publish a external service to the cluster.
+    * Note: this only for simplifying local deployments.
+    */
   def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse]
 
   /** Returns the name and version string of the server (displayed on about page). */

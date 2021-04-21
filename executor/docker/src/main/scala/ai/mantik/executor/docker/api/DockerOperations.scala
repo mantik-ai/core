@@ -6,13 +6,22 @@ import java.util.concurrent.TimeoutException
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.docker.ContainerDefinition
 import ai.mantik.executor.docker.api.DockerClient.WrappedErrorResponse
-import ai.mantik.executor.docker.api.structures.{ ContainerWaitResponse, CreateContainerRequest, CreateContainerResponse, CreateNetworkRequest, InspectContainerResponse, ListContainerRequestFilter, ListContainerResponseRow, ListNetworkRequestFilter }
+import ai.mantik.executor.docker.api.structures.{
+  ContainerWaitResponse,
+  CreateContainerRequest,
+  CreateContainerResponse,
+  CreateNetworkRequest,
+  InspectContainerResponse,
+  ListContainerRequestFilter,
+  ListContainerResponseRow,
+  ListNetworkRequestFilter
+}
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 /** High level docker operations, consisting of multiple sub operations. */
 class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRuntime) {
@@ -75,9 +84,9 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
   }
 
   /**
-   * Wait for a container.
-   * This works around TimeoutExceptions from Akka Http.
-   */
+    * Wait for a container.
+    * This works around TimeoutExceptions from Akka Http.
+    */
   def waitContainer(container: String, timeout: FiniteDuration): Future[ContainerWaitResponse] = {
     val finalTimeout = akkaRuntime.clock.instant().plus(timeout.toSeconds, ChronoUnit.SECONDS)
 
@@ -87,10 +96,9 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
         Future.failed(new TimeoutException(s"Timeout waiting for container ${container}"))
       }
 
-      dockerClient.containerWait(container).recoverWith {
-        case _: TimeoutException =>
-          logger.debug("Container wait failed with timeout, trying again.")
-          continueWait()
+      dockerClient.containerWait(container).recoverWith { case _: TimeoutException =>
+        logger.debug("Container wait failed with timeout, trying again.")
+        continueWait()
       }
     }
 
@@ -98,9 +106,9 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
   }
 
   /**
-   * List containers.
-   * @param all if true, only running containers are returned.
-   */
+    * List containers.
+    * @param all if true, only running containers are returned.
+    */
   def listContainers(all: Boolean, labelFilters: Seq[(String, String)]): Future[Vector[ListContainerResponseRow]] = {
     dockerClient.listContainersFiltered(
       all,
@@ -108,7 +116,7 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
     )
   }
 
-  /** Ensures the existance of a running container, returns the ID if it's already running.  */
+  /** Ensures the existance of a running container, returns the ID if it's already running. */
   def ensureContainer(name: String, createContainerRequest: CreateContainerRequest): Future[String] = {
     checkExistance(name).flatMap {
       case Some(existing) =>
@@ -137,11 +145,13 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
 
   /** Ensures the existance of a network, returns the Id. */
   def ensureNetwork(name: String, createNetworkRequest: CreateNetworkRequest): Future[String] = {
-    dockerClient.listNetworksFiltered(
-      ListNetworkRequestFilter(
-        name = Some(Vector(name))
+    dockerClient
+      .listNetworksFiltered(
+        ListNetworkRequestFilter(
+          name = Some(Vector(name))
+        )
       )
-    ).flatMap {
+      .flatMap {
         case networks if networks.nonEmpty =>
           logger.info(s"Network ${name} already exists with id ${networks.head.Id}")
           Future.successful(networks.head.Id)

@@ -1,10 +1,10 @@
 package ai.mantik.ds.sql.builder
 
-import ai.mantik.ds.FundamentalType.{ StringType, fromName }
-import ai.mantik.ds.element.{ Bundle, Primitive, SingleElementBundle, TabularBundle }
+import ai.mantik.ds.FundamentalType.{StringType, fromName}
+import ai.mantik.ds.element.{Bundle, Primitive, SingleElementBundle, TabularBundle}
 import ai.mantik.ds.sql._
 import ai.mantik.ds.testutil.TestBase
-import ai.mantik.ds.{ ArrayT, FundamentalType, Nullable, Struct, TabularData }
+import ai.mantik.ds.{ArrayT, FundamentalType, Nullable, Struct, TabularData}
 
 class SelectBuilderSpec extends TestBase {
 
@@ -84,11 +84,14 @@ class SelectBuilderSpec extends TestBase {
 
     val got2 = SelectBuilder.buildSelect("SELECT 3 FROM $1")
     got2 shouldBe Right(
-      Select(AnonymousInput(emptyInput, 1), Some(
-        Vector(
-          SelectProjection("$1", ConstantExpression(SingleElementBundle(FundamentalType.Int8, Primitive(3: Byte))))
+      Select(
+        AnonymousInput(emptyInput, 1),
+        Some(
+          Vector(
+            SelectProjection("$1", ConstantExpression(SingleElementBundle(FundamentalType.Int8, Primitive(3: Byte))))
+          )
         )
-      ))
+      )
     )
     testReparsable(got2.forceRight)
   }
@@ -169,9 +172,8 @@ class SelectBuilderSpec extends TestBase {
         )
       )
     )
-    got.right.get.projections.zip(expected.projections).foreach {
-      case (a, b) =>
-        a shouldBe b
+    got.right.get.projections.zip(expected.projections).foreach { case (a, b) =>
+      a shouldBe b
     }
     got shouldBe Right(
       expected
@@ -183,9 +185,11 @@ class SelectBuilderSpec extends TestBase {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE x = 5")
     val expected = Select(
       AnonymousInput(simpleInput),
-      Some(Vector(
-        SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
-      )),
+      Some(
+        Vector(
+          SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
+        )
+      ),
       Vector(
         Condition.Equals(
           ColumnExpression(0, FundamentalType.Int32),
@@ -201,9 +205,11 @@ class SelectBuilderSpec extends TestBase {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World'")
     val expected = Select(
       AnonymousInput(simpleInput),
-      Some(Vector(
-        SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
-      )),
+      Some(
+        Vector(
+          SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
+        )
+      ),
       Vector(
         Condition.Equals(
           ColumnExpression(1, FundamentalType.StringType),
@@ -219,9 +225,11 @@ class SelectBuilderSpec extends TestBase {
     val got = SelectBuilder.buildSelect(simpleInput, "SELECT x WHERE y = 'Hello World' and x = 1")
     val expected = Select(
       AnonymousInput(simpleInput),
-      Some(Vector(
-        SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
-      )),
+      Some(
+        Vector(
+          SelectProjection("x", ColumnExpression(0, FundamentalType.Int32))
+        )
+      ),
       Vector(
         Condition.Equals(
           ColumnExpression(1, FundamentalType.StringType),
@@ -238,10 +246,12 @@ class SelectBuilderSpec extends TestBase {
   }
 
   it should "support nullable casts" in {
-    val got = SelectBuilder.buildSelect(
-      simpleInput,
-      "SELECT CAST (x as STRING NULLABLE)"
-    ).forceRight
+    val got = SelectBuilder
+      .buildSelect(
+        simpleInput,
+        "SELECT CAST (x as STRING NULLABLE)"
+      )
+      .forceRight
     val expected = Select(
       AnonymousInput(simpleInput),
       Some(
@@ -261,10 +271,12 @@ class SelectBuilderSpec extends TestBase {
   }
 
   it should "support is null checks" in {
-    val got = SelectBuilder.buildSelect(
-      simpleInput,
-      "SELECT y WHERE x IS NULL"
-    ).forceRight
+    val got = SelectBuilder
+      .buildSelect(
+        simpleInput,
+        "SELECT y WHERE x IS NULL"
+      )
+      .forceRight
     val expected = Select(
       AnonymousInput(simpleInput),
       Some(
@@ -283,10 +295,12 @@ class SelectBuilderSpec extends TestBase {
   }
 
   it should "support is not null checks" in {
-    val got = SelectBuilder.buildSelect(
-      simpleInput,
-      "SELECT y WHERE x IS NOT NULL"
-    ).forceRight
+    val got = SelectBuilder
+      .buildSelect(
+        simpleInput,
+        "SELECT y WHERE x IS NOT NULL"
+      )
+      .forceRight
     val expected = Select(
       AnonymousInput(simpleInput),
       Some(
@@ -312,10 +326,12 @@ class SelectBuilderSpec extends TestBase {
       "y" -> FundamentalType.Int8
     )
 
-    val got = SelectBuilder.buildSelect(
-      input,
-      "SELECT x[y], size(x)"
-    ).forceRight
+    val got = SelectBuilder
+      .buildSelect(
+        input,
+        "SELECT x[y], size(x)"
+      )
+      .forceRight
 
     got.resultingTabularType shouldBe TabularData(
       "$1" -> Nullable(FundamentalType.Int32),
@@ -326,13 +342,16 @@ class SelectBuilderSpec extends TestBase {
       AnonymousInput(input),
       Some(
         Vector(
-          SelectProjection("$1", ArrayGetExpression(
-            ColumnExpression(0, ArrayT(FundamentalType.Int32)),
-            CastExpression(
-              ColumnExpression(1, FundamentalType.Int8),
-              FundamentalType.Int32
+          SelectProjection(
+            "$1",
+            ArrayGetExpression(
+              ColumnExpression(0, ArrayT(FundamentalType.Int32)),
+              CastExpression(
+                ColumnExpression(1, FundamentalType.Int8),
+                FundamentalType.Int32
+              )
             )
-          )),
+          ),
           SelectProjection("$2", SizeExpression(ColumnExpression(0, ArrayT(FundamentalType.Int32))))
         )
       )
@@ -347,10 +366,12 @@ class SelectBuilderSpec extends TestBase {
       "y" -> FundamentalType.Int8
     )
 
-    val got = SelectBuilder.buildSelect(
-      input,
-      "SELECT CAST (x as INT32), CAST(y as INT8[][] NULLABLE)"
-    ).forceRight
+    val got = SelectBuilder
+      .buildSelect(
+        input,
+        "SELECT CAST (x as INT32), CAST(y as INT8[][] NULLABLE)"
+      )
+      .forceRight
 
     got.resultingTabularType shouldBe TabularData(
       "x" -> FundamentalType.Int32,
@@ -367,10 +388,12 @@ class SelectBuilderSpec extends TestBase {
         "age" -> FundamentalType.Int32
       )
     )
-    val got = SelectBuilder.buildSelect(
-      input,
-      "SELECT (user).name, (user).age"
-    ).forceRight
+    val got = SelectBuilder
+      .buildSelect(
+        input,
+        "SELECT (user).name, (user).age"
+      )
+      .forceRight
 
     got.resultingTabularType shouldBe TabularData(
       "name" -> FundamentalType.StringType,

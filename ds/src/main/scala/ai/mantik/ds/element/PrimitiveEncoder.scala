@@ -6,10 +6,10 @@ import ai.mantik.ds.FundamentalType._
 import scala.util.Try
 
 /**
- * Type class which wraps fundamental types into Primitive instances.
- * The purpose is to have a consistent mapping and to hide all these
- * type erasure beyond a layer of type class magic.
- */
+  * Type class which wraps fundamental types into Primitive instances.
+  * The purpose is to have a consistent mapping and to hide all these
+  * type erasure beyond a layer of type class magic.
+  */
 trait PrimitiveEncoder[T <: FundamentalType] {
   type ScalaType
 
@@ -30,7 +30,9 @@ object PrimitiveEncoder {
     type ScalaType = B0
   }
 
-  private def makePrimitiveEncoder[T <: FundamentalType, ST](convertPf: PartialFunction[Any, ST])(implicit ord: Ordering[ST]) = new PrimitiveEncoder[T] {
+  private def makePrimitiveEncoder[T <: FundamentalType, ST](
+      convertPf: PartialFunction[Any, ST]
+  )(implicit ord: Ordering[ST]) = new PrimitiveEncoder[T] {
     override final type ScalaType = ST
 
     override def wrap(s: ScalaType): Primitive[ScalaType] = Primitive(s)
@@ -83,8 +85,8 @@ object PrimitiveEncoder {
     case s: String if Try(s.toBoolean).isSuccess => s.toBoolean
   }
 
-  implicit val stringEncoder = makePrimitiveEncoder[StringType.type, String] {
-    case s: String => s
+  implicit val stringEncoder = makePrimitiveEncoder[StringType.type, String] { case s: String =>
+    s
   }
 
   implicit val float32Encoder = makePrimitiveEncoder[Float32.type, Float] {
@@ -98,8 +100,8 @@ object PrimitiveEncoder {
     case s: String if Try(s.toDouble).isSuccess => s.toDouble
   }
 
-  implicit val voidEncoder = makePrimitiveEncoder[VoidType.type, Unit] {
-    case _ => ()
+  implicit val voidEncoder = makePrimitiveEncoder[VoidType.type, Unit] { case _ =>
+    ()
   }
 
   implicit class PrimitiveExtensions[T <: FundamentalType, ST](t: T)(implicit f: Aux[T, ST]) {

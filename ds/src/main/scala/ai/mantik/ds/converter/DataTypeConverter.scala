@@ -1,6 +1,6 @@
 package ai.mantik.ds.converter
 
-import ai.mantik.ds.{ DataType, FundamentalType, TabularData }
+import ai.mantik.ds.{DataType, FundamentalType, TabularData}
 import ai.mantik.ds.element._
 
 /** A Converter for data types. */
@@ -33,9 +33,12 @@ object DataTypeConverter {
   }
 
   /** Generates a converter which is is working within a functional type and converting to the same again. */
-  def fundamental[T <: FundamentalType, ST](dt: T)(f: ST => ST)(implicit x: PrimitiveEncoder.Aux[T, ST]): DataTypeConverter = {
+  def fundamental[T <: FundamentalType, ST](
+      dt: T
+  )(f: ST => ST)(implicit x: PrimitiveEncoder.Aux[T, ST]): DataTypeConverter = {
     FunctionalConverter(
-      dt, p => Primitive(f(p.asInstanceOf[Primitive[ST]].x))
+      dt,
+      p => Primitive(f(p.asInstanceOf[Primitive[ST]].x))
     )
   }
 }

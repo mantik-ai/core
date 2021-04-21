@@ -1,13 +1,14 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.funcational.FunctionType
-import ai.mantik.elements.{ AlgorithmDefinition, MantikHeader }
+import ai.mantik.elements.{AlgorithmDefinition, MantikHeader}
 import ai.mantik.planner.repository.Bridge
 
 /** Some A => B Transformation Algorithm */
 case class Algorithm(
     core: MantikItemCore[AlgorithmDefinition]
-) extends ApplicableMantikItem with BridgedMantikItem {
+) extends ApplicableMantikItem
+    with BridgedMantikItem {
 
   override type DefinitionType = AlgorithmDefinition
   override type OwnType = Algorithm

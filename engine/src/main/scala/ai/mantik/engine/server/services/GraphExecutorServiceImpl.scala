@@ -1,18 +1,28 @@
 package ai.mantik.engine.server.services
 
 import ai.mantik.componently.rpc.RpcConversions
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.NamedMantikId
-import ai.mantik.engine.protos.graph_executor.{ DeployItemRequest, DeployItemResponse, FetchItemRequest, FetchItemResponse, SaveItemRequest, SaveItemResponse }
+import ai.mantik.engine.protos.graph_executor.{
+  DeployItemRequest,
+  DeployItemResponse,
+  FetchItemRequest,
+  FetchItemResponse,
+  SaveItemRequest,
+  SaveItemResponse
+}
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
-import ai.mantik.engine.session.{ EngineErrors, Session, SessionManager }
-import ai.mantik.planner.{ ApplicableMantikItem, DataSet }
+import ai.mantik.engine.session.{EngineErrors, Session, SessionManager}
+import ai.mantik.planner.{ApplicableMantikItem, DataSet}
 import akka.stream.Materializer
 import javax.inject.Inject
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
-class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with GraphExecutorService with RpcServiceBase {
+class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime)
+    extends ComponentBase
+    with GraphExecutorService
+    with RpcServiceBase {
 
   override def fetchDataSet(request: FetchItemRequest): Future[FetchItemResponse] = handleErrors {
     for {

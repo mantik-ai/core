@@ -1,11 +1,11 @@
 package ai.mantik.componently.rpc
 
-import ai.mantik.testutils.{ AkkaSupport, TestBase }
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import ai.mantik.testutils.{AkkaSupport, TestBase}
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import io.grpc.stub.StreamObserver
 
-import scala.concurrent.{ Future, Promise }
-import scala.util.{ Failure, Success, Try }
+import scala.concurrent.{Future, Promise}
+import scala.util.{Failure, Success, Try}
 
 class StreamConversionsSpec extends TestBase with AkkaSupport {
 

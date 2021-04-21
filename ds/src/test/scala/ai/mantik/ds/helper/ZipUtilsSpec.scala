@@ -1,6 +1,6 @@
 package ai.mantik.ds.helper
 
-import ai.mantik.ds.testutil.{ GlobalAkkaSupport, TempDirSupport, TestBase }
+import ai.mantik.ds.testutil.{GlobalAkkaSupport, TempDirSupport, TestBase}
 import org.apache.commons.io.FileUtils
 import _root_.akka.stream.scaladsl._
 import _root_.akka.util.ByteString
@@ -33,7 +33,8 @@ class ZipUtilsSpec extends TestBase with TempDirSupport with GlobalAkkaSupport w
     val sampleFileSource = FileIO.fromPath(sampleFile)
     val targetFile = tempDirectory.resolve("test.zip")
     val sampleFileDestination = FileIO.toPath(targetFile)
-    val result = await(sampleFileSource.via(ZipUtils.zipSingleFileStream("file1")).toMat(sampleFileDestination)(Keep.right).run())
+    val result =
+      await(sampleFileSource.via(ZipUtils.zipSingleFileStream("file1")).toMat(sampleFileDestination)(Keep.right).run())
     targetFile.toFile.exists() shouldBe true
 
     val destinationUnzip = tempDirectory.resolve("unzip")
@@ -46,17 +47,26 @@ class ZipUtilsSpec extends TestBase with TempDirSupport with GlobalAkkaSupport w
   it should "unzip via single flow" in {
     // zipping like above
     val targetFile = tempDirectory.resolve("test.zip")
-    await(FileIO.fromPath(sampleFile).via(ZipUtils.zipSingleFileStream()).toMat(FileIO.toPath(targetFile))(Keep.right).run())
+    await(
+      FileIO.fromPath(sampleFile).via(ZipUtils.zipSingleFileStream()).toMat(FileIO.toPath(targetFile))(Keep.right).run()
+    )
 
     val unzipTargetFile = tempDirectory.resolve("unzipped")
-    await(FileIO.fromPath(targetFile).via(ZipUtils.unzipSingleFileStream()).toMat(FileIO.toPath(unzipTargetFile))(Keep.right).run())
+    await(
+      FileIO
+        .fromPath(targetFile)
+        .via(ZipUtils.unzipSingleFileStream())
+        .toMat(FileIO.toPath(unzipTargetFile))(Keep.right)
+        .run()
+    )
 
     FileUtils.readFileToByteArray(sampleFile.toFile) shouldBe
       FileUtils.readFileToByteArray(unzipTargetFile.toFile)
   }
 
   it should "zip transparently" in {
-    val result = FileIO.fromPath(sampleFile)
+    val result = FileIO
+      .fromPath(sampleFile)
       .via(ZipUtils.zipSingleFileStream())
       .via(ZipUtils.unzipSingleFileStream())
       .runWith(Sink.seq)

@@ -1,23 +1,23 @@
 package ai.mantik.planner.repository.impl
 
 import java.io.File
-import java.nio.file.{ Files, Path }
+import java.nio.file.{Files, Path}
 import java.sql.Timestamp
 
-import ai.mantik.componently.{ AkkaRuntime, ComponentBase }
-import ai.mantik.elements.errors.{ ErrorCodes, MantikException }
-import ai.mantik.elements.{ ItemId, MantikHeader, MantikId, NamedMantikId }
+import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.elements.errors.{ErrorCodes, MantikException}
+import ai.mantik.elements.{ItemId, MantikHeader, MantikId, NamedMantikId}
 import ai.mantik.planner.repository.impl.LocalRepository.DirectoryConfigKey
-import ai.mantik.planner.repository.{ DeploymentInfo, MantikArtifact, Repository, SubDeploymentInfo }
+import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact, Repository, SubDeploymentInfo}
 import ai.mantik.planner.repository.impl.LocalRepositoryDb._
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import io.circe.parser
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import org.apache.commons.io.FileUtils
-import org.sqlite.{ SQLiteErrorCode, SQLiteException }
+import org.sqlite.{SQLiteErrorCode, SQLiteException}
 
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 /** A local repository for artifacts based upon Sqlite. */
 @Singleton
@@ -25,9 +25,11 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
 
   @Inject
   def this()(implicit akkaRuntime: AkkaRuntime) {
-    this(new File(
-      akkaRuntime.config.getString(LocalRepository.DirectoryConfigKey)
-    ).toPath)
+    this(
+      new File(
+        akkaRuntime.config.getString(LocalRepository.DirectoryConfigKey)
+      ).toPath
+    )
   }
 
   // Note: in general we are using the plain ExecutionContext here
@@ -66,14 +68,15 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   private def getByName(id: NamedMantikId): Option[DbArtifact] = {
     run {
       for {
-        name <- db.names.filter { n => n.account == lift(id.account) && n.name == lift(id.name) && n.version == lift(id.version) }
+        name <- db.names.filter { n =>
+          n.account == lift(id.account) && n.name == lift(id.name) && n.version == lift(id.version)
+        }
         item <- db.items.join(_.itemId == name.currentItemId)
         depl <- db.deployments.leftJoin(_.itemId == item.itemId)
       } yield (name, item, depl)
-    }.headOption.map {
-      case (name, item, depl) =>
-        val subDeployments = getSubDeployments(item.itemId)
-        DbArtifact(Some(name), item, depl, subDeployments)
+    }.headOption.map { case (name, item, depl) =>
+      val subDeployments = getSubDeployments(item.itemId)
+      DbArtifact(Some(name), item, depl, subDeployments)
     }
   }
 
@@ -83,10 +86,9 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
         item <- db.items.filter(_.itemId == lift(id.toString))
         depl <- db.deployments.leftJoin(_.itemId == item.itemId)
       } yield (item, depl)
-    }.headOption.map {
-      case (item, depl) =>
-        val subDeployments = getSubDeployments(item.itemId)
-        DbArtifact(None, item, depl, subDeployments)
+    }.headOption.map { case (item, depl) =>
+      val subDeployments = getSubDeployments(item.itemId)
+      DbArtifact(None, item, depl, subDeployments)
     }
   }
 
@@ -110,9 +112,10 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
             db.items.insert(lift(converted))
           )
         } catch {
-          case s: SQLiteException if s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY ||
-            s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT // newer version of sqlite throws this
-            =>
+          case s: SQLiteException
+              if s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY ||
+                s.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT // newer version of sqlite throws this
+              =>
             ErrorCodes.MantikItemConflict.throwIt("Items may not be overwritten with the same itemId")
         }
 
@@ -126,9 +129,9 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   }
 
   /**
-   * Forces mantikId to point to itemId.
-   * @return true if something changed.
-   */
+    * Forces mantikId to point to itemId.
+    * @return true if something changed.
+    */
   private def tagItemExec(itemId: ItemId, mantikId: NamedMantikId): Boolean = {
     val nameElement = DbMantikName(
       account = mantikId.account,
@@ -147,11 +150,13 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
     }
 
     val exists = run {
-      db.names.filter { e =>
-        e.account == lift(mantikId.account) &&
+      db.names
+        .filter { e =>
+          e.account == lift(mantikId.account) &&
           e.name == lift(mantikId.name) &&
           e.version == lift(mantikId.version)
-      }.map(x => (x.id, x.currentItemId))
+        }
+        .map(x => (x.id, x.currentItemId))
     }.headOption
 
     exists match {
@@ -217,22 +222,22 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
           try {
             run(db.deployments.insert(lift(converted))) > 0
           } catch {
-            case e: SQLiteException if e.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_FOREIGNKEY ||
-              e.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT =>
+            case e: SQLiteException
+                if e.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT_FOREIGNKEY ||
+                  e.getResultCode == SQLiteErrorCode.SQLITE_CONSTRAINT =>
               // entry not present.
               false
           }
 
         }
 
-        val convertedSubDeployments = info.sub.map {
-          case (key, value) =>
-            DbSubDeploymentInfo(
-              itemId = itemIdString,
-              subId = key,
-              name = value.name,
-              internalUrl = value.internalUrl
-            )
+        val convertedSubDeployments = info.sub.map { case (key, value) =>
+          DbSubDeploymentInfo(
+            itemId = itemIdString,
+            subId = key,
+            name = value.name,
+            internalUrl = value.internalUrl
+          )
         }
 
         run(db.subDeployments.filter(_.itemId == lift(itemIdString)).delete)
@@ -291,8 +296,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   }
 
   /**
-   * Convert a DB Artifact to a artifact
-   */
+    * Convert a DB Artifact to a artifact
+    */
   private def decodeDbArtifact(dbArtifact: DbArtifact): MantikArtifact = {
     MantikArtifact(
       mantikHeader = dbArtifact.item.mantikheader,
@@ -324,9 +329,9 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   }
 
   /**
-   * Encode a DB Artefact.
-   * Each Db Artefacts have different Ids, so it can come to collisions.
-   */
+    * Encode a DB Artefact.
+    * Each Db Artefacts have different Ids, so it can come to collisions.
+    */
   private def encodeDbArtifact(a: MantikArtifact): DbMantikItem = {
     DbMantikItem(
       mantikheader = a.mantikHeader,
@@ -348,7 +353,11 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
     }
   }
 
-  override def list(alsoAnonymous: Boolean, deployedOnly: Boolean, kindFilter: Option[String]): Future[IndexedSeq[MantikArtifact]] = {
+  override def list(
+      alsoAnonymous: Boolean,
+      deployedOnly: Boolean,
+      kindFilter: Option[String]
+  ): Future[IndexedSeq[MantikArtifact]] = {
     dbOperation(s"list alsoAnonymous=${alsoAnonymous} deployedOnly=${deployedOnly} kindFilter=${kindFilter}") {
       // The filtering can't be easily moved to a later stage so it's directly inside the join expression
       // see https://github.com/getquill/quill/issues/1012
@@ -386,18 +395,19 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   override def byFileId(fileId: String): Future[Seq[MantikArtifact]] = {
     dbOperation(s"byFileId fileId=${fileId}") {
       val query = quote {
-        db.items.filter(_.fileId == lift(Some(fileId): Option[String]))
-          .leftJoin(db.names).on(_.itemId == _.currentItemId)
-          .leftJoin(db.deployments).on(_._1.itemId == _.itemId)
+        db.items
+          .filter(_.fileId == lift(Some(fileId): Option[String]))
+          .leftJoin(db.names)
+          .on(_.itemId == _.currentItemId)
+          .leftJoin(db.deployments)
+          .on(_._1.itemId == _.itemId)
       }
-      val artifacts = run(query).map {
-        case ((item, name), depl) =>
-          (item, name, depl)
+      val artifacts = run(query).map { case ((item, name), depl) =>
+        (item, name, depl)
       }
-      artifacts.map {
-        case (item, name, depl) =>
-          val subDeployments = getSubDeployments(item.itemId)
-          decodeDbArtifact(DbArtifact(name, item, depl, subDeployments))
+      artifacts.map { case (item, name, depl) =>
+        val subDeployments = getSubDeployments(item.itemId)
+        decodeDbArtifact(DbArtifact(name, item, depl, subDeployments))
       }
     }
   }
@@ -416,9 +426,10 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
 }
 
 @Singleton
-class TempRepository @Inject() (implicit akkaRuntime: AkkaRuntime) extends LocalRepository(
-  Files.createTempDirectory("mantik_db")
-) {
+class TempRepository @Inject() (implicit akkaRuntime: AkkaRuntime)
+    extends LocalRepository(
+      Files.createTempDirectory("mantik_db")
+    ) {
 
   addShutdownHook {
     logger.debug(s"Deleting temp directory ${directory}")
