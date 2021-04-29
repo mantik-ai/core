@@ -7,7 +7,6 @@ import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.registry.api._
 import ai.mantik.planner.buildinfo.BuildInfo
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -19,8 +18,7 @@ class MantikRegistryTokenProvider(
     password: SecretReader
 )(
     implicit akkaRuntime: AkkaRuntime
-) extends ComponentBase
-    with FailFastCirceSupport {
+) extends ComponentBase {
 
   // Used by ensureToken
   private object tokenLock

@@ -1,11 +1,10 @@
 ThisBuild / organization := "ai.mantik"
 ThisBuild / version := "0.3-SNAPSHOT"
-ThisBuild / scalaVersion := "2.12.8"
+ThisBuild / scalaVersion := "2.12.13"
 // ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
 ThisBuild / scalacOptions += "-feature"
 ThisBuild / scalacOptions ++= Seq("-unchecked", "-deprecation")
 ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats
-// ThisBuild / updateOptions := updateOptions.value.withGigahorse(false) // See https://github.com/sbt/sbt/issues/3570
 
 Test / parallelExecution := true
 Test / fork := false
@@ -14,12 +13,27 @@ IntegrationTest / fork := true
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
-val akkaVersion = "2.5.20"
-val akkaHttpVersion = "10.1.7"
-val scalaTestVersion = "3.0.5"
-val circeVersion = "0.11.1"
-val slf4jVersion = "1.7.25"
+val akkaVersion = "2.5.32"
+val akkaHttpVersion = "10.1.14"
+val scalaTestVersion = "3.0.9"
+val circeVersion = "0.11.2"
+val slf4jVersion = "1.7.30"
 val fhttpVersion = "0.2.2"
+val scalaLoggingVersion = "3.9.3"
+val commonsIoVersion = "2.8.0"
+val guavaVersion = "30.1.1-jre"
+val guiceVersion = "4.2.3"
+val circeYamlVersion = "0.8.0"
+val logbackVersion = "1.2.3"
+val macroParadiseVersion = "2.1.1"
+val akkaHttpCirceVerson = "1.25.2"
+val awsSdkVersion = "2.16.45"
+val skuberVersion = "2.2.0"
+val sqliteJdbcVersion = "3.28.0"
+val quillVersion = "3.2.2"
+val catsVersion = "1.6.1"
+val parboiledVersion = "2.1.8"
+val msgpackVersion = "0.8.22"
 
 val publishSettings = Seq(
   publishTo := {
@@ -53,12 +67,12 @@ lazy val testutils = (project in file("testutils"))
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion,
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+      "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
       "org.slf4j" % "slf4j-api" % slf4jVersion,
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "commons-io" % "commons-io" % "2.6",
+      "ch.qos.logback" % "logback-classic" % logbackVersion,
+      "commons-io" % "commons-io" % commonsIoVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      "io.circe" %% "circe-yaml" % "0.8.0"
+      "io.circe" %% "circe-yaml" % circeYamlVersion
     ),
     publishSettings
   )
@@ -101,7 +115,7 @@ def makeProject(directory: String, id: String = "") = {
     .dependsOn(testutils % "it,test")
     .configs(IntegrationTest)
     .settings(
-      addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+      addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full),
       publishSettings,
       Defaults.itSettings,
       IntegrationTest / testOptions += Tests.Argument("-oDF"),
@@ -116,24 +130,23 @@ lazy val ds = makeProject("ds")
       // Circe
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
-      "io.circe" %% "circe-java8" % circeVersion,
       // Akka
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
       // Cats
-      "org.typelevel" %% "cats-core" % "1.6.0",
+      "org.typelevel" %% "cats-core" % catsVersion,
       // Parboiled (Parsers)
-      "org.parboiled" %% "parboiled" % "2.1.5",
+      "org.parboiled" %% "parboiled" % parboiledVersion,
       // https://mvnrepository.com/artifact/commons-io/commons-io
-      "commons-io" % "commons-io" % "2.6",
+      "commons-io" % "commons-io" % commonsIoVersion,
       // MessagePack
-      "org.msgpack" % "msgpack-core" % "0.8.16",
+      "org.msgpack" % "msgpack-core" % msgpackVersion,
       // SLF4J Api
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       // Guava
-      "com.google.guava" % "guava" % "30.0-jre"
+      "com.google.guava" % "guava" % guavaVersion
     )
   )
 
@@ -152,9 +165,7 @@ lazy val util = makeProject("util")
       // Circe
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
-      "io.circe" %% "circe-java8" % circeVersion,
-      "io.circe" %% "circe-generic-extras" % circeVersion,
-      "de.heikoseeberger" %% "akka-http-circe" % "1.25.2"
+      "io.circe" %% "circe-generic-extras" % circeVersion
     )
   )
 
@@ -175,7 +186,7 @@ lazy val elements = makeProject("elements")
   .settings(
     name := "elements",
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-yaml" % "0.8.0",
+      "io.circe" %% "circe-yaml" % circeYamlVersion,
       "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
       "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
     ),
@@ -188,12 +199,12 @@ lazy val componently = makeProject("componently")
   .settings(
     name := "componently",
     libraryDependencies ++= Seq(
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+      "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
       // gRPC
       "io.grpc" % "grpc-stub" % scalapb.compiler.Version.grpcJavaVersion,
       "com.google.protobuf" % "protobuf-java" % scalapb.compiler.Version.protobufVersion,
       // Guice
-      "com.google.inject" % "guice" % "4.2.2"
+      "com.google.inject" % "guice" % guiceVersion
     )
   )
 
@@ -233,7 +244,7 @@ lazy val executorS3Storage = makeProject("executor/s3-storage", "executorS3Stora
     name := "executor-s3-storage",
     libraryDependencies ++= Seq(
       // Amazon S3
-      "software.amazon.awssdk" % "s3" % "2.15.69"
+      "software.amazon.awssdk" % "s3" % awsSdkVersion
     )
   )
 
@@ -250,10 +261,10 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       // Kubernetes Client
-      "io.skuber" %% "skuber" % "2.2.0",
+      "io.skuber" %% "skuber" % skuberVersion,
       // Guava
-      "com.google.guava" % "guava" % "27.1-jre",
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+      "com.google.guava" % "guava" % guavaVersion,
+      "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion
     )
   )
   .enablePlugins(BuildInfoPlugin)
@@ -267,8 +278,8 @@ lazy val planner = makeProject("planner")
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
-      "org.xerial" % "sqlite-jdbc" % "3.28.0",
-      "io.getquill" %% "quill-jdbc" % "3.2.0"
+      "org.xerial" % "sqlite-jdbc" % sqliteJdbcVersion,
+      "io.getquill" %% "quill-jdbc" % quillVersion
     ),
     enableProtocolBuffer,
     configureBuildInfo("ai.mantik.planner.buildinfo"),
@@ -281,7 +292,7 @@ lazy val examples = makeProject("examples")
   .settings(
     name := "examples",
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "ch.qos.logback" % "logback-classic" % logbackVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     ),
     publish := {},
@@ -309,7 +320,7 @@ lazy val engineApp = makeProject("engine-app", "engineApp")
   .settings(
     libraryDependencies ++= Seq(
       // Logging
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "ch.qos.logback" % "logback-classic" % logbackVersion,
       "org.slf4j" % "jul-to-slf4j" % slf4jVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     )
