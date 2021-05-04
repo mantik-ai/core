@@ -37,6 +37,10 @@ build:
       - "public"
     expire_in: 5 hrs
 
+validate_copyright_header:
+  stage: verify
+  script:
+    - ./scripts/ci/copyright_header.sh validate
 
 test:
   stage: verify
