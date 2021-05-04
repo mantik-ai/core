@@ -1,5 +1,5 @@
 #
-# This file is part of the Mantik.
+# This file is part of the Mantik Project.
 # Copyright (c) 2020-2021 Mantik UG (Haftungsbeschränkt)
 # Authors: See AUTHORS file
 #
