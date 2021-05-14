@@ -52,6 +52,23 @@ case class MantikHeaderMeta(
       account = account.getOrElse(NamedMantikId.DefaultAccount)
     )
   }
+
+  /** Overrides all name related fields from an id. (name, version, account) */
+  def withId(id: NamedMantikId): MantikHeaderMeta = {
+    copy(
+      name = Some(id.name),
+      version = if (id.version == NamedMantikId.DefaultVersion) {
+        None
+      } else {
+        Some(id.version)
+      },
+      account = if (id.account == NamedMantikId.DefaultAccount) {
+        None
+      } else {
+        Some(id.account)
+      }
+    )
+  }
 }
 
 object MantikHeaderMeta {

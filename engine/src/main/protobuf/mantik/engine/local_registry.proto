@@ -62,7 +62,9 @@ message ListArtifactResponse {
 
 message AddArtifactRequest {
     // Header part
-    // Optional Named Mantik Id
+    // Optional Named Mantik Id, overriding an (optional) name inside the MantikHeader
+    // If there are no named Mantik Ids either here nor inside MantikHeader, then an
+    // anonymous item is generated.
     string named_mantik_id = 1;
     // Mantik Header
     string mantik_header = 2;

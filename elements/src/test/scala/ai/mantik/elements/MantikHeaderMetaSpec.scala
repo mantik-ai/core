@@ -42,4 +42,17 @@ class MantikHeaderMetaSpec extends TestBase {
     )
     bad.id.get.violations shouldNot be(empty)
   }
+
+  it should "take over the id" in {
+    val base = MantikHeaderMeta()
+    val full = NamedMantikId("account/foo:1234")
+    base.withId(full).id shouldBe Some(full)
+
+    val simple = NamedMantikId("bar")
+
+    val withSimple = base.withId(simple)
+    withSimple.id shouldBe Some(simple)
+    withSimple.account shouldBe empty
+    withSimple.version shouldBe empty
+  }
 }
