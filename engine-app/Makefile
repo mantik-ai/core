@@ -41,3 +41,6 @@ publish:
 
 clean:
 	$(SBT) clean
+	# Also deleting compiled build.sbt
+	rm -rf ../project/target
+	rm -rf ../project/project/target

@@ -1,5 +1,7 @@
 # No Built in Rules
 MAKEFLAGS += --no-builtin-rules
+CACHE_DIR ?= ${PWD}/cache
+export CACHE_DIR
 
 build: build-subprojects
 
@@ -65,8 +67,7 @@ publish:
 	$(MAKE) -C engine-app publish
 
 .PHONY: clean
-clean:
-	rm -rf `find -not -path "./cache/*" -name "target" | xargs`
+clean: clean-subprojects
 
 # Pattern rule which executes % on every subproject
 %-subprojects:
