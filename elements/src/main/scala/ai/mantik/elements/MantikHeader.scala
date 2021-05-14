@@ -34,6 +34,12 @@ import scala.reflect.ClassTag
 
 /**
   * A MantikHeader file. Contains one Mantik Definition together with it's JSON representation.
+  *
+  * @param definition the base definition of the Mantik Item
+  * @param metaJson   the JSON source of the item and it's meta variables
+  * @param header     common optional meta fields of a MantikHeader (e.g. Name, Version, ...)
+  *
+  * Note: MetaJson and MantikHeaderMeta both have meta in their name, but are completely different things.
   */
 case class MantikHeader[T <: MantikDefinition](
     definition: T,
@@ -91,6 +97,21 @@ case class MantikHeader[T <: MantikDefinition](
       case Left(error)  => throw new MetaVariableException("Could not reparse with changed meta values ", error)
       case Right(value) => value
     }
+  }
+
+  /** Update Meta values of the Mantik Header.
+    * (Updates the MetaJson accordingly)
+    */
+  def withMantikHeaderMeta(meta: MantikHeaderMeta): MantikHeader[T] = {
+    val updatedJson = toJsonValue.deepMerge(meta.asJson).asObject.getOrElse {
+      throw new IllegalStateException(s"Meta JSON should always be an object")
+    }
+    copy(
+      header = meta,
+      metaJson = metaJson.copy(
+        sourceJson = updatedJson
+      )
+    )
   }
 
   /** Return violations (note: cannot spot bridge-related violations) */

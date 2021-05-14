@@ -22,7 +22,6 @@
 package ai.mantik.engine.server.services
 
 import java.time.Instant
-
 import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
 import ai.mantik.ds.FundamentalType.{Int32, StringType}
 import ai.mantik.ds.funcational.FunctionType
@@ -32,6 +31,7 @@ import ai.mantik.elements.{
   ItemId,
   MantikDefinition,
   MantikHeader,
+  MantikId,
   NamedMantikId
 }
 import ai.mantik.engine.protos.local_registry.{
@@ -287,6 +287,40 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     loadFileResult.contentType shouldBe ContentTypes.ZipFileContentType
     val fileContent = collectByteSource(loadFileResult.source)
     fileContent shouldBe (bytes.reduce(_ ++ _))
+  }
+
+  it should "take over the name of the mantik file if no alternative is given" in new EnvBase {
+    val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[AddArtifactResponse]()
+    val requestObserver = localRegistryServiceImpl.addArtifact(resultObserver)
+
+    val namedId = NamedMantikId(
+      "account/my_nice_algorithm:1.1"
+    )
+
+    namedId.violations shouldBe empty
+
+    val myItem = item.copy(
+      mantikHeader = item.parsedMantikHeader
+        .withMantikHeaderMeta(
+          item.parsedMantikHeader.header.withId(
+            namedId
+          )
+        )
+        .toJson
+    )
+
+    requestObserver.onNext(
+      AddArtifactRequest(
+        mantikHeader = myItem.mantikHeader
+      )
+    )
+    requestObserver.onCompleted()
+    val result = await(resultFuture)
+    result.getArtifact.namedId shouldBe namedId.toString
+
+    val original = await(localRepo.get(MantikId.fromString(result.artifact.get.namedId)))
+    Converters.decodeMantikArtifact(result.artifact.get) shouldBe original
+    original.namedId shouldBe Some(namedId)
   }
 
   "getArtifactWithPayload" should "deliver artifacts without payload" in new EnvBase {

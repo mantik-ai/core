@@ -87,24 +87,35 @@ class LocalRegistryServiceImpl @Inject() (localMantikRegistry: LocalMantikRegist
       translateError,
       responseObserver
     ) { case (header, source) =>
-      val namedId = RpcConversions
+      val overrideNamedMantikId: Option[NamedMantikId] = RpcConversions
         .decodeOptionalString(header.namedMantikId)
         .map(
           NamedMantikId.apply
         )
+
+      // Forcing the parsing of the Header
+      val parsedMantikHeader =
+        MantikHeader.fromYaml(header.mantikHeader).fold(e => throw InvalidMantikHeaderException.wrap(e), identity)
+
+      val namedMantikId = overrideNamedMantikId.orElse(
+        parsedMantikHeader.header.id
+      )
+
       val itemId = ItemId.generate()
       val maybeContentType = RpcConversions.decodeOptionalString(header.contentType)
+
       val mantikArtifact = MantikArtifact(
         mantikHeader = header.mantikHeader,
         fileId = None, // will be set by response
-        namedId = namedId,
+        namedId = namedMantikId,
         itemId = itemId
       )
-      mantikArtifact.parsedMantikHeader // force parsing
+
       val maybePayloadSource: Option[PayloadSource] = maybeContentType.map { contentType =>
         val decodedSource = source.map(r => RpcConversions.decodeByteString(r.payload))
         contentType -> decodedSource
       }
+
       logger.info(s"Adding artifact ${mantikArtifact.mantikId} (payload=${maybeContentType})...")
       localMantikRegistry
         .addMantikArtifact(

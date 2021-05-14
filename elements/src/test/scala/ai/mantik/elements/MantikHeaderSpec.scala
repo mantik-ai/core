@@ -160,6 +160,21 @@ class MantikHeaderSpec extends TestBase {
     )
   }
 
+  it should "support updating MantikHeaderMeta" in {
+    val mantikHeader = MantikHeader.fromYamlWithType[AlgorithmDefinition](sample).forceRight
+    mantikHeader.header.id shouldBe Some(NamedMantikId("super_duper_algorithm:0.1"))
+
+    val updated = mantikHeader.withMantikHeaderMeta(
+      MantikHeaderMeta().withId(
+        "account/name:0.2"
+      )
+    )
+    updated.header.id shouldBe Some(NamedMantikId("account/name:0.2"))
+    val serialized = updated.toJsonValue
+    val back = MantikHeader.parseSingleDefinition(serialized).forceRight
+    back.header.id shouldBe Some(NamedMantikId("account/name:0.2"))
+  }
+
   it should "parse trainable algorithms" in {
     val definition =
       """
