@@ -42,7 +42,7 @@ else
 endif
 
 clean::
-	rm -rf target/docker_build
+	rm -rf target
 
 # Pulling dependencies
 pull_dependencies: target/vendor/tensorflow_c/lib

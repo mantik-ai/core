@@ -335,6 +335,7 @@ lazy val root = (project in file("."))
     elements,
     executorApi,
     executorCommon,
+    executorCommonTest,
     executorKubernetes,
     executorDocker,
     executorS3Storage,
