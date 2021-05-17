@@ -2,7 +2,7 @@ module gl.ambrosys.de/mantik/go_shared
 
 require (
 	github.com/buger/jsonparser v0.0.0-20181115193947-bf1c66bbce23
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.5.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.3.0

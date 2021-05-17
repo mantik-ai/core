@@ -2,7 +2,7 @@ module tfbridge
 
 require (
 	github.com/buger/jsonparser v0.0.0-20181115193947-bf1c66bbce23
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.5.2
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.3.0
