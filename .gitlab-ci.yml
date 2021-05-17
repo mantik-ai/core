@@ -4,7 +4,7 @@ include:
     file: "/templates/storage/ci.yml"
 
 image:
-  name: reg.ambrosys.de/mantik/mantikbuilder
+  name: reg.ambrosys.de/mantik/mantikbuilder:v1
   entrypoint: [""] # Bug https://gitlab.com/gitlab-org/gitlab-runner/issues/1170
 
 

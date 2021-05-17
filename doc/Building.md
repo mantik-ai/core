@@ -36,12 +36,6 @@ Requirements
       sudo apt-get install protobuf-compiler libprotobuf-dev
       ```
       
-    * Protobuf for golang
-
-      ```
-      go get github.com/golang/protobuf/protoc-gen-go
-      ```
-      
 * Python
      
      - Python 3.7

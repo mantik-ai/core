@@ -30,6 +30,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 	"io"
 	"io/ioutil"
 	"os"
@@ -134,7 +135,7 @@ func parseInitFromStringContent(s string) (*mnp.InitRequest, error) {
 
 func parseInitFromContent(bytes []byte) (*mnp.InitRequest, error) {
 	req := mnp.InitRequest{}
-	err := req.XXX_Unmarshal(bytes)
+	err := proto.Unmarshal(bytes, &req)
 	if err != nil {
 		return nil, err
 	}

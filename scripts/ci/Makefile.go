@@ -56,6 +56,8 @@ clean::
 protos: protos/proto.make
 
 protos/proto.make: $(shell find $(PROTOBUF_DIR) -name "*.proto")
+	# Pinning go protoc gen
+	go get github.com/golang/protobuf/protoc-gen-go@v1.5.2
 	@mkdir -p protos
 	PATH=$(PATH):$(GO_PATH)/bin; protoc -I $(PROTOBUF_DIR) $^ --go_out=plugins=grpc:protos
 	@touch $@
