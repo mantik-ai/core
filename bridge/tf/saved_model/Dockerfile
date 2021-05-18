@@ -1,4 +1,4 @@
-FROM golang:1.13.4-buster AS build
+FROM golang:1.16.0-buster AS build
 
 RUN groupadd -r mantik-bridge && useradd -r -g mantik-bridge mantik-bridge
 
@@ -14,7 +14,7 @@ WORKDIR /opt/bridge
 ENV CLIBDIR=/opt/bridge/vendor/tensorflow_c
 
 RUN mkdir -p $CLIBDIR
-RUN curl https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.12.0.tar.gz | tar xvz -C $CLIBDIR
+RUN curl https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.15.0.tar.gz | tar xvz -C $CLIBDIR
 
 # Bulding Tensorflow Bridge
 ADD *.go .
@@ -39,7 +39,7 @@ ENV CGO_LDFLAGS=-L/opt/bridge/vendor/tensorflow_c/lib
 RUN mkdir /tmp/go_cache
 ENV GOCACHE=/tmp/go_cache
 
-RUN go build -o tfbridge
+RUN go build -mod=mod -o tfbridge
 
 # Build final image
 FROM debian:buster-slim

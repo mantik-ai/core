@@ -18,11 +18,11 @@ endif
 ifeq ($(UNAME_S), Darwin)
   DYLD_LIBRARY_PATH=$(shell pwd)/$(TENSORFLOW_DIR)
   export DYLD_LIBRARY_PATH
-  CLIBURL=https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-darwin-x86_64-1.12.0.tar.gz
+  CLIBURL=https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-darwin-x86_64-1.15.0.tar.gz
 else ifeq ($(UNAME_S), Linux)
   LD_LIBRARY_PATH=$(shell pwd)/$(TENSORFLOW_DIR)
   export LD_LIBRARY_PATH
-  CLIBURL=https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.12.0.tar.gz
+  CLIBURL=https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.15.0.tar.gz
 else
   $(error Unknown platform)
 endif

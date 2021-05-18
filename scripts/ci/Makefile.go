@@ -10,7 +10,7 @@ ENABLE_LINUX ?= true
 EXTRA_DEPS ?=
 MAIN_FILE ?= main.go
 APP_VERSION := $(shell git describe --always --dirty)
-GO_PATH ?= $(HOME)/go
+GOPATH ?= $(HOME)/go
 
 ifeq ($(ENABLE_LINUX),true)
 	LINUX_DEPENDENCY = target/${NAME}_linux
@@ -42,10 +42,10 @@ test: target/${NAME}
 
 target/${NAME}: $(shell find -not -path "./target/*" -name "*.go") $(EXTRA_DEPS)
 	gofmt -w .
-	go build -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)
+	go build -mod=mod -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)
 
 target/${NAME}_linux: target/${NAME} $(EXTRA_DEPS)
-	CGO_ENABLED=0 GOOS=linux go build -a -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)
+	CGO_ENABLED=0 GOOS=linux go build -mod=mod -a -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)
 
 # If a protobuf_dir is set, it will be build extra
 ifdef PROTOBUF_DIR
@@ -59,6 +59,6 @@ protos/proto.make: $(shell find $(PROTOBUF_DIR) -name "*.proto")
 	# Pinning go protoc gen
 	go get github.com/golang/protobuf/protoc-gen-go@v1.5.2
 	@mkdir -p protos
-	PATH=$(PATH):$(GO_PATH)/bin; protoc -I $(PROTOBUF_DIR) $^ --go_out=plugins=grpc:protos
+	PATH=$(GOPATH)/bin:$(PATH); protoc -I $(PROTOBUF_DIR) $^ --go_out=plugins=grpc:protos
 	@touch $@
 endif

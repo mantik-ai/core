@@ -4,7 +4,7 @@ include:
     file: "/templates/storage/ci.yml"
 
 image:
-  name: reg.ambrosys.de/mantik/mantikbuilder:v1
+  name: reg.ambrosys.de/mantik/mantikbuilder:v2
   entrypoint: [""] # Bug https://gitlab.com/gitlab-org/gitlab-runner/issues/1170
 
 
@@ -79,7 +79,6 @@ docker_publish:
     BUILDSERVER: "true"
   only:
     - master
-    - story/151/build_system_integration
   cache:
     key: dependency_cache
     paths:
@@ -95,7 +94,6 @@ other_publish:
   stage: publish
   only:
     - master
-    - story/151/build_system_integration
   cache:
     key: dependency_cache
     paths:
@@ -114,4 +112,3 @@ pages:
     - echo "Uploading pages"
   only:
     - master
-    - story/151/build_system_integration

@@ -73,7 +73,7 @@ func RunBridge(imageName string, mantikHeader string, dataZipFile string, keepDa
 				},
 			},
 		},
-	}, nil, "mantik_bridge")
+	}, nil, nil, "mantik_bridge")
 
 	ExitOnError(err, "Container Create")
 
