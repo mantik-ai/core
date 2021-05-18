@@ -46,11 +46,11 @@ build_applications: $(EXECUTABLE_TARGETS) $(EXECUTABLE_LINUX_TARGETS)
 
 target/%_linux: $(GO_FILES)
 	@mkdir -p target
-	CGO_ENABLED=0 GOOS=linux go build -a  -o $@ $(MAIN_FILE_$*)
+	CGO_ENABLED=0 GOOS=linux go build -mod=mod -a  -o $@ $(MAIN_FILE_$*)
 
 target/%: $(GO_FILES)
 	@mkdir -p target
-	go build -o $@ $(MAIN_FILE_$*)
+	go build -mod=mod -o $@ $(MAIN_FILE_$*)
 
 # Docker stuff
 

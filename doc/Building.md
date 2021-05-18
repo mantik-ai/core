@@ -28,7 +28,7 @@ Requirements
 
 * Go Code
 
-    * [Go](https://golang.org/dl/). We are using Version 1.13.
+    * [Go](https://golang.org/dl/). We are using Version 1.16.
     * Protobuf
 
       ```
