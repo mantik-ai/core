@@ -23,7 +23,7 @@ package ai.mantik.planner
 
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.SingleElementBundle
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements.{ItemId, MantikHeader, TrainableAlgorithmDefinition}
 import ai.mantik.planner.repository.Bridge
 

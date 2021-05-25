@@ -28,6 +28,7 @@ import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.repository.{ContentTypes, FileRepository, MantikArtifact, MantikArtifactRetriever, Repository}
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -128,6 +129,14 @@ class BasicOpExecutor(
         val last = memory.getLast().asInstanceOf[T]
         memory.put(c.memoryId, last)
         Future.successful(last)
+      case c: PlanOp.UploadFile =>
+        val fileId = files.resolveFileId(c.fileReference)
+        FutureHelper.time(logger, s"Upload File $fileId") {
+          fileRepository.storeFile(fileId).flatMap { sink =>
+            val source = Source.single(c.data)
+            source.runWith(sink).map(_ => ())
+          }
+        }
     }
   }
 

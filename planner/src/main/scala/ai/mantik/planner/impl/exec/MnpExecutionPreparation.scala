@@ -22,6 +22,7 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.bridge.protocol.bridge.MantikInitConfiguration
+import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.mnp.protocol.mnp.{ConfigureInputPort, ConfigureOutputPort}
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import ai.mantik.planner.Planner.InconsistencyException
@@ -98,7 +99,7 @@ class MnpExecutionPreparer(
   private def buildSessionCall(nodeId: String, dockerContainer: DockerContainer): SessionInitializer = {
     val sessionId = sessionIdForNode(nodeId)
 
-    val inputData = dockerContainer.data.map { data =>
+    val fileInputData = dockerContainer.data.map { data =>
       files.resolveFileRead(data.id)
     }
 
@@ -131,18 +132,29 @@ class MnpExecutionPreparer(
       )
     }
 
+    val payloadContentType = fileInputData
+      .map(_.contentType)
+      .orElse(
+        dockerContainer.embeddedData.map(_._1)
+      )
+      .getOrElse("")
+
+    val payload = if (fileInputData.isDefined) {
+      val fullUrl =
+        remoteFileUrls.getOrElse(nodeId, throw new InconsistencyException(s"No remote url found for node id ${nodeId}"))
+      MantikInitConfiguration.Payload.Url(fullUrl)
+    } else
+      dockerContainer.embeddedData match {
+        case Some((_, data)) =>
+          MantikInitConfiguration.Payload.Content(RpcConversions.encodeByteString(data))
+        case None =>
+          MantikInitConfiguration.Payload.Empty
+      }
+
     val initConfiguration = MantikInitConfiguration(
       header = dockerContainer.mantikHeader.toJson,
-      payloadContentType = inputData.map(_.contentType).getOrElse(""),
-      payload = inputData
-        .map { data =>
-          val fullUrl = remoteFileUrls
-            .getOrElse(nodeId, throw new InconsistencyException(s"No remote url found for node id ${nodeId}"))
-          MantikInitConfiguration.Payload.Url(fullUrl)
-        }
-        .getOrElse(
-          MantikInitConfiguration.Payload.Empty
-        )
+      payloadContentType = payloadContentType,
+      payload = payload
     )
 
     MnpExecutionPreparation.SessionInitializer(sessionId, initConfiguration, inputPorts, outputPorts)

@@ -32,6 +32,9 @@ object Errors {
   /** A Format definition is in a way not logical. */
   class FormatDefinitionException(msg: String) extends RuntimeException(msg)
 
+  /** The data type cannot be applied. */
+  class DataTypeMismatchException(msg: String) extends RuntimeException(msg)
+
   /** Something is not encoded in the way we expect it. */
   class EncodingException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
 

@@ -115,13 +115,14 @@ object ResourcePlan {
   }
 
   /** Generates a Resource plan for a single node. */
-  def singleNode(nodeId: String, node: Node[PlanNodeService]): ResourcePlan = {
+  def singleNode(nodeId: String, node: Node[PlanNodeService], pre: PlanOp[Unit] = PlanOp.Empty): ResourcePlan = {
     val graph = Graph(
       nodes = Map(
         nodeId -> node
       )
     )
     ResourcePlan(
+      pre = pre,
       graph = graph,
       inputs = node.inputs.indices.map { port =>
         NodePortRef(nodeId, port)

@@ -22,7 +22,7 @@
 package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.formats.json.JsonFormat
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{DataType, TabularData}
 import ai.mantik.elements.PipelineStep.MetaVariableSetting

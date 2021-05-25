@@ -56,10 +56,6 @@ func (p *pushHandler) Quit(ctx context.Context, request *mnp.QuitRequest) (*mnp.
 	panic("implement me")
 }
 
-func (p *pushHandler) AboutSession(ctx context.Context, request *mnp.AboutSessionRequest) (*mnp.AboutSessionResponse, error) {
-	panic("implement me")
-}
-
 func (p *pushHandler) QuitSession(ctx context.Context, request *mnp.QuitSessionRequest) (*mnp.QuitSessionResponse, error) {
 	panic("implement me")
 }

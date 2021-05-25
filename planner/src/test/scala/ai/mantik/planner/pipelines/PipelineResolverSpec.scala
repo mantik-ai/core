@@ -22,7 +22,7 @@
 package ai.mantik.planner.pipelines
 
 import ai.mantik.ds.{DataType, FundamentalType, TabularData, Tensor}
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.PipelineStep.MetaVariableSetting
 import ai.mantik.elements.{

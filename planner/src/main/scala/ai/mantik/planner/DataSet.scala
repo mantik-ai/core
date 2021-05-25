@@ -21,9 +21,11 @@
  */
 package ai.mantik.planner
 
-import ai.mantik.ds.Errors.FeatureNotSupported
+import ai.mantik.bridge.scalafn.{RowMapper, ScalaFnDefinition, ScalaFnPayload, ScalaFnType, UserDefinedFunction}
+import ai.mantik.ds.Errors.{DataTypeMismatchException, FeatureNotSupported}
 import ai.mantik.ds.{DataType, TabularData}
-import ai.mantik.ds.element.{Bundle, SingleElementBundle}
+import ai.mantik.ds.element.{Bundle, SingleElementBundle, TabularRow}
+import ai.mantik.ds.functional.FunctionConverter
 import ai.mantik.ds.sql.{
   AnonymousInput,
   AutoSelect,
@@ -201,6 +203,48 @@ case class DataSet(
         )
     }
     dataSets
+  }
+
+  /**
+    * Maps rows into a new structure using the ScalaFn-Bridge.
+    *
+    * Note: this method is very low level, type errors are not detected.
+    */
+  @throws[FeatureNotSupported]("If the input data is not tabular")
+  def mapRows(
+      destinationType: TabularData
+  )(rowMapper: RowMapper): DataSet = {
+    val inputTabular = forceDataTypeTabular()
+    val payload = ScalaFnPayload.serialize(rowMapper)
+    val definition = ScalaFnDefinition(
+      fnType = ScalaFnType.RowMapperType,
+      input = Vector(inputTabular),
+      output = Vector(destinationType),
+      payload = payload
+    )
+    val operation = Operation.ScalaFnOperation(definition, Vector(this))
+
+    val payloadSource = PayloadSource.OperationResult(operation)
+    DataSet.natural(Source.constructed(payloadSource), destinationType)
+  }
+
+  /**
+    * Map rows into a new structure using the ScalaFn-Bridge.
+    *
+    * The structure of the mapping function is automatically detected.
+    * The resulting columns will be named like _1, _2, etc.
+    */
+  @throws[DataTypeMismatchException]("If the data types can't be applied")
+  @throws[FeatureNotSupported]("If the input data is not tabular")
+  def mapRowsFn[I, O](
+      udf: UserDefinedFunction[I, O]
+  ): DataSet = {
+    val inputTabular = forceDataTypeTabular()
+    val resultingType = udf.functionConverter.destinationTypeAsTable()
+    val inputDecoder = udf.functionConverter.buildDecoderForTables(inputTabular)
+    val outputEncoder = udf.functionConverter.buildEncoderForTables()
+    val fullFunction = inputDecoder.andThen(udf.fn).andThen(outputEncoder)
+    mapRows(resultingType)(RowMapper(fullFunction))
   }
 
   override protected def withCore(core: MantikItemCore[DataSetDefinition]): DataSet = {

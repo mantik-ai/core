@@ -19,30 +19,23 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.ds.funcational
+package ai.mantik.bridge.scalafn
 
-import ai.mantik.ds.FundamentalType
-import ai.mantik.ds.helper.circe.CirceJson
-import ai.mantik.ds.testutil.TestBase
-import io.circe.Json
-import io.circe.syntax._
+import io.circe.{Decoder, Encoder}
 
-class FunctionTypeSpec extends TestBase {
+/** Defines the type of serialized Code to be expected. */
+sealed abstract class ScalaFnType(val name: String)
 
-  it should "parse well" in {
-    val sample =
-      """
-        |{
-        | "input": "uint8",
-        | "output": "string"
-        |}
-      """.stripMargin
-    val jsonParsed = CirceJson.forceParseJson(sample)
-    val parsed = jsonParsed.as[FunctionType].getOrElse(fail())
-    parsed shouldBe FunctionType(
-      FundamentalType.Uint8,
-      FundamentalType.StringType
-    )
-    parsed.asJson.as[FunctionType].getOrElse(fail()) shouldBe parsed
+object ScalaFnType {
+  case object RowMapperType extends ScalaFnType("rowMapper")
+
+  val all = Seq(RowMapperType)
+
+  implicit val encoder: Encoder[ScalaFnType] = Encoder.encodeString.contramap[ScalaFnType](_.name)
+  implicit val decoder: Decoder[ScalaFnType] = Decoder.decodeString.emap { name =>
+    all.find(_.name == name) match {
+      case None      => Left(s"Unexpected type ${name}, expected one of : ${all.map(_.name)}")
+      case Some(got) => Right(got)
+    }
   }
 }

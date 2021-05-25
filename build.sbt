@@ -19,6 +19,7 @@ val scalaTestVersion = "3.0.9"
 val circeVersion = "0.11.2"
 val slf4jVersion = "1.7.30"
 val fhttpVersion = "0.2.2"
+val shapelessVersion = "2.3.3"
 val scalaLoggingVersion = "3.9.3"
 val commonsIoVersion = "2.8.0"
 val guavaVersion = "30.1.1-jre"
@@ -137,6 +138,7 @@ lazy val ds = makeProject("ds")
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
       // Cats
       "org.typelevel" %% "cats-core" % catsVersion,
+      "com.chuusai" %% "shapeless" % shapelessVersion,
       // Parboiled (Parsers)
       "org.parboiled" %% "parboiled" % parboiledVersion,
       // https://mvnrepository.com/artifact/commons-io/commons-io
@@ -271,7 +273,7 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
   .settings(configureBuildInfo("ai.mantik.executor.kubernetes.buildinfo"))
 
 lazy val planner = makeProject("planner")
-  .dependsOn(ds, elements, executorApi, componently, mnpScala)
+  .dependsOn(ds, elements, executorApi, componently, mnpScala, scalaFnApi)
   .dependsOn(executorKubernetes % "it", executorDocker % "it", executorS3Storage % "it")
   .settings(
     name := "planner",
@@ -327,6 +329,34 @@ lazy val engineApp = makeProject("engine-app", "engineApp")
   )
   .enablePlugins(JavaAppPackaging)
 
+lazy val scalaFnClosureSerializer = makeProject("bridge/scalafn/closure-serializer", "scalaFnClosureSerializer")
+  .settings(
+    name := "scala-fn-closure-serializer",
+    libraryDependencies ++= Seq(
+      "com.twitter" %% "chill" % "0.9.5",
+      "org.slf4j" % "slf4j-api" % slf4jVersion
+    )
+  )
+
+lazy val scalaFnApi = makeProject("bridge/scalafn/api", "scalaFnApi")
+  .dependsOn(ds, elements, scalaFnClosureSerializer)
+  .settings(
+    name := "scala-fn-api"
+  )
+
+lazy val scalaFnBridge = makeProject("bridge/scalafn/bridge", "scalaFnBridge")
+  .dependsOn(scalaFnApi, mnpScala)
+  .settings(
+    name := "scala-fn-bridge",
+    enableProtocolBuffer,
+    configureBuildInfo("ai.mantik.bridge.scalafn.buildinfo"),
+    PB.protoSources in Compile += baseDirectory.value / "../../protocol/protobuf",
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % logbackVersion
+    )
+  )
+  .enablePlugins(JavaAppPackaging)
+
 lazy val root = (project in file("."))
   .aggregate(
     testutils,
@@ -344,7 +374,10 @@ lazy val root = (project in file("."))
     engine,
     engineApp,
     componently,
-    util
+    util,
+    scalaFnClosureSerializer,
+    scalaFnApi,
+    scalaFnBridge
   )
   .settings(
     name := "mantik-core",

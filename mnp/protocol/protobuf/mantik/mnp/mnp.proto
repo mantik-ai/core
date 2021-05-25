@@ -20,9 +20,6 @@ service MnpService {
     // Quit the node.
     rpc Quit (QuitRequest) returns (QuitResponse) {}
 
-    // Gathers information about a session
-    rpc AboutSession(AboutSessionRequest) returns (AboutSessionResponse);
-
     // Quits the session
     rpc QuitSession(QuitSessionRequest) returns (QuitSessionResponse);
 
@@ -99,16 +96,6 @@ message QuitRequest {
 
 message QuitResponse {
 
-}
-
-message AboutSessionRequest  {
-    // The session to use
-    string session_id = 1;
-}
-
-message AboutSessionResponse {
-    // The state of the session
-    SessionState state = 1;
 }
 
 message QuitSessionRequest {

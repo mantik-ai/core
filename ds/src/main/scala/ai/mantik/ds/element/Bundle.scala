@@ -211,7 +211,7 @@ object Bundle {
 
   /** Wrap a single primitive non tabular value. */
   def fundamental[ST](x: ST)(implicit valueEncoder: ValueEncoder[ST]): SingleElementBundle = {
-    SingleElementBundle(valueEncoder.fundamentalType, valueEncoder.wrap(x))
+    SingleElementBundle(valueEncoder.dataType, valueEncoder.wrap(x))
   }
 
   /** The empty value. */

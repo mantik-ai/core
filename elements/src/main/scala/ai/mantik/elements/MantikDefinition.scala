@@ -22,7 +22,7 @@
 package ai.mantik.elements
 
 import ai.mantik.ds.DataType
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.ds.helper.circe.{CirceJson, DiscriminatorDependentCodec}
 import io.circe.generic.extras.Configuration
 import io.circe.{Decoder, Encoder, ObjectEncoder}

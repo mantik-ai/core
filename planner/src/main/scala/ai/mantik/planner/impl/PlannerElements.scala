@@ -21,10 +21,12 @@
  */
 package ai.mantik.planner.impl
 
+import ai.mantik.bridge.scalafn.ScalaFnDefinition
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.sql.{MultiQuery, Query, Select}
 import ai.mantik.executor.model.docker.{Container, DockerConfig}
 import ai.mantik.planner
+import ai.mantik.planner.Operation.ScalaFnOperation
 import ai.mantik.planner.Planner.{InconsistencyException, PlannerException}
 import ai.mantik.planner._
 import ai.mantik.planner.graph._
@@ -121,9 +123,12 @@ class PlannerElements(config: Config) {
     }
   }
 
-  private def makeSingleNodeResourcePlan(node: Node[PlanNodeService]): State[PlanningState, ResourcePlan] = {
+  private def makeSingleNodeResourcePlan(
+      node: Node[PlanNodeService],
+      pre: PlanOp[Unit] = PlanOp.Empty
+  ): State[PlanningState, ResourcePlan] = {
     PlanningState.stateChange(_.withNextNodeId) { nodeId =>
-      ResourcePlan.singleNode(nodeId, node)
+      ResourcePlan.singleNode(nodeId, node, pre)
     }
   }
 
@@ -159,6 +164,57 @@ class PlannerElements(config: Config) {
     Node(
       container,
       inputs = inputs.map { _ => NodePort(MantikBundleContentType) },
+      outputs = outputs
+    )
+  }
+
+  def scalaFn(scalaFnDefinition: ScalaFnDefinition): State[PlanningState, ResourcePlan] = {
+    if (scalaFnDefinition.payload.size > MaxEmbedFileSize) {
+      for {
+        file <- PlanningState(_.pipeFile(ContentTypes.OctetStreamContentType, true))
+        preparation = PlanOp.UploadFile(scalaFnDefinition.payload, file.ref)
+        node = scalaFnNode(scalaFnDefinition, Some(file.ref))
+        result <- makeSingleNodeResourcePlan(node, preparation)
+      } yield {
+        result
+      }
+    } else {
+      val node = scalaFnNode(scalaFnDefinition, None)
+      makeSingleNodeResourcePlan(node)
+    }
+  }
+
+  val MaxEmbedFileSize = 1024 * 100
+
+  def scalaFnNode(
+      scalaFnDefinition: ScalaFnDefinition,
+      externalFile: Option[PlanFileReference]
+  ): Node[PlanNodeService.DockerContainer] = {
+    if (externalFile.isEmpty) {
+      if (scalaFnDefinition.payload.size > MaxEmbedFileSize) {
+        throw new FeatureNotSupported(
+          s"Maximum payload size exceeded, got ${scalaFnDefinition.payload.size}, max size: ${MaxEmbedFileSize}"
+        )
+      }
+    }
+    val header = scalaFnDefinition.asHeader.toMantikHeader
+    val resolvedBridge = resolveBridge(BuiltInItems.ScalaFnBridge)
+    val embeddedData = if (externalFile.isEmpty) {
+      Some(ContentTypes.OctetStreamContentType -> scalaFnDefinition.payload)
+    } else {
+      None
+    }
+    val container = PlanNodeService.DockerContainer(
+      resolvedBridge,
+      mantikHeader = header,
+      embeddedData = embeddedData,
+      data = externalFile
+    )
+    val inputs = Vector.fill(scalaFnDefinition.input.size)(NodePort(MantikBundleContentType))
+    val outputs = Vector.fill(scalaFnDefinition.output.size)(NodePort(MantikBundleContentType))
+    Node(
+      container,
+      inputs = inputs,
       outputs = outputs
     )
   }

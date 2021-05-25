@@ -21,7 +21,7 @@
  */
 package ai.mantik.planner.pipelines
 
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.ds.helper.circe.DiscriminatorDependentCodec
 import ai.mantik.ds.sql.Select
 import ai.mantik.elements.PipelineStep

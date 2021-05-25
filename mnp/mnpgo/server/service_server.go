@@ -126,10 +126,6 @@ func (s *MnpServiceServer) Quit(context.Context, *mnp.QuitRequest) (*mnp.QuitRes
 	return &mnp.QuitResponse{}, nil
 }
 
-func (s *MnpServiceServer) AboutSession(context.Context, *mnp.AboutSessionRequest) (*mnp.AboutSessionResponse, error) {
-	panic("implement me")
-}
-
 func (s *MnpServiceServer) QuitSession(ctx context.Context, req *mnp.QuitSessionRequest) (*mnp.QuitSessionResponse, error) {
 	session, err := s.getSession(req.SessionId)
 	if err != nil {

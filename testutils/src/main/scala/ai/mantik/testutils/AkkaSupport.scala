@@ -75,6 +75,6 @@ trait AkkaSupport extends BeforeAndAfterAll {
 
   protected def collectByteSource(source: Source[ByteString, _]): ByteString = {
     val collected = collectSource(source)
-    collected.reduce(_ ++ _)
+    collected.foldLeft(ByteString.empty)(_ ++ _)
   }
 }

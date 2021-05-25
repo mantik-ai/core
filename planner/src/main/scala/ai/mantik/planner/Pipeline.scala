@@ -20,7 +20,7 @@
  * a commercial license.
  */
 package ai.mantik.planner
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.planner.pipelines.{PipelineBuilder, PipelineResolver, ResolvedPipeline}
 import ai.mantik.componently.utils.EitherExtensions._
 import ai.mantik.ds.DataType

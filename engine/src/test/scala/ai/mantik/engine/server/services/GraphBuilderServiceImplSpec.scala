@@ -22,7 +22,7 @@
 package ai.mantik.engine.server.services
 
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.ds.sql.Split
 import ai.mantik.ds.{DataType, FundamentalType, TabularData}

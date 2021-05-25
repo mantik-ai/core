@@ -36,6 +36,9 @@ object BuiltInItems {
   /** Name of the Select Bridge */
   val SelectBridgeName = NamedMantikId(account = BuiltInAccount, name = "select")
 
+  /** Name of the ScalaFn Bridge */
+  val ScalaFnBridgeName = NamedMantikId(account = BuiltInAccount, name = "scalafn")
+
   /**
     * Look for a Built In Item
     * @return the item if it was found.
@@ -76,7 +79,24 @@ object BuiltInItems {
       MantikHeader.pure(
         BridgeDefinition(
           dockerImage = "mantikai/bridge.select",
-          suitable = Seq(MantikDefinition.DataSetKind),
+          suitable = Seq(MantikDefinition.CombinerKind),
+          protocol = 2,
+          payloadContentType = None
+        )
+      )
+    )
+  )
+
+  val ScalaFnBridge = Bridge(
+    MantikItemCore(
+      Source(
+        DefinitionSource.Loaded(Some(ScalaFnBridgeName), ItemId("@2")),
+        PayloadSource.Empty
+      ),
+      MantikHeader.pure(
+        BridgeDefinition(
+          dockerImage = "mantikai/bridge.scala-fn",
+          suitable = Seq(MantikDefinition.CombinerKind),
           protocol = 2,
           payloadContentType = None
         )

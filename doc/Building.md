@@ -10,7 +10,7 @@ Requirements
 ------------
 
 * Scala Code
-    * Java OpenJDK. 1.8 should do it, but 1.11 is faster
+    * Java OpenJDK. 11
 
       ```
       # Ubuntu 18.04

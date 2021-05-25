@@ -19,16 +19,17 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.ds.funcational
+package ai.mantik.bridge.scalafn
 
-import ai.mantik.ds.{DataType, funcational}
-import ai.mantik.ds.helper.circe.{CirceJson, DiscriminatorDependentCodec}
+import ai.mantik.bridge.scalafn.bridge.Bridge
+import ai.mantik.componently.AkkaRuntime
 
-case class FunctionType(
-    input: DataType,
-    output: DataType
-)
+object Main {
 
-object FunctionType {
-  implicit val codec = CirceJson.makeSimpleCodec[FunctionType]
+  def main(args: Array[String]): Unit = {
+    implicit val runtime = AkkaRuntime.createNew()
+    val backend = new ScalaFnBackend()
+    val bridge = new Bridge(backend)
+    bridge.run()
+  }
 }

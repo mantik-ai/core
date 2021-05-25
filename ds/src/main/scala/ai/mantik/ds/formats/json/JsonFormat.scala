@@ -21,23 +21,27 @@
  */
 package ai.mantik.ds.formats.json
 
-import java.util.Base64
+import ai.mantik.ds.Errors.EncodingException
 
+import java.util.Base64
 import ai.mantik.ds.converter.casthelper.TensorHelper
 import ai.mantik.ds._
 import ai.mantik.ds.element._
 import ai.mantik.ds.helper.circe.CirceJson
+import akka.stream.scaladsl.{Flow, JsonFraming, Source}
 import akka.util.ByteString
-import io.circe.Decoder.Result
+import io.circe.Decoder.{Result, decodeJsonObject}
 import io.circe._
 import io.circe.syntax._
+import io.circe.jawn
 import cats.implicits._
+import org.slf4j.LoggerFactory
 
 /**
   * Bundle JSON Serializer.
-  * TODO: There could be support for streaming encoding/decoding for better performance
   */
 object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
+  private val logger = LoggerFactory.getLogger(getClass)
 
   /** Raw Encoded value, used for decoding type in the first pass. */
   private case class Encoded(
@@ -62,6 +66,110 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
         val elementEncoder = createElementEncoder(s.model)
         elementEncoder.apply(s.element)
     }
+  }
+
+  /** Create an encoder for root elements. */
+  def createRootElementEncoder(dataType: DataType): Encoder[RootElement] = {
+    dataType match {
+      case t: TabularData =>
+        createRowEncoder(t).contramap(_.asInstanceOf[TabularRow])
+      case otherwise =>
+        createElementEncoder(otherwise).contramap[RootElement](_.asInstanceOf[SingleElement].element)
+    }
+  }
+
+  /** Create a stream encoder (without header) */
+  def createStreamRootElementEncoder(dataType: DataType): Flow[RootElement, ByteString, _] = {
+    val encoder = createRootElementEncoder(dataType)
+    val basicFlow = Flow.fromFunction { x: RootElement =>
+      ByteString(encoder.apply(x).toString())
+    }
+    dataType match {
+      case t: TabularData => basicFlow.intersperse(ByteString("["), ByteString(","), ByteString("]"))
+      case otherwise      => basicFlow
+    }
+  }
+
+  /** Create a stream encoder (with header) */
+  def createStreamRootElementEncoderWithHeader(dataType: DataType): Flow[RootElement, ByteString, _] = {
+    val valueEncoder = createStreamRootElementEncoder(dataType)
+    val encodedType = dataType.asJson
+    val header = s"""{"type":${encodedType},"value":"""
+    val footer = "}"
+    valueEncoder.prepend(Source.single(ByteString(header))) ++ Source.single(ByteString(footer))
+  }
+
+  /** Create a decoder for root elements. */
+  def createRootElementDecoder(dataType: DataType): Decoder[RootElement] = {
+    dataType match {
+      case t: TabularData =>
+        createRowDecoder(t).map(x => x: RootElement)
+      case other =>
+        createElementDecoder(other).map { e => SingleElement(e) }
+    }
+  }
+
+  /** Create a stream decoder for root elements (without header) */
+  def createStreamRootElementDecoder(dataType: DataType): Flow[ByteString, RootElement, _] = {
+    // TODO: This is not streaming, however we are using this Mime type only for constants
+    // Note: JsonFraming doesn't like our array of elements, as it expects an array of objects
+    logger.warn(s"No implementation of stream decoding, using fallback")
+    Flow
+      .apply[ByteString]
+      .fold(ByteString.empty) { case (current, next) =>
+        current ++ next
+      }
+      .map { concatenated =>
+        (for {
+          json <- jawn.parseByteBuffer(concatenated.toByteBuffer)
+          parsed <- deserializeBundleValue(dataType, json)
+        } yield parsed) match {
+          case Left(error) => throw error
+          case Right(value) if value.model != dataType =>
+            throw new EncodingException(s"Header (type=${value.model}) has different type than expected (=${dataType})")
+          case Right(ok) => ok
+        }
+      }
+      .mapConcat(_.rows)
+    /*
+    // This doesn't work
+    val rootDecoder = createRootElementDecoder(dataType)
+    JsonFraming.objectScanner(Short.MaxValue).map { frame =>
+      (for {
+        json <- jawn.parseByteBuffer(frame.toByteBuffer)
+        parsed <- rootDecoder.decodeJson(json)
+      } yield parsed) match {
+        case Left(error) => throw error
+        case Right(ok)   => ok
+      }
+    }
+     */
+  }
+
+  /** Create a stream decoder for root elements (with header) */
+  def createStreamRootElementDecoderWithHeader(dataType: DataType): Flow[ByteString, RootElement, _] = {
+    // TODO: This is not streaming, however we are using this Mime type only for constants
+    // We have no possibility to split out the JSON stream into separate key values without consuming all of them
+    // JsonFraming is of no use here. Go implements one
+    // However this is only needed for debugging Bridges and not in production
+    logger.warn(s"No implementation of stream decoding with header, using fallback")
+    Flow
+      .apply[ByteString]
+      .fold(ByteString.empty) { case (current, next) =>
+        current ++ next
+      }
+      .map { concatenated =>
+        (for {
+          json <- jawn.parseByteBuffer(concatenated.toByteBuffer)
+          parsed <- deserializeBundle(json)
+        } yield parsed) match {
+          case Left(error) => throw error
+          case Right(value) if value.model != dataType =>
+            throw new EncodingException(s"Header (type=${value.model}) has different type than expected (=${dataType})")
+          case Right(ok) => ok
+        }
+      }
+      .mapConcat(_.rows)
   }
 
   override def encodeObject(bundle: Bundle): JsonObject = {
@@ -246,7 +354,7 @@ object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
             if (c.value.isNull) {
               Right(NullElement)
             } else {
-              underlyingDecoder(c).map(SomeElement)
+              underlyingDecoder(c).map(SomeElement.apply)
             }
           }
         }

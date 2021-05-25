@@ -25,7 +25,7 @@ import java.time.temporal.ChronoUnit
 
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.FundamentalType.StringType
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.{

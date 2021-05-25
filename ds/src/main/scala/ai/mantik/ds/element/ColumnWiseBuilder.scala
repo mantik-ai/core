@@ -60,6 +60,6 @@ case class ColumnWiseBundleBuilder(private val columnsRev: List[(String, DataTyp
   /** Add a new column, filled with automatically detected primitive values. */
   def withPrimitives[T: ValueEncoder](name: String, values: T*): ColumnWiseBundleBuilder = {
     val encoder = implicitly[ValueEncoder[T]]
-    withColumn(name, encoder.fundamentalType, values.map(encoder.wrap).toIndexedSeq)
+    withColumn(name, encoder.dataType, values.map(encoder.wrap).toIndexedSeq)
   }
 }

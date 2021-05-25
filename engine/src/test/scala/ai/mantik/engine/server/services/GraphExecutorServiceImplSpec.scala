@@ -23,7 +23,7 @@ package ai.mantik.engine.server.services
 
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.element.Bundle
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements.{AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.engine.protos.ds.BundleEncoding
 import ai.mantik.engine.protos.graph_executor.{DeployItemRequest, FetchItemRequest, SaveItemRequest}
