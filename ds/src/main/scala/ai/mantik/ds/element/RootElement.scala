@@ -40,7 +40,11 @@ case class SingleElement(
 ) extends RootElement
 
 object TabularRow {
-  def apply(elements: Element*): TabularRow = TabularRow(elements.toIndexedSeq)
+
+  /** Generate a new tabular row. */
+  def apply(wrappers: ElementWrapper*): TabularRow = {
+    TabularRow(wrappers.map(_.element).toIndexedSeq)
+  }
 }
 
 /**
@@ -84,6 +88,10 @@ object EmbeddedTabularElement {
 sealed trait NullableElement extends Element
 
 case class SomeElement(x: Element) extends NullableElement
+
+object SomeElement {
+  def apply(e: ElementWrapper): SomeElement = SomeElement(e.element)
+}
 
 case object NullElement extends NullableElement
 

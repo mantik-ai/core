@@ -21,9 +21,12 @@
  */
 package ai.mantik.planner
 
+import ai.mantik.bridge.scalafn.{ScalaFnDefinition, ScalaFnHeader}
+import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.sql.{MultiQuery, Query, Select}
 import ai.mantik.elements.{ItemId, NamedMantikId}
+import akka.util.ByteString
 
 /** Defines where a MantikItem comes from. */
 case class Source(
@@ -109,6 +112,14 @@ case object Operation {
   /** An SQL Query Operation */
   case class SqlQueryOperation(query: MultiQuery, arguments: Vector[DataSet]) extends Operation {
     override val resultCount: Int = query.resultingQueryType.size
+  }
+
+  /** An operation on the ScalaFn-Bridge. */
+  case class ScalaFnOperation(
+      definition: ScalaFnDefinition,
+      arguments: Vector[DataSet]
+  ) extends Operation {
+    override def resultCount: Int = definition.output.size
   }
 }
 

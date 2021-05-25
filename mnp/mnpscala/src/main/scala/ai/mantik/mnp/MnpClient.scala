@@ -59,6 +59,11 @@ class MnpClient(val address: String, mnpService: MnpService) {
     mnpService.quit(QuitRequest())
   }
 
+  /** Get a session object for a given session id, assuming it exists */
+  def joinSession(sessionId: String): MnpSession = {
+    new MnpSession(address, sessionId, mnpService)
+  }
+
   /**
     * Initialize a new MNP Session.
     * Can throw [[SessionInitException]] when the init fails on remote side

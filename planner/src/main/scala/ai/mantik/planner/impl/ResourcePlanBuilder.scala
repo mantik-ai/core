@@ -320,6 +320,14 @@ private[impl] class ResourcePlanBuilder(elements: PlannerElements, mantikItemSta
           val mergedArguments = argumentSource.reduceLeft(_.merge(_))
           selectSource.application(mergedArguments)
         }
+      case Operation.ScalaFnOperation(definition, arguments) =>
+        for {
+          argumentSource <- arguments.map(manifestDataSet).sequence
+          scalaFnSource <- elements.scalaFn(definition)
+        } yield {
+          val merged = argumentSource.reduce(_.merge(_))
+          scalaFnSource.application(merged)
+        }
     }
   }
 

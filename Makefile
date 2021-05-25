@@ -17,6 +17,7 @@ SUB_PROJECTS=\
 	bridge/sklearn/simple_learn \
 	bridge/tf/saved_model \
 	bridge/tf/train \
+	bridge/scalafn/bridge \
 	executor/containers \
 	executor/tinyproxy \
 	cli \

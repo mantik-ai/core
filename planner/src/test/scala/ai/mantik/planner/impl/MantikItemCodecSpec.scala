@@ -22,7 +22,7 @@
 package ai.mantik.planner.impl
 
 import ai.mantik.ds.element.{Bundle, TabularBundle}
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.ds.sql.Select
 import ai.mantik.ds.{FundamentalType, TabularData}
 import ai.mantik.elements.{AlgorithmDefinition, ItemId, MantikHeader}

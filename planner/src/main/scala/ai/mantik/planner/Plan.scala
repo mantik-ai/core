@@ -27,6 +27,8 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.{ItemId, MantikDefinition, MantikHeader, NamedMantikId}
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner.graph.{Graph, Node}
+import akka.NotUsed
+import akka.util.ByteString
 
 /**
   * A plan is something which can be executed. They are created by the [[Planner]]
@@ -76,11 +78,17 @@ object PlanNodeService {
   /** Represents a pure file in a graph. */
   case class File(fileReference: PlanFileReference) extends PlanNodeService
 
-  /** Represents a docker container in the graph. */
+  /** Represents a docker container in the graph.
+    * @param container container to spin up
+    * @param data data as file upload
+    * @param mantikHeader Mantik header to initialize
+    * @param embeddedData embedded data
+    */
   case class DockerContainer(
       container: Container,
       data: Option[PlanFileReference] = None,
-      mantikHeader: MantikHeader[_ <: MantikDefinition]
+      mantikHeader: MantikHeader[_ <: MantikDefinition],
+      embeddedData: Option[(String, ByteString)] = None
   ) extends PlanNodeService
 
   implicit val renderable = new Renderable[PlanNodeService] {
@@ -93,6 +101,7 @@ object PlanNodeService {
             "Docker",
             "container" -> d.container,
             "data" -> d.data.map(_.id.toString),
+            "embeddedData" -> d.embeddedData.map { e => s"Embedded ${e._2.size} bytes" },
             "mantikHeader" -> d.mantikHeader.toJsonValue.noSpaces
           )
       }
@@ -130,6 +139,9 @@ object PlanOp {
   case class LoadBundleFromFile(dataType: DataType, fileReference: PlanFileReference)
       extends PlanOp[Bundle]
       with BasicOp[Bundle]
+
+  /** Uploads generic data */
+  case class UploadFile(data: ByteString, fileReference: PlanFileReference) extends ProceduralPlanOp with BasicOp[Unit]
 
   /** Add some mantik item (only the itemId) */
   case class AddMantikItem(item: MantikItem, file: Option[PlanFileReference])

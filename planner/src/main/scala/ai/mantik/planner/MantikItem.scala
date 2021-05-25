@@ -22,7 +22,7 @@
 package ai.mantik.planner
 
 import ai.mantik.ds.element.{Bundle, SingleElementBundle, ValueEncoder}
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.{
   AlgorithmDefinition,

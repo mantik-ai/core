@@ -440,7 +440,7 @@ class MnpPlanExecutor(
       s"Initializing session ${container.mnpClient.address}/${initializer.sessionId}, ${initializer.config.header}"
     )
     logger.debug(
-      s"Associated payload: ${initializer.config.payload} (contentType: ${initializer.config.payloadContentType})"
+      s"Associated payload: ${!initializer.config.payload.isEmpty} (contentType: ${initializer.config.payloadContentType})"
     )
     container.mnpClient
       .initSession(

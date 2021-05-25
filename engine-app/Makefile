@@ -24,7 +24,7 @@ include ../scripts/ci/Makefile.docker_single
 
 
 target/build.make: ${SCALA_RESOURCES}
-	$(SBT) package engineApp/stage
+	$(SBT) package engineApp/stage scalaFnBridge/stage
 	touch $@
 
 .PHONY: test

@@ -21,7 +21,7 @@
  */
 package ai.mantik.mnp
 
-class MnpException(msg: String) extends RuntimeException(msg)
+class MnpException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
 
 class SessionInitException(msg: String) extends MnpException(msg) {}
 

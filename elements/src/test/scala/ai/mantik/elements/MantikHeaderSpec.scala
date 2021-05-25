@@ -23,7 +23,7 @@ package ai.mantik.elements
 
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.{FundamentalType, TabularData}
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements
 import ai.mantik.elements.meta.MetaVariable
 import ai.mantik.testutils.TestBase

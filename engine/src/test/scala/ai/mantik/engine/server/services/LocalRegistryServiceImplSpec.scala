@@ -24,7 +24,7 @@ package ai.mantik.engine.server.services
 import java.time.Instant
 import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
 import ai.mantik.ds.FundamentalType.{Int32, StringType}
-import ai.mantik.ds.funcational.FunctionType
+import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements.{
   AlgorithmDefinition,
   DataSetDefinition,
