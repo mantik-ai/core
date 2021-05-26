@@ -8,7 +8,7 @@ cd $MYDIR
 
 rm -rf example/kmeans/payload/model.pickle
 
-pipenv run python main.py example/kmeans/ &
+poetry run python main.py example/kmeans/ &
 SERVER_PID=$!
 
 trap "pkill -P $$ || true" EXIT # Kills children processes at the end

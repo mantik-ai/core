@@ -32,7 +32,7 @@ They will connect to a running engine.
 
 ## Start the Python Example
 
-With the Engine running, the python client example should be runnable from pipenv.
+With the Engine running, the python client example should be runnable from poetry.
 
 ## TLDR
 

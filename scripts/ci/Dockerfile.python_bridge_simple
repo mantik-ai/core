@@ -3,8 +3,27 @@ RUN groupadd -r mantik-bridge && useradd -r -g mantik-bridge mantik-bridge
 
 ADD --chown=mantik-bridge:mantik-bridge target /opt/bridge
 
+# Install poetry for Python
+ARG POETRY_VERSION="1.1.6"
+
+ENV PYTHONFAULTHANDLER=1 \
+  PYTHONUNBUFFERED=1 \
+  PYTHONHASHSEED=random \
+  PIP_NO_CACHE_DIR=off \
+  PIP_DISABLE_PIP_VERSION_CHECK=on \
+  PIP_DEFAULT_TIMEOUT=100 \
+  POETRY_VERSION=$POETRY_VERSION \
+  POETRY_HOME=/opt/poetry \
+  POETRY_VIRTUALENVS_CREATE=false
+
+RUN apt-get update && apt-get install -y curl
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
+RUN chown -R mantik-bridge:mantik-bridge ${POETRY_HOME}
+
+# Install bridge dependencies
 WORKDIR /opt/bridge
-RUN pip install --no-cache-dir -r requirements.txt
+RUN poetry install
 
 # Data Directory
 RUN mkdir /data && chown mantik-bridge:mantik-bridge /data
@@ -13,4 +32,4 @@ USER mantik-bridge:mantik-bridge
 
 EXPOSE 8502
 VOLUME ["/data"]
-ENTRYPOINT ["python", "main.py", "/data"]
+ENTRYPOINT ["poetry", "run", "python", "main.py", "/data"]

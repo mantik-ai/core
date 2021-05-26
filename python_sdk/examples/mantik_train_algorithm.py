@@ -26,7 +26,7 @@ import time
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.datasets.samples_generator import make_blobs
+from sklearn.datasets import make_blobs
 from sklearn.metrics.pairwise import pairwise_distances_argmin
 from sklearn.metrics import accuracy_score
 

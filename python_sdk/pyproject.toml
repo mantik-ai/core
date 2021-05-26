@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "mantik"
+version = "0.1.0"
+description = ""
+packages = [{ include = "mantik" }]
+authors = ["Mantik Team <info@mantik.ai>"]
+homepage = "https://www.mantik.ai"
+
+[tool.poetry.dependencies]
+python = "~3.7"
+flask = "^1.1.2"
+mnp = { path = "../mnp/mnppython", develop = true }
+msgpack = "^1.0.2"
+pyyaml = "^5.4.1"
+requests = "^2.25.1"
+
+[tool.poetry.dev-dependencies]
+grpcio-tools = "^1.37.1"
+mypy = "^0.812"
+numpy = "^1.20.2"
+pytest = "^6.2.4"
+scikit-learn = "^0.24.2"
+
+[build-system]
+requires = ["poetry>=1.0.0"]
+
+[mypy]
+ignore_missing_imports = true

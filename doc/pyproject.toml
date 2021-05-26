@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "mantik-doc"
+description = "Mantik documentation builder"
+version = "0.1.0"
+authors = ["Mantik Team <info@mantik.ai>"]
+homepage = "https://www.mantik.ai"
+
+[tool.poetry.dependencies]
+python = "~3.7"
+sphinx = "^4"
+sphinx-readable-theme = { git = "https://github.com/Ohjeah/sphinx-readable-theme", tag = "v1.3.0"}
+recommonmark = "^0.7.1"
+
+[build-system]
+requires = ["poetry>=1.0.0"]

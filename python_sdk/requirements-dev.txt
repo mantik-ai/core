@@ -1,8 +1,0 @@
--r requirements.txt
--e .
-
-numpy
-scikit-learn
-pytest
-grpcio-tools
-mnp

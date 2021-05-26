@@ -21,14 +21,14 @@ Assuming you want to try it out locally, with Minikube, you should install the f
 - Make: Needed for Building
 - SBT (Simple Build Tool): Needed for Building Scala
 - Python 3.7: Needed for Python Bridges, Python SDK and Examples
-- pipenv: Needed for Python Package Management
+- poetry: Needed for Python Package Management
 - Go 1.13: Needed for Go Containers and Bridges
 - Protobuf Compiler: Needed for gRpc
 - Docker: Needed for Docker Container generation
 
 The docker images will be build directly into the Docker registry which is built into Minikube.
 
-The different build systems (SBT, go, pipenv) are all controlled using a multi-directory Makefile.
+The different build systems (SBT, go, poetry) are all controlled using a multi-directory Makefile.
 
 Build using:
 
@@ -125,7 +125,7 @@ once you have the engine running.
 ### Running Python Examples
 
 - Go into the directory `python-sdk`
-- Spawn a Pipenv shell using `pipenv shell`
+- Spawn a Poetry shell using `poetry shell`
 - Run `python examples/mantik_train_algorithm.py`
 
 ### Running CLI (Command Line Interface)
