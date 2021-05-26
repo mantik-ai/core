@@ -1,23 +1,25 @@
-.PHONY: build
+# Caching
+ifdef CACHE_DIR
+  export POETRY_CACHE_DIR_PATH=$(CACHE_DIR)/poetry
+endif
+
 build: ../public
 
 clean:
 	rm -rf ../public
 
 ../public:
-	pipenv --python 3 install # automatically uses requirements.txt
+	POETRY_CACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry install
 	cp ../Readme.rst index.rst
-	pipenv run sphinx-build -b html . ../public
+	POETRY_CACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry run sphinx-build -b html . ../public
 
 # Empty Goals
-.PHONY: test
 test:
 
-.PHONY: docker
 docker:
 
-.PHONY: docker-unchecked
 docker-unchecked:
 
-.PHONY: docker-publish
 docker-publish:
+
+.PHONY: build clean test docker docker-unchecked docker-publish

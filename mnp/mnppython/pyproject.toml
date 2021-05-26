@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "mnp"
+version = "0.1.0"
+description = ""
+packages = [{ include = "mnp" }]
+authors = ["Mantik Team <info@mantik.ai>"]
+homepage = "https://www.mantik.ai"
+
+[tool.poetry.dependencies]
+python = "~3.7"
+grpcio = "^1.37.1"
+grpcio-tools = "^1.37.1"
+protobuf = "^3.16.0"
+
+[tool.poetry.dev-dependencies]
+mypy = "^0.812"
+pytest = "^6.2.4"
+pytest-timeout = "^1.4.2"
+
+[build-system]
+requires = ["poetry>=1.0.0"]
+
+[tool.pytest.ini_options]
+timeout = 500
+
+[mypy]
+ignore_missing_imports = true

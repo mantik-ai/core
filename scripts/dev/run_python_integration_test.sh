@@ -11,9 +11,10 @@ trap "kill 0" EXIT # Kills children processes at the end
 
 sleep 30
 
+POETRY_CACHE_DIR_PATH=${PWD}/cache/poetry
 cd ./python_sdk/
-pipenv install --dev
+POETRY_CACHE_DIR=${POETRY_CACHE_DIR_PATH} poetry install
 cd examples
 for file in *.py; do
-  pipenv run python $file
+  POETRY_CACHE_DIR=${POETRY_CACHE_DIR_PATH} poetry run python $file
 done

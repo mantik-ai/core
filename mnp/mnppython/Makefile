@@ -2,31 +2,27 @@ include ../../scripts/ci/Makefile.grpc_helper
 
 # Caching
 ifdef CACHE_DIR
-  export PIP_CACHE_DIR=$(CACHE_DIR)/pip
-  export PIPENV_CACHE_DIR=$(CACHE_DIR)/pipenv
+  export POETRY_CACHE_DIR_PATH=$(CACHE_DIR)/poetry
 endif
 
 build: protobuf
 
-.PHONY: clean
 clean::
 	rm -rf target
 
-.PHONY: test
 test: build
-	pipenv install --dev
-	pipenv run pytest
-	pipenv run mypy --ignore-missing-imports mnp
+	POETRY_CACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry install
+	POETRY_CACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry run pytest tests
+	POETRY_CACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry run mypy --config-file pyproject.toml --exclude "_stubs" mnp
 
 $(eval $(call python_grpc,../protocol/protobuf/,mnp/_stubs,mantik.mnp))
 
-.PHONY: docker
 docker:
 	@#"Nothing to do"
 
-.PHONY: docker-unchecked
 docker-unchecked:
 
 
-.PHONY: docker-publish
 docker-publish:
+
+.PHONY: build clean test docker docker-unchecked docker-publish

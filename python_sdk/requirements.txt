@@ -1,5 +1,0 @@
-flask
-msgpack
-pyyaml
-mnp
-requests

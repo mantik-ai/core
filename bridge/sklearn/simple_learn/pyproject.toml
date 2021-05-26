@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "mantik-sklearn-bridge"
+description = "Mantik bridge for sklearn"
+version = "0.1.0"
+authors = ["Mantik Team <info@mantik.ai>"]
+homepage = "https://www.mantik.ai"
+
+[tool.poetry.dependencies]
+python = "~3.7"
+mantik = { path = "./../../../python_sdk", develop = true }
+mnp = { path = "./../../../mnp/mnppython", develop = true }
+scikit-learn = "^0.24.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.4"
+
+[build-system]
+requires = ["poetry>=1.0.0"]
+
+[tool.pytest.ini_options]
+norecursedirs = "target"

@@ -39,7 +39,7 @@ Requirements
 * Python
      
      - Python 3.7
-     - pipenv
+     - poetry
      - Python dev (gcc etc.)
      
      The python code is using generated protobuf code. After a clean checkout

@@ -4,6 +4,12 @@
 # OUTPUT_DIRECTORY = $2
 # STRIP_PATH = $3
 
+# Caching
+ifdef CACHE_DIR
+  export POETRY_CACHE_DIR_PATH=$(CACHE_DIR)/poetry
+endif
+
+
 define python_grpc
 
 $2/.done.make: $(shell find $1 -name "*.proto")
@@ -16,8 +22,8 @@ $2/.done.make: $(shell find $1 -name "*.proto")
     #      https://github.com/grpc/grpc/issues/9450
     #      https://github.com/architect-team/python-launcher/issues/1
 	mkdir -p $2
-	pipenv install --dev
-	pipenv run python -m grpc_tools.protoc \
+	POETRY_CACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry install
+	POETRY_CACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry run python -m grpc_tools.protoc \
         -I $1 \
         --python_out $2 \
         --grpc_python_out $2 \

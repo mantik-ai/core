@@ -2,21 +2,18 @@ MAKEFLAGS += --no-builtin-rules
 
 # Caching
 ifdef CACHE_DIR
-  export PIP_CACHE_DIR=$(CACHE_DIR)/pip
-  export PIPENV_CACHE_DIR=$(CACHE_DIR)/pipenv
+  export POETRY_CACHE_DIR_PATH=$(CACHE_DIR)/poetry
 endif
 
 
 build: target/build.make
 
-.PHONY: clean
 clean:
 	rm -rf target
 
-.PHONY: test
 test:
-	pipenv install --dev
-	pipenv run pytest
+	POETRY_CHACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry install
+	POETRY_CHACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry run pytest
 
 target/build.make: target/copy_py.make target/copy_shared.make
 	touch $@
@@ -26,13 +23,18 @@ target/copy_py.make: $(shell find . -name "*.py" -not -path "./target/*" -not -p
 	rsync -R $? target/
 	touch $@
 
-target/copy_shared.make: $(shell find $(MANTIK_ROOT)/python_sdk -name "*.py") Pipfile Pipfile.lock
+target/copy_shared.make: $(shell find $(MANTIK_ROOT)/python_sdk -name "*.py")
 	mkdir -p target
-	pipenv lock -r > target/requirements.txt
-	# TODO: Only copy .py files
-	cp -r $(MANTIK_ROOT)/python_sdk target/
-	cp -r $(MANTIK_ROOT)/mnp/mnppython target/
+	cp poetry.lock pyproject.toml target/
+	# TODO: Only copy .py, poetry.lock, and pyproject.toml files
+	cp -v -r $(MANTIK_ROOT)/python_sdk target/
+	cp -v -r $(MANTIK_ROOT)/mnp/mnppython target/
 
-	sed -i '/python_sdk/c\-e ./python_sdk\' target/requirements.txt
-	sed -i '/mnppython/c\-e ./mnppython\' target/requirements.txt
+	# Rewrite relative paths to allow installation of the packages
+	sed -i 's/".*python_sdk"/"\.\/python_sdk"/' target/poetry.lock target/pyproject.toml
+	sed -i 's/".*mnppython"/"\.\/mnppython"/' target/poetry.lock target/pyproject.toml
+	sed -i 's/".*mnppython"/"\.\/..\/mnppython"/' target/python_sdk/poetry.lock target/python_sdk/pyproject.toml
+
 	touch $@
+
+.PHONY: build clean test
