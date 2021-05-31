@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.engine.labels.app }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.engine.labels.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.engine.labels.app }}
+    spec:
+      serviceAccountName: {{ .Values.deployment.name }}-sa
+      containers:
+        - name: {{ .Values.deployment.name }}
+          image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - -Dmantik.executor.docker.defaultImageTag={{ .Values.deployment.mantik.args.executor.docker.defaultImageTag }} 
+            - -Dmantik.executor.behaviour.disablePull={{ .Values.deployment.mantik.args.executor.behaviour.disablePull }}
+            - -Dmantik.executor.kubernetes.behavior.defaultTimeout={{ .Values.deployment.mantik.args.executor.kubernetes.behavior.defaultTimeout }}
+            - -Dmantik.executor.type=kubernetes
+            - -Dmantik.planner.payloadProvider=executor
+            - -Dmantik.executor.kubernetes.nodeAddress={{ .Values.deployment.mantik.args.executor.kubernetes.nodeAddress }}
+          ports:
+            - containerPort: {{ .Values.engine.grpcPort }}
+          volumeMounts:
+            - name: mantik-engine-repo
+              mountPath: /data/mantik/repo
+            - name: mantik-engine-logs
+              mountPath: /data/mantik/logs
+      volumes:
+        - name: mantik-engine-repo
+          persistentVolumeClaim:
+            claimName: me-repo-pv-claim
+        - name: mantik-engine-logs
+          persistentVolumeClaim:
+            claimName: me-logs-pv-claim

@@ -1,0 +1,49 @@
+# Default values for mantik-engine.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+#-------------------------------------------------------------------------------------
+
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+
+
+image:
+  pullPolicy: Never
+  name: mdocker.rcxt.de/engine
+  tag: master
+
+engine: # General values that cannot be attributed to a template
+  grpcPort: 8087
+  labels:
+    app: engine
+  
+  
+service: # Expose engine
+  name: mantik-engine-service
+  type: LoadBalancer
+  port: 8087
+
+deployment:
+  name: mantik-engine
+  mantik: # mantik specific configuration
+    args: # Arguments passed as -Dmantik...
+      executor:
+        docker:
+          defaultImageTag: "latest" # Do not load mantik bridges from a specific tag
+        behaviour:
+          disablePull: "true" # Do not pull images (they are already there)
+        kubernetes:
+          behavior:
+            defaultTimeout: "10 minutes"
+          nodeAddress: null
+          
+volumes:
+  logs:
+    size: 1Gi
+  repo:
+    size: 1Gi

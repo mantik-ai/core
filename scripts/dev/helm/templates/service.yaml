@@ -1,0 +1,15 @@
+# Expose the engine as a service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.name }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ .Values.engine.labels.app }}
+  ports:
+  - port: {{ .Values.service.port }}
+    protocol: TCP
+    targetPort: {{ .Values.engine.grpcPort }}
+  selector:
+    app: {{ .Values.engine.labels.app }}
