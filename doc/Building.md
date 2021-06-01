@@ -60,15 +60,26 @@ Requirements
        For Mac, follow this [Installation Guide](https://docs.docker.com/docker-for-mac/)
 
 * Integration tests and running
-    * [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
+    * [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) 1.18.1
     
       Minikube is used as developing Kubernetes backend, for integration tests
       and also for developing with the Docker Backend without needing root-Permissions.
+      
+    * [Kubectl](https://kubernetes.io/docs/reference/kubectl/overview/)
+    
+      ```
+      # Ubuntu
+      sudo snap install kubectl --classic
+      ```
       
     * [Minio](https://min.io/)
     
       Minio is a free object server with (partly) S3 Compatible API.
       We use it local deployments to publish binary assets to bridges running in Kubernetes.
+      
+    * [Minio Client](https://min.io/download#/linux)  
+    
+      We use `mc` for configuring Minio.
       
     * `socat`
     
@@ -126,7 +137,34 @@ Open in IDE
 Running Integration Tests
 -------------------------
 
-* This can be started using `scripts/dev/start_minikube.sh`
+* Minikube can be started using `scripts/dev/start_minikube.sh`
+
+  After starting, both `minikube status` and `kubectl get namespaces` should work.  
+
+* Add an entry to minio.minikube to your `/etc/hosts`, using the ip of Minikube (use `minikube ip` for that)
+  
+  E.g.
+
+  ```
+  192.168.99.105 minio.minikube
+  ```
+  
+* Configure minio permissions using `scripts/dev/configure_minio.sh`
 * All integration tests can be run using `make integration-test`
 
-          
+
+Troubleshooting Integration Tests
+---------------------------------
+
+* If minio is a non-working state, delete the namespace and recreate it. 
+
+  - Ensure entry in `/etc/hosts` (see above)
+  - Delete minio namespace `kubectl delete ns minio`
+  - Create Mino (Helm) `/scripts/dev/start_minikube_minio.sh`
+  - Configure Minio Permissions `./scripts/dev/configure_minio.sh`
+
+ * Sometimes if minikube got recreated or deleted (e.g. `minikube delete --all`), Helm thinks Minio is already deployed (since it was in an older minikube instance). In that case, use `helm delete minio -n minio` and `/scripts/dev/start_minikube_minio.sh` and configure Minio (see above).
+
+* In seldom cases, the minikube IP changes, then you have to update `/etc/hosts`  
+
+  
