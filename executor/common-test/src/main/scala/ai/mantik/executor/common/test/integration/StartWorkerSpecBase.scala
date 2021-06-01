@@ -25,7 +25,16 @@ import java.util.Base64
 
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{ ListWorkerRequest, MnpPipelineDefinition, MnpWorkerDefinition, StartWorkerRequest, StartWorkerResponse, StopWorkerRequest, WorkerState, WorkerType }
+import ai.mantik.executor.model.{
+  ListWorkerRequest,
+  MnpPipelineDefinition,
+  MnpWorkerDefinition,
+  StartWorkerRequest,
+  StartWorkerResponse,
+  StopWorkerRequest,
+  WorkerState,
+  WorkerType
+}
 import ai.mantik.testutils.TestBase
 import akka.util.ByteString
 
@@ -40,10 +49,18 @@ trait StartWorkerSpecBase {
     // Addional check for implementors
   }
 
-  protected def checkExistance(executor: Executor, startWorkerResponse: StartWorkerResponse, expectedType: WorkerType): Unit = {
-    val listResponse = await(executor.listWorkers(ListWorkerRequest(
-      isolationSpace
-    )))
+  protected def checkExistence(
+      executor: Executor,
+      startWorkerResponse: StartWorkerResponse,
+      expectedType: WorkerType
+  ): Unit = {
+    val listResponse = await(
+      executor.listWorkers(
+        ListWorkerRequest(
+          isolationSpace
+        )
+      )
+    )
 
     val element = listResponse.workers.find(_.nodeName == startWorkerResponse.nodeName)
     element shouldBe defined
@@ -53,11 +70,15 @@ trait StartWorkerSpecBase {
   }
 
   protected def stopAndKill(executor: Executor, startWorkerResponse: StartWorkerResponse): Unit = {
-    val stopResponse = await(executor.stopWorker(StopWorkerRequest(
-      isolationSpace,
-      nameFilter = Some(startWorkerResponse.nodeName),
-      remove = false
-    )))
+    val stopResponse = await(
+      executor.stopWorker(
+        StopWorkerRequest(
+          isolationSpace,
+          nameFilter = Some(startWorkerResponse.nodeName),
+          remove = false
+        )
+      )
+    )
     stopResponse.removed shouldNot be(empty)
 
     eventually {
@@ -65,11 +86,15 @@ trait StartWorkerSpecBase {
       listResponse2.workers.find(_.nodeName == startWorkerResponse.nodeName).get.state shouldBe 'terminal
     }
 
-    val stopResponse2 = await(executor.stopWorker(StopWorkerRequest(
-      isolationSpace,
-      nameFilter = Some(startWorkerResponse.nodeName),
-      remove = true
-    )))
+    val stopResponse2 = await(
+      executor.stopWorker(
+        StopWorkerRequest(
+          isolationSpace,
+          nameFilter = Some(startWorkerResponse.nodeName),
+          remove = true
+        )
+      )
+    )
     stopResponse2.removed shouldNot be(empty)
 
     eventually {
@@ -94,13 +119,14 @@ trait StartWorkerSpecBase {
     id = userId,
     isolationSpace = isolationSpace,
     definition = MnpPipelineDefinition(
-      io.circe.parser.parse(
-        """{
-          |  "name": "my_pipeline",
-          |  "steps": [],
-          |  "inputType": "int32"
-          |}
-          |""".stripMargin).forceRight
+      io.circe.parser
+        .parse("""{
+                 |  "name": "my_pipeline",
+                 |  "steps": [],
+                 |  "inputType": "int32"
+                 |}
+                 |""".stripMargin)
+        .forceRight
     )
   )
 
@@ -109,7 +135,7 @@ trait StartWorkerSpecBase {
     response.nodeName shouldNot be(empty)
     response.externalUrl shouldBe empty
 
-    checkExistance(executor, response, WorkerType.MnpWorker)
+    checkExistence(executor, response, WorkerType.MnpWorker)
 
     stopAndKill(executor, response)
   }
@@ -120,7 +146,7 @@ trait StartWorkerSpecBase {
     response.nodeName shouldNot be(empty)
     response.nodeName should include(nameHint)
 
-    checkExistance(executor, response, WorkerType.MnpWorker)
+    checkExistence(executor, response, WorkerType.MnpWorker)
 
     stopAndKill(executor, response)
   }
@@ -142,7 +168,7 @@ trait StartWorkerSpecBase {
     response.nodeName shouldNot be(empty)
     response.externalUrl shouldBe empty
 
-    checkExistance(executor, response, WorkerType.MnpWorker)
+    checkExistence(executor, response, WorkerType.MnpWorker)
 
     stopAndKill(executor, response)
   }
@@ -152,31 +178,39 @@ trait StartWorkerSpecBase {
     response.nodeName shouldNot be(empty)
     response.externalUrl shouldBe empty
 
-    checkExistance(executor, response, WorkerType.MnpPipeline)
+    checkExistence(executor, response, WorkerType.MnpPipeline)
 
     stopAndKill(executor, response)
   }
 
   it should "allow deploying a persistent pipeline" in withExecutor { executor =>
-    val response = await(executor.startWorker(pipelineRequest.copy(
-      keepRunning = true
-    )))
+    val response = await(
+      executor.startWorker(
+        pipelineRequest.copy(
+          keepRunning = true
+        )
+      )
+    )
     response.nodeName shouldNot be(empty)
     response.externalUrl shouldBe empty
 
-    checkExistance(executor, response, WorkerType.MnpPipeline)
+    checkExistence(executor, response, WorkerType.MnpPipeline)
 
     stopAndKill(executor, response)
   }
 
   it should "allow deplying a persistent pipeline with ingress" in withExecutor { executor =>
-    val response = await(executor.startWorker(pipelineRequest.copy(
-      ingressName = Some("pipe1")
-    )))
+    val response = await(
+      executor.startWorker(
+        pipelineRequest.copy(
+          ingressName = Some("pipe1")
+        )
+      )
+    )
     response.nodeName shouldNot be(empty)
     response.externalUrl shouldBe defined
 
-    checkExistance(executor, response, WorkerType.MnpPipeline)
+    checkExistence(executor, response, WorkerType.MnpPipeline)
 
     stopAndKill(executor, response)
   }

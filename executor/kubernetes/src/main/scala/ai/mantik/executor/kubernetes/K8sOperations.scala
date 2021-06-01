@@ -121,7 +121,9 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
         // We could also try to use the Patch API, but this is very tricky to do it in a generic way
         logger.info(s"${obj.kind} ${obj.name} already exists, deleting...")
         for {
-          _ <- errorHandling("Deleting")(client.delete[O](obj.name))
+          _ <- errorHandling("Deleting")(
+            client.delete[O](obj.name, gracePeriodSeconds = config.kubernetes.deletionGracePeriod.toSeconds.toInt)
+          )
           _ = logger.debug(s"Waiting for deletion of $description")
           _ <- waitUntilDeleted[O](namespace, obj.name)
           _ = logger.info(s"Recreating ${obj.kind} ${obj.name}")
@@ -172,9 +174,15 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   }
 
   /** Delete an object in Kubernetes. */
-  def delete[O <: ObjectResource](namespace: Option[String], name: String, gracePeriodSeconds: Int = -1)(
+  def delete[O <: ObjectResource](
+      namespace: Option[String],
+      name: String,
+      gracePeriodSecondsOverride: Option[Int] = None
+  )(
       implicit rd: ResourceDefinition[O]
   ): Future[Unit] = {
+    val gracePeriodSeconds = gracePeriodSecondsOverride.getOrElse(config.kubernetes.deletionGracePeriod.toSeconds.toInt)
+    logger.debug(s"Deleting ${rd.spec.names.singular} of name ${name}, gracePeriod=${gracePeriodSeconds}")
     errorHandling(s"Delete ${rd.spec.defaultVersion}/${rd.spec.names.singular}") {
       namespacedClient(namespace).delete(name, gracePeriodSeconds)
     }
@@ -182,7 +190,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
 
   /** Ensure the existence of a namespace, and returns a kubernetes client for this namespace. */
   def ensureNamespace(namespace: String): Future[Namespace] = {
-    errorHandling("Get namespace")(rootClient.get[Namespace](namespace))
+    errorHandling("Get namespace", true)(rootClient.get[Namespace](namespace))
       .map { ns =>
         logger.trace(s"Using existing namespace ${namespace}, no creation necessary")
         ns
@@ -280,8 +288,13 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
     }.map { _ => () }
   }
 
-  /** Some principal k8s Error handling. */
-  def errorHandling[T](what: => String)(f: => Future[T]): Future[T] = {
+  /**
+    * Retries an operation on Error 500 Errors.
+    * @param what name for the operation executed
+    * @param silent if true, when do not log on regular errors
+    * @param f the operation to run
+    */
+  def errorHandling[T](what: => String, silent: Boolean = false)(f: => Future[T]): Future[T] = {
     // For retry handling see: https://kubernetes.io/docs/reference/federation/v1/definitions/
     // And skuber.json.format.apiobj.statusReads
 
@@ -302,19 +315,25 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
         case Success(value) =>
           response.trySuccess(value)
         case Failure(e) if remaining <= 0 =>
-          logger.warn(s"K8S ${what} Operation failed, tried ${config.kubernetes.retryTimes}")
+          if (!silent) {
+            logger.warn(s"K8S ${what} Operation failed, tried ${config.kubernetes.retryTimes}")
+          }
           response.tryFailure(e)
         case Failure(s: K8SException) if s.status.code.contains(500) && retryAfterSeconds(s.status).nonEmpty =>
           val retryValue = retryAfterSeconds(s.status).get
           val seconds = Math.min(Math.max(1, retryValue), config.kubernetes.defaultTimeout.toSeconds)
-          logger.warn(
-            s"K8S ${what} Operation failed with 500+retry ${retryValue}, will try again in ${seconds} seconds."
-          )
+          if (!silent) {
+            logger.warn(
+              s"K8S ${what} Operation failed with 500+retry ${retryValue}, will try again in ${seconds} seconds."
+            )
+          }
           actorSystem.scheduler.scheduleOnce(seconds.seconds) {
             tryAgain(remaining - 1)
           }
         case Failure(e) =>
-          logger.debug(s"K8S ${what} operation failed", e)
+          if (!silent) {
+            logger.debug(s"K8S ${what} operation failed", e)
+          }
           response.tryFailure(e)
       }
     }

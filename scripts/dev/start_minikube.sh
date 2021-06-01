@@ -21,7 +21,7 @@ else
     sleep 10        # Sometimes there seems to be some kind of race condition
 
     echo "Starting Minikube ..."
-    minikube start --memory 8192
+    minikube start --memory 8192 --driver=virtualbox
     minikube addons enable ingress
     minikube addons enable ingress-dns # newer Minikube required?
 
