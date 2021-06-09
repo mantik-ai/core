@@ -17,13 +17,15 @@ Assuming you want to try it out locally, with Minikube, you should install the f
 
 - Minikube: As a local kubernetes environment
 - A local Minio-Instance for running integration tests, reachable in http://minio.minikube (see `scripts/dev/start_minikube_minio.sh`)
+- helm: For deploying the mantik engine on minikube
 - Java Development Kit 1.11: Needed for Scala
 - Make: Needed for Building
 - SBT (Simple Build Tool): Needed for Building Scala
 - Python 3.7: Needed for Python Bridges, Python SDK and Examples
 - poetry: Needed for Python Package Management
-- Go 1.13: Needed for Go Containers and Bridges
+- Go 1.16: Needed for Go Containers and Bridges
 - Protobuf Compiler: Needed for gRpc
+- gcc: For compiling code related to protobuf
 - Docker: Needed for Docker Container generation
 
 The docker images will be build directly into the Docker registry which is built into Minikube.
