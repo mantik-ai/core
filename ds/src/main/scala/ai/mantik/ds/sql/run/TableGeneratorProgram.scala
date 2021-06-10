@@ -41,7 +41,7 @@ sealed trait TableGeneratorProgram {
   /** Maximum id of input sources */
   def maxInputSource: Int
 
-  /** Extra results (in case of [[MultiGeneratorProgram]]) */
+  /** Extra results (in case of [[MultiTableGeneratorProgram]]) */
   def extraResults: Vector[TabularData]
 
   /** Return the type of all result tables */

@@ -48,7 +48,7 @@ abstract class TestBase
 
   /**
     * Wait for a result and returns the future.
-    * Note: if you are expecting a failure, use [[awaitException()]]
+    * Note: if you are expecting a failure, use [[awaitException]]
     */
   @throws[ExecutionException]("If the future returns an error (to have a stack trace)")
   def await[T](f: => Future[T]): T = {

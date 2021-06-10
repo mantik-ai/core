@@ -100,7 +100,7 @@ trait MantikItem {
   def push(): Action.PushAction = Action.PushAction(this)
 
   /**
-    * Returns the [[ItemId]] of the item.
+    * Returns the [[ai.mantik.elements.ItemId]] of the item.
     */
   def itemId: ItemId = core.itemId
 
@@ -112,9 +112,8 @@ trait MantikItem {
 
   /**
     * Update Meta Variables.
-    *
-    * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]])
     */
+  @throws[MetaVariableException]("If a value is missing or of wrong type or not changeable.")
   def withMetaValues(values: (String, SingleElementBundle)*): OwnType = {
     val updatedMantikHeader = mantikHeader.withMetaValues(values: _*)
     withMantikHeader(updatedMantikHeader)
@@ -123,9 +122,8 @@ trait MantikItem {
   /**
     * Convenience function to udpate a single meta value.
     * Types are matched automatically if possible
-    *
-    * @throws MetaVariableException (see [[ai.mantik.elements.meta.MetaJson.withMetaValues]]
     */
+  @throws[MetaVariableException]("If a value is missing or of wrong type or not changeable.")
   def withMetaValue[T: ValueEncoder](name: String, value: T): OwnType = {
     withMetaValues(name -> Bundle.fundamental(value))
   }

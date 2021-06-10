@@ -12,7 +12,7 @@ else
   -Dsbt.coursier.home=$(CACHE_DIR)/coursier
 endif
 
-SBT = cd ../; sbt $(SBT_CACHE_PARAMETER) -warn
+SBT = cd ../; sbt $(SBT_CACHE_PARAMETER) -Dquill.macro.log=false -warn
 
 # .make files are there to tell Make if something is going to be rebuild
 
@@ -24,7 +24,7 @@ include ../scripts/ci/Makefile.docker_single
 
 
 target/build.make: ${SCALA_RESOURCES}
-	$(SBT) package engineApp/stage scalaFnBridge/stage
+	$(SBT) package engineApp/stage scalaFnBridge/stage unidoc
 	touch $@
 
 .PHONY: test

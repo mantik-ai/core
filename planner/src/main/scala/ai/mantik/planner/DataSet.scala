@@ -60,10 +60,9 @@ case class DataSet(
 
   /**
     * Prepares a select statement on this dataset.
-    *
-    * @throws FeatureNotSupported if a select is applied on non tabular data or if the select could not be compiled.
-    * @throws IllegalArgumentException on illegal selects.
     */
+  @throws[FeatureNotSupported]("if a select is applied on non tabular data or if the select could not be compiled.")
+  @throws[IllegalArgumentException]("On illegal selects")
   def select(statement: String): DataSet = {
     val parsedSelect = Select.parse(forceDataTypeTabular(), statement) match {
       case Left(error) => throw new IllegalArgumentException(s"Could not parse select ${error}")
@@ -131,8 +130,8 @@ case class DataSet(
   /**
     * Tries to auto convert this data set to another data type.
     * Conversions can only be done if they do not loose precision or cannot fail single rows.
-    * @throws ConversionNotApplicableException if the conversion can not be applied.
     */
+  @throws[ConversionNotApplicableException]("If the conversion can not be applied.")
   def autoAdaptOrFail(targetType: DataType): DataSet = {
     if (targetType == dataType) {
       return this
@@ -268,7 +267,7 @@ object DataSet {
   /**
     * Execute an SQL Query on Datasets.
     * @param query SQL Query
-    * @param arguments arguments to be used within SQL query. They are accessible as $0, $1, ...
+    * @param arguments arguments to be used within SQL query. They are accessible as &#36;0, &#36;1, ...
     */
   def query(
       statement: String,

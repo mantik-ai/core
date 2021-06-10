@@ -38,7 +38,7 @@ import com.typesafe.config.Config
 /**
   * Raw Elements in Plan Construction.
   */
-class PlannerElements(config: Config) {
+private[impl] class PlannerElements(config: Config) {
 
   private val dockerConfig = DockerConfig.parseFromConfig(config.getConfig("mantik.bridge.docker"))
 

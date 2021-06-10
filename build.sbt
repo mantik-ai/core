@@ -5,6 +5,8 @@ ThisBuild / scalaVersion := "2.12.13"
 ThisBuild / scalacOptions += "-feature"
 ThisBuild / scalacOptions ++= Seq("-unchecked", "-deprecation")
 ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats
+ThisBuild / autoAPIMappings := true
+ThisBuild / publishArtifact in (Compile, packageDoc) := false
 
 Test / parallelExecution := true
 Test / fork := false
@@ -86,7 +88,9 @@ def enableProtocolBuffer = Seq(
   ),
   PB.targets in Compile := Seq(
     scalapb
-      .gen() -> (sourceManaged in Compile).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
+      .gen(
+        lenses = false
+      ) -> (sourceManaged in Compile).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
   )
 )
 
@@ -272,8 +276,17 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
   .enablePlugins(BuildInfoPlugin)
   .settings(configureBuildInfo("ai.mantik.executor.kubernetes.buildinfo"))
 
+// Contains the Mantik Bridge Specific Protobuf Elements (except MNP)
+lazy val bridgeProtocol = makeProject("bridge/protocol", "bridgeProtocol")
+  .dependsOn(mnpScala)
+  .settings(
+    name := "bridge-protocol",
+    enableProtocolBuffer,
+    PB.protoSources in Compile += baseDirectory.value / "protobuf"
+  )
+
 lazy val planner = makeProject("planner")
-  .dependsOn(ds, elements, executorApi, componently, mnpScala, scalaFnApi)
+  .dependsOn(ds, elements, executorApi, componently, mnpScala, bridgeProtocol, scalaFnApi)
   .dependsOn(executorKubernetes % "it", executorDocker % "it", executorS3Storage % "it")
   .settings(
     name := "planner",
@@ -284,8 +297,7 @@ lazy val planner = makeProject("planner")
       "io.getquill" %% "quill-jdbc" % quillVersion
     ),
     enableProtocolBuffer,
-    configureBuildInfo("ai.mantik.planner.buildinfo"),
-    PB.protoSources in Compile += baseDirectory.value / "../bridge/protocol/protobuf"
+    configureBuildInfo("ai.mantik.planner.buildinfo")
   )
   .enablePlugins(BuildInfoPlugin)
 
@@ -345,12 +357,11 @@ lazy val scalaFnApi = makeProject("bridge/scalafn/api", "scalaFnApi")
   )
 
 lazy val scalaFnBridge = makeProject("bridge/scalafn/bridge", "scalaFnBridge")
-  .dependsOn(scalaFnApi, mnpScala)
+  .dependsOn(scalaFnApi, bridgeProtocol)
   .settings(
     name := "scala-fn-bridge",
     enableProtocolBuffer,
     configureBuildInfo("ai.mantik.bridge.scalafn.buildinfo"),
-    PB.protoSources in Compile += baseDirectory.value / "../../protocol/protobuf",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion
     )
@@ -370,6 +381,7 @@ lazy val root = (project in file("."))
     executorDocker,
     executorS3Storage,
     examples,
+    bridgeProtocol,
     planner,
     engine,
     engineApp,
@@ -383,5 +395,11 @@ lazy val root = (project in file("."))
     name := "mantik-core",
     publish := {},
     publishLocal := {},
-    test := {}
+    test := {},
+    addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full)
+  )
+  .enablePlugins(ScalaUnidocPlugin)
+  .settings(
+    // Exclude examples from Documentation
+    unidocProjectFilter in (ScalaUnidoc, unidoc) := inAnyProject -- inProjects(examples, testutils)
   )

@@ -29,9 +29,8 @@ import ai.mantik.ds.sql.run.SingleTableGeneratorProgramRunner.RowIterator
 
 /**
   * Runs Select Programs
-  *
-  * @throws FeatureNotSupported if some select feature could not be translated.
   */
+@throws[FeatureNotSupported]("if some select feature could not be translated.")
 class SelectProgramRunner(selectProgram: SelectProgram) {
 
   private val selectorRunner = selectProgram.selector.map(new ProgramRunner(_))

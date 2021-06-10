@@ -26,7 +26,7 @@ import ai.mantik.ds.{ArrayT, FundamentalType, ImageChannel}
 import org.parboiled2._
 
 /** Parser for Expressions. */
-trait ExpressionParser extends ConstantParser with BinaryOperationParser {
+private[parser] trait ExpressionParser extends ConstantParser with BinaryOperationParser {
   this: Parser =>
 
   import AST._

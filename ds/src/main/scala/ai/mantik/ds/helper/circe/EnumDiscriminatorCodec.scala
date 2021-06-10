@@ -29,7 +29,7 @@ import io.circe._
   * Encodes the values of a trivial disjunct enum hierarchy into a Json string.
   * Note: is using circe json.
   *
-  * TODO: Circe's [[KeyDecoder]] and [[KeyEncoder]] somehow have a similar meaning however
+  * TODO: Circe's KeyDecoder and KeyEncoder somehow have a similar meaning however
   * they are abstract classes so we cannot easily mix them together. Maybe it's a good idea to clean up.
   */
 class EnumDiscriminatorCodec[T](val mapping: Seq[(String, T)]) extends Encoder[T] with Decoder[T] {

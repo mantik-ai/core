@@ -153,8 +153,8 @@ object Bundle {
 
   /**
     * Constructs a bundle from data type and elements.
-    * @throws IllegalArgumentException if the bundle is invalid.
     */
+  @throws[IllegalArgumentException]("if the bundle is invalid.")
   def apply(model: DataType, elements: Vector[RootElement]): Bundle = {
     elements match {
       case Vector(s: SingleElement) => SingleElementBundle(model, s.element)

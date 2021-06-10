@@ -39,7 +39,7 @@ import javax.inject.Inject
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-/** Implements the gRpc Server for [[PlanningContextService]] */
+/** Implements the gRpc Server for [[PlanningContext]] */
 class RemotePlanningContextServerImpl @Inject() (
     context: PlanningContext,
     retriever: MantikArtifactRetriever

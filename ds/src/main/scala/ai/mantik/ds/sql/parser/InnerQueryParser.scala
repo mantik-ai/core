@@ -25,7 +25,7 @@ import ai.mantik.ds.sql.parser.AST.AnonymousReference
 import org.parboiled2.{Parser, Rule1}
 
 /** Defines an inner query parser, implemented by [[QueryParser]] */
-trait InnerQueryParser {
+private[parser] trait InnerQueryParser {
   self: Parser =>
 
   /** Parse an inner query as expected in InnerQuery union InnerQuery */
@@ -39,7 +39,7 @@ trait InnerQueryParser {
 }
 
 /** Implements InnerQueryParser with only support for anonymous queries */
-trait AnonymousOnlyInnerQueryParser extends InnerQueryParser with ConstantParser {
+private[parser] trait AnonymousOnlyInnerQueryParser extends InnerQueryParser with ConstantParser {
   self: Parser =>
 
   override def UnionLikeInnerQuery: Rule1[AST.QueryNode] = AnonymousFrom

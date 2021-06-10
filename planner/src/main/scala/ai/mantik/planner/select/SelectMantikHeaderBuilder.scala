@@ -31,7 +31,7 @@ import io.circe.Json
 import io.circe.syntax._
 
 /**
-  * Converts a [[TableGeneratorProgram]] to a [[MantikHeader]] for the select-Bridge.
+  * Converts a [[ai.mantik.ds.sql.run.TableGeneratorProgram]] to a [[ai.mantik.elements.MantikHeader]] for the select-Bridge.
   * @param program the compiled program
   * @param query human readable query
   */

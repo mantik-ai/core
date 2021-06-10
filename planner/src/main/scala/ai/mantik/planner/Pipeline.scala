@@ -74,8 +74,8 @@ object Pipeline {
   /**
     * Build a pipeline from a list of algorithms.
     * This will result in artificial child mantik ids.
-    * @throws IllegalArgumentException if data types do not match.
     */
+  @throws[IllegalArgumentException]("if data types do not match.")
   def build(
       algorithm0: Algorithm,
       algorithms: Algorithm*

@@ -43,7 +43,7 @@ class SecretReader(configKey: String, config: Config) {
 
   /**
     * Read the secret value.
-    * @throws ConfigException if the config key was not found
+    * @throws com.typesafe.config.ConfigException if the config key was not found
     * @throws UnresolvedSecretException if the config value could not be resolved.
     */
   def read(): String = {
