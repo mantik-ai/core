@@ -30,8 +30,8 @@ import scala.collection.mutable
 
 /**
   * A Trivial interpreter for Programs.
-  * @throws FeatureNotSupported if some op code could not be translated.
   */
+@throws[FeatureNotSupported]("if some op code could not be translated.")
 class ProgramRunner(program: Program) {
 
   type StackType = mutable.ArrayStack[Element]

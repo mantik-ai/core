@@ -215,7 +215,6 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   private def updateDeploymentStateOp(itemId: ItemId, maybeDeployed: Option[DeploymentInfo]): Boolean = {
     maybeDeployed match {
       case None =>
-        transaction()
         val deleted = run {
           db.deployments.filter(_.itemId == lift(itemId.toString)).delete
         }

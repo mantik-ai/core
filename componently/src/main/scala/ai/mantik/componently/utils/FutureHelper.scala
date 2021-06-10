@@ -49,7 +49,7 @@ object FutureHelper {
   }
 
   /**
-    * Let a future with [[TimeoutException]] if it takes too long.
+    * Let a future with [[scala.concurrent.TimeoutException]] if it takes too long.
     * Note: the inner code of the future will still run, as they are not cancellable.
     * @param operationName an operation name, which will be displayed in the exception.
     * @return the future which will fail with timeout.

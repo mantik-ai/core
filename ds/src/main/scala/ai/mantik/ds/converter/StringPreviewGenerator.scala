@@ -34,8 +34,8 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
 
   /**
     * Render a Bundle.
-    * @throws IllegalArgumentException if the bundle is not consistent.
     */
+  @throws[IllegalArgumentException]("if the bundle is not consistent.")
   def render(bundle: Bundle): String = {
     bundle.model match {
       case table: TabularData =>

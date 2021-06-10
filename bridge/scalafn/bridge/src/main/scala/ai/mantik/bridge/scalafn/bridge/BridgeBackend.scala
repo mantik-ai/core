@@ -38,7 +38,7 @@ import com.typesafe.scalalogging.Logger
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-/** Implements parts of [[ServerBackend]] to make it easier to implement Bridges */
+/** Implements parts of [[ai.mantik.mnp.server.ServerBackend]] to make it easier to implement Bridges */
 trait BridgeBackend extends ServerBackend with Component {
   import ai.mantik.componently.AkkaHelper._
 

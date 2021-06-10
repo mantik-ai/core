@@ -26,7 +26,7 @@ import org.parboiled2._
 import scala.collection.immutable
 
 /** Handles parsing of Binary Operations, including precedence. */
-trait BinaryOperationParser {
+private[parser] trait BinaryOperationParser {
   self: Parser =>
 
   /** Parses an Expression. */

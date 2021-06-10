@@ -24,7 +24,7 @@ package ai.mantik.ds.sql.parser
 import ai.mantik.ds.sql.parser.AST.{JoinCondition, JoinNode, JoinType}
 import org.parboiled2.{Parser, Rule1}
 
-trait JoinParser extends ExpressionParser with InnerQueryParser {
+private[parser] trait JoinParser extends ExpressionParser with InnerQueryParser {
   this: Parser =>
 
   def Join: Rule1[JoinNode] = {

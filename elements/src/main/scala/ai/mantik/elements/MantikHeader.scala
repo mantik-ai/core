@@ -84,8 +84,8 @@ case class MantikHeader[T <: MantikDefinition](
 
   /**
     * Update Meta Variable Values
-    * @throws MetaVariableException see [[MetaJson.withMetaValues]].
     */
+  @throws[MetaVariableException]("If a value is missing or of wrong type or not changeable.")
   def withMetaValues(values: (String, SingleElementBundle)*): MantikHeader[T] = {
     val updatedJson = metaJson.withMetaValues(values: _*)
     val resultCandidate = for {

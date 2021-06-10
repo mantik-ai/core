@@ -54,7 +54,7 @@ import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 
-/** Implements a [[PlanningContext]] on top of a gRpc [[PlanningContextService]] */
+/** Implements a [[PlanningContext]] on top of the gRpc Service */
 class RemotePlanningContextImpl @Inject() (planningContext: PlanningContextService)(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase
     with PlanningContext {

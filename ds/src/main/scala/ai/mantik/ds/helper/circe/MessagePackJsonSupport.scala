@@ -91,9 +91,8 @@ object MessagePackJsonSupport {
 
   /**
     * Read a Circe JSON from MessageUnpacker.
-    * @throws IOException on unexpected format.
     */
-  @throws[IOException]
+  @throws[IOException]("On unexpected format")
   def readJsonToMessagePack(in: MessageUnpacker): Json = {
     in.getNextFormat.getValueType match {
       case ValueType.NIL =>

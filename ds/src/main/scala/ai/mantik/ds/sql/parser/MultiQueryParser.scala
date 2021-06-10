@@ -30,7 +30,7 @@ import scala.collection.immutable
   * Parses Multi queries
   * (Special queries which can return multiple tables)
   */
-trait MultiQueryParser {
+private[parser] trait MultiQueryParser {
   self: Parser with ConstantParser with ExpressionParser =>
 
   def BracketInnerQuery: Rule1[QueryNode]

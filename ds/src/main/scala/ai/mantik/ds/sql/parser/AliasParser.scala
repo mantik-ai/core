@@ -23,7 +23,7 @@ package ai.mantik.ds.sql.parser
 
 import org.parboiled2.{Parser, Rule1}
 
-trait AliasParser {
+private[parser] trait AliasParser {
   self: Parser with ExpressionParser =>
 
   def ParseAsAlias: Rule1[String] = {

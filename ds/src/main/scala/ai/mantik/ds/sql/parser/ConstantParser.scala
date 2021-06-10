@@ -24,7 +24,7 @@ package ai.mantik.ds.sql.parser
 import ai.mantik.ds.sql.parser.AST._
 import org.parboiled2._
 
-trait ConstantParser {
+private[parser] trait ConstantParser {
   self: Parser =>
 
   def Constant: Rule1[ConstantExpressionNode] = rule {

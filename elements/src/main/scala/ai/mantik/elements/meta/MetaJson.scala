@@ -97,8 +97,8 @@ object MetaJson {
 
   /**
     * Generate a Meta Json instance when you are sure there are no meta variables.
-    * @throws IllegalArgumentException if there are meta variables.
     */
+  @throws[IllegalArgumentException]("If there are meta variables.")
   def withoutMetaVariables(in: JsonObject): MetaJson = {
     require(in(MetaVariablesKey).isEmpty, "No meta variables allowed")
     MetaJson(

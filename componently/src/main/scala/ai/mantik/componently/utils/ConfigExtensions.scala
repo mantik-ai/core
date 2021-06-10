@@ -26,7 +26,7 @@ import com.typesafe.config.Config
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.collection.JavaConverters._
 
-/** Extensions for [[Config]] */
+/** Extensions for [[com.typesafe.config.Config]] */
 object ConfigExtensions {
 
   class ConfigExt(config: Config) {

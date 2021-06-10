@@ -27,7 +27,7 @@ import Parser.DeliveryScheme.Either
 
 import scala.collection.immutable
 
-object QueryParser {
+private[sql] object QueryParser {
 
   /** Parse a SELECT statement into a SelectNode */
   def parseSelectToNode(select: String): Either[String, SelectNode] = {

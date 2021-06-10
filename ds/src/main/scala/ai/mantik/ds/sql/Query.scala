@@ -89,7 +89,7 @@ object Query {
     QueryBuilder.buildQuery(statement)
   }
 
-  /** Run a statement on tabular arguments which can be referenced by $0, $1, ... */
+  /** Run a statement on tabular arguments which can be referenced by &#36;0, &#36;1, ... */
   def run(statement: String, arguments: TabularBundle*): Either[String, TabularBundle] = {
     implicit val context = SqlContext(arguments.map(_.model).toVector)
     for {
@@ -160,10 +160,9 @@ object Select {
 
   /**
     * Parse and run a select statement.
-    *
-    * @throws IllegalArgumentException on invalid select statements or non tabular bundles
-    * @throws FeatureNotSupported      when the statement can be parsed, but not executed.
     */
+  @throws[IllegalArgumentException]("on invalid select statements or non tabular bundles")
+  @throws[FeatureNotSupported]("when the statement can be parsed, but not executed.")
   def run(input: TabularBundle, statement: String): Bundle = {
     val tabularData = input.model
     val select = SelectBuilder.buildSelect(tabularData, statement) match {

@@ -10,3 +10,6 @@ libraryDependencies ++= Seq(
 
 addSbtPlugin("au.com.onegeek" %% "sbt-dotenv" % "2.0.117")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.3")
+
+addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.4.3")
+addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "3.0.0")

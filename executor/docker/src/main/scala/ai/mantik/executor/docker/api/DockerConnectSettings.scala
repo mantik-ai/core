@@ -128,7 +128,6 @@ case class DockerConnectSettings(
 
   /**
     * Returns SSL Config settings to use.
-    * (In case of PEM Files, you have to call this on [[deriveClientCertIfNecessary]].
     */
   lazy val sslConfigSettings: Option[SSLConfigSettings] = {
     if (clientCert.isEmpty) {

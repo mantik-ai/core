@@ -87,7 +87,7 @@ object RpcConversions {
     )
   }
 
-  /** Encode an error into a [[StatusRuntimeException]]. */
+  /** Encode an error into a [[io.grpc.StatusRuntimeException]]. */
   def encodeError(e: Throwable, code: Code): StatusRuntimeException = {
     val description = e.getMessage // null is allowed according to source of Status.
     val status = code.toStatus.withDescription(description).withCause(e)

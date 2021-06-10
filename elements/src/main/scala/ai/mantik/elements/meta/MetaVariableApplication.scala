@@ -29,7 +29,7 @@ import cats.implicits._
   *
   * @param metaVariables the list of meta variables. may itself not contain meta variables.
   *
-  * Variables have the form ${foo.bar}
+  * Variables have the form &#36;{foo.bar}
   */
 case class MetaVariableApplication(
     metaVariables: List[MetaVariable]
