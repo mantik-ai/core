@@ -27,7 +27,7 @@ import ai.mantik.elements.errors.MantikAsyncException
 import ai.mantik.elements.{MantikId, NamedMantikId}
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.{ExecutionPayloadProvider, MnpPlanExecutor}
+import ai.mantik.planner.impl.exec.{ExecutionPayloadProvider, MnpPlanExecutor, UiStateService}
 import ai.mantik.planner.repository.impl.{LocalMantikRegistryImpl, MantikArtifactRetrieverImpl}
 import ai.mantik.planner.repository._
 
@@ -100,6 +100,7 @@ private[mantik] object PlanningContextImpl {
     val planner = new PlannerImpl(akkaRuntime.config, mantikItemStateManager)
     val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
     val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
+    val uiStateService = new UiStateService(executor)
     // val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
 
     val planExecutor = new MnpPlanExecutor(
@@ -108,7 +109,8 @@ private[mantik] object PlanningContextImpl {
       executor,
       retriever,
       payloadProvider,
-      mantikItemStateManager
+      mantikItemStateManager,
+      uiStateService
     )
     val context =
       new PlanningContextImpl(localRegistry, planner, planExecutor, registry, retriever, mantikItemStateManager)

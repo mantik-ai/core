@@ -30,6 +30,8 @@ import ai.mantik.planner.graph.{Graph, Node}
 import akka.NotUsed
 import akka.util.ByteString
 
+import scala.annotation.tailrec
+
 /**
   * A plan is something which can be executed. They are created by the [[Planner]]
   * and are executed by the [[PlanExecutor]].
@@ -40,7 +42,18 @@ case class Plan[T](
     op: PlanOp[T],
     files: List[PlanFile],
     cachedItems: Set[Vector[ItemId]]
-)
+) {
+
+  /** Returns operations as flat list with their coordinates. */
+  def flatWithCoordinates: Seq[(List[Int], PlanOp[_])] = PlanOp.flatWithCoordinates(op)
+
+  /** Files by file reference. */
+  lazy val fileMap: Map[PlanFileReference, PlanFile] = {
+    files.map { file =>
+      file.ref -> file
+    }.toMap
+  }
+}
 
 /** An Id for a [[PlanFile]] */
 case class PlanFileReference(id: Int) extends AnyVal
@@ -82,7 +95,7 @@ object PlanNodeService {
     * @param container container to spin up
     * @param data data as file upload
     * @param mantikHeader Mantik header to initialize
-    * @param embeddedData embedded data
+    * @param embeddedData embedded data (with Content Type)
     */
   case class DockerContainer(
       container: Container,
@@ -276,6 +289,24 @@ object PlanOp {
         parts -> lastCompressedTail
       case other =>
         Nil -> other
+    }
+  }
+
+  /** Generates a flat list with coordinates for all PlanOps. */
+  def flatWithCoordinates(op: PlanOp[_]): Seq[(List[Int], PlanOp[_])] = {
+    def build(path: List[Int], current: PlanOp[_]): Seq[(List[Int], PlanOp[_])] = {
+      current match {
+        case s: Sequential[_] =>
+          s.plans.zipWithIndex.flatMap { case (op, idx) =>
+            build(idx :: path, op)
+          }
+        case other => Seq(path -> other)
+      }
+    }
+    val results = build(Nil, op)
+    // Note: results have reversed order in path
+    results.map { case (reversedPath, op) =>
+      reversedPath.reverse -> op
     }
   }
 

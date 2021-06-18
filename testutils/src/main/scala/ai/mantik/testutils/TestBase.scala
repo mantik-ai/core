@@ -56,7 +56,7 @@ abstract class TestBase
       Await.result(f, timeout)
     } catch {
       case NonFatal(e) =>
-        throw new ExecutionException(s"Asynchronous operation failed", e)
+        throw new ExecutionException(s"Asynchronous operation failed: ${e.getMessage}", e)
     }
   }
 

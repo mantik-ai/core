@@ -27,6 +27,7 @@ Assuming you want to try it out locally, with Minikube, you should install the f
 - Protobuf Compiler: Needed for gRpc
 - gcc: For compiling code related to protobuf
 - Docker: Needed for Docker Container generation
+- NodeJS V14 + NPM: Needed for UI
 
 The docker images will be build directly into the Docker registry which is built into Minikube.
 

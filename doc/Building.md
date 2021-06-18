@@ -58,6 +58,13 @@ Requirements
        apt-get install docker.io
        ```
        For Mac, follow this [Installation Guide](https://docs.docker.com/docker-for-mac/)
+    
+* JavaScript
+
+     - [NodeJS](https://nodejs.org/en/)
+       
+       For Ubuntu see [NodeSource](https://github.com/nodesource/distributions#debinstall)
+       The Ubuntu-shipped distribution is too old.
 
 * Integration tests and running
     * [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) 1.18.1
