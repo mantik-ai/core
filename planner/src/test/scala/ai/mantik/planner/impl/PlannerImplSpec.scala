@@ -171,6 +171,9 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val plan = planner.convert(
       Action.SaveAction(
         item
+      ),
+      ActionMeta(
+        name = Some("nice name")
       )
     )
 
@@ -181,6 +184,7 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
         Some(PlanFileReference(1))
       )
     )
+    plan.name shouldBe Some("nice name")
   }
 
   it should "work with a tag and save" in new Env {

@@ -20,6 +20,8 @@ message FetchItemRequest {
     string dataset_id = 2;
     // Requested Encoding
     BundleEncoding encoding = 3;
+    // Meta Information about that request
+    ActionMeta meta = 4;
 }
 
 message FetchItemResponse {
@@ -32,6 +34,8 @@ message SaveItemRequest {
     // Name under which the item is to be stored (can be name:version)
     // if not given, the current name is used (see tag command)
     string name = 3;
+    // Meta Information about that request
+    ActionMeta meta = 4;
 }
 
 message SaveItemResponse {
@@ -39,6 +43,8 @@ message SaveItemResponse {
     string name = 1;
     // Mantik Item Id under which this item has been saved.
     string mantik_item_id = 2;
+    // Meta Information about that request
+    ActionMeta meta = 3;
 }
 
 message DeployItemRequest {
@@ -48,6 +54,8 @@ message DeployItemRequest {
     string ingress_name = 3;
     // A Hint for the Service Name (not required)
     string name_hint = 4;
+    // Meta Information about that request
+    ActionMeta meta = 5;
 }
 
 message DeployItemResponse {
@@ -57,4 +65,10 @@ message DeployItemResponse {
     string internal_url = 2;
     // External URL (only valid if an ingress is set)
     string external_url = 3;
+}
+
+// Meta Information about an action
+message ActionMeta {
+    // Optional name
+    string name = 1;
 }

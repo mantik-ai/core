@@ -41,7 +41,8 @@ import scala.annotation.tailrec
 case class Plan[T](
     op: PlanOp[T],
     files: List[PlanFile],
-    cachedItems: Set[Vector[ItemId]]
+    cachedItems: Set[Vector[ItemId]],
+    name: Option[String] = None
 ) {
 
   /** Returns operations as flat list with their coordinates. */

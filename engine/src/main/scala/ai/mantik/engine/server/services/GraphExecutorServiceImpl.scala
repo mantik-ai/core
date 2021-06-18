@@ -30,7 +30,8 @@ import ai.mantik.engine.protos.graph_executor.{
   FetchItemRequest,
   FetchItemResponse,
   SaveItemRequest,
-  SaveItemResponse
+  SaveItemResponse,
+  ActionMeta => RpcActionMeta
 }
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
 import ai.mantik.engine.session.{EngineErrors, Session, SessionManager}
@@ -50,7 +51,8 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
       session <- sessionManager.get(request.sessionId)
       dataset = session.getItemAs[DataSet](request.datasetId)
       fetchAction = dataset.fetch
-      fetchPlan = session.components.planner.convert(fetchAction)
+      actionMeta = Converters.decodeActionMeta(request.getMeta)
+      fetchPlan = session.components.planner.convert(fetchAction, actionMeta)
       result <- session.components.planExecutor.execute(fetchPlan)
       encodedBundle = Converters.encodeBundle(result, request.encoding)
     } yield {
@@ -69,7 +71,8 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
       mantikId = RpcConversions.decodeOptionalString(request.name).map(NamedMantikId.fromString)
       perhapsTagged = mantikId.map(item.tag).getOrElse(item)
       saveAction = perhapsTagged.save()
-      savePlan = session.components.planner.convert(saveAction)
+      actionMeta = Converters.decodeActionMeta(request.getMeta)
+      savePlan = session.components.planner.convert(saveAction, actionMeta)
       _ <- session.components.planExecutor.execute(savePlan)
     } yield {
       SaveItemResponse(
@@ -87,7 +90,8 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
         ingressName = optionalString(request.ingressName),
         nameHint = optionalString(request.nameHint)
       )
-      plan = session.components.planner.convert(action)
+      actionMeta = Converters.decodeActionMeta(request.getMeta)
+      plan = session.components.planner.convert(action, actionMeta)
       result <- session.components.planExecutor.execute(plan)
     } yield {
       DeployItemResponse(

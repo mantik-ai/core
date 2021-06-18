@@ -59,14 +59,7 @@ trait PlanningContext {
   def pull(id: MantikId): MantikItem
 
   /** Execute an Action. */
-  def execute[T](action: Action[T]): T
-
-  /** Execute multiple actions discarding the return value (convenience function) */
-  def execute(action1: Action[_], action2: Action[_], moreActions: Action[_]*): Unit = {
-    execute(action1)
-    execute(action2)
-    moreActions.foreach(execute(_))
-  }
+  def execute[T](action: Action[T], meta: ActionMeta = ActionMeta()): T
 
   /**
     * Push a local mantik item including payload to the repository.

@@ -136,11 +136,11 @@ class UiStateService @Inject() (executor: Executor)(implicit akkaRuntime: AkkaRu
   }
 
   // Methods for MnpPlanExecutor
-  def registerNewJob(id: String, plan: Plan[_], name: Option[String] = None): Unit = {
+  def registerNewJob(id: String, plan: Plan[_]): Unit = {
     val time = clock.instant()
     val header = JobHeader(
       id = id,
-      name = name,
+      name = plan.name,
       registration = time,
       state = JobState.Pending,
       start = None

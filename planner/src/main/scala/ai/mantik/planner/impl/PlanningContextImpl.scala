@@ -59,8 +59,8 @@ private[planner] class PlanningContextImpl @Inject() (
     MantikItem.fromMantikArtifact(artifact, mantikItemStateManager, hull)
   }
 
-  override def execute[T](action: Action[T]): T = {
-    val plan = planner.convert(action)
+  override def execute[T](action: Action[T], meta: ActionMeta): T = {
+    val plan = planner.convert(action, meta)
     val result = await(planExecutor.execute(plan), jobTimeout)
     result
   }

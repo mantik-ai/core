@@ -70,13 +70,16 @@ class MantikItem:
     def __str__(self):
         return str(self.item)
 
-    def fetch(self) -> MantikItem:
+    def fetch(self, action_name=None) -> MantikItem:
         if not hasattr(self, "_f_response"):
             self._f_response: FetchItemResponse = self._graph_executor.FetchDataSet(
                 FetchItemRequest(
                     session_id=self._session.session_id,
                     dataset_id=self.item_id,
                     encoding=ENCODING_JSON,
+                    meta=ActionMeta(
+                        name=action_name
+                    )
                 ),
                 timeout=30,
             )
@@ -264,7 +267,7 @@ class Client(object):
             item_id: _set(item_id, variables) for item_id, variables in meta.items()
         }
 
-    def train(self, pipe, data, meta=None, caching=True):
+    def train(self, pipe, data, meta=None, caching=True, action_name=None):
         """Transform a trainable pipeline to a pipeline.
 
         Only the last element must be a TrainableAlgorithm.
@@ -291,13 +294,13 @@ class Client(object):
                 session_id=self.session.session_id,
                 trainable_id=new_ids.get(old_id, old_id),
                 training_dataset_id=features.item_id,
-                no_caching=not caching,
+                no_caching=not caching
             ),
             timeout=30,
         )
         trained_algorithm = self._make_item(train_response.trained_algorithm)
         stats = self._make_item(train_response.stat_dataset)
-        return self.make_pipeline([*pipe[:-1], trained_algorithm], data), stats.fetch()
+        return self.make_pipeline([*pipe[:-1], trained_algorithm], data), stats.fetch(action_name=action_name)
 
     def tag(self, algo: MantikItem, ref: str) -> MantikItem:
         """Tag an algorithm algo with a reference ref."""

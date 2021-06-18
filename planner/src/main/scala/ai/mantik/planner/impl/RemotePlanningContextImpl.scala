@@ -86,9 +86,10 @@ class RemotePlanningContextImpl @Inject() (planningContext: PlanningContextServi
     }
   }
 
-  override def execute[T](action: Action[T]): T = {
+  override def execute[T](action: Action[T], meta: ActionMeta): T = {
     val request = ExecuteActionRequest(
-      actionJson = action.asJson.toString()
+      actionJson = action.asJson.toString(),
+      actionMetaJson = meta.asJson.toString()
     )
     val responseData: Future[ByteString] =
       StreamConversions.callMultiOut(Conversions.decodeErrors, planningContext.execute, request) {

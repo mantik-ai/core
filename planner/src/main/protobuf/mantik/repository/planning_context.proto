@@ -31,6 +31,8 @@ message LoadItemResponse {
 message ExecuteActionRequest {
     // Serialized Mantik Action
     string action_json = 1;
+    // Serialized Action Meta
+    string action_meta_json = 2;
 }
 
 message ExecuteActionResponse {
