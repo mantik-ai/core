@@ -61,4 +61,29 @@ class PlanOpSpec extends TestBase {
       PlanOp.Sequential(Seq(PlanOp.Empty, plan1), plan2)
     ) shouldBe PlanOp.seq(plan1, plan2)
   }
+
+  "flatWithCoordinates" should "work" in {
+    PlanOp.flatWithCoordinates(PlanOp.Empty) shouldBe Seq(Nil -> PlanOp.Empty)
+    PlanOp.flatWithCoordinates(PlanOp.seq(plan1, plan2)) shouldBe Seq(
+      List(0) -> plan1,
+      List(1) -> plan2
+    )
+    PlanOp.flatWithCoordinates(
+      PlanOp.seq(
+        PlanOp.seq(
+          plan1,
+          plan2
+        ),
+        plan3,
+        PlanOp.seq(
+          plan4
+        )
+      )
+    ) shouldBe Seq(
+      List(0, 0) -> plan1,
+      List(0, 1) -> plan2,
+      List(1) -> plan3,
+      List(2, 0) -> plan4
+    )
+  }
 }

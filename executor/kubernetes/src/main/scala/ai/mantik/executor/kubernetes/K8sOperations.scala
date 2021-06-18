@@ -116,7 +116,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   )(implicit fmt: Format[O], rd: ResourceDefinition[O]): Future[O] = {
     val client = namespacedClient(namespace)
     val description = s"${obj.apiVersion}/${obj.kind}"
-    errorHandling(s"Create or replace ${description}")(client.create(obj)).recoverWith {
+    errorHandling(s"Create or replace ${description}", silent = true)(client.create(obj)).recoverWith {
       case e: K8SException if e.status.code.contains(409) =>
         // We could also try to use the Patch API, but this is very tricky to do it in a generic way
         logger.info(s"${obj.kind} ${obj.name} already exists, deleting...")

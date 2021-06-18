@@ -61,7 +61,8 @@ class MnpPlanExecutor(
     dockerConfig: DockerConfig,
     artifactRetriever: MantikArtifactRetriever,
     payloadExecutorProvider: ExecutionPayloadProvider,
-    mantikItemStateManager: MantikItemStateManager
+    mantikItemStateManager: MantikItemStateManager,
+    uiStateService: UiStateService
 )(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase
     with PlanExecutor {
@@ -87,7 +88,8 @@ class MnpPlanExecutor(
       executor: Executor,
       retriever: MantikArtifactRetriever,
       payloadExecutorProvider: ExecutionPayloadProvider,
-      mantikItemStateManager: MantikItemStateManager
+      mantikItemStateManager: MantikItemStateManager,
+      uiStateService: UiStateService
   )(implicit akkaRuntime: AkkaRuntime) {
     this(
       fileRepository,
@@ -99,54 +101,80 @@ class MnpPlanExecutor(
       ),
       retriever,
       payloadExecutorProvider,
-      mantikItemStateManager
+      mantikItemStateManager,
+      uiStateService
     )
   }
 
   override def execute[T](plan: Plan[T]): Future[T] = {
     val jobId = UUID.randomUUID().toString
     logger.info(s"Executing job ${jobId}")
-    for {
+    uiStateService.registerNewJob(jobId, plan)
+    uiStateService.startJob(jobId)
+
+    val result = for {
       grpcProxy <- executor.grpcProxy(isolationSpace)
-      containerMapping <- reserveContainers(grpcProxy, jobId, plan)
-      files <- openFilesBuilder.openFiles(plan.files)
+      containerMapping <- uiStateService.executingNamedOperation(jobId, UiStateService.PrepareContainerName) {
+        reserveContainers(grpcProxy, jobId, plan)
+      }
+      files <- uiStateService.executingNamedOperation(jobId, UiStateService.PrepareFilesName) {
+        openFilesBuilder.openFiles(plan.files)
+      }
       memory = new Memory()
-      result <- executeOp(plan.op)(files, memory, containerMapping)
+      result <- executeOp(jobId, plan.op, Nil)(files, memory, containerMapping)
       _ <- stopContainers(jobId)
     } yield {
       result
     }
+    result.andThen {
+      case Success(_) => uiStateService.finishJob(jobId)
+      case Failure(exception) =>
+        uiStateService.finishJob(jobId, Some(Option(exception.getMessage).getOrElse("Unknown error")))
+    }
+    result
   }
 
+  /** Execute a single operation
+    * @param jobId id of the job
+    * @param planOp the operation to execute
+    * @param revPath the reverse path to this operation
+    */
   def executeOp[T](
-      planOp: PlanOp[T]
+      jobId: String,
+      planOp: PlanOp[T],
+      revPath: List[Int]
   )(implicit files: ExecutionOpenFiles, memory: Memory, containerMapping: ContainerMapping): Future[T] = {
-    try {
-      executeOpInner(planOp).andThen { case Success(value) =>
-        memory.setLast(value)
+    uiStateService.executingCoordinatedOperation(jobId, revPath.reverse) {
+      try {
+        executeOpInner(jobId, planOp, revPath).andThen { case Success(value) =>
+          memory.setLast(value)
+        }
+      } catch {
+        case NonFatal(e) =>
+          Future.failed(e)
       }
-    } catch {
-      case NonFatal(e) =>
-        Future.failed(e)
     }
   }
 
   private def executeOpInner[T](
-      planOp: PlanOp[T]
+      jobId: String,
+      planOp: PlanOp[T],
+      revPath: List[Int]
   )(implicit files: ExecutionOpenFiles, memory: Memory, containerMapping: ContainerMapping): Future[T] = {
     planOp match {
       case basic: PlanOp.BasicOp[T] =>
         basicOpExecutor.execute(basic)
       case PlanOp.Sequential(parts, last) =>
+        val lastOpIndex = parts.length
         FutureHelper
           .time(logger, s"Running ${parts.length} sub tasks") {
-            FutureHelper.afterEachOtherStateful(parts, memory.getLastOrNull()) { case (_, part) =>
-              executeOp(part)
+            FutureHelper.afterEachOtherStateful(parts.zipWithIndex, memory.getLastOrNull()) { case (_, (part, idx)) =>
+              executeOp(jobId, part, idx :: revPath)
             }
           }
           .flatMap { _ =>
             FutureHelper.time(logger, s"Running last part") {
-              executeOp(last)
+              executeOp(jobId, last, lastOpIndex :: revPath)
             }
           }
       case PlanOp.RunGraph(graph) =>

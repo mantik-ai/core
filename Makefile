@@ -5,7 +5,9 @@ export CACHE_DIR
 
 build: build-subprojects
 
+# Note: the order of Subprojects is important as some need the output of others
 SUB_PROJECTS=\
+	ui/client\
 	engine-app\
 	mnp/mnpgo\
 	mnp/mnppython\

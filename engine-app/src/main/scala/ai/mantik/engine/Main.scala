@@ -25,6 +25,7 @@ import ai.mantik.componently.AkkaRuntime
 import ai.mantik.componently.di.AkkaModule
 import ai.mantik.engine.buildinfo.BuildInfo
 import ai.mantik.engine.server.{EngineServer, ServiceModule}
+import ai.mantik.ui.server.UiServer
 import com.google.inject.Guice
 import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -49,6 +50,9 @@ object Main {
 
       val server = injector.getInstance(classOf[EngineServer])
       server.start()
+
+      val ui = injector.getInstance(classOf[UiServer])
+
       server.waitUntilFinished()
     } catch {
       case e: Exception =>

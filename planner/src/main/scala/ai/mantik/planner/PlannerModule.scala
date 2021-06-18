@@ -22,9 +22,10 @@
 package ai.mantik.planner
 
 import ai.mantik.componently.AkkaRuntime
-import ai.mantik.planner.impl.exec.{ExecutionPayloadProviderModule, MnpPlanExecutor}
+import ai.mantik.planner.impl.exec.{ExecutionPayloadProviderModule, MnpPlanExecutor, UiStateService}
 import ai.mantik.planner.impl.{PlannerImpl, PlanningContextImpl}
 import ai.mantik.planner.repository.RepositoryModule
+import ai.mantik.ui.StateService
 import com.google.inject.AbstractModule
 
 /**
@@ -40,5 +41,6 @@ class PlannerModule(
     bind(classOf[Planner]).to(classOf[PlannerImpl])
     install(new RepositoryModule)
     install(new ExecutionPayloadProviderModule)
+    bind(classOf[StateService]).to(classOf[UiStateService])
   }
 }

@@ -286,7 +286,7 @@ lazy val bridgeProtocol = makeProject("bridge/protocol", "bridgeProtocol")
   )
 
 lazy val planner = makeProject("planner")
-  .dependsOn(ds, elements, executorApi, componently, mnpScala, bridgeProtocol, scalaFnApi)
+  .dependsOn(ds, elements, executorApi, componently, mnpScala, bridgeProtocol, scalaFnApi, uiApi)
   .dependsOn(executorKubernetes % "it", executorDocker % "it", executorS3Storage % "it")
   .settings(
     name := "planner",
@@ -300,6 +300,21 @@ lazy val planner = makeProject("planner")
     configureBuildInfo("ai.mantik.planner.buildinfo")
   )
   .enablePlugins(BuildInfoPlugin)
+
+// The Model of the UI
+lazy val uiApi = makeProject("ui/api", "uiApi")
+  .dependsOn(ds, elements, componently)
+  .settings(
+    name := "ui-api"
+  )
+
+// The Server, including wrapped HTML Code
+lazy val uiServer = makeProject("ui/server", "uiServer")
+  .dependsOn(uiApi)
+  .settings(
+    name := "ui-server",
+    Compile / unmanagedResourceDirectories += baseDirectory.value / ".." / "client" / "target"
+  )
 
 lazy val examples = makeProject("examples")
   .dependsOn(engine)
@@ -327,7 +342,7 @@ lazy val engine = makeProject("engine")
 
 /** Runable Main Class */
 lazy val engineApp = makeProject("engine-app", "engineApp")
-  .dependsOn(engine, executorKubernetes, executorDocker, executorS3Storage)
+  .dependsOn(engine, executorKubernetes, executorDocker, executorS3Storage, uiServer)
   .settings(
     name := "engine-app"
   )
@@ -337,7 +352,9 @@ lazy val engineApp = makeProject("engine-app", "engineApp")
       "ch.qos.logback" % "logback-classic" % logbackVersion,
       "org.slf4j" % "jul-to-slf4j" % slf4jVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
-    )
+    ),
+    // Do not run within SBT but in a forked VM when starting
+    fork := true
   )
   .enablePlugins(JavaAppPackaging)
 
@@ -383,6 +400,8 @@ lazy val root = (project in file("."))
     examples,
     bridgeProtocol,
     planner,
+    uiApi,
+    uiServer,
     engine,
     engineApp,
     componently,

@@ -21,14 +21,14 @@
  */
 package ai.mantik.mnp
 
-import ai.mantik.mnp.protocol.mnp.{ ConfigureInputPort, ConfigureOutputPort, TaskState }
+import ai.mantik.mnp.protocol.mnp.{ConfigureInputPort, ConfigureOutputPort, TaskState}
 import ai.mantik.mnp.server.MnpServer
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
+import org.scalatest.time.{Millis, Span}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future, TimeoutException }
-import scala.util.control.NonFatal
+import scala.concurrent.{Await, Future, TimeoutException}
 
 class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
 
@@ -43,6 +43,11 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
       }
     }
   }
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(
+    timeout = scaled(Span(500, Millis)),
+    interval = scaled(Span(50, Millis))
+  )
 
   private def shortAwait[T](f: Future[T]): T = Await.result(f, 50.millis)
 
@@ -63,12 +68,14 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
   val simpleOutput = Seq(ConfigureOutputPort("type1"))
 
   it should "open and close a session" in new Env {
-    val session = await(client.initSession(
-      "session1",
-      config = None,
-      inputs = simpleInput,
-      outputs = simpleOutput
-    ))
+    val session = await(
+      client.initSession(
+        "session1",
+        config = None,
+        inputs = simpleInput,
+        outputs = simpleOutput
+      )
+    )
     val backendSession = backend.getSession("session1").get
     backendSession.sessionQuitted shouldBe false
 
@@ -84,12 +91,14 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
   }
 
   it should "execute a trivial echo session" in new Env {
-    val session = await(client.initSession(
-      "session1",
-      config = None,
-      inputs = simpleInput,
-      outputs = simpleOutput
-    ))
+    val session = await(
+      client.initSession(
+        "session1",
+        config = None,
+        inputs = simpleInput,
+        outputs = simpleOutput
+      )
+    )
 
     val task = session.task("task1")
     task.push(0).runWith(Source(Vector(ByteString("Hello"), ByteString("World"), ByteString(" How are you?"))))
@@ -114,12 +123,14 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
   }
 
   it should "create a task with query task" in new Env {
-    val session = await(client.initSession(
-      "session1",
-      config = None,
-      inputs = simpleInput,
-      outputs = simpleOutput
-    ))
+    val session = await(
+      client.initSession(
+        "session1",
+        config = None,
+        inputs = simpleInput,
+        outputs = simpleOutput
+      )
+    )
 
     val task = session.task("task1")
     awaitException[RuntimeException] {
@@ -136,22 +147,26 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
   it should "handle a crashing session" in new Env {
     val exception = new RuntimeException("BOOM")
     backend.sessionInitCrash = Some(exception)
-    awaitException[Exception](client.initSession(
-      "session1",
-      config = None,
-      inputs = simpleInput,
-      outputs = simpleOutput
-    )).getMessage should include("BOOM")
+    awaitException[Exception](
+      client.initSession(
+        "session1",
+        config = None,
+        inputs = simpleInput,
+        outputs = simpleOutput
+      )
+    ).getMessage should include("BOOM")
   }
 
   it should "handle a crashing task" in new Env {
     val exception = new RuntimeException("BOOM")
-    val session = await(client.initSession(
-      "session1",
-      config = None,
-      inputs = simpleInput,
-      outputs = simpleOutput
-    ))
+    val session = await(
+      client.initSession(
+        "session1",
+        config = None,
+        inputs = simpleInput,
+        outputs = simpleOutput
+      )
+    )
 
     backend.getSession("session1").get.crashingTask = Some(exception)
 
@@ -168,12 +183,14 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
   }
 
   it should "wait with collecting" in new Env {
-    val session = await(client.initSession(
-      "session1",
-      config = None,
-      inputs = simpleInput,
-      outputs = simpleOutput
-    ))
+    val session = await(
+      client.initSession(
+        "session1",
+        config = None,
+        inputs = simpleInput,
+        outputs = simpleOutput
+      )
+    )
     val task = session.task("task1")
     intercept[TimeoutException] {
       shortAwait(task.pull(0).runWith(Sink.seq))
@@ -193,18 +210,22 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
   }
 
   it should "handle automatic forwarding" in new EnvWithTwoServers {
-    val session1 = await(client.initSession(
-      "session1",
-      config = None,
-      inputs = simpleInput,
-      outputs = Seq(ConfigureOutputPort("type1", s"mnp://127.0.0.1:${server2.port}/session2/0"))
-    ))
-    val session2 = await(client2.initSession(
-      "session2",
-      config = None,
-      inputs = simpleInput,
-      outputs = simpleOutput
-    ))
+    val session1 = await(
+      client.initSession(
+        "session1",
+        config = None,
+        inputs = simpleInput,
+        outputs = Seq(ConfigureOutputPort("type1", s"mnp://127.0.0.1:${server2.port}/session2/0"))
+      )
+    )
+    val session2 = await(
+      client2.initSession(
+        "session2",
+        config = None,
+        inputs = simpleInput,
+        outputs = simpleOutput
+      )
+    )
     val inTask = session1.task("task1")
     val outTask = session2.task("task1")
     inTask.push(0).runWith(Source(Vector(ByteString("Hello "), ByteString("World"))))
