@@ -23,7 +23,6 @@ package ai.mantik.engine.server.services
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
-
 import ai.mantik.componently.rpc.RpcConversions
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
@@ -32,7 +31,7 @@ import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.elements.{ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.engine.protos.items.MantikItem.Item
 import ai.mantik.engine.protos.items.ObjectKind
-import ai.mantik.planner.{Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm}
+import ai.mantik.planner.{ActionMeta, Algorithm, DataSet, MantikItem, Pipeline, TrainableAlgorithm}
 import ai.mantik.engine.protos.items.{ObjectKind, MantikItem => ProtoMantikItem}
 import ai.mantik.engine.protos.items.{Algorithm => ProtoAlgorithm}
 import ai.mantik.engine.protos.items.{DataSet => ProtoDataSet}
@@ -45,6 +44,7 @@ import ai.mantik.engine.protos.registry.{
   MantikArtifact => ProtoMantikArtifact,
   SubDeploymentInfo => ProtoSubDeploymentInfo
 }
+import ai.mantik.engine.protos.graph_executor.{ActionMeta => ProtoActionMeta}
 import ai.mantik.planner.repository.{Bridge, DeploymentInfo, MantikArtifact, SubDeploymentInfo}
 import com.google.protobuf.{ByteString => ProtoByteString}
 import akka.stream.Materializer
@@ -273,5 +273,17 @@ private[engine] object Converters {
 
   def decodeInstantFromScalaProto(t: Timestamp): Instant = {
     RpcConversions.decodeInstant(Timestamp.toJavaProto(t))
+  }
+
+  def encodeActionMeta(p: ActionMeta): ProtoActionMeta = {
+    ProtoActionMeta(
+      name = RpcConversions.encodeOptionalString(p.name)
+    )
+  }
+
+  def decodeActionMeta(p: ProtoActionMeta): ActionMeta = {
+    ActionMeta(
+      name = RpcConversions.decodeOptionalString(p.name)
+    )
   }
 }

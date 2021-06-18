@@ -7,7 +7,7 @@
       <dd>{{job.header.id}}</dd>
       <dt>Name</dt>
       <dd v-if="job.header.name">
-        {{job.name}}
+        {{job.header.name}}
       </dd>
       <dd v-else>
         Not named

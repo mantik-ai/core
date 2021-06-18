@@ -53,10 +53,10 @@ object MnistTraining extends ExampleBase {
     val adaptedTest = testDataSet.select("select x as image")
     val applied = trained.apply(adaptedTest)
 
-    val appliedResult = applied.fetch.run()
+    val appliedResult = applied.fetch.run("Train MNIST")
     println("Applied:\n" + appliedResult.render())
 
-    println("Stats:\n" + context.execute(stats.fetch))
+    println("Stats:\n" + stats.fetch.run("Fetching Stats"))
 
     // Building a Pipeline
     val productionImageInput = TabularData(
@@ -76,7 +76,7 @@ object MnistTraining extends ExampleBase {
     )
 
     // Deploying
-    val deployResult = productionPipe.deploy(ingressName = Some("mnist")).run()
+    val deployResult = productionPipe.deploy(ingressName = Some("mnist")).run("Deploying MNIST")
     println(s"Pipeline deployed: ${deployResult.externalUrl}")
   }
 }

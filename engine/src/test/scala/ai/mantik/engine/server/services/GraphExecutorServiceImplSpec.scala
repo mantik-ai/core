@@ -26,11 +26,16 @@ import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements.{AlgorithmDefinition, ItemId, MantikHeader, NamedMantikId}
 import ai.mantik.engine.protos.ds.BundleEncoding
-import ai.mantik.engine.protos.graph_executor.{DeployItemRequest, FetchItemRequest, SaveItemRequest}
+import ai.mantik.engine.protos.graph_executor.{
+  DeployItemRequest,
+  FetchItemRequest,
+  SaveItemRequest,
+  ActionMeta => RpcActionMeta
+}
 import ai.mantik.engine.testutil.{TestArtifacts, TestBaseWithSessions}
 import ai.mantik.planner.impl.MantikItemStateManager
 import ai.mantik.planner.repository.MantikArtifact
-import ai.mantik.planner.{Algorithm, DataSet, DeploymentState, MantikItem, Pipeline, PlanOp, Source}
+import ai.mantik.planner.{ActionMeta, Algorithm, DataSet, DeploymentState, MantikItem, Pipeline, PlanOp, Source}
 
 import scala.concurrent.Future
 
@@ -39,6 +44,9 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
   trait Env {
     val graphExecutor = new GraphExecutorServiceImpl(sessionManager)
   }
+
+  private val rpcActionMeta = Some(RpcActionMeta(name = "nice request"))
+  private val actionMeta = ActionMeta(name = Some("nice request"))
 
   for {
     encoding <- Seq(BundleEncoding.ENCODING_MSG_PACK, BundleEncoding.ENCODING_JSON)
@@ -53,12 +61,12 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
       components.nextItemToReturnByExecutor = Future.successful(lit)
       val response = await(
         graphExecutor.fetchDataSet(
-          FetchItemRequest(session1.id, dataset1Id, encoding)
+          FetchItemRequest(session1.id, dataset1Id, encoding, meta = rpcActionMeta)
         )
       )
       val bundleDecoded = Converters.decodeBundle(response.bundle.get)
       bundleDecoded shouldBe lit
-      components.lastPlan shouldBe components.planner.convert(dataset.fetch)
+      components.lastPlan shouldBe components.planner.convert(dataset.fetch, actionMeta)
     }
   }
 
@@ -75,13 +83,14 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
         SaveItemRequest(
           session1.id,
           dataset1Id,
-          "foo1"
+          "foo1",
+          meta = rpcActionMeta
         )
       )
     )
     response.name shouldBe "foo1"
     response.mantikItemId shouldNot be(empty)
-    components.lastPlan shouldBe components.planner.convert(dataset.tag("foo1").save())
+    components.lastPlan shouldBe components.planner.convert(dataset.tag("foo1").save(), actionMeta)
   }
 
   "deploy" should "deploy elements" in new Env {
@@ -121,13 +130,15 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
           session1.id,
           pipeline1Id,
           nameHint = "nameHint1",
-          ingressName = "ingress1"
+          ingressName = "ingress1",
+          meta = rpcActionMeta
         )
       )
     )
     response.name shouldBe "name1"
     response.internalUrl shouldBe "internalUrl1"
     response.externalUrl shouldBe "externalUrl1"
+    components.lastPlan.name shouldBe actionMeta.name
     val ops = components.lastPlan.op.asInstanceOf[PlanOp.Sequential[_]].plans
     val deployOp = ops.collectFirst { case x: PlanOp.DeployPipeline =>
       x

@@ -24,8 +24,11 @@ package ai.mantik.planner
 /** A Planner converts an [[Action]] into an executable [[Plan]]. */
 trait Planner {
 
-  /** Convert a set of action into a plan. */
-  def convert[T](action: Action[T]): Plan[T]
+  /** Convert an actions into a plan (without meta data) */
+  final def convert[T](action: Action[T]): Plan[T] = convert(action, ActionMeta())
+
+  /** Convert an action into a plan. */
+  def convert[T](action: Action[T], meta: ActionMeta): Plan[T]
 }
 
 object Planner {

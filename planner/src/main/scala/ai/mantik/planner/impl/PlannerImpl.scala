@@ -48,10 +48,10 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
   val elements = new PlannerElements(config)
   val resourcePlanBuilder = new ResourcePlanBuilder(elements, mantikItemStateManager)
 
-  override def convert[T](action: Action[T]): Plan[T] = {
+  override def convert[T](action: Action[T], meta: ActionMeta): Plan[T] = {
     val (planningState, planOp) = convertSingleAction(action).run(PlanningState()).value
     val compressed = PlanOp.compress(planOp)
-    Plan(compressed, planningState.files, planningState.cacheItems)
+    Plan(compressed, planningState.files, planningState.cacheItems, name = meta.name)
   }
 
   def convertSingleAction[T](action: Action[T]): State[PlanningState, PlanOp[T]] = {

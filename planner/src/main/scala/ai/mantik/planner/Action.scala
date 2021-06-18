@@ -24,6 +24,7 @@ package ai.mantik.planner
 import ai.mantik.ds.element.Bundle
 import ai.mantik.ds.helper.circe.DiscriminatorDependentCodec
 import ai.mantik.elements.NamedMantikId
+import io.circe.generic.semiauto
 import io.circe.{Decoder, Encoder}
 
 /**
@@ -34,8 +35,16 @@ import io.circe.{Decoder, Encoder}
 sealed trait Action[T] {
 
   /** Executes the action, when an implicit context is available. */
-  def run()(implicit context: PlanningContext): T = context.execute(this)
+  def run()(implicit context: PlanningContext): T = context.execute(this, ActionMeta())
+
+  /** Executes the action with a name. */
+  def run(name: String)(implicit context: PlanningContext): T = context.execute(this, ActionMeta(name = Some(name)))
 }
+
+/** Meta Information about an action */
+case class ActionMeta(
+    name: Option[String] = None
+)
 
 object Action {
 
@@ -71,4 +80,9 @@ object Action {
     // As each concrete type has a fixed T, this should work.
     x.asInstanceOf[Action[T]]
   }
+}
+
+object ActionMeta {
+  implicit val encoder: Encoder[ActionMeta] = semiauto.deriveEncoder[ActionMeta]
+  implicit val decoder: Decoder[ActionMeta] = semiauto.deriveDecoder[ActionMeta]
 }

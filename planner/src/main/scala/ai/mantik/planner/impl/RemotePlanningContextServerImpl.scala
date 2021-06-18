@@ -28,7 +28,7 @@ import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.Plan
 import ai.mantik.planner.protos.planning_context._
 import ai.mantik.planner.repository.MantikArtifactRetriever
 import ai.mantik.planner.repository.rpc.Conversions
-import ai.mantik.planner.{Action, MantikItem, PlanningContext}
+import ai.mantik.planner.{Action, ActionMeta, MantikItem, PlanningContext}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import io.circe.syntax._
@@ -65,7 +65,7 @@ class RemotePlanningContextServerImpl @Inject() (
     // Note: we are streaming the response, as gRpc has a maxmimal limit of 4MB per Message
     val maxChunkSize = 65536
     try {
-      val responseJson = executeJsonAction(request.actionJson)
+      val responseJson = executeJsonAction(request.actionJson, request.actionMetaJson)
       // Note: This is memory expensive
       val asBuffer = ByteString(Printer.noSpaces.prettyByteBuffer(responseJson))
 
@@ -85,11 +85,12 @@ class RemotePlanningContextServerImpl @Inject() (
     }
   }
 
-  private def executeJsonAction(actionJson: String): Json = {
+  private def executeJsonAction(actionJson: String, actionMetaJson: String): Json = {
     val action = Conversions.decodeJsonItem[Action[_]](actionJson, err => s"Invalid Action ${err}")
+    val actionMeta = Conversions.decodeJsonItem[ActionMeta](actionMetaJson, err => s"Invalid Action Meta ${err}")
 
     def runAndEncode[T: Encoder](action: Action[T]): Json = {
-      val result = context.execute(action)
+      val result = context.execute(action, actionMeta)
       result.asJson
     }
 
