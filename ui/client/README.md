@@ -1,5 +1,7 @@
 # ui-client
 
+you have to be in the current directory!
+
 ## Project setup
 ```
 npm install
