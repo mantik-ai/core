@@ -1,4 +1,4 @@
-FROM openjdk:11
+FROM openjdk:11-jre-slim
 
 RUN useradd -ms /bin/bash mantikengine && \
     mkdir /app && \

@@ -1,7 +1,5 @@
-FROM python:3.7-slim
+FROM python:3.7.10-slim-buster as builder
 RUN groupadd -r mantik-bridge && useradd -r -g mantik-bridge mantik-bridge
-
-ADD --chown=mantik-bridge:mantik-bridge target /opt/bridge
 
 # Install poetry for Python
 ARG POETRY_VERSION="1.1.6"
@@ -19,17 +17,30 @@ ENV PYTHONFAULTHANDLER=1 \
 RUN apt-get update && apt-get install -y curl
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
 ENV PATH="${POETRY_HOME}/bin:${PATH}"
-RUN chown -R mantik-bridge:mantik-bridge ${POETRY_HOME}
+RUN python -m venv /venv
+
+ADD --chown=mantik-bridge:mantik-bridge target /opt/bridge
+
 
 # Install bridge dependencies
 WORKDIR /opt/bridge
-RUN poetry install
+RUN . /venv/bin/activate && poetry install --no-dev --no-root
 
-# Data Directory
-RUN mkdir /data && chown mantik-bridge:mantik-bridge /data
+# Killing Python Cache
+RUN find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
+RUN cd /venv && find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
+
+RUN echo ". /venv/bin/activate && python main.py" > /opt/bridge/entrypoint.sh
+
+
+FROM python:3.7.10-slim-buster
+RUN groupadd -r mantik-bridge && useradd -r -g mantik-bridge mantik-bridge
+
+COPY --from=builder /venv /venv
+COPY --from=builder /opt/bridge /opt/bridge
 
 USER mantik-bridge:mantik-bridge
+WORKDIR /opt/bridge
 
 EXPOSE 8502
-VOLUME ["/data"]
-ENTRYPOINT ["poetry", "run", "python", "main.py", "/data"]
+ENTRYPOINT ["/bin/bash", "./entrypoint.sh"]
