@@ -20,6 +20,7 @@
  * a commercial license.
  */
 package ai.mantik.executor.docker.api.structures
+import ai.mantik.executor.docker.api.InstantCodec._
 
 import io.circe.generic.JsonCodec
 

@@ -43,8 +43,18 @@ class UiRouter(resourceClassLoader: ClassLoader, stateService: StateService)(imp
   /** Serves /api Requests */
   private val apiRoute = RouteConcatenation.concat(
     path("version") {
-      get {
-        respondJson(stateService.version)
+      pathEnd {
+        get {
+          respondJson(stateService.version)
+        }
+      }
+
+    },
+    path("settings") {
+      pathEnd {
+        get {
+          respondJson(stateService.settings)
+        }
       }
     },
     pathPrefix("jobs") {

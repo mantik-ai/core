@@ -62,7 +62,8 @@ class MnpPlanExecutor(
     artifactRetriever: MantikArtifactRetriever,
     payloadExecutorProvider: ExecutionPayloadProvider,
     mantikItemStateManager: MantikItemStateManager,
-    uiStateService: UiStateService
+    uiStateService: UiStateService,
+    executionCleanup: ExecutionCleanup
 )(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase
     with PlanExecutor {
@@ -89,7 +90,8 @@ class MnpPlanExecutor(
       retriever: MantikArtifactRetriever,
       payloadExecutorProvider: ExecutionPayloadProvider,
       mantikItemStateManager: MantikItemStateManager,
-      uiStateService: UiStateService
+      uiStateService: UiStateService,
+      executionCleanup: ExecutionCleanup
   )(implicit akkaRuntime: AkkaRuntime) {
     this(
       fileRepository,
@@ -102,7 +104,8 @@ class MnpPlanExecutor(
       retriever,
       payloadExecutorProvider,
       mantikItemStateManager,
-      uiStateService
+      uiStateService,
+      executionCleanup
     )
   }
 
@@ -113,6 +116,7 @@ class MnpPlanExecutor(
     uiStateService.startJob(jobId)
 
     val result = for {
+      _ <- executionCleanup.isReady
       grpcProxy <- executor.grpcProxy(isolationSpace)
       containerMapping <- uiStateService.executingNamedOperation(jobId, UiStateService.PrepareContainerName) {
         reserveContainers(grpcProxy, jobId, plan)

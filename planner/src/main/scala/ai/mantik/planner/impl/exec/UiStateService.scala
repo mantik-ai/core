@@ -41,8 +41,12 @@ import ai.mantik.ui.model.{
   OperationState,
   RunGraph,
   RunGraphResponse,
+  SettingEntry,
+  SettingsResponse,
   VersionResponse
 }
+import com.typesafe.config.{ConfigValue, ConfigValueType}
+import io.circe.Json
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BiFunction
@@ -79,6 +83,46 @@ class UiStateService @Inject() (executor: Executor)(implicit akkaRuntime: AkkaRu
     scalaVersion = BuildInfo.scalaVersion,
     executorBackend = executor.getClass.getSimpleName
   )
+
+  override def settings: SettingsResponse = {
+    import scala.collection.JavaConverters._
+    import io.circe.syntax._
+    val mantikConfig = config.getConfig("mantik")
+    val allValues = mantikConfig
+      .entrySet()
+      .asScala
+      .toVector
+      .map { entry =>
+        entry.getKey -> entry.getValue
+      }
+      .sortBy(_._1)
+
+    val converted = allValues.map { case (key, value) =>
+      if (key.toLowerCase.contains("password")) {
+        SettingEntry(key, "<censored>".asJson)
+      } else {
+        val convertedEntry = value.valueType() match {
+          case _ if key.contains("password") => "<censored>".asJson
+          case ConfigValueType.OBJECT        => "object".asJson // should not happen
+          case ConfigValueType.LIST          => "list".asJson // can happen
+          case ConfigValueType.NUMBER =>
+            val doubleCandidate = mantikConfig.getNumber(key).doubleValue()
+            if (doubleCandidate.toInt == doubleCandidate) {
+              doubleCandidate.toInt.asJson
+            } else {
+              doubleCandidate.asJson
+            }
+          case ConfigValueType.BOOLEAN => mantikConfig.getBoolean(key).asJson
+          case ConfigValueType.NULL    => Json.Null
+          case ConfigValueType.STRING  => mantikConfig.getString(key).asJson
+          case _                       => "Unknown Type".asJson
+        }
+        SettingEntry(key, convertedEntry)
+      }
+    }
+
+    SettingsResponse(converted)
+  }
 
   override def job(id: String, pollVersion: Option[Long]): Future[JobResponse] = {
     Option(jobMap.get(id)) match {

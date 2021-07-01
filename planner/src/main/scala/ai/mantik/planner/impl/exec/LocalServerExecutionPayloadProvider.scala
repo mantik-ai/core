@@ -45,6 +45,8 @@ private[mantik] class LocalServerExecutionPayloadProvider @Inject() (
   private val repoServer = new FileRepositoryServer(fileRepository)
   private val serverAddress = repoServer.address()
 
+  logger.info(s"Starting local server ExecutionPayloadProvider, address ${serverAddress}")
+
   private def makeUrlForFile(fileId: String): String = {
     val result = s"http://${serverAddress.host}:${serverAddress.port}/files/${fileId}"
     logger.debug(s"Mapped internal file ${fileId} to ${result}")
