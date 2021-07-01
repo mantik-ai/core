@@ -21,7 +21,15 @@
  */
 package ai.mantik.ui
 
-import ai.mantik.ui.model.{JobHeader, JobResponse, JobsResponse, OperationId, RunGraphResponse, VersionResponse}
+import ai.mantik.ui.model.{
+  JobHeader,
+  JobResponse,
+  JobsResponse,
+  OperationId,
+  RunGraphResponse,
+  SettingsResponse,
+  VersionResponse
+}
 
 import scala.concurrent.Future
 
@@ -30,6 +38,9 @@ trait StateService {
 
   /** Returns the current version */
   def version: VersionResponse
+
+  /** Return Mantik settings */
+  def settings: SettingsResponse
 
   /** Returns the list of present jobs
     * @param pollVersion if given with current version, poll for the next version

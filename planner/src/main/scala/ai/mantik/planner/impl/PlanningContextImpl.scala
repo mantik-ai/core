@@ -27,7 +27,7 @@ import ai.mantik.elements.errors.MantikAsyncException
 import ai.mantik.elements.{MantikId, NamedMantikId}
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.{ExecutionPayloadProvider, MnpPlanExecutor, UiStateService}
+import ai.mantik.planner.impl.exec.{ExecutionCleanup, ExecutionPayloadProvider, MnpPlanExecutor, UiStateService}
 import ai.mantik.planner.repository.impl.{LocalMantikRegistryImpl, MantikArtifactRetrieverImpl}
 import ai.mantik.planner.repository._
 
@@ -102,7 +102,7 @@ private[mantik] object PlanningContextImpl {
     val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
     val uiStateService = new UiStateService(executor)
     // val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
-
+    val executionCleanup = new ExecutionCleanup(executor, repository)
     val planExecutor = new MnpPlanExecutor(
       fileRepository,
       repository,
@@ -110,7 +110,8 @@ private[mantik] object PlanningContextImpl {
       retriever,
       payloadProvider,
       mantikItemStateManager,
-      uiStateService
+      uiStateService,
+      executionCleanup
     )
     val context =
       new PlanningContextImpl(localRegistry, planner, planExecutor, registry, retriever, mantikItemStateManager)

@@ -37,6 +37,8 @@ import ai.mantik.ui.model.{
   RunGraphLink,
   RunGraphNode,
   RunGraphResponse,
+  SettingEntry,
+  SettingsResponse,
   VersionResponse
 }
 import ai.mantik.ui.server.DummyStateService.jobId
@@ -54,6 +56,13 @@ class DummyStateService(implicit akkaRuntime: AkkaRuntime) extends ComponentBase
     version = "123.4",
     scalaVersion = "2.12-superduper",
     executorBackend = "Kubernetes"
+  )
+
+  override def settings: SettingsResponse = SettingsResponse(
+    values = Vector(
+      SettingEntry("setting1", "foo".asJson),
+      SettingEntry("setting2", 123.asJson)
+    )
   )
 
   var jobsVersion: Long = 1

@@ -57,6 +57,11 @@ trait AkkaRuntime {
     */
   def withExtraLifecycle(): AkkaRuntime
 
+  /** Creates a new runtime with overriden configuration
+    * (Note: the lifecycle will be the same as the parent)
+    */
+  def withConfigOverride(config: Config => Config): AkkaRuntime
+
   final def shutdown(): Unit = Await.ready(shutdownAsync(), AkkaRuntime.ShutdownTimeout)
 }
 
@@ -104,6 +109,13 @@ private[componently] case class AkkaRuntimeImpl(
     copy(
       ownAkka = false,
       lifecycle = new mantik.componently.Lifecycle.SimpleLifecycle()
+    )
+  }
+
+  override def withConfigOverride(f: Config => Config): AkkaRuntime = {
+    val updatedConfig = f(this.config)
+    copy(
+      config = updatedConfig
     )
   }
 

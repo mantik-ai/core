@@ -19,37 +19,19 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.executor.docker.api.structures
+package ai.mantik.ui.model
 
-import java.time.Instant
-
+import io.circe.Json
 import io.circe.generic.JsonCodec
-import ai.mantik.executor.docker.api.InstantCodec._
 
+/** Return Mantik's Configuration */
 @JsonCodec
-case class ListNetworkRequestFilter(
-    // Note: much more fields possible
-    name: Option[Vector[String]] = None,
-    label: Option[Vector[String]] = None // In form label=value
+case class SettingsResponse(
+    values: Vector[SettingEntry]
 )
 
-object ListNetworkRequestFilter {
-  def forLabels(labels: (String, String)*): ListNetworkRequestFilter = {
-    ListNetworkRequestFilter(
-      label = Some(
-        labels.map { case (k, v) => s"${k}=${v}" }.toVector
-      )
-    )
-  }
-}
-
 @JsonCodec
-case class ListNetworkResponseRow(
-    Name: String,
-    Id: String,
-    Created: Instant,
-    Driver: String,
-    Labels: Option[Map[String, String]] = None
-) {
-  def labels: Map[String, String] = Labels.getOrElse(Map.empty)
-}
+case class SettingEntry(
+    key: String,
+    value: Json
+)

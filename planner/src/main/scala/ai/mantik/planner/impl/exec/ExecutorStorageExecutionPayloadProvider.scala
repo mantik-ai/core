@@ -46,6 +46,8 @@ private[mantik] class ExecutorStorageExecutionPayloadProvider @Inject() (
   /** Duration how long temporary files are shared for executor nodes */
   val temporaryStorageTimeout: FiniteDuration = temporalConfig("mantik.planner.temporaryFileShareDuration")
 
+  logger.info(s"Starting ExecutorStorage Payload Provider, delegating to ${storage.getClass.getSimpleName}")
+
   private def temporalConfig(key: String): FiniteDuration = {
     val amount = config.getTemporal(key)
     try {

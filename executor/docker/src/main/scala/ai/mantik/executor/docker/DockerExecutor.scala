@@ -88,7 +88,8 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
         if (grpcSettings.enabled) {
           throw new Errors.InternalException("Grpc Proxy not started but enabled?!")
         } else {
-          throw new Errors.NotFoundException("Grpc Proxy not enabled")
+          logger.info(s"gRpc Proxy not enabled")
+          GrpcProxy(None)
         }
     }
   }
