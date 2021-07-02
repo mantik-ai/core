@@ -103,8 +103,8 @@ dockerhub_publish:
     DOCKER_USERNAME: mantikbuildserver
     DOCKER_PASSWORD: "$DOCKERHUB_ACCESS_KEY"
   only:
-    - tags
-    - story/250/publish_images_to_dockerhub
+    - refs
+      - tags
     - variables:
       - $CI_COMMIT_REF_PROTECTED == "true"
   cache:
@@ -121,8 +121,9 @@ dockerhub_publish:
 other_publish:
   stage: publish
   only:
-    - master
-    - tags
+    - refs
+      - master
+      - tags
     - variables:
       - $CI_COMMIT_REF_PROTECTED == "true"
   cache:
