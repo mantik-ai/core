@@ -103,7 +103,7 @@ dockerhub_publish:
     DOCKER_USERNAME: mantikbuildserver
     DOCKER_PASSWORD: "$DOCKERHUB_ACCESS_KEY"
   only:
-    refs
+    refs:
       - tags
     variables:
       - $CI_COMMIT_REF_PROTECTED == "true"
@@ -121,7 +121,7 @@ dockerhub_publish:
 other_publish:
   stage: publish
   only:
-    refs
+    refs:
       - master
       - tags
     variables:
