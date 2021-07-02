@@ -90,6 +90,31 @@ docker_publish:
     - make docker-unchecked
     - make docker-publish
 
+dockerhub_publish:
+  stage: publish
+  image: reg.ambrosys.de/mantik/mantikdockerindocker
+  variables:
+    CACHE_DIR: "$PWD/cache"
+    BUILDSERVER: "true"
+    REMOTE_REPO_NAME: registry.hub.docker.com
+    DOCKER_USERNAME: mantikbuildserver
+    DOCKER_PASSWORD: "$DOCKERHUB_ACCESS_KEY"
+  only:
+    - tags
+    - story/250/publish_images_to_dockerhub
+  except:
+    - branches
+  cache:
+    key: dependency_cache
+    paths:
+      - cache
+  services:
+    - docker:dind
+  script:
+    - mkdir -p $CACHE_DIR
+    - make docker-unchecked
+    - make docker-publish
+
 other_publish:
   stage: publish
   only:
