@@ -25,6 +25,7 @@ import ai.mantik.ui.model.{
   JobHeader,
   JobResponse,
   JobsResponse,
+  MetricsResponse,
   OperationId,
   RunGraphResponse,
   SettingsResponse,
@@ -41,6 +42,9 @@ trait StateService {
 
   /** Return Mantik settings */
   def settings: SettingsResponse
+
+  /** Return Mantik Metrics. */
+  def metrics: MetricsResponse
 
   /** Returns the list of present jobs
     * @param pollVersion if given with current version, poll for the next version

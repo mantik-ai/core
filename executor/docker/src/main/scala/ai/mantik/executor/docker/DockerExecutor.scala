@@ -301,10 +301,10 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
         .sequence(associated.map { row =>
           if (stopWorkerRequest.remove.value) {
             // no need to kill before, we are forcing removal
-            dockerClient.removeContainer(row.Id, true)
+            dockerOperations.removeContainer(row.Id)
           } else {
             if (decodeState(row) == WorkerState.Running) {
-              dockerClient.killContainer(row.Id)
+              dockerOperations.killContainer(row.Id)
             } else {
               Future.successful(())
             }

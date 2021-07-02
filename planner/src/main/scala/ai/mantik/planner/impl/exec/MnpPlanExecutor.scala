@@ -21,31 +21,27 @@
  */
 package ai.mantik.planner.impl.exec
 
-import java.util.UUID
 import ai.mantik.bridge.protocol.bridge.MantikInitConfiguration
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
-import ai.mantik.executor.Executor
-import ai.mantik.executor.model.docker.{Container, DockerConfig}
 import ai.mantik.executor.model._
 import ai.mantik.mnp.protocol.mnp._
-import ai.mantik.mnp.{MnpClient, MnpSession, SessionInitException}
-import ai.mantik.planner
+import ai.mantik.mnp.{MnpSession, SessionInitException}
 import ai.mantik.planner.PlanExecutor.PlanExecutorException
-import ai.mantik.planner.graph.{Graph, Node}
-import ai.mantik.planner.impl.MantikItemStateManager
-import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{InputPush, OutputPull}
-import ai.mantik.planner.pipelines.{PipelineRuntimeDefinition, ResolvedPipelineStep}
-import ai.mantik.planner.repository._
 import ai.mantik.planner._
+import ai.mantik.planner.graph.{Graph, Node}
+import ai.mantik.planner.impl.exec.MnpExecutionPreparation.{InputPush, OutputPull}
+import ai.mantik.planner.impl.exec.MnpWorkerManager.{ContainerMapping, ReservedContainer}
+import ai.mantik.planner.impl.{MantikItemStateManager, Metrics}
+import ai.mantik.planner.pipelines.{PipelineRuntimeDefinition, ResolvedPipelineStep}
 import ai.mantik.planner.repository.FileRepository.FileGetResult
-import akka.http.scaladsl.model.Uri
+import ai.mantik.planner.repository._
 import akka.util.ByteString
 import cats.implicits._
 import com.google.protobuf.any.Any
 import io.circe.syntax._
-import io.grpc.ManagedChannel
 
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -53,17 +49,17 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 /** Naive MNP Implementation of an Executor. */
-class MnpPlanExecutor(
+@Singleton
+class MnpPlanExecutor @Inject() (
     fileRepository: FileRepository,
     repository: Repository,
-    executor: Executor,
-    isolationSpace: String,
-    dockerConfig: DockerConfig,
     artifactRetriever: MantikArtifactRetriever,
     payloadExecutorProvider: ExecutionPayloadProvider,
     mantikItemStateManager: MantikItemStateManager,
     uiStateService: UiStateService,
-    executionCleanup: ExecutionCleanup
+    executionCleanup: ExecutionCleanup,
+    mnpWorkerManager: MnpWorkerManager,
+    metrics: Metrics
 )(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase
     with PlanExecutor {
@@ -81,34 +77,6 @@ class MnpPlanExecutor(
     mantikItemStateManager
   )
 
-  @Singleton
-  @Inject
-  def this(
-      fileRepository: FileRepository,
-      repository: Repository,
-      executor: Executor,
-      retriever: MantikArtifactRetriever,
-      payloadExecutorProvider: ExecutionPayloadProvider,
-      mantikItemStateManager: MantikItemStateManager,
-      uiStateService: UiStateService,
-      executionCleanup: ExecutionCleanup
-  )(implicit akkaRuntime: AkkaRuntime) {
-    this(
-      fileRepository,
-      repository,
-      executor,
-      isolationSpace = akkaRuntime.config.getString("mantik.planner.isolationSpace"),
-      dockerConfig = DockerConfig.parseFromConfig(
-        akkaRuntime.config.getConfig("mantik.bridge.docker")
-      ),
-      retriever,
-      payloadExecutorProvider,
-      mantikItemStateManager,
-      uiStateService,
-      executionCleanup
-    )
-  }
-
   override def execute[T](plan: Plan[T]): Future[T] = {
     val jobId = UUID.randomUUID().toString
     logger.info(s"Executing job ${jobId}")
@@ -117,16 +85,15 @@ class MnpPlanExecutor(
 
     val result = for {
       _ <- executionCleanup.isReady
-      grpcProxy <- executor.grpcProxy(isolationSpace)
       containerMapping <- uiStateService.executingNamedOperation(jobId, UiStateService.PrepareContainerName) {
-        reserveContainers(grpcProxy, jobId, plan)
+        mnpWorkerManager.reserveContainers(jobId, plan)
       }
       files <- uiStateService.executingNamedOperation(jobId, UiStateService.PrepareFilesName) {
         openFilesBuilder.openFiles(plan.files)
       }
       memory = new Memory()
       result <- executeOp(jobId, plan.op, Nil)(files, memory, containerMapping)
-      _ <- stopContainers(jobId)
+      _ <- mnpWorkerManager.closeConnectionAndStopContainers(containerMapping)
     } yield {
       result
     }
@@ -188,127 +155,6 @@ class MnpPlanExecutor(
       case dp: PlanOp.DeployPipeline =>
         deployPipeline(dp)
     }
-  }
-
-  private case class ReservedContainer(
-      name: String,
-      image: String,
-      address: String,
-      mnpChannel: ManagedChannel,
-      mnpClient: MnpClient,
-      aboutResponse: AboutResponse
-  )
-
-  private case class ContainerMapping(
-      containers: Map[Container, ReservedContainer]
-  )
-
-  /** Spins up containers needed for a plan. */
-  private def reserveContainers[T](grpcProxy: GrpcProxy, jobId: String, plan: Plan[T]): Future[ContainerMapping] = {
-    val runGraphs: Vector[PlanOp.RunGraph] = plan.op.foldLeftDown(
-      Vector.empty[PlanOp.RunGraph]
-    ) {
-      case (v, op: PlanOp.RunGraph) => v :+ op
-      case (v, _)                   => v
-    }
-
-    val containers = (for {
-      runGraph <- runGraphs
-      (_, node) <- runGraph.graph.nodes
-      container <- node.service match {
-        case c: PlanNodeService.DockerContainer => Some(c)
-        case _                                  => None
-      }
-    } yield {
-      container.container
-    }).distinct
-
-    logger.info(s"Spinning up ${containers.size} containers")
-
-    containers
-      .traverse { container =>
-        startWorker(grpcProxy, jobId, container).map { reservedContainer =>
-          container -> reservedContainer
-        }
-      }
-      .map { responses =>
-        ContainerMapping(
-          responses.toMap
-        )
-      }
-  }
-
-  /** Spin up a container and creates a connection to it. */
-  private def startWorker(grpcProxy: GrpcProxy, jobId: String, container: Container): Future[ReservedContainer] = {
-    val nameHint = "mantik-" + container.simpleImageName
-    val startWorkerRequest = StartWorkerRequest(
-      isolationSpace,
-      id = jobId,
-      definition = MnpWorkerDefinition(
-        container = container,
-        extraLogins = dockerConfig.logins
-      ),
-      nameHint = Some(nameHint)
-    )
-    val t0 = System.currentTimeMillis()
-    // TODO: Error Handling, shutting down the worker if the mnpClient fails!
-    for {
-      response <- executor.startWorker(startWorkerRequest)
-      (address, aboutResponse, channel, mnpClient) <- buildConnection(grpcProxy, response.nodeName)
-    } yield {
-      val t1 = System.currentTimeMillis()
-      logger.info(
-        s"Spinned up worker ${response.nodeName} image=${container.image} about=${aboutResponse.name} within ${t1 - t0}ms"
-      )
-      ReservedContainer(
-        response.nodeName,
-        container.image,
-        address,
-        channel,
-        mnpClient,
-        aboutResponse
-      )
-    }
-  }
-
-  /**
-    * Build a connection to the container.
-    * @return address, about response, mnp channel and mnp client.
-    */
-  private def buildConnection(
-      grpcProxy: GrpcProxy,
-      nodeName: String
-  ): Future[(String, AboutResponse, ManagedChannel, MnpClient)] = {
-    val address = s"${nodeName}:8502" // TODO: Configurable
-    Future {
-      grpcProxy.proxyUrl match {
-        case Some(proxy) => MnpClient.connectViaProxy(proxy, address)
-        case None        => MnpClient.connect(address)
-      }
-    }.flatMap { case (channel, client) =>
-      // TODO: Configurable
-      FutureHelper
-        .tryMultipleTimes(30.seconds, 200.milliseconds) {
-          client.about().transform {
-            case Success(aboutResponse) => Success(Some(aboutResponse))
-            case Failure(e)             => Success(None)
-          }
-        }
-        .map { aboutResponse =>
-          (address, aboutResponse, channel, client)
-        }
-    }
-  }
-
-  private def stopContainers(jobId: String): Future[Unit] = {
-    executor
-      .stopWorker(
-        StopWorkerRequest(
-          isolationSpace,
-          idFilter = Some(jobId)
-        )
-      )
-      .map { _ => () }
   }
 
   private def runGraph(graph: Graph[PlanNodeService])(
@@ -521,7 +367,12 @@ class MnpPlanExecutor(
       .flatMap { result =>
         val runTask = session.task(taskId)
         val sink = runTask.push(inputPush.portId)
-        result.source.runWith(sink)
+        result.source
+          .map { bytes =>
+            metrics.mnpPushBytes.inc(bytes.length)
+            bytes
+          }
+          .runWith(sink)
       }
       .map { case (bytes, response) =>
         logger.debug(
@@ -538,7 +389,12 @@ class MnpPlanExecutor(
       .storeFile(outputPull.fileStorageResult.fileId)
       .flatMap { fileSink =>
         val runTask = session.task(taskId)
-        val source = runTask.pull(outputPull.portId)
+        val source = runTask
+          .pull(outputPull.portId)
+          .map { bytes =>
+            metrics.mnpPullBytes.inc(bytes.length)
+            bytes
+          }
         source.runWith(fileSink)
       }
       .map { bytes =>
@@ -563,25 +419,17 @@ class MnpPlanExecutor(
   )(implicit files: ExecutionOpenFiles): Future[DeploymentState] = {
     val payloadData = deployAlgorithm.node.service.data.map(files.resolveFileRead)
     payloadExecutorProvider.providePermanent(deployAlgorithm.item.itemId).flatMap { payloadUrl =>
-      val initCall = buildInitCallForDeployment(deployAlgorithm.node, payloadData, payloadUrl)
-
-      val startWorkerRequest = StartWorkerRequest(
-        isolationSpace,
-        id = deployAlgorithm.serviceId,
-        definition = MnpWorkerDefinition(
-          container = deployAlgorithm.node.service.container,
-          extraLogins = dockerConfig.logins,
-          initializer = Some(ByteString(initCall.toByteArray))
-        ),
-        nameHint = deployAlgorithm.serviceNameHint,
-        keepRunning = true
-      )
-
+      val initCall = ByteString(buildInitCallForDeployment(deployAlgorithm.node, payloadData, payloadUrl).toByteArray)
       for {
-        response <- executor.startWorker(startWorkerRequest)
+        response <- mnpWorkerManager.runPermanentWorker(
+          deployAlgorithm.serviceId,
+          deployAlgorithm.serviceNameHint,
+          deployAlgorithm.node.service.container,
+          initCall
+        )
         deploymentState = DeploymentState(
           name = response.nodeName,
-          internalUrl = s"mnp://${response.nodeName}:8502/${DeployedSessionName}",
+          internalUrl = s"mnp://${response.nodeName}:${mnpWorkerManager.mnpPort}/${DeployedSessionName}",
           externalUrl = None
         )
         deploymentInfo = DeploymentInfo(
@@ -640,19 +488,13 @@ class MnpPlanExecutor(
 
       val runtimeDefinition = buildPipelineRuntimeDefinition(dp, subDeploymentStates)
 
-      val startWorkerRequest = StartWorkerRequest(
-        isolationSpace,
-        id = dp.serviceId,
-        definition = MnpPipelineDefinition(
-          definition = runtimeDefinition.asJson
-        ),
-        keepRunning = true,
-        ingressName = dp.ingress,
-        nameHint = dp.serviceNameHint
-      )
-
       for {
-        response <- executor.startWorker(startWorkerRequest)
+        response <- mnpWorkerManager.runPermanentPipeline(
+          dp.serviceId,
+          definition = MnpPipelineDefinition(runtimeDefinition.asJson),
+          ingressName = dp.ingress,
+          nameHint = dp.serviceNameHint
+        )
         deploymentState = DeploymentState(
           name = response.nodeName,
           internalUrl = s"http://${response.nodeName}:8502",
@@ -685,19 +527,13 @@ class MnpPlanExecutor(
     val subRequests: Map[String, Future[StartWorkerResponse]] = dp.sub.map { case (key, subItem) =>
       val initCall = buildInitCallForDeployment(subItem.node, None, None)
       val nameHint = "mantik-sub-" + subItem.node.service.container.simpleImageName
-      val startWorkerRequest = StartWorkerRequest(
-        isolationSpace = isolationSpace,
+      val workerResponse = mnpWorkerManager.runPermanentWorker(
         id = dp.serviceId,
-        definition = MnpWorkerDefinition(
-          container = subItem.node.service.container,
-          extraLogins = dockerConfig.logins,
-          initializer = Some(ByteString(initCall.toByteArray))
-        ),
-        keepRunning = true,
         nameHint = Some(nameHint),
-        ingressName = None
+        container = subItem.node.service.container,
+        initializer = ByteString(initCall.toByteArray)
       )
-      key -> executor.startWorker(startWorkerRequest)
+      key -> workerResponse
     }
 
     Future

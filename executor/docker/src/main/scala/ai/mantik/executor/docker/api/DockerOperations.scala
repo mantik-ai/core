@@ -183,4 +183,25 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
           }
       }
   }
+
+  def killContainer(id: String): Future[Unit] = {
+    ignore409 {
+      dockerClient.killContainer(id)
+    }
+  }
+
+  def removeContainer(id: String): Future[Unit] = {
+    ignore409 {
+      dockerClient.removeContainer(id, /*force = */ true)
+    }
+  }
+
+  /** Ignore error 409 (Already in progress) from Docker */
+  private def ignore409[T](f: Future[Unit]): Future[Unit] = {
+    f.recover {
+      case e: DockerClient.WrappedErrorResponse if e.code == 409 =>
+        logger.debug(s"Ignoring error 409 on docker removal", e)
+        ()
+    }
+  }
 }
