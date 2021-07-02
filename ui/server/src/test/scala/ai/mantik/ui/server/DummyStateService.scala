@@ -30,6 +30,7 @@ import ai.mantik.ui.model.{
   JobResponse,
   JobState,
   JobsResponse,
+  MetricsResponse,
   Operation,
   OperationDefinition,
   OperationId,
@@ -62,6 +63,13 @@ class DummyStateService(implicit akkaRuntime: AkkaRuntime) extends ComponentBase
     values = Vector(
       SettingEntry("setting1", "foo".asJson),
       SettingEntry("setting2", 123.asJson)
+    )
+  )
+
+  override def metrics: MetricsResponse = MetricsResponse(
+    metrics = Map(
+      "count" -> 1.asJson,
+      "count2" -> 2.asJson
     )
   )
 

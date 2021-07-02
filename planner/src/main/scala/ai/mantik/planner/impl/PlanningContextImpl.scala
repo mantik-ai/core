@@ -27,7 +27,13 @@ import ai.mantik.elements.errors.MantikAsyncException
 import ai.mantik.elements.{MantikId, NamedMantikId}
 import ai.mantik.executor.Executor
 import ai.mantik.planner._
-import ai.mantik.planner.impl.exec.{ExecutionCleanup, ExecutionPayloadProvider, MnpPlanExecutor, UiStateService}
+import ai.mantik.planner.impl.exec.{
+  ExecutionCleanup,
+  ExecutionPayloadProvider,
+  MnpPlanExecutor,
+  MnpWorkerManager,
+  UiStateService
+}
 import ai.mantik.planner.repository.impl.{LocalMantikRegistryImpl, MantikArtifactRetrieverImpl}
 import ai.mantik.planner.repository._
 
@@ -43,7 +49,8 @@ private[planner] class PlanningContextImpl @Inject() (
     val planExecutor: PlanExecutor,
     val remoteRegistry: RemoteMantikRegistry,
     val retriever: MantikArtifactRetriever,
-    val mantikItemStateManager: MantikItemStateManager
+    val mantikItemStateManager: MantikItemStateManager,
+    val metrics: Metrics
 )(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase
     with PlanningContext {
@@ -96,25 +103,39 @@ private[mantik] object PlanningContextImpl {
       registry: RemoteMantikRegistry,
       payloadProvider: ExecutionPayloadProvider
   )(implicit akkaRuntime: AkkaRuntime): PlanningContextImpl = {
+    val metrics = new Metrics()
     val mantikItemStateManager = new MantikItemStateManager()
     val planner = new PlannerImpl(akkaRuntime.config, mantikItemStateManager)
     val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
     val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
-    val uiStateService = new UiStateService(executor)
+    val uiStateService = new UiStateService(executor, metrics)
     // val fileRepositoryServerRemotePresence = new FileRepositoryServerRemotePresence(fileRepositoryServer, executor)
     val executionCleanup = new ExecutionCleanup(executor, repository)
+    val mnpWorkerManager = new MnpWorkerManager(
+      executor,
+      metrics
+    )
     val planExecutor = new MnpPlanExecutor(
       fileRepository,
       repository,
-      executor,
       retriever,
       payloadProvider,
       mantikItemStateManager,
       uiStateService,
-      executionCleanup
+      executionCleanup,
+      mnpWorkerManager,
+      metrics
     )
     val context =
-      new PlanningContextImpl(localRegistry, planner, planExecutor, registry, retriever, mantikItemStateManager)
+      new PlanningContextImpl(
+        localRegistry,
+        planner,
+        planExecutor,
+        registry,
+        retriever,
+        mantikItemStateManager,
+        metrics
+      )
     context
   }
 }

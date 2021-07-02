@@ -28,6 +28,7 @@ import ai.mantik.executor.Executor
 import ai.mantik.planner.PlanOp.AddMantikItem
 import ai.mantik.planner.{Plan, PlanFile, PlanFileReference, PlanOp}
 import ai.mantik.planner.buildinfo.BuildInfo
+import ai.mantik.planner.impl.Metrics
 import ai.mantik.ui.StateService
 import ai.mantik.ui.model.{
   Job,
@@ -35,6 +36,7 @@ import ai.mantik.ui.model.{
   JobResponse,
   JobState,
   JobsResponse,
+  MetricsResponse,
   Operation,
   OperationDefinition,
   OperationId,
@@ -45,6 +47,7 @@ import ai.mantik.ui.model.{
   SettingsResponse,
   VersionResponse
 }
+import com.codahale.metrics.{Counter, Gauge}
 import com.typesafe.config.{ConfigValue, ConfigValueType}
 import io.circe.Json
 
@@ -55,9 +58,10 @@ import scala.concurrent.Future
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
+import io.circe.syntax._
 
 @Singleton
-class UiStateService @Inject() (executor: Executor)(implicit akkaRuntime: AkkaRuntime)
+class UiStateService @Inject() (executor: Executor, metricsService: Metrics)(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase
     with StateService {
 
@@ -86,7 +90,6 @@ class UiStateService @Inject() (executor: Executor)(implicit akkaRuntime: AkkaRu
 
   override def settings: SettingsResponse = {
     import scala.collection.JavaConverters._
-    import io.circe.syntax._
     val mantikConfig = config.getConfig("mantik")
     val allValues = mantikConfig
       .entrySet()
@@ -122,6 +125,32 @@ class UiStateService @Inject() (executor: Executor)(implicit akkaRuntime: AkkaRu
     }
 
     SettingsResponse(converted)
+  }
+
+  override def metrics: MetricsResponse = {
+    def formatValue(i: Any): Json = {
+      i match {
+        case i: Int               => i.asJson
+        case i: java.lang.Integer => i.asJson
+        case l: Long              => l.asJson
+        case l: java.lang.Long    => l.asJson
+        case b: Boolean           => b.asJson
+        case b: java.lang.Boolean => b.asJson
+        case f: Float             => f.asJson
+        case f: java.lang.Float   => f.asJson
+        case d: Double            => d.asJson
+        case d: java.lang.Double  => d.asJson
+        case other                => other.toString.asJson
+      }
+    }
+    val formatted = metricsService.all.flatMap { case (key, value) =>
+      value match {
+        case counter: Counter => Some(key -> counter.getCount.asJson)
+        case gauge: Gauge[_]  => Some(key -> formatValue(gauge.getValue))
+        case _                => None // Not Supported
+      }
+    }
+    MetricsResponse(formatted)
   }
 
   override def job(id: String, pollVersion: Option[Long]): Future[JobResponse] = {

@@ -37,6 +37,7 @@ val quillVersion = "3.2.2"
 val catsVersion = "1.6.1"
 val parboiledVersion = "2.1.8"
 val msgpackVersion = "0.8.22"
+val metricsVersion = "4.2.0"
 
 val publishSettings = Seq(
   publishTo := {
@@ -294,7 +295,8 @@ lazy val planner = makeProject("planner")
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "org.xerial" % "sqlite-jdbc" % sqliteJdbcVersion,
-      "io.getquill" %% "quill-jdbc" % quillVersion
+      "io.getquill" %% "quill-jdbc" % quillVersion,
+      "io.dropwizard.metrics" % "metrics-core" % metricsVersion
     ),
     enableProtocolBuffer,
     configureBuildInfo("ai.mantik.planner.buildinfo")

@@ -57,6 +57,13 @@ class UiRouter(resourceClassLoader: ClassLoader, stateService: StateService)(imp
         }
       }
     },
+    path("metrics") {
+      pathEnd {
+        get {
+          respondJson(stateService.metrics)
+        }
+      }
+    },
     pathPrefix("jobs") {
       RouteConcatenation.concat(
         pathEnd {

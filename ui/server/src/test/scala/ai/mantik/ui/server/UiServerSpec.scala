@@ -23,7 +23,14 @@ package ai.mantik.ui.server
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.testutils.{AkkaSupport, HttpSupport, TestBase}
-import ai.mantik.ui.model.{JobResponse, JobsResponse, RunGraphResponse, VersionResponse}
+import ai.mantik.ui.model.{
+  JobResponse,
+  JobsResponse,
+  MetricsResponse,
+  RunGraphResponse,
+  SettingsResponse,
+  VersionResponse
+}
 import akka.http.scaladsl.model.ContentTypes
 import io.circe.{Decoder, Json}
 
@@ -90,6 +97,8 @@ class UiServerSpec extends TestBase with AkkaSupport with HttpSupport {
     }
     testJson[JobsResponse]("/api/jobs")
     testJson[VersionResponse]("/api/version")
+    testJson[SettingsResponse]("/api/settings")
+    testJson[MetricsResponse]("/api/metrics")
     testJson[JobResponse](s"/api/jobs/${DummyStateService.jobId}")
 
     val (response, _) = httpGet(address + "/api/jobs/otherjob")
