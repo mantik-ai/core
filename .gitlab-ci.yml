@@ -105,6 +105,8 @@ dockerhub_publish:
   only:
     - tags
     - story/250/publish_images_to_dockerhub
+    - variables:
+      - $CI_COMMIT_REF_PROTECTED == "true"
   cache:
     key: dependency_cache
     paths:
@@ -120,6 +122,9 @@ other_publish:
   stage: publish
   only:
     - master
+    - tags
+    - variables:
+      - $CI_COMMIT_REF_PROTECTED == "true"
   cache:
     key: dependency_cache
     paths:
