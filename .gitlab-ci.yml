@@ -102,8 +102,6 @@ dockerhub_publish:
   only:
     - tags
     - story/250/publish_images_to_dockerhub
-  except:
-    - branches
   cache:
     key: dependency_cache
     paths:
