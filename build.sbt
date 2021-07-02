@@ -1,10 +1,10 @@
 import scala.sys.process._
-import scala.util.Try
 val gitVersion = "git describe --always".!!.trim
 val buildNum = Option(System.getProperty("build.number")).getOrElse("local")
 
 // If there is a Tag starting with v, e.g. v0.3.0 use it as the build artefact version (e.g. 0.3.0)
-val versionTag = Try("git describe --tags".!!.trim).toOption
+val versionTag = sys.env
+  .get("CI_COMMIT_TAG")
   .filter(_.startsWith("v"))
   .map(_.stripPrefix("v"))
 

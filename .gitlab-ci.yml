@@ -47,6 +47,8 @@ test:
   variables:
     USER_ID: "0" # Disables suid inside docker image
     CACHE_DIR: "$PWD/cache"
+  except:
+    - story/250/publish_images_to_dockerhub
   script:
     - mkdir -p $CACHE_DIR
     - make test
@@ -97,6 +99,7 @@ dockerhub_publish:
     CACHE_DIR: "$PWD/cache"
     BUILDSERVER: "true"
     REMOTE_REPO_NAME: registry.hub.docker.com
+    REMOTE_REPO_GROUP: mantikai/
     DOCKER_USERNAME: mantikbuildserver
     DOCKER_PASSWORD: "$DOCKERHUB_ACCESS_KEY"
   only:
