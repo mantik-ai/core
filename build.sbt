@@ -1,5 +1,18 @@
+import scala.sys.process._
+val gitVersion = "git describe --always".!!.trim
+val buildNum = Option(System.getProperty("build.number")).getOrElse("local")
+
+// If there is a Tag starting with v, e.g. v0.3.0 use it as the build artefact version (e.g. 0.3.0)
+val versionTag = sys.env
+  .get("CI_COMMIT_TAG")
+  .filter(_.startsWith("v"))
+  .map(_.stripPrefix("v"))
+
+val snapshotVersion = "0.3-SNAPSHOT"
+val artefactVersion = versionTag.getOrElse(snapshotVersion)
+
 ThisBuild / organization := "ai.mantik"
-ThisBuild / version := "0.3-SNAPSHOT"
+ThisBuild / version := artefactVersion
 ThisBuild / scalaVersion := "2.12.13"
 // ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
 ThisBuild / scalacOptions += "-feature"
@@ -57,10 +70,6 @@ val publishSettings = Seq(
   test in publish := {},
   test in publishLocal := {}
 )
-
-import scala.sys.process._
-val gitVersion = "git describe --always".!!.trim
-val buildNum = Option(System.getProperty("build.number")).getOrElse("local")
 
 // Shared test code
 lazy val testutils = (project in file("testutils"))
