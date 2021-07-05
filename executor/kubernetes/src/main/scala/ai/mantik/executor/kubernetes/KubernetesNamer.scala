@@ -22,9 +22,9 @@
 package ai.mantik.executor.kubernetes
 
 import java.util.UUID
-
 import org.slf4j.LoggerFactory
 
+import java.util.regex.Pattern
 import scala.annotation.tailrec
 import scala.collection.mutable
 
@@ -106,46 +106,71 @@ object KubernetesNamer {
     }
   }
 
-  /** Encode a label value in a way that Kubernetes accepts it. Can be decoded by [[decodeLabelValue]]. */
+  /** Prefix to be for @ and an already valid label (Mantik's ItemIds) */
+  val AtPrefix = "A"
+
+  /** Suffix to be used for @ (Mantik Items can end with slashes) */
+  val AtSuffix = "A"
+
+  /** Prefix to be used if the rest of the string is a valid label. */
+  val ValidPrefix = "B"
+
+  /** Prefix to be used for custom character encoding. */
+  val CustomPrefix = "C"
+
+  /** Suffix fo be used for custom character encoding */
+  val CustomSuffix = "C"
+
+  /** Encode a label in a way that kubernetes accepts it.
+    * Note: if the label is too long, it's possible that Kubernetes stil won't accept it.
+    */
   def encodeLabelValue(value: String): String = {
-    // Valid according to error message '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?'
-
-    // Motivation: Most characters should stay be the same, while making it possible to encode all characters.
-
-    // Using '_' as Escape Character
-    // If first character is to be escaped, we use Z as start character.
-    // The first z is translated into "Z_"
-
     if (value.isEmpty) {
-      return ""
+      ""
+    } else if (isValidLabel(value)) {
+      ValidPrefix + value
+    } else {
+      if (value.startsWith("@")) {
+        val candidate = AtPrefix + value.drop(1) + AtSuffix
+        if (isValidLabel(candidate)) {
+          return candidate
+        }
+      }
+      CustomPrefix + customLabelEncoding(value) + CustomSuffix
     }
-    val resultBuilder = StringBuilder.newBuilder
-    val first = value.head
-
-    first match {
-      case 'Z'                  => resultBuilder ++= "Z_"
-      case x if firstAllowed(x) => resultBuilder += x
-      case other =>
-        resultBuilder += 'Z'
-        resultBuilder ++= charToHex(other)
-    }
-
-    value.tail.foreach {
-      case x if restAllowed(x) => resultBuilder += x
-      case other =>
-        resultBuilder += '_'
-        resultBuilder ++= charToHex(other)
-    }
-
-    resultBuilder.result()
   }
 
-  private def firstAllowed(b: Char): Boolean = {
+  /** Encode a label value in a way that Kubernetes accepts it. Can be decoded by [[decodeLabelValue]]. */
+  private def customLabelEncoding(value: String): String = {
+    // Start with CustomPrefix
+    // Everything which is a Special Character is encoded using _ and code
+    // _ is encoded as __
+    // If the last char is not valid, use a trailing _
+
+    val resultBuilder = StringBuilder.newBuilder
+    value.foreach {
+      case c if middleAllowed(c) => resultBuilder += c
+      case '_'                   => resultBuilder ++= "__"
+      case other                 => resultBuilder ++= "_" + charToHex(other)
+    }
+    resultBuilder.result
+  }
+
+  /** The character is allowed at the start or end in custom encoding */
+  private def startOrEndAllowed(b: Char): Boolean = {
     (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
   }
 
-  private def restAllowed(b: Char): Boolean = {
-    firstAllowed(b) || (b == '.') || (b == '-')
+  /** The character is allowed at the middle a label. */
+  private def middleAllowed(b: Char): Boolean = {
+    startOrEndAllowed(b) || (b == '.') || (b == '-')
+  }
+
+  private val validLabelRegex = "(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?".r
+
+  /** Check if something is a valid label. */
+  def isValidLabel(s: String): Boolean = {
+    validLabelRegex.pattern.matcher(s).matches() && s.length <= 63
   }
 
   /**
@@ -154,31 +179,38 @@ object KubernetesNamer {
     */
   def decodeLabelValue(value: String): String = {
     if (value.isEmpty) {
-      return ""
-    }
-    val resultBuilder = StringBuilder.newBuilder
-    val afterFirst = if (value.startsWith("Z_")) {
-      resultBuilder += 'Z'
-      value.drop(2)
-    } else if (value.startsWith("Z")) {
-      val hex = value.drop(1).take(4)
-      resultBuilder += charFromHex(hex)
-      value.drop(5)
+      ""
+    } else if (value.startsWith(ValidPrefix)) {
+      value.stripPrefix(ValidPrefix)
+    } else if (value.startsWith(AtPrefix)) {
+      "@" + value.stripPrefix(AtPrefix).stripSuffix(AtSuffix)
+    } else if (value.startsWith(CustomPrefix)) {
+      decodeCustomLabel(value.stripPrefix(CustomPrefix).stripSuffix(CustomSuffix))
     } else {
-      resultBuilder += value.head
-      value.drop(1)
+      throw new IllegalArgumentException(s"Invalid label prefix in ${value}")
     }
+  }
 
+  private def decodeCustomLabel(value: String): String = {
+    val resultBuilder = StringBuilder.newBuilder
     var i = 0
-    while (i < afterFirst.length) {
-      val c = afterFirst(i)
+    while (i < value.length) {
+      val c = value(i)
       c match {
+        case '_' if i == value.length - 1 =>
+        // Trailing underline, not important
+        case '_' if value.substring(i + 1, i + 2) == "_" =>
+          //  Another underline
+          resultBuilder += '_'
+          i += 1
         case '_' =>
-          // decode
-          val hex = afterFirst.substring(i + 1, i + 5)
+          // Arbitrary character
+          val hex = value.substring(i + 1, i + 5)
           val dec = charFromHex(hex)
           resultBuilder += dec
           i += 4
+        case o =>
+          resultBuilder += o
         case o =>
           resultBuilder += o
       }
