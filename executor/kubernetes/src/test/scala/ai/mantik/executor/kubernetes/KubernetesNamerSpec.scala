@@ -23,6 +23,9 @@ package ai.mantik.executor.kubernetes
 
 import ai.mantik.testutils.TestBase
 
+import java.security.SecureRandom
+import java.util.Base64
+
 class KubernetesNamerSpec extends TestBase {
 
   it should "work in an easy example" in {
@@ -45,20 +48,61 @@ class KubernetesNamerSpec extends TestBase {
   it should "escape labels" in {
     val pairs = Seq(
       "" -> "",
-      "AbC120d" -> "AbC120d",
-      "my.domain" -> "my.domain",
-      "." -> "Z002e",
-      "Z" -> "Z_",
-      "Z." -> "Z_.",
-      "Z/" -> "Z__002f",
-      "__" -> "Z005f_005f",
-      "Z_." -> "Z__005f."
+      "AbC120d" -> "BAbC120d",
+      "@Abc-1234" -> "AAbc-1234A",
+      "my.domain" -> "Bmy.domain",
+      "." -> "C.C",
+      "Z" -> "BZ",
+      "Z." -> "CZ.C",
+      "Z/" -> "CZ_002fC",
+      "__" -> "C____C",
+      "Z_." -> "CZ__.C",
+      "@@@@@" -> "C_0040_0040_0040_0040_0040C"
     )
     pairs.foreach { case (from, to) =>
-      KubernetesNamer.encodeLabelValue(from) shouldBe to
+      withClue(s"It should work for ${from} (expected to be ${to})") {
+        KubernetesNamer.encodeLabelValue(from) shouldBe to
+        KubernetesNamer.isValidLabel(to) shouldBe true
+        KubernetesNamer.decodeLabelValue(to) shouldBe from
+      }
     }
-    pairs.foreach { case (from, to) =>
-      KubernetesNamer.decodeLabelValue(to) shouldBe from
+  }
+
+  it should "create valid ids for ItemIds, Bug#245" in {
+    var aEncoding = 0
+    var cEncoding = 0
+    var maxLength = 0
+    for (i <- 0 until 1000) {
+      val itemId = generateItemIdString()
+      val encoded = KubernetesNamer.encodeLabelValue(itemId)
+      val decoded = KubernetesNamer.decodeLabelValue(encoded)
+      decoded shouldBe itemId
+      withClue(s"${encoded} from ${itemId} should match Kubernetes requirements (iteration ${i})") {
+        // https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+        KubernetesNamer.isValidLabel(encoded) shouldBe true
+      }
+      if (encoded.startsWith(KubernetesNamer.AtPrefix)) {
+        aEncoding += 1
+      }
+      if (encoded.startsWith(KubernetesNamer.CustomPrefix)) {
+        cEncoding += 1
+      }
+      maxLength = encoded.length.max(maxLength)
     }
+    logger.info(s"Max Length: ${maxLength}")
+    logger.info(s"Type A Encoding: ${aEncoding}")
+    logger.info(s"Type C Encoding: ${cEncoding}")
+  }
+
+  val ByteCount = 32
+  private val generator = new SecureRandom()
+
+  private def generateItemIdString(): String = {
+    // From ItemId.generate()
+    val value = new Array[Byte](ByteCount)
+    generator.nextBytes(value)
+    // Use URL Encoding, we do not want "/"
+    val encoded = Base64.getUrlEncoder.withoutPadding().encodeToString(value)
+    "@" + encoded
   }
 }
