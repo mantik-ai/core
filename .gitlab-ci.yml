@@ -47,6 +47,8 @@ test:
   variables:
     USER_ID: "0" # Disables suid inside docker image
     CACHE_DIR: "$PWD/cache"
+  except:
+    - story/250/publish_images_to_dockerhub
   script:
     - mkdir -p $CACHE_DIR
     - make test
@@ -90,10 +92,40 @@ docker_publish:
     - make docker-unchecked
     - make docker-publish
 
+dockerhub_publish:
+  stage: publish
+  image: reg.ambrosys.de/mantik/mantikdockerindocker
+  variables:
+    CACHE_DIR: "$PWD/cache"
+    BUILDSERVER: "true"
+    REMOTE_REPO_NAME: registry.hub.docker.com
+    REMOTE_REPO_GROUP: mantikai/
+    DOCKER_USERNAME: mantikbuildserver
+    DOCKER_PASSWORD: "$DOCKERHUB_ACCESS_KEY"
+  only:
+    refs:
+      - tags
+    variables:
+      - $CI_COMMIT_REF_PROTECTED == "true"
+  cache:
+    key: dependency_cache
+    paths:
+      - cache
+  services:
+    - docker:dind
+  script:
+    - mkdir -p $CACHE_DIR
+    - make docker-unchecked
+    - make docker-publish
+
 other_publish:
   stage: publish
   only:
-    - master
+    refs:
+      - master
+      - tags
+    variables:
+      - $CI_COMMIT_REF_PROTECTED == "true"
   cache:
     key: dependency_cache
     paths:
