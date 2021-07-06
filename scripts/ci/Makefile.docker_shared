@@ -4,7 +4,7 @@ CI_COMMIT_REF_SLUG ?= local
 REMOTE_REPO_NAME ?= mdocker.rcxt.de
 # Can be overriden to have the full image name
 REMOTE_REPO_GROUP ?=
-DOCKER_USERNAME ?= $(mantik.ci)
+DOCKER_USERNAME ?= mantik.ci
 DOCKER_PASSWORD ?= $(SONATYPE_MANTIK_PASSWORD)
 DOCKER ?= docker
 
