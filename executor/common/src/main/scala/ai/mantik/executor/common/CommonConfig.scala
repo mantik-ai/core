@@ -26,6 +26,7 @@ import com.typesafe.config.{Config => TypesafeConfig}
 
 /** Common settings for various executors. */
 case class CommonConfig(
+    isolationSpace: String,
     mnpPreparer: Container,
     mnpPipelineController: Container,
     dockerConfig: DockerConfig,
@@ -44,6 +45,7 @@ object CommonConfig {
       dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig(name)))
     }
     CommonConfig(
+      isolationSpace = root.getString("isolationSpace"),
       mnpPreparer = rc("mnpPreparer"),
       mnpPipelineController = rc("mnpPipelineController"),
       dockerConfig = dockerConfig,

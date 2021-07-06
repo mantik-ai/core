@@ -30,14 +30,13 @@ class PublishServiceSpec extends IntegrationTestBase {
 
   it should "allow publishing ip address services" in new Env {
     val request = PublishServiceRequest(
-      "space",
       "service1",
       4000,
       "192.168.1.1",
       4001
     )
     val response = await(executor.publishService(request))
-    response.name shouldBe s"service1.${config.kubernetes.namespacePrefix}space.svc.cluster.local:4000"
+    response.name shouldBe s"service1.${config.kubernetes.namespacePrefix}${config.common.isolationSpace}.svc.cluster.local:4000"
     val ns = config.kubernetes.namespacePrefix + "space"
     val service = await(kubernetesClient.getInNamespace[Service]("service1", ns))
     val port = service.spec.get.ports.ensuring(_.size == 1).head
@@ -63,7 +62,6 @@ class PublishServiceSpec extends IntegrationTestBase {
     val response = await(
       executor.publishService(
         PublishServiceRequest(
-          "space2",
           "service1",
           4000,
           "myserver.example.com",
@@ -71,7 +69,7 @@ class PublishServiceSpec extends IntegrationTestBase {
         )
       )
     )
-    response.name shouldBe s"service1.${config.kubernetes.namespacePrefix}space2.svc.cluster.local:4000"
+    response.name shouldBe s"service1.${config.kubernetes.namespacePrefix}${config.common.isolationSpace}.svc.cluster.local:4000"
     val ns = config.kubernetes.namespacePrefix + "space2"
     val service = await(kubernetesClient.getInNamespace[Service]("service1", ns))
     val port = service.spec.get.ports.ensuring(_.size == 1).head
@@ -86,7 +84,6 @@ class PublishServiceSpec extends IntegrationTestBase {
     awaitException[Errors.BadRequestException] {
       executor.publishService(
         PublishServiceRequest(
-          "space3",
           "service1",
           4000,
           "myserver.example.com",

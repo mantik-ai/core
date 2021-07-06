@@ -75,8 +75,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     }
   }
 
-  override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = {
-    // Note: Docker Executor doesn't support one proxy per isolationSpace yet
+  override def grpcProxy(): Future[GrpcProxy] = {
     val grpcSettings = executorConfig.common.grpcProxy
     extraServices.grpcProxy.map {
       case Some(id) =>
@@ -111,7 +110,6 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
 
     val dockerConverter = new DockerConverter(
       executorConfig,
-      isolationSpace = startWorkerRequest.isolationSpace,
       internalId = internalId,
       userId = startWorkerRequest.id
     )
@@ -177,7 +175,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
       // TODO
       logger.warn("Filtering for node names is not performance right now.")
     }
-    listWorkers(true, listWorkerRequest.isolationSpace, listWorkerRequest.idFilter).map { response =>
+    listWorkers(true, listWorkerRequest.idFilter).map { response =>
       val workers = response.flatMap(decodeListWorkerResponse(_, listWorkerRequest.nameFilter))
       ListWorkerResponse(
         workers
@@ -187,11 +185,10 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
 
   private def listWorkers(
       all: Boolean,
-      isolationSpace: String,
       userIdFilter: Option[String]
   ): Future[Vector[ListContainerResponseRow]] = {
     val labelFilters = Seq(
-      DockerConstants.IsolationSpaceLabelName -> isolationSpace,
+      DockerConstants.IsolationSpaceLabelName -> executorConfig.common.isolationSpace,
       LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
       LabelConstants.RoleLabelName -> LabelConstants.role.worker
     ) ++ userIdFilter.map { id =>
@@ -277,7 +274,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
   override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
     // go through all workers, if we are going to remove them
     val all = stopWorkerRequest.remove.value
-    listWorkers(all, stopWorkerRequest.isolationSpace, stopWorkerRequest.idFilter).flatMap { containers =>
+    listWorkers(all, stopWorkerRequest.idFilter).flatMap { containers =>
       val decoded: Vector[(StopWorkerResponseElement, ListContainerResponseRow)] = containers.flatMap { row =>
         decodeListWorkerResponse(row, stopWorkerRequest.nameFilter).map { d =>
           StopWorkerResponseElement(

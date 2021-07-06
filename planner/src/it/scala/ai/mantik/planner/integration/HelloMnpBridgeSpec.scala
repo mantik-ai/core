@@ -30,14 +30,12 @@ import ai.mantik.planner.BuiltInItems
 class HelloMnpBridgeSpec extends IntegrationTestBase {
 
   private def executor = embeddedExecutor.executor
-  private val isolationSpace = "hello-mnp-bridge"
   private val MnpPort = 8502
 
   it should "initialize" in {
     val startResponse = await(
       executor.startWorker(
         StartWorkerRequest(
-          isolationSpace,
           "id1",
           MnpWorkerDefinition(
             Container(
@@ -49,7 +47,7 @@ class HelloMnpBridgeSpec extends IntegrationTestBase {
     )
     logger.info(s"Started container ${startResponse.nodeName}")
 
-    val grpcProxy = await(executor.grpcProxy(isolationSpace))
+    val grpcProxy = await(executor.grpcProxy())
     logger.info(s"gRpc Proxy: ${grpcProxy}")
 
     val destinationAddress = s"${startResponse.nodeName}:${MnpPort}"

@@ -39,7 +39,7 @@ trait Executor extends Component {
   def nameAndVersion: Future[String]
 
   /** Returns the gRpc proxy which enables the Engine to communicate with MNP Nodes. */
-  def grpcProxy(isolationSpace: String): Future[GrpcProxy]
+  def grpcProxy(): Future[GrpcProxy]
 
   /** Start a new Worker. */
   def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse]

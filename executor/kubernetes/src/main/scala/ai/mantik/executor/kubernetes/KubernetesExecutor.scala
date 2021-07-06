@@ -56,11 +56,8 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   logger.info(s"Disable Pull:        ${config.common.disablePull}")
   val nodeAddress = config.kubernetes.nodeAddress.getOrElse(kubernetesHost)
   logger.info(s"Node Address:        ${nodeAddress}")
-
-  private def namespaceForIsolationSpace(isolationSpace: String): String = {
-    // TODO: Escape invalid characters.
-    config.kubernetes.namespacePrefix + isolationSpace
-  }
+  val namespace = config.kubernetes.namespacePrefix + config.common.isolationSpace
+  logger.info(s"Namespace:           ${namespace}")
 
   override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] =
     logErrors(s"PublishService ${publishServiceRequest.serviceName}") {
@@ -74,8 +71,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
           new Errors.BadRequestException("Can't bind a service name with a different port number to kubernetes")
         )
       }
-
-      val namespace = namespaceForIsolationSpace(publishServiceRequest.isolationSpace)
 
       val service = Service(
         metadata = ObjectMeta(
@@ -176,17 +171,19 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     Future.successful(str)
   }
 
-  override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = logErrors("GrpcProxy") {
+  override def grpcProxy(): Future[GrpcProxy] = {
+    lazyGrpcProxy
+  }
+
+  private lazy val lazyGrpcProxy: Future[GrpcProxy] = ensureGrpcProxy()
+
+  private def ensureGrpcProxy(): Future[GrpcProxy] = logErrors("GrpcProxy") {
     val grpcProxyConfig = config.common.grpcProxy
     if (!grpcProxyConfig.enabled) {
-      return Future.failed(
-        new Errors.NotFoundException("Grpc Proxy not enabled")
+      logger.info(s"Grpc Proxy not enabled")
+      return Future.successful(
+        GrpcProxy(None)
       )
-    }
-    val namespace = namespaceForIsolationSpace(isolationSpace)
-    Option(grpcProxies.get(namespace)) match {
-      case Some(alreadyExists) => return Future.successful(alreadyExists)
-      case None                => // continue
     }
 
     val deployment = Deployment(
@@ -262,7 +259,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
         proxyUrl = Some(s"http://${nodeAddress}:$nodePort")
       )
       logger.info(s"Ensured grpc Proxy ${grpcProxy.proxyUrl} for namespace ${namespace}")
-      grpcProxies.put(namespace, grpcProxy)
       grpcProxy
     }
   }
@@ -272,7 +268,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       val converter = KubernetesConverter(config, kubernetesHost)
       val internalId = UUID.randomUUID().toString
       val converted = converter.convertStartWorkRequest(internalId, startWorkerRequest)
-      val namespace = namespaceForIsolationSpace(startWorkerRequest.isolationSpace)
 
       val t0 = System.currentTimeMillis()
       ops.ensureNamespace(namespace).flatMap { _ =>
@@ -292,7 +287,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
 
   override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] =
     logErrors(s"ListWorkers") {
-      val namespace = namespaceForIsolationSpace(listWorkerRequest.isolationSpace)
       listWorkersImpl(namespace, listWorkerRequest.nameFilter, listWorkerRequest.idFilter).map { workloads =>
         ListWorkerResponse(
           workloads.map { workload =>
@@ -349,7 +343,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = logErrors(s"StopWorker") {
-    val namespace = namespaceForIsolationSpace(stopWorkerRequest.isolationSpace)
     listWorkersImpl(namespace, stopWorkerRequest.nameFilter, stopWorkerRequest.idFilter).flatMap { workloads =>
       val responses = workloads.map { workload =>
         StopWorkerResponseElement(
@@ -382,9 +375,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
         logger.trace(s"${what} executed within ${t1 - t0}ms")
     }
   }
-
-  /** Maps namespace to grpcProxy. */
-  private val grpcProxies = new ConcurrentHashMap[String, GrpcProxy]()
 }
 
 class KubernetesExecutorProvider @Inject() (implicit akkaRuntime: AkkaRuntime) extends Provider[KubernetesExecutor] {

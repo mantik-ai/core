@@ -33,9 +33,8 @@ import ai.mantik.executor.model.docker.Container
 class WorkerSpec extends IntegrationTestBase {
 
   trait Env extends super.Env {
-    def startWorker(id: String, isolationSpace: String): StartWorkerResponse = {
+    def startWorker(id: String): StartWorkerResponse = {
       val startWorkerRequest = StartWorkerRequest(
-        isolationSpace = isolationSpace,
         id = id,
         definition = MnpWorkerDefinition(
           container = Container(
@@ -48,16 +47,15 @@ class WorkerSpec extends IntegrationTestBase {
   }
 
   it should "start stop and list workers" in new Env {
-    val isolationSpace = "startworker-test"
     // The same id can be used multiple times
-    val worker1 = startWorker("id1", isolationSpace)
-    val worker2 = startWorker("id1", isolationSpace)
-    val worker3 = startWorker("id2", isolationSpace)
-    val worker4 = startWorker("id2", isolationSpace)
+    val worker1 = startWorker("id1")
+    val worker2 = startWorker("id1")
+    val worker3 = startWorker("id2")
+    val worker4 = startWorker("id2")
 
     val workersResponse1 = await(
       executor.listWorkers(
-        ListWorkerRequest(isolationSpace)
+        ListWorkerRequest()
       )
     )
     workersResponse1.workers.size shouldBe 4
@@ -69,16 +67,9 @@ class WorkerSpec extends IntegrationTestBase {
       worker4.nodeName
     )
 
-    val workerResponseDifferentSpace = await(
-      executor.listWorkers(
-        ListWorkerRequest("other-space")
-      )
-    )
-    workerResponseDifferentSpace.workers shouldBe empty
-
     val workerResponseById = await(
       executor.listWorkers(
-        ListWorkerRequest(isolationSpace, idFilter = Some("id1"))
+        ListWorkerRequest(idFilter = Some("id1"))
       )
     )
     workerResponseById.workers.map(_.nodeName) should contain theSameElementsAs Seq(
@@ -88,39 +79,33 @@ class WorkerSpec extends IntegrationTestBase {
 
     val workerResponseByNameFilter = await(
       executor.listWorkers(
-        ListWorkerRequest(isolationSpace, nameFilter = Some(worker1.nodeName))
+        ListWorkerRequest(nameFilter = Some(worker1.nodeName))
       )
     )
     workerResponseByNameFilter.workers.ensuring(_.size == 1).head.nodeName shouldBe worker1.nodeName
 
-    // doesn't affect, all there
-    await(
-      executor.stopWorker(
-        StopWorkerRequest("other-space")
-      )
-    )
-    await(executor.listWorkers(ListWorkerRequest(isolationSpace))).workers.size shouldBe 4
+    await(executor.listWorkers(ListWorkerRequest())).workers.size shouldBe 4
 
     // Kill by Id
-    val removedById = await(executor.stopWorker(StopWorkerRequest(isolationSpace, idFilter = Some("id1"))))
+    val removedById = await(executor.stopWorker(StopWorkerRequest(idFilter = Some("id1"))))
     removedById.removed.size shouldBe 2
     removedById.removed.map(_.name) should contain theSameElementsAs Seq(worker1.nodeName, worker2.nodeName)
     removedById.removed.map(_.id).distinct shouldBe Seq("id1")
 
-    await(executor.listWorkers(ListWorkerRequest(isolationSpace))).workers.size shouldBe 2
+    await(executor.listWorkers(ListWorkerRequest())).workers.size shouldBe 2
 
     // Kill by Name
     val removedByName =
-      await(executor.stopWorker(StopWorkerRequest(isolationSpace, nameFilter = Some(worker3.nodeName))))
+      await(executor.stopWorker(StopWorkerRequest(nameFilter = Some(worker3.nodeName))))
     removedByName.removed.size shouldBe 1
     removedByName.removed.head.name shouldBe worker3.nodeName
     removedByName.removed.head.id shouldBe "id2"
 
-    await(executor.listWorkers(ListWorkerRequest(isolationSpace))).workers.size shouldBe 1
+    await(executor.listWorkers(ListWorkerRequest())).workers.size shouldBe 1
 
     // Kill everything
-    val removeRest = await(executor.stopWorker(StopWorkerRequest(isolationSpace)))
+    val removeRest = await(executor.stopWorker(StopWorkerRequest()))
     removeRest.removed.size shouldBe 1
-    await(executor.listWorkers(ListWorkerRequest(isolationSpace))).workers.size shouldBe 0
+    await(executor.listWorkers(ListWorkerRequest())).workers.size shouldBe 0
   }
 }
