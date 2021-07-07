@@ -21,7 +21,7 @@
  */
 package ai.mantik.executor.model
 
-import ai.mantik.executor.model.docker.{Container, DockerLogin}
+import ai.mantik.executor.model.docker.Container
 import akka.util.ByteString
 import io.circe.generic.JsonCodec
 import ByteStringCodec._
@@ -54,7 +54,6 @@ sealed trait WorkerDefinition {}
   */
 case class MnpWorkerDefinition(
     container: Container,
-    extraLogins: Seq[DockerLogin] = Nil,
     initializer: Option[ByteString] = None
 ) extends WorkerDefinition
 

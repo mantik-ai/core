@@ -25,7 +25,7 @@ import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.Executor
-import ai.mantik.executor.model.docker.{Container, DockerConfig}
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{
   GrpcProxy,
   MnpPipelineDefinition,
@@ -57,10 +57,6 @@ private[planner] class MnpWorkerManager @Inject() (
 )(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase {
   import MnpWorkerManager._
-
-  val dockerConfig: DockerConfig = DockerConfig.parseFromConfig(
-    akkaRuntime.config.getConfig("mantik.bridge.docker")
-  )
 
   val mnpConnectionTimeout: FiniteDuration = config.getFiniteDuration("mantik.planner.execution.mnpConnectionTimeout")
   val mnpCloseConnectionTimeout: FiniteDuration =
@@ -167,8 +163,7 @@ private[planner] class MnpWorkerManager @Inject() (
     val startWorkerRequest = StartWorkerRequest(
       id = jobId,
       definition = MnpWorkerDefinition(
-        container = container,
-        extraLogins = dockerConfig.logins
+        container = container
       ),
       nameHint = Some(nameHint)
     )
@@ -235,7 +230,6 @@ private[planner] class MnpWorkerManager @Inject() (
       id = id,
       definition = MnpWorkerDefinition(
         container = container,
-        extraLogins = dockerConfig.logins,
         initializer = Some(initializer)
       ),
       nameHint = nameHint,
