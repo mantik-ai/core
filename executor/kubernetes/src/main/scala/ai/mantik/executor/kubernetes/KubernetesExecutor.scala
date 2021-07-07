@@ -56,7 +56,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   logger.info(s"Disable Pull:        ${config.common.disablePull}")
   val nodeAddress = config.kubernetes.nodeAddress.getOrElse(kubernetesHost)
   logger.info(s"Node Address:        ${nodeAddress}")
-  val namespace = config.kubernetes.namespacePrefix + config.common.isolationSpace
+  val namespace = config.namespace
   logger.info(s"Namespace:           ${namespace}")
 
   override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] =
@@ -287,7 +287,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
 
   override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] =
     logErrors(s"ListWorkers") {
-      listWorkersImpl(namespace, listWorkerRequest.nameFilter, listWorkerRequest.idFilter).map { workloads =>
+      listWorkersImpl(listWorkerRequest.nameFilter, listWorkerRequest.idFilter).map { workloads =>
         ListWorkerResponse(
           workloads.map { workload =>
             generateListWorkerResponseElement(workload)
@@ -297,7 +297,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     }
 
   private def listWorkersImpl(
-      namespace: String,
       nameFilter: Option[String],
       userIdFilter: Option[String]
   ): Future[Vector[Workload]] = {
@@ -343,7 +342,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = logErrors(s"StopWorker") {
-    listWorkersImpl(namespace, stopWorkerRequest.nameFilter, stopWorkerRequest.idFilter).flatMap { workloads =>
+    listWorkersImpl(stopWorkerRequest.nameFilter, stopWorkerRequest.idFilter).flatMap { workloads =>
       val responses = workloads.map { workload =>
         StopWorkerResponseElement(
           id = KubernetesNamer.decodeLabelValue(

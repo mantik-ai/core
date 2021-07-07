@@ -36,14 +36,13 @@ class PublishServiceSpec extends IntegrationTestBase {
       4001
     )
     val response = await(executor.publishService(request))
-    response.name shouldBe s"service1.${config.kubernetes.namespacePrefix}${config.common.isolationSpace}.svc.cluster.local:4000"
-    val ns = config.kubernetes.namespacePrefix + "space"
-    val service = await(kubernetesClient.getInNamespace[Service]("service1", ns))
+    response.name shouldBe s"service1.${config.namespace}.svc.cluster.local:4000"
+    val service = await(kubernetesClient.getInNamespace[Service]("service1", config.namespace))
     val port = service.spec.get.ports.ensuring(_.size == 1).head
     port.port shouldBe 4000
     service.spec.get.externalName shouldBe ""
 
-    val endpoints = await(kubernetesClient.getInNamespace[Endpoints]("service1", ns))
+    val endpoints = await(kubernetesClient.getInNamespace[Endpoints]("service1", config.namespace))
     val subset = endpoints.subsets.ensuring(_.size == 1).head
     subset.addresses shouldBe List(
       Endpoints.Address("192.168.1.1")
@@ -63,20 +62,19 @@ class PublishServiceSpec extends IntegrationTestBase {
       executor.publishService(
         PublishServiceRequest(
           "service1",
-          4000,
+          4001,
           "myserver.example.com",
-          4000
+          4001
         )
       )
     )
-    response.name shouldBe s"service1.${config.kubernetes.namespacePrefix}${config.common.isolationSpace}.svc.cluster.local:4000"
-    val ns = config.kubernetes.namespacePrefix + "space2"
-    val service = await(kubernetesClient.getInNamespace[Service]("service1", ns))
+    response.name shouldBe s"service1.${config.kubernetes.namespacePrefix}${config.common.isolationSpace}.svc.cluster.local:4001"
+    val service = await(kubernetesClient.getInNamespace[Service]("service1", config.namespace))
     val port = service.spec.get.ports.ensuring(_.size == 1).head
-    port.port shouldBe 4000
+    port.port shouldBe 4001
     service.spec.get.externalName shouldBe "myserver.example.com"
 
-    val endpoints = await(kubernetesClient.listInNamespace[ListResource[Endpoints]](ns))
+    val endpoints = await(kubernetesClient.listInNamespace[ListResource[Endpoints]](config.namespace))
     endpoints.items shouldBe empty
   }
 
@@ -85,9 +83,9 @@ class PublishServiceSpec extends IntegrationTestBase {
       executor.publishService(
         PublishServiceRequest(
           "service1",
-          4000,
+          4002,
           "myserver.example.com",
-          4001
+          4003
         )
       )
     }
