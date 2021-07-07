@@ -102,7 +102,7 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     response.nodeName shouldNot be(empty)
     val containers = await(dockerClient.listContainers(true))
     val container = containers.find(_.Names.contains("/" + response.nodeName)).getOrElse(fail)
-    container.Labels(DockerConstants.IsolationSpaceLabelName) shouldBe "some_isolation"
+    container.Labels(DockerConstants.IsolationSpaceLabelName) shouldBe config.common.isolationSpace
     container.Labels(LabelConstants.UserIdLabelName) shouldBe "foo"
     container.Labels(LabelConstants.ManagedByLabelName) shouldBe LabelConstants.ManagedByLabelValue
     container.Labels(LabelConstants.WorkerTypeLabelName) shouldBe LabelConstants.workerType.mnpWorker
@@ -142,8 +142,11 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
   }
 
   "listWorkers" should "work" in new EnvForWorkers {
-    val response = await(dockerExecutor.listWorkers(ListWorkerRequest()))
-    response.workers shouldBe empty
+    await(dockerExecutor.stopWorker(StopWorkerRequest())) // killing them all
+    eventually {
+      val response = await(dockerExecutor.listWorkers(ListWorkerRequest()))
+      response.workers shouldBe empty
+    }
 
     val startResponse1 = startWorker("x1")
     val startResponse2 = startWorker("x2")
