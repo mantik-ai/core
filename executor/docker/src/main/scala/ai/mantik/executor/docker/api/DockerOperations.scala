@@ -23,7 +23,6 @@ package ai.mantik.executor.docker.api
 
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
-
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.executor.docker.ContainerDefinition
 import ai.mantik.executor.docker.api.DockerClient.WrappedErrorResponse
@@ -42,6 +41,7 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 /** High level docker operations, consisting of multiple sub operations. */
@@ -76,14 +76,22 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
 
   /** Pull an image. */
   def pullImage(image: String): Future[Unit] = {
-    for {
+    val t0 = System.currentTimeMillis()
+    logger.info(s"Starting pulling of image ${image}")
+    val result = for {
       response <- dockerClient.pullImage(image)
       // This is tricky, the pull is silently aborted if we do not completely consume the resposne
       _ <- response._2.runWith(Sink.ignore)
     } yield {
-      logger.debug(s"Pulled image ${image}")
+      val t1 = System.currentTimeMillis()
+      logger.info(s"Pulled image ${image} in ${t1 - t0}ms")
       ()
     }
+    result.failed.foreach { case NonFatal(e) =>
+      val t1 = System.currentTimeMillis()
+      logger.error(s"Pulling image ${image} failed within ${t1 - t0}ms", e)
+    }
+    result
   }
 
   /** Creates a container, pulling if necessary. */
