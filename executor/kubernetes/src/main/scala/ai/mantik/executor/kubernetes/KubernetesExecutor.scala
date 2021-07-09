@@ -51,8 +51,8 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     with Executor {
   val kubernetesHost = ops.clusterServer.authority.host.address()
   logger.info(s"Initializing with kubernetes at address ${kubernetesHost}")
-  logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag}")
-  logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository}")
+  logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag.getOrElse("<empty>")}")
+  logger.info(s"Docker Default Repo: ${config.dockerConfig.defaultImageRepository.getOrElse("<empty>")}")
   logger.info(s"Disable Pull:        ${config.common.disablePull}")
   val nodeAddress = config.kubernetes.nodeAddress.getOrElse(kubernetesHost)
   logger.info(s"Node Address:        ${nodeAddress}")

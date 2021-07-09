@@ -42,8 +42,8 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     with Executor {
 
   logger.info("Initializing Docker Executor")
-  logger.info(s"Default Repo: ${executorConfig.common.dockerConfig.defaultImageRepository}")
-  logger.info(s"Default Tag:  ${executorConfig.common.dockerConfig.defaultImageTag}")
+  logger.info(s"Default Repo: ${executorConfig.common.dockerConfig.defaultImageRepository.getOrElse("<empty>")}")
+  logger.info(s"Default Tag:  ${executorConfig.common.dockerConfig.defaultImageTag.getOrElse("<empty>")}")
   logger.info(s"Disable Pull: ${executorConfig.common.disablePull}")
   logger.info(s"Docker Host:  ${dockerClient.dockerHost}")
 
