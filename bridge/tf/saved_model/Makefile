@@ -6,12 +6,8 @@ TENSORFLOW_DIR = $(CLIBDIR)/lib
 ENABLE_LINUX=false
 DOCKER_IMAGE_NAME=bridge.tf.saved_model
 
-ifdef BUILDSERVER
-  # The buildserver is already building in a compatible environment
-  # So there is no need to rebuild the goal inside Docker
-  DOCKER_FILE=Dockerfile.buildserver
-endif
-
+# Linux C-Library
+CLIBURL_LINUX=https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.15.0.tar.gz
 
 # This makefile is a bit ugly because we need the C-Library linked to the Executable.
 
@@ -22,7 +18,7 @@ ifeq ($(UNAME_S), Darwin)
 else ifeq ($(UNAME_S), Linux)
   LD_LIBRARY_PATH=$(shell pwd)/$(TENSORFLOW_DIR)
   export LD_LIBRARY_PATH
-  CLIBURL=https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.15.0.tar.gz
+  CLIBURL=$(CLIBURL_LINUX)
 else
   $(error Unknown platform)
 endif
@@ -51,6 +47,7 @@ target/vendor/tensorflow_c/lib:
 	mkdir -p $(CLIBDIR)
 	mkdir -p $(DOWNLOAD_CACHE)
 	wget -nc $(CLIBURL) -P $(DOWNLOAD_CACHE)
+	wget -nc $(CLIBURL_LINUX) -P $(DOWNLOAD_CACHE) # Must be present for Docker
 	tar xvzf $(DOWNLOAD_CACHE)/$(shell basename $(CLIBURL)) -C $(CLIBDIR)
 
 # Prepare Docker image build directory, referenced the Dockerfile
@@ -59,4 +56,5 @@ target/docker_build/generated.make: $(shell find $(MANTIK_ROOT)/go_shared -name 
 	mkdir -p target/docker_build
 	cp -r $(MANTIK_ROOT)/go_shared target/docker_build/
 	cp -r $(MANTIK_ROOT)/mnp target/docker_build/
+	cp $(DOWNLOAD_CACHE)/$(shell basename $(CLIBURL_LINUX)) target/docker_build
 	touch $@
