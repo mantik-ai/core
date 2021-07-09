@@ -26,6 +26,8 @@ docker: | build docker-unchecked
 
 .PHONY: docker-unchecked
 docker-unchecked:
+	@echo "IMAGE_FULL_NAME=${IMAGE_FULL_NAME}"
+	@echo "REMOTE_IMAGE_NAME=${REMOTE_IMAGE_NAME}"
 	$(DOCKER) build $(DOCKER_FILE_ARGUMENT) $(DOCKER_EXTRA_ARGS) -t $(IMAGE_FULL_NAME) .
 
 .PHONY: docker-publish
