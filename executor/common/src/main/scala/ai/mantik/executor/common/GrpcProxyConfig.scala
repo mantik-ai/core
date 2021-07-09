@@ -27,7 +27,6 @@ import com.typesafe.config.Config
 case class GrpcProxyConfig(
     enabled: Boolean,
     containerName: String,
-    container: Container,
     port: Int,
     externalPort: Int
 )
@@ -40,8 +39,7 @@ object GrpcProxyConfig {
       enabled = subConfig.getBoolean("enabled"),
       containerName = subConfig.getString("containerName"),
       port = subConfig.getInt("port"),
-      externalPort = subConfig.getInt("externalPort"),
-      container = Container.parseFromTypesafeConfig(subConfig)
+      externalPort = subConfig.getInt("externalPort")
     )
   }
 }

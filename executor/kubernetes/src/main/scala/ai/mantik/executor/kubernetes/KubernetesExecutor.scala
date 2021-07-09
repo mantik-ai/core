@@ -178,6 +178,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   private lazy val lazyGrpcProxy: Future[GrpcProxy] = ensureGrpcProxy()
 
   private def ensureGrpcProxy(): Future[GrpcProxy] = logErrors("GrpcProxy") {
+    val grpcProxyContainer = config.common.grpcProxyContainer
     val grpcProxyConfig = config.common.grpcProxy
     if (!grpcProxyConfig.enabled) {
       logger.info(s"Grpc Proxy not enabled")
@@ -211,11 +212,11 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
                 containers = List(
                   skuber.Container(
                     name = "main",
-                    image = grpcProxyConfig.container.image,
-                    args = grpcProxyConfig.container.parameters.toList,
+                    image = grpcProxyContainer.image,
+                    args = grpcProxyContainer.parameters.toList,
                     imagePullPolicy = KubernetesConverter.createImagePullPolicy(
                       config.common.disablePull,
-                      grpcProxyConfig.container
+                      grpcProxyContainer
                     )
                   )
                 )

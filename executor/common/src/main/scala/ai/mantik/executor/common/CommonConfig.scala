@@ -29,6 +29,7 @@ case class CommonConfig(
     isolationSpace: String,
     mnpPreparer: Container,
     mnpPipelineController: Container,
+    grpcProxyContainer: Container,
     dockerConfig: DockerConfig,
     disablePull: Boolean,
     grpcProxy: GrpcProxyConfig
@@ -48,6 +49,7 @@ object CommonConfig {
       isolationSpace = root.getString("isolationSpace"),
       mnpPreparer = rc("mnpPreparer"),
       mnpPipelineController = rc("mnpPipelineController"),
+      grpcProxyContainer = rc("grpcProxy"),
       dockerConfig = dockerConfig,
       disablePull = root.getBoolean("behaviour.disablePull"),
       grpcProxy = GrpcProxyConfig.fromTypesafeConfig(c)
