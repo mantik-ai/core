@@ -13,7 +13,7 @@ networks:
 
 services:
   engine:
-    image: mantikai/engine:v0.3.0-test4
+    image: mantikai/engine:v0.3.0-test5
     command: >
       -Dmantik.executor.type="docker"
       -Dmantik.executor.docker.url="http://docker-proxy:2375"
