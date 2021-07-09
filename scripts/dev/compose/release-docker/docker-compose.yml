@@ -1,4 +1,4 @@
-version: '3.3'
+version: '3.5'
 
 # Note: we are talking to Docker directly
 # We want Mantik do download images.
@@ -7,7 +7,9 @@ version: '3.3'
 
 networks:
   mantik-docker-proxy: {} # Mantik Communicating with Docker (note: has a lot of privileges)
-  mantik-workers: {} # Mantik Worker Network
+  # Mantik Worker Network
+  mantik-workers:
+    name: mantik-workers
 
 services:
   engine:
