@@ -13,7 +13,7 @@ networks:
 
 services:
   engine:
-    image: mantikai/engine:v0.3.0-test3
+    image: mantikai/engine:v0.3.0-test4
     command: >
       -Dmantik.executor.type="docker"
       -Dmantik.executor.docker.url="http://docker-proxy:2375"
@@ -21,6 +21,7 @@ services:
       -Dmantik.executor.grpcProxy.enabled=false
       -Dmantik.planner.payloadProvider="local"
       -Dmantik.planner.cleanupOnStart=true
+      -Dmantik.fileRepositoryServer.host="mantik-engine"
     container_name: mantik-engine
     networks:
       - mantik-docker-proxy

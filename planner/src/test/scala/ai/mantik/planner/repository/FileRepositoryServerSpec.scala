@@ -40,7 +40,7 @@ class FileRepositoryServerSpec extends TestBaseWithAkkaRuntime with TempDirSuppo
   override protected lazy val typesafeConfig: Config = ConfigFactory
     .load()
     .withValue(
-      "mantik.repository.fileRepository.port",
+      "mantik.fileRepositoryServer.port",
       ConfigValueFactory.fromAnyRef(0)
     )
 
@@ -105,6 +105,15 @@ class FileRepositoryServerSpec extends TestBaseWithAkkaRuntime with TempDirSuppo
   it should "know it's address" in new Env {
     val address = server.address()
     address.host shouldNot startWith("127.0.") // No loopback devices
+  }
+
+  it should "be possible to override the host" in {
+    val runtime = akkaRuntime.withConfigOverride { c =>
+      c.withValue("mantik.fileRepositoryServer.host", ConfigValueFactory.fromAnyRef("server1234"))
+    }
+    val repo = new LocalFileRepository(tempDirectory) with NonAsyncFileRepository
+    val server = new FileRepositoryServer(repo)(runtime)
+    server.address().host shouldBe "server1234"
   }
 
   it should "allow file removal " in new Env {
