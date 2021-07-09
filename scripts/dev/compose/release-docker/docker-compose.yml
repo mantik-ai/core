@@ -1,0 +1,54 @@
+version: '3.3'
+
+# Note: we are talking to Docker directly
+# We want Mantik do download images.
+# We are not using Minio, as the engine is inside the same docker
+# We are not using a gRpc Proxy as we are in the same network as the mantik workers
+
+networks:
+  mantik-docker-proxy: {} # Mantik Communicating with Docker (note: has a lot of privileges)
+  mantik-workers: {} # Mantik Worker Network
+
+services:
+  engine:
+    image: mantikai/engine:v0.3.0-test3
+    command: >
+      -Dmantik.executor.type="docker"
+      -Dmantik.executor.docker.url="http://docker-proxy:2375"
+      -Dmantik.executor.docker.workerNetwork="mantik-workers"
+      -Dmantik.executor.grpcProxy.enabled=false
+      -Dmantik.planner.payloadProvider="local"
+      -Dmantik.planner.cleanupOnStart=true
+    container_name: mantik-engine
+    networks:
+      - mantik-docker-proxy
+      - mantik-workers
+    volumes:
+      - mantik-engine-repo:/data/mantik/repo
+      - mantik-engine-logs:/data/mantik/logs
+    ports:
+      - 127.0.0.1:8087:8087 # gRPc Interface
+      - 127.0.0.1:4040:4040 # UI
+    links:
+      - docker-proxy
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:0.1
+    container_name: mantik-docker-proxy
+    networks:
+      - mantik-docker-proxy
+    expose:
+      - 2375
+    environment:
+      - CONTAINERS=1
+      - EXEC=1
+      - NETWORKS=1
+      - VOLUMES=1
+      - POST=1
+      - BUILD=1
+      - IMAGES=1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+volumes:
+  mantik-engine-repo: {}
+  mantik-engine-logs: {}
+
