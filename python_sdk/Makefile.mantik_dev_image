@@ -13,8 +13,6 @@ target/copy_shared.make: $(shell find $(MANTIK_ROOT)/python_sdk -name "*.py")
 	cp -v -r $(MANTIK_ROOT)/python_sdk/mantik target/python_sdk
 	cp -v -r $(MANTIK_ROOT)/mnp/mnppython target/
 
-	#sed -i 's/".*python_sdk"/"\.\/python_sdk"/' target/poetry.lock target/pyproject.toml
-	#sed -i 's/".*mnppython"/"\.\/mnppython"/' python_sdk/poetry.lock python_sdk/pyproject.toml
 	sed -i 's/".*mnppython"/"\.\/..\/mnppython"/' target/python_sdk/poetry.lock target/python_sdk/pyproject.toml
 
 	touch $@
