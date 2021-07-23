@@ -1,4 +1,5 @@
 include ../scripts/ci/Makefile.grpc_helper
+include Makefile.mantik_dev_image
 
 # Caching
 ifdef CACHE_DIR
@@ -17,12 +18,5 @@ test: build
 
 $(eval $(call python_grpc,../engine/src/main/protobuf,mantik/engine/_stubs,mantik.engine))
 $(eval $(call python_grpc,../bridge/protocol/protobuf,mantik/bridge/_stubs,mantik.bridge))
-
-docker:
-	@#"Nothing to do"
-
-docker-unchecked:
-
-docker-publish:
 
 .PHONY: build clean test typecheck docker docker-unchecked docker-publish1

@@ -1,0 +1,39 @@
+FROM python:3.7.10-slim-buster as builder
+
+COPY target/ /opt
+
+# Install poetry for Python
+ARG POETRY_VERSION="1.1.6"
+
+ENV PYTHONFAULTHANDLER=1 \
+  PYTHONUNBUFFERED=1 \
+  PYTHONHASHSEED=random \
+  PIP_NO_CACHE_DIR=off \
+  PIP_DISABLE_PIP_VERSION_CHECK=on \
+  PIP_DEFAULT_TIMEOUT=100 \
+  POETRY_VERSION=$POETRY_VERSION \
+  POETRY_HOME=/opt/poetry \
+  POETRY_VIRTUALENVS_CREATE=false
+
+RUN apt-get update && apt-get install -y curl
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
+RUN python -m venv /venv
+
+WORKDIR /opt/python_sdk
+
+RUN . /venv/bin/activate && poetry install --no-dev
+
+# Killing Python Cache
+RUN find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
+RUN cd /venv && find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
+
+FROM python:3.7.10-slim-buster
+
+# Copy installations
+COPY --from=builder /venv /venv
+COPY --from=builder /opt/python_sdk/mantik /opt/python_sdk/mantik
+COPY --from=builder /opt/mnppython /opt/mnppython
+
+# Access virtual env via PATH
+ENV PATH="/venv/bin:${PATH}"
