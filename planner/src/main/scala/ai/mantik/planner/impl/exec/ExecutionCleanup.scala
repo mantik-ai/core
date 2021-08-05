@@ -36,7 +36,6 @@ class ExecutionCleanup @Inject() (executor: Executor, repo: Repository)(implicit
 
   /** True if enabled */
   val isEnabled = config.getBoolean("mantik.planner.cleanupOnStart")
-  private val isolationSpace = config.getString("mantik.planner.isolationSpace")
 
   /** Future which fires when the cleanup is ready. Fires immediately if disabled. */
   val isReady: Future[Unit] = {
@@ -58,7 +57,7 @@ class ExecutionCleanup @Inject() (executor: Executor, repo: Repository)(implicit
 
     for {
       deployedItems <- repo.list(alsoAnonymous = true, deployedOnly = true)
-      workers <- executor.listWorkers(ListWorkerRequest(isolationSpace))
+      workers <- executor.listWorkers(ListWorkerRequest())
       workersToDelete = calculateWorkersToDelete(workers, deployedItems)
       stoppedCount <- deleteWorkers(workersToDelete)
     } yield {
@@ -92,7 +91,6 @@ class ExecutionCleanup @Inject() (executor: Executor, repo: Repository)(implicit
       logger.info(s"Stopping Worker ${worker.nodeName} in state ${worker.state}")
       executor.stopWorker(
         StopWorkerRequest(
-          isolationSpace,
           nameFilter = Some(worker.nodeName)
         )
       )

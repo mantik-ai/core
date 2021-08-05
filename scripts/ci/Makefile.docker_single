@@ -10,8 +10,7 @@ SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 include $(SELF_DIR)/Makefile.docker_shared
 
 IMAGE_FULL_NAME = $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)
-CI_COMMIT_REF_SLUG ?= local
-REMOTE_IMAGE_NAME = $(REMOTE_REPO_NAME)/$(REMOTE_REPO_GROUP)$(DOCKER_IMAGE_NAME):$(CI_COMMIT_REF_SLUG)
+REMOTE_IMAGE_NAME = $(REMOTE_REPO_NAME)/$(REMOTE_REPO_GROUP)$(DOCKER_IMAGE_NAME):$(REMOTE_IMAGE_TAG)
 DOCKER_EXTRA_ARGS ?=
 # If given, use this docker file
 DOCKER_FILE ?= ""
@@ -27,6 +26,8 @@ docker: | build docker-unchecked
 
 .PHONY: docker-unchecked
 docker-unchecked:
+	@echo "IMAGE_FULL_NAME=${IMAGE_FULL_NAME}"
+	@echo "REMOTE_IMAGE_NAME=${REMOTE_IMAGE_NAME}"
 	$(DOCKER) build $(DOCKER_FILE_ARGUMENT) $(DOCKER_EXTRA_ARGS) -t $(IMAGE_FULL_NAME) .
 
 .PHONY: docker-publish

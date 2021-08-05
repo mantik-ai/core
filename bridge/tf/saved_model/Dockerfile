@@ -9,12 +9,9 @@ USER mantik-bridge:mantik-bridge
 
 WORKDIR /opt/bridge
 
-# Downloading C++ Libraries
-
 ENV CLIBDIR=/opt/bridge/vendor/tensorflow_c
 
 RUN mkdir -p $CLIBDIR
-RUN curl https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.15.0.tar.gz | tar xvz -C $CLIBDIR
 
 # Bulding Tensorflow Bridge
 ADD *.go .
@@ -22,6 +19,8 @@ ADD *.mod .
 ADD *.sum .
 ADD pb_vendor pb_vendor
 ADD services services
+# Note: Docker automatically unpacks tgz files
+ADD target/docker_build/libtensorflow*.tar.gz $CLIBDIR
 
 # Shared Stuff (will be linked statically)
 RUN mkdir /tmp/go_shared

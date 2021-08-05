@@ -55,7 +55,7 @@ class ExecutorMock(implicit val akkaRuntime: AkkaRuntime) extends Executor {
 
   override def nameAndVersion: Future[String] = ???
 
-  override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = ???
+  override def grpcProxy(): Future[GrpcProxy] = ???
 
   override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = ???
 
@@ -121,12 +121,11 @@ class ExecutionCleanupSpec extends TestBaseWithAkkaRuntime {
     }
     cleanup.isEnabled shouldBe true
     await(cleanup.isReady)
-    val isolationSpace = typesafeConfig.getString("mantik.planner.isolationSpace")
     executorMock.workersToStop.result().map { req =>
-      (req.isolationSpace, req.nameFilter)
+      (req.nameFilter)
     } should contain theSameElementsAs Seq(
-      (isolationSpace, Some("a")),
-      (isolationSpace, Some("b"))
+      (Some("a")),
+      (Some("b"))
     )
   }
 

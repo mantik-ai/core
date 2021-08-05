@@ -1,10 +1,9 @@
 version: '3.5'
 
 # Note: we are talking to Docker directly
-# We do not want Mantik to download images (this can change in the future)
+# We want Mantik do download images.
 # We are not using Minio, as the engine is inside the same docker
 # We are not using a gRpc Proxy as we are in the same network as the mantik workers
-
 
 networks:
   mantik-docker-proxy: {} # Mantik Communicating with Docker (note: has a lot of privileges)
@@ -14,11 +13,9 @@ networks:
 
 services:
   engine:
-    image: mantikai/engine
+    image: mantikai/engine:v0.3.0-test5
     command: >
       -Dmantik.executor.type="docker"
-      -Dmantik.executor.docker.defaultImageTag=""
-      -Dmantik.executor.behaviour.disablePull=true
       -Dmantik.executor.docker.url="http://docker-proxy:2375"
       -Dmantik.executor.docker.workerNetwork="mantik-workers"
       -Dmantik.executor.grpcProxy.enabled=false

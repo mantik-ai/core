@@ -19,6 +19,9 @@ VOLUME /data/mantik/repo
 # Contains logs
 VOLUME /data/mantik/logs
 
+ARG MANTIK_VERSION_TAG
+ENV MANTIK_VERSION_TAG=$MANTIK_VERSION_TAG
+
 ENTRYPOINT ["/app/bin/engine-app", "-Dconfig.resource=application_dockerimage.conf", "-Dlogback.configurationFile=logback_dockerimage.xml"]
 
 

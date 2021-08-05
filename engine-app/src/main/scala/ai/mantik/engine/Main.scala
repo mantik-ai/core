@@ -38,7 +38,12 @@ object Main {
   SLF4JBridgeHandler.install()
 
   def main(args: Array[String]): Unit = {
+    val mantikVersionTag = sys.env
+      .get("MANTIK_VERSION_TAG")
+      .filter(_.nonEmpty)
+      .getOrElse("<undefined>")
     logger.info(s"Initializing Mantik Engine ${BuildInfo}")
+    logger.info(s"MANTIK_VERSION_TAG=${mantikVersionTag}")
     implicit val akkaRuntime = AkkaRuntime.createNew()
 
     try {

@@ -32,14 +32,13 @@ import io.circe.Json
 
 class DockerConverter(
     config: DockerExecutorConfig,
-    isolationSpace: String,
     internalId: String,
     userId: String
 ) {
 
   val defaultLabels = Map(
     LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
-    DockerConstants.IsolationSpaceLabelName -> isolationSpace,
+    DockerConstants.IsolationSpaceLabelName -> config.common.isolationSpace,
     LabelConstants.InternalIdLabelName -> internalId,
     LabelConstants.UserIdLabelName -> userId
   )

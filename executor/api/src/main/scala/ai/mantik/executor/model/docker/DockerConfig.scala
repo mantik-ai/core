@@ -21,6 +21,7 @@
  */
 package ai.mantik.executor.model.docker
 
+import ai.mantik.componently.utils.SecretReader
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.{Config, ConfigException, ConfigObject}
 import io.circe.generic.JsonCodec
@@ -108,7 +109,10 @@ object DockerLogin {
     DockerLogin(
       repository = config.getString("repository"),
       username = config.getString("username"),
-      password = config.getString("password")
+      password = {
+        val value = config.getString("password")
+        SecretReader.readSecretFromString(value, "password").getOrElse(value)
+      }
     )
   }
 }
