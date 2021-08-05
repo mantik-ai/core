@@ -31,12 +31,20 @@ case class InspectContainerResponse(
     Created: Instant,
     Image: String,
     Args: List[String],
-    NetworkSettings: InspectContainerNetworkResponse
+    NetworkSettings: InspectContainerNetworkResponse,
+    State: InspectContainerStateResponse
 )
 
 @JsonCodec
 case class InspectContainerNetworkResponse(
     Networks: Map[String, InspectContainerNetworkSpecificResponse] = Map.empty
+)
+
+@JsonCodec
+case class InspectContainerStateResponse(
+    Status: String,
+    Running: Boolean,
+    ExitCode: Option[Int]
 )
 
 @JsonCodec

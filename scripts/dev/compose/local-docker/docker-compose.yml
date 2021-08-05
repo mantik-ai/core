@@ -21,6 +21,7 @@ services:
       -Dmantik.executor.behaviour.disablePull=true
       -Dmantik.executor.docker.url="http://docker-proxy:2375"
       -Dmantik.executor.docker.workerNetwork="mantik-workers"
+      -Dmantik.executor.docker.host="localhost"
       -Dmantik.executor.grpcProxy.enabled=false
       -Dmantik.planner.payloadProvider="local"
       -Dmantik.planner.cleanupOnStart=true

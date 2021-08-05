@@ -65,7 +65,9 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
 
   /** (Guess) the Address of the docker host. */
   lazy val dockerHost: String = {
-    connectSettings.asUri.authority.host.address
+    connectSettings.host.getOrElse {
+      connectSettings.asUri.authority.host.address
+    }
   }
 
   logger.info(s"Initializing DockerClient with uri ${connectSettings.asUri}")
