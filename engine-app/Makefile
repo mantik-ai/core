@@ -19,13 +19,21 @@ SBT = cd ../; sbt $(SBT_CACHE_PARAMETER) -Dquill.macro.log=false -warn
 .PHONY: build
 build: target/build.make
 
+.PHONY: api-doc
+api-doc: target/api-doc.make
+
+
 DOCKER_IMAGE_NAME=engine
 DOCKER_EXTRA_ARGS=--build-arg MANTIK_VERSION_TAG=$(CI_COMMIT_TAG)
 include ../scripts/ci/Makefile.docker_single
 
 
 target/build.make: ${SCALA_RESOURCES}
-	$(SBT) package engineApp/stage scalaFnBridge/stage unidoc
+	$(SBT) package engineApp/stage scalaFnBridge/stage
+	touch $@
+
+target/api-doc.make: ${SCALA_RESOURCES}
+	$(SBT) unidoc
 	touch $@
 
 .PHONY: test

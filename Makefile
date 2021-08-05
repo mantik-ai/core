@@ -35,6 +35,7 @@ help:
 	@echo "build             Build the code"
 	@echo "test              Run all unittests"
 	@echo "clean             Remove results"
+	@echo "api-doc           Build API Documentation"
 	@echo "local-install     Install non-docker artifacts locally"
 	@echo "publish           Publish non-docker artifacts to the repository"
 	@echo "docker            Build Docker Images."
@@ -71,6 +72,9 @@ publish:
 
 .PHONY: clean
 clean: clean-subprojects
+
+.PHONY: api-doc
+api-doc: api-doc-subprojects
 
 # Pattern rule which executes % on every subproject
 %-subprojects:

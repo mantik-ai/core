@@ -17,5 +17,5 @@ clean:
 
 test: build
 
-.PHONY: test docker install publish docker-unchecked docker-publish
+.PHONY: api-doc test docker install publish docker-unchecked docker-publish
 

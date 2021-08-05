@@ -6,11 +6,4 @@ PROTOBUF_DIR=../protocol/protobuf
 include ../../scripts/ci/Makefile.go
 
 # Nothing
-.PHONY: docker
-docker:
-
-.PHONY: docker-unchecked
-docker-unchecked:
-
-.PHONY: docker-publish
-docker-publish:
+.PHONY: api-doc docker docker-unchecked docker-publish

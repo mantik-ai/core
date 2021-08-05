@@ -10,10 +10,7 @@ DOCKER_IMAGE_NAME=bridge.scala-fn
 include ../../../scripts/ci/Makefile.docker_single
 
 # Nothing to do, tested and published inside engine-app
-.PHONY: test
-.PHONY: install
-.PHONY: publish
-.PHONY clean:
+.PHONY: api-doc test install publish clean
 
 
 

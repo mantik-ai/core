@@ -20,7 +20,7 @@ build:
     CACHE_DIR: "$PWD/cache"
   script:
     - mkdir -p $CACHE_DIR
-    - make build
+    - make build api-doc
   cache:
     key: dependency_cache
     paths:
