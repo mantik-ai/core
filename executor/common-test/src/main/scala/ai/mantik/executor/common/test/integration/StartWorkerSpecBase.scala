@@ -41,7 +41,6 @@ import akka.util.ByteString
 trait StartWorkerSpecBase {
   self: IntegrationBase with TestBase =>
 
-  val isolationSpace = "start-worker-test"
   // user Id given to all containers
   val userId = "userId"
 
@@ -57,7 +56,6 @@ trait StartWorkerSpecBase {
     val listResponse = await(
       executor.listWorkers(
         ListWorkerRequest(
-          isolationSpace
         )
       )
     )
@@ -73,7 +71,6 @@ trait StartWorkerSpecBase {
     val stopResponse = await(
       executor.stopWorker(
         StopWorkerRequest(
-          isolationSpace,
           nameFilter = Some(startWorkerResponse.nodeName),
           remove = false
         )
@@ -82,14 +79,13 @@ trait StartWorkerSpecBase {
     stopResponse.removed shouldNot be(empty)
 
     eventually {
-      val listResponse2 = await(executor.listWorkers(ListWorkerRequest(isolationSpace)))
+      val listResponse2 = await(executor.listWorkers(ListWorkerRequest()))
       listResponse2.workers.find(_.nodeName == startWorkerResponse.nodeName).get.state shouldBe 'terminal
     }
 
     val stopResponse2 = await(
       executor.stopWorker(
         StopWorkerRequest(
-          isolationSpace,
           nameFilter = Some(startWorkerResponse.nodeName),
           remove = true
         )
@@ -98,7 +94,7 @@ trait StartWorkerSpecBase {
     stopResponse2.removed shouldNot be(empty)
 
     eventually {
-      val listResponse2 = await(executor.listWorkers(ListWorkerRequest(isolationSpace)))
+      val listResponse2 = await(executor.listWorkers(ListWorkerRequest()))
       listResponse2.workers.find(_.nodeName == startWorkerResponse.nodeName) shouldBe empty
     }
 
@@ -106,7 +102,6 @@ trait StartWorkerSpecBase {
   }
 
   private val simpleStartWorker = StartWorkerRequest(
-    isolationSpace = isolationSpace,
     id = userId,
     definition = MnpWorkerDefinition(
       container = Container(
@@ -117,7 +112,6 @@ trait StartWorkerSpecBase {
 
   private val pipelineRequest = StartWorkerRequest(
     id = userId,
-    isolationSpace = isolationSpace,
     definition = MnpPipelineDefinition(
       io.circe.parser
         .parse("""{
@@ -153,7 +147,6 @@ trait StartWorkerSpecBase {
 
   it should "allow deploying a persistent worker with initializer" in withExecutor { executor =>
     val startWorkerRequest = StartWorkerRequest(
-      isolationSpace = isolationSpace,
       id = userId,
       definition = MnpWorkerDefinition(
         container = Container(

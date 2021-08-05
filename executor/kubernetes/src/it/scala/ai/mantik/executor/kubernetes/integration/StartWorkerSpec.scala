@@ -34,7 +34,7 @@ class StartWorkerSpec extends IntegrationTestBase with StartWorkerSpecBase {
 
   override protected def checkEmptyNow(): Unit = {
     val ops = new K8sOperations(config, _kubernetesClient)
-    val ns = config.kubernetes.namespacePrefix + isolationSpace
+    val ns = config.kubernetes.namespacePrefix + config.common.isolationSpace
     val labelFilter = Seq(
       LabelConstants.UserIdLabelName -> userId
     )

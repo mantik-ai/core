@@ -36,6 +36,9 @@ case class Config(
     kubernetes: KubernetesConfig
 ) {
   def dockerConfig: DockerConfig = common.dockerConfig
+
+  /** Returns the namespace to use. */
+  def namespace: String = kubernetes.namespacePrefix + common.isolationSpace
 }
 
 object Config {

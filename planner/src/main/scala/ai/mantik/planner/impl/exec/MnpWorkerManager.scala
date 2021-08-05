@@ -25,7 +25,7 @@ import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.Executor
-import ai.mantik.executor.model.docker.{Container, DockerConfig}
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{
   GrpcProxy,
   MnpPipelineDefinition,
@@ -58,11 +58,6 @@ private[planner] class MnpWorkerManager @Inject() (
     extends ComponentBase {
   import MnpWorkerManager._
 
-  val isolationSpace: String = config.getString("mantik.planner.isolationSpace")
-  val dockerConfig: DockerConfig = DockerConfig.parseFromConfig(
-    akkaRuntime.config.getConfig("mantik.bridge.docker")
-  )
-
   val mnpConnectionTimeout: FiniteDuration = config.getFiniteDuration("mantik.planner.execution.mnpConnectionTimeout")
   val mnpCloseConnectionTimeout: FiniteDuration =
     config.getFiniteDuration("mantik.planner.execution.mnpCloseConnectionTimeout")
@@ -70,7 +65,7 @@ private[planner] class MnpWorkerManager @Inject() (
 
   /** Spins up containers needed for a plan. */
   def reserveContainers[T](jobId: String, plan: Plan[T]): Future[ContainerMapping] = {
-    executor.grpcProxy(isolationSpace).flatMap { grpcProxy =>
+    executor.grpcProxy().flatMap { grpcProxy =>
       val containers = requiredContainersForPlan(plan)
 
       logger.info(s"Spinning up ${containers.size} containers")
@@ -152,7 +147,6 @@ private[planner] class MnpWorkerManager @Inject() (
     executor
       .stopWorker(
         StopWorkerRequest(
-          isolationSpace,
           idFilter = Some(jobId)
         )
       )
@@ -167,11 +161,9 @@ private[planner] class MnpWorkerManager @Inject() (
   private def startWorker(grpcProxy: GrpcProxy, jobId: String, container: Container): Future[ReservedContainer] = {
     val nameHint = "mantik-" + container.simpleImageName
     val startWorkerRequest = StartWorkerRequest(
-      isolationSpace,
       id = jobId,
       definition = MnpWorkerDefinition(
-        container = container,
-        extraLogins = dockerConfig.logins
+        container = container
       ),
       nameHint = Some(nameHint)
     )
@@ -235,11 +227,9 @@ private[planner] class MnpWorkerManager @Inject() (
       initializer: ByteString
   ): Future[StartWorkerResponse] = {
     val startWorkerRequest = StartWorkerRequest(
-      isolationSpace,
       id = id,
       definition = MnpWorkerDefinition(
         container = container,
-        extraLogins = dockerConfig.logins,
         initializer = Some(initializer)
       ),
       nameHint = nameHint,
@@ -259,7 +249,6 @@ private[planner] class MnpWorkerManager @Inject() (
       nameHint: Option[String]
   ): Future[StartWorkerResponse] = {
     val startWorkerRequest = StartWorkerRequest(
-      isolationSpace,
       id = id,
       definition = definition,
       keepRunning = true,

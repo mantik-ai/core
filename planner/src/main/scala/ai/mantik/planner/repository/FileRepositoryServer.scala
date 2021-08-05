@@ -26,6 +26,7 @@ import java.net.{Inet4Address, InetAddress, NetworkInterface}
 import ai.mantik.componently.utils.HostPort
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.MantikException
+import ai.mantik.componently.utils.ConfigExtensions._
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, MediaType, MediaTypes}
 import akka.http.scaladsl.server.Directives._
@@ -44,6 +45,7 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
   private val subConfig = config.getConfig("mantik.fileRepositoryServer")
   private val port = subConfig.getInt("port")
   private val interface = subConfig.getString("interface")
+  private val host = subConfig.getOptionalString("host")
 
   private val route = concat(
     path("/") {
@@ -132,6 +134,9 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
   private lazy val _address = figureOutAddress()
 
   private def figureOutAddress(): HostPort = {
+    if (host.isDefined) {
+      return HostPort(host.get, boundPort)
+    }
     // This is tricky: https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
     // We can't know which one is available from kubernetes
     // hopefully the first non-loopback is it.

@@ -21,7 +21,7 @@
  */
 package ai.mantik.executor.model
 
-import ai.mantik.executor.model.docker.{Container, DockerLogin}
+import ai.mantik.executor.model.docker.Container
 import akka.util.ByteString
 import io.circe.generic.JsonCodec
 import ByteStringCodec._
@@ -30,7 +30,6 @@ import io.circe.Json
 /**
   * Request for starting a MNP worker
   *
-  * @param isolationSpace isolation space where to start the worker
   * @param id user specified id to give to the worker
   * @param definition definition of the worker
   * @param keepRunning if true, keep the worker running
@@ -39,7 +38,6 @@ import io.circe.Json
   */
 @JsonCodec
 case class StartWorkerRequest(
-    isolationSpace: String,
     id: String,
     definition: WorkerDefinition,
     keepRunning: Boolean = false,
@@ -56,7 +54,6 @@ sealed trait WorkerDefinition {}
   */
 case class MnpWorkerDefinition(
     container: Container,
-    extraLogins: Seq[DockerLogin] = Nil,
     initializer: Option[ByteString] = None
 ) extends WorkerDefinition
 

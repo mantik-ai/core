@@ -40,8 +40,6 @@ import com.typesafe.config.Config
   */
 private[impl] class PlannerElements(config: Config) {
 
-  private val dockerConfig = DockerConfig.parseFromConfig(config.getConfig("mantik.bridge.docker"))
-
   import ai.mantik.planner.repository.ContentTypes._
 
   /** Converts a plan to a job. */
@@ -261,10 +259,8 @@ private[impl] class PlannerElements(config: Config) {
 
   /** Construct a container for a Bridge. */
   def resolveBridge(bridge: Bridge): Container = {
-    dockerConfig.resolveContainer(
-      Container(
-        image = bridge.mantikHeader.definition.dockerImage
-      )
+    Container(
+      image = bridge.mantikHeader.definition.dockerImage
     )
   }
 }

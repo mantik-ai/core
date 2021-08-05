@@ -250,7 +250,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
   ): Future[ListResource[T]] = {
     val labelSelector = LabelSelector(
       (labelFilter.map { case (k, v) =>
-        LabelSelector.IsEqualRequirement(k, KubernetesNamer.encodeLabelValue(v))
+        LabelSelector.IsEqualRequirement(k, v)
       }.toVector): _*
     )
     errorHandling(s"ListSelected ${rd.spec.defaultVersion}/${rd.spec.names.singular}") {

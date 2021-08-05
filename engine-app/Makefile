@@ -20,6 +20,7 @@ SBT = cd ../; sbt $(SBT_CACHE_PARAMETER) -Dquill.macro.log=false -warn
 build: target/build.make
 
 DOCKER_IMAGE_NAME=engine
+DOCKER_EXTRA_ARGS=--build-arg MANTIK_VERSION_TAG=$(CI_COMMIT_TAG)
 include ../scripts/ci/Makefile.docker_single
 
 

@@ -26,8 +26,10 @@ import com.typesafe.config.{Config => TypesafeConfig}
 
 /** Common settings for various executors. */
 case class CommonConfig(
+    isolationSpace: String,
     mnpPreparer: Container,
     mnpPipelineController: Container,
+    grpcProxyContainer: Container,
     dockerConfig: DockerConfig,
     disablePull: Boolean,
     grpcProxy: GrpcProxyConfig
@@ -44,8 +46,10 @@ object CommonConfig {
       dockerConfig.resolveContainer(Container.parseFromTypesafeConfig(containersConfig.getConfig(name)))
     }
     CommonConfig(
+      isolationSpace = root.getString("isolationSpace"),
       mnpPreparer = rc("mnpPreparer"),
       mnpPipelineController = rc("mnpPipelineController"),
+      grpcProxyContainer = rc("grpcProxy"),
       dockerConfig = dockerConfig,
       disablePull = root.getBoolean("behaviour.disablePull"),
       grpcProxy = GrpcProxyConfig.fromTypesafeConfig(c)
