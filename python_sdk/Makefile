@@ -25,4 +25,4 @@ docker-unchecked:
 
 docker-publish:
 
-.PHONY: build clean test typecheck docker docker-unchecked docker-publish1
+.PHONY: api-doc build clean test typecheck docker docker-unchecked docker-publish1
