@@ -66,7 +66,7 @@ object Errors {
   class BadRequestException(msg: String) extends ExecutorException(msg, 400)
 
   /** A strange internal error. */
-  class InternalException(msg: String) extends ExecutorException(msg, 500)
+  class InternalException(msg: String, cause: Throwable = null) extends ExecutorException(msg, 500, cause)
 
   /** There was a problem with the payload. */
   class CouldNotExecutePayload(msg: String) extends ExecutorException(msg, 502)
