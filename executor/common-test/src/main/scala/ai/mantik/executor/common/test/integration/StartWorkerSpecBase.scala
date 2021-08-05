@@ -60,11 +60,14 @@ trait StartWorkerSpecBase {
       )
     )
 
-    val element = listResponse.workers.find(_.nodeName == startWorkerResponse.nodeName)
-    element shouldBe defined
+    val elements = listResponse.workers.filter(_.nodeName == startWorkerResponse.nodeName)
+    withClue(s"There should be exactly one worker of node name ${startWorkerResponse.nodeName} in ${elements}") {
+      elements.size shouldBe 1
+    }
+    val element = elements.head
 
-    element.get.`type` shouldBe expectedType
-    element.get.externalUrl shouldBe startWorkerResponse.externalUrl
+    element.`type` shouldBe expectedType
+    element.externalUrl shouldBe startWorkerResponse.externalUrl
   }
 
   protected def stopAndKill(executor: Executor, startWorkerResponse: StartWorkerResponse): Unit = {
