@@ -23,7 +23,6 @@ package ai.mantik.executor.docker.integration
 
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.common.test.integration.StartWorkerSpecBase
-import ai.mantik.executor.docker.DockerConstants
 
 class StartWorkerSpec extends IntegrationTestBase with StartWorkerSpecBase {
   override protected def checkEmptyNow(): Unit = {

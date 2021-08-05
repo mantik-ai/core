@@ -111,10 +111,14 @@ class DockerConverter(
 
     val envValue = s"MNP_INIT=${encodedInitRequest}"
 
+    val labels = defaultLabels ++ Seq(
+      LabelConstants.RoleLabelName -> LabelConstants.role.mnpInitializer
+    )
+
     val request = CreateContainerRequest(
       Image = config.common.mnpPreparer.image,
       Cmd = allParameters.toVector,
-      Labels = mnpWorkerLabels(),
+      Labels = labels,
       Env = Vector(envValue)
     )
 

@@ -139,6 +139,11 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     initContainer shouldBe defined
     logger.info(s"InitContainer ${initContainer.get.asJson}")
     initContainer.get.State shouldBe "exited"
+
+    withClue("It should not show up in listWorkers") {
+      val response = await(dockerExecutor.listWorkers(ListWorkerRequest()))
+      response.workers.count(_.id == "startme") shouldBe 1
+    }
   }
 
   "listWorkers" should "work" in new EnvForWorkers {

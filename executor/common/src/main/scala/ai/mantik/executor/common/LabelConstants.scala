@@ -47,6 +47,9 @@ object LabelConstants {
 
     /** Grpc Proxy Role */
     val grpcProxy = "grpcproxy"
+
+    /** MNP Initializer Role (Docker) */
+    val mnpInitializer = "mnp-init"
   }
 
   /** Which kind of Worker */
