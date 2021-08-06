@@ -35,7 +35,7 @@ class DockerConverterSpec extends TestBase {
       common = commonConfig
     )
     lazy val defaultLabels = Map("foo" -> "bar")
-    lazy val converter = new DockerConverter(config, "isolation1", "internalId", "userId")
+    lazy val converter = new DockerConverter(config, "internalId", "userId")
   }
 
   "pullPolicy" should "work when pulling is disabled" in new Env {

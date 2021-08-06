@@ -51,7 +51,6 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
 
   "publishService" should "be a dummy" in new Env {
     val namedService = PublishServiceRequest(
-      isolationSpace = "some_isolation",
       serviceName = "service1",
       port = 4000,
       externalName = "servicename",
@@ -63,7 +62,6 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
 
   it should "work with ip addresses" in new Env {
     val ipService = PublishServiceRequest(
-      isolationSpace = "some_isolation",
       serviceName = "service1",
       port = 4000,
       externalName = "192.168.1.1",
@@ -75,7 +73,6 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
 
   it should "fail on different ports inside and outside" in new Env {
     val invalid = PublishServiceRequest(
-      isolationSpace = "some_isolation",
       serviceName = "service1",
       port = 4000,
       externalName = "ignored",
@@ -87,9 +84,8 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
   }
 
   trait EnvForWorkers extends Env {
-    def startWorker(id: String, isolationSpace: String): StartWorkerResponse = {
+    def startWorker(id: String): StartWorkerResponse = {
       val startWorkerRequest = StartWorkerRequest(
-        isolationSpace = isolationSpace,
         id = id,
         definition = MnpWorkerDefinition(
           container = Container(
@@ -102,11 +98,11 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
   }
 
   "startWorker" should "should work" in new EnvForWorkers {
-    val response = startWorker("foo", "some_isolation")
+    val response = startWorker("foo")
     response.nodeName shouldNot be(empty)
     val containers = await(dockerClient.listContainers(true))
     val container = containers.find(_.Names.contains("/" + response.nodeName)).getOrElse(fail)
-    container.Labels(DockerConstants.IsolationSpaceLabelName) shouldBe "some_isolation"
+    container.Labels(DockerConstants.IsolationSpaceLabelName) shouldBe config.common.isolationSpace
     container.Labels(LabelConstants.UserIdLabelName) shouldBe "foo"
     container.Labels(LabelConstants.ManagedByLabelName) shouldBe LabelConstants.ManagedByLabelValue
     container.Labels(LabelConstants.WorkerTypeLabelName) shouldBe LabelConstants.workerType.mnpWorker
@@ -127,7 +123,6 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
 
   it should "be possible to initialize an MNP Node directly" in new Env {
     val startWorkerRequest = StartWorkerRequest(
-      isolationSpace = "start_with_init",
       id = "startme",
       definition = MnpWorkerDefinition(
         container = Container(
@@ -144,82 +139,72 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     initContainer shouldBe defined
     logger.info(s"InitContainer ${initContainer.get.asJson}")
     initContainer.get.State shouldBe "exited"
+
+    withClue("It should not show up in listWorkers") {
+      val response = await(dockerExecutor.listWorkers(ListWorkerRequest()))
+      response.workers.count(_.id == "startme") shouldBe 1
+    }
   }
 
   "listWorkers" should "work" in new EnvForWorkers {
-    val response = await(dockerExecutor.listWorkers(ListWorkerRequest("other_isolation")))
-    response.workers shouldBe empty
+    await(dockerExecutor.stopWorker(StopWorkerRequest())) // killing them all
+    eventually {
+      val response = await(dockerExecutor.listWorkers(ListWorkerRequest()))
+      response.workers shouldBe empty
+    }
 
-    val startResponse1 = startWorker("x1", "other_isolation")
-    val startResponse2 = startWorker("x2", "other_isolation")
+    val startResponse1 = startWorker("x1")
+    val startResponse2 = startWorker("x2")
 
-    val response2 = await(dockerExecutor.listWorkers(ListWorkerRequest("other_isolation")))
+    val response2 = await(dockerExecutor.listWorkers(ListWorkerRequest()))
     response2.workers.size shouldBe 2
     response2.workers.map(_.id) should contain theSameElementsAs Seq("x1", "x2")
     response2.workers.map(_.`type`) should contain theSameElementsAs Seq(WorkerType.MnpWorker, WorkerType.MnpWorker)
 
     // id filter
-    val response3 = await(dockerExecutor.listWorkers(ListWorkerRequest("other_isolation", idFilter = Some("x1"))))
+    val response3 = await(dockerExecutor.listWorkers(ListWorkerRequest(idFilter = Some("x1"))))
     response3.workers.size shouldBe 1
     response3.workers.head.id shouldBe "x1"
 
     // name filter
     val response4 = await(
-      dockerExecutor.listWorkers(ListWorkerRequest("other_isolation", nameFilter = Some(startResponse2.nodeName)))
+      dockerExecutor.listWorkers(ListWorkerRequest(nameFilter = Some(startResponse2.nodeName)))
     )
     response4.workers.size shouldBe 1
     response4.workers.head.id shouldBe "x2"
-
-    // isolationSpace
-    val response5 = await(dockerExecutor.listWorkers(ListWorkerRequest("not_existing")))
-    response5.workers shouldBe empty
   }
 
   "stopWorkers" should "work" in new EnvForWorkers {
-    val container1 = startWorker("x1", "stop_test")
-    val container2 = startWorker("x2", "stop_test")
-    val container3 = startWorker("x3", "stop_test")
-    val container4 = startWorker("x4", "stop_test2")
+    val container1 = startWorker("x1")
+    val container2 = startWorker("x2")
+    val container3 = startWorker("x3")
 
     eventually {
-      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test", idFilter = Some("x1"))))
+      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest(idFilter = Some("x1"))))
       listResponse.workers.head.state shouldBe WorkerState.Running
     }
 
     // by id
-    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", idFilter = Some("x1"), remove = false)))
+    await(dockerExecutor.stopWorker(StopWorkerRequest(idFilter = Some("x1"), remove = false)))
     eventually {
-      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test", idFilter = Some("x1"))))
+      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest(idFilter = Some("x1"))))
       listResponse.workers.head.state shouldBe an[WorkerState.Failed]
     }
 
     // by name
     await(
-      dockerExecutor.stopWorker(StopWorkerRequest("stop_test", nameFilter = Some(container2.nodeName), remove = false))
+      dockerExecutor.stopWorker(StopWorkerRequest(nameFilter = Some(container2.nodeName), remove = false))
     )
     eventually {
-      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test", idFilter = Some("x2"))))
+      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest(idFilter = Some("x2"))))
       listResponse.workers.head.state shouldBe an[WorkerState.Failed]
     }
 
     // by all
-    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", remove = false)))
+    await(dockerExecutor.stopWorker(StopWorkerRequest(remove = false)))
     eventually {
-      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test", idFilter = Some("x3"))))
+      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest(idFilter = Some("x3"))))
       listResponse.workers.head.state shouldBe an[WorkerState.Failed]
-    }
-
-    // however the other isolation space should be not infected
-    eventually {
-      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test2")))
-      listResponse.workers.head.state shouldBe WorkerState.Running
-    }
-
-    // removing all
-    await(dockerExecutor.stopWorker(StopWorkerRequest("stop_test", remove = true)))
-    eventually {
-      val listResponse = await(dockerExecutor.listWorkers(ListWorkerRequest("stop_test")))
-      listResponse.workers shouldBe empty
     }
   }
 }

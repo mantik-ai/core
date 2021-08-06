@@ -40,6 +40,9 @@ clean::
 test: target/${NAME}
 	go test -v ./...
 
+# Empty
+api-doc::
+
 target/${NAME}: $(shell find -not -path "./target/*" -name "*.go") $(EXTRA_DEPS)
 	gofmt -w .
 	go build -mod=mod -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)

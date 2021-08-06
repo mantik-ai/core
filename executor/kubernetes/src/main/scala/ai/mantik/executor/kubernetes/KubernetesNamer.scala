@@ -211,8 +211,6 @@ object KubernetesNamer {
           i += 4
         case o =>
           resultBuilder += o
-        case o =>
-          resultBuilder += o
       }
       i += 1
     }

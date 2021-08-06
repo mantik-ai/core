@@ -23,8 +23,8 @@ package ai.mantik.executor.docker.api
 
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
-
 import ai.mantik.componently.AkkaRuntime
+import ai.mantik.executor.Errors.{ExecutorException, InternalException}
 import ai.mantik.executor.docker.ContainerDefinition
 import ai.mantik.executor.docker.api.DockerClient.WrappedErrorResponse
 import ai.mantik.executor.docker.api.structures.{
@@ -37,11 +37,14 @@ import ai.mantik.executor.docker.api.structures.{
   ListContainerResponseRow,
   ListNetworkRequestFilter
 }
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{JsonFraming, Sink}
 import com.typesafe.scalalogging.Logger
+import io.circe.generic.semiauto
+import io.circe.{Decoder, Json}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 /** High level docker operations, consisting of multiple sub operations. */
@@ -76,14 +79,51 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
 
   /** Pull an image. */
   def pullImage(image: String): Future[Unit] = {
-    for {
+    // The docker API doc is not very clear what is the correct format of the Response
+    // however status and error seem to be present.
+    case class PullResponseLine(
+        error: Option[String],
+        status: Option[String]
+    )
+    implicit val decoder: Decoder[PullResponseLine] = semiauto.deriveDecoder[PullResponseLine]
+
+    val t0 = System.currentTimeMillis()
+    logger.debug(s"Starting pulling of image ${image}")
+    val result = for {
       response <- dockerClient.pullImage(image)
-      // This is tricky, the pull is silently aborted if we do not completely consume the resposne
-      _ <- response._2.runWith(Sink.ignore)
+      // This is tricky, the pull is silently aborted if we do not completely consume the response
+      responseLines <- response._2
+        .via(
+          JsonFraming
+            .objectScanner(1024)
+        )
+        .map { bytes =>
+          val string = bytes.utf8String
+          logger.debug(s"Pulling Response ${string}")
+          io.circe.parser.parse(string).flatMap(_.as[PullResponseLine]) match {
+            case Left(value) => throw new InternalException(s"Docker responds with invalid JSON", value)
+            case Right(ok)   => ok
+          }
+        }
+        .runWith(Sink.seq)
+      _ <- {
+        responseLines.flatMap(_.error).lastOption match {
+          case Some(err) =>
+            Future.failed(new InternalException(s"Could not pull image ${image}: ${err}"))
+          case None => Future.successful(())
+        }
+
+      }
     } yield {
-      logger.debug(s"Pulled image ${image}")
+      val t1 = System.currentTimeMillis()
+      logger.debug(s"Pulled image ${image} in ${t1 - t0}ms")
       ()
     }
+    result.failed.foreach { case NonFatal(e) =>
+      val t1 = System.currentTimeMillis()
+      logger.error(s"Pulling image ${image} failed within ${t1 - t0}ms", e)
+    }
+    result
   }
 
   /** Creates a container, pulling if necessary. */
@@ -140,11 +180,20 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
   /** Ensures the existance of a running container, returns the ID if it's already running. */
   def ensureContainer(name: String, createContainerRequest: CreateContainerRequest): Future[String] = {
     checkExistance(name).flatMap {
-      case Some(existing) =>
+      case Some(existing) if existing.State.Running =>
         logger.info(s"Container ${name} already exists with Id ${existing.Id}")
         Future.successful(existing.Id)
-      case None =>
+      case otherwise =>
+        val preparation: Future[Unit] = otherwise match {
+          case None =>
+            logger.info(s"Container ${name} doesn't exist")
+            Future.successful(())
+          case Some(value) =>
+            logger.info(s"Container ${name} does exist, but doesn't appear running, recreating...")
+            dockerClient.removeContainer(value.Id, true)
+        }
         (for {
+          _ <- preparation
           _ <- pullImageIfNotPresent(createContainerRequest.Image)
           res <- dockerClient.createContainer(name, createContainerRequest)
           _ <- dockerClient.startContainer(res.Id)

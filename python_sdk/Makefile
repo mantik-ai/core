@@ -38,4 +38,4 @@ test: build
 $(eval $(call python_grpc,../engine/src/main/protobuf,mantik/engine/_stubs,mantik.engine))
 $(eval $(call python_grpc,../bridge/protocol/protobuf,mantik/bridge/_stubs,mantik.bridge))
 
-.PHONY: build clean test typecheck docker-publish
+.PHONY: api-doc build clean test typecheck

@@ -13,13 +13,4 @@ clean:
 	cp ../Readme.rst index.rst
 	POETRY_CACHE_DIR=$(POETRY_CACHE_DIR_PATH) poetry run sphinx-build -b html . ../public
 
-# Empty Goals
-test:
-
-docker:
-
-docker-unchecked:
-
-docker-publish:
-
-.PHONY: build clean test docker docker-unchecked docker-publish
+.PHONY: api-doc build clean test docker docker-unchecked docker-publish

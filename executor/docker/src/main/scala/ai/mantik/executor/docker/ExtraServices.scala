@@ -98,8 +98,8 @@ class ExtraServices(
   }
 
   private val grpcStartRequest = CreateContainerRequest(
-    Image = executorConfig.common.grpcProxy.container.image,
-    Cmd = executorConfig.common.grpcProxy.container.parameters.toVector,
+    Image = executorConfig.common.grpcProxyContainer.image,
+    Cmd = executorConfig.common.grpcProxyContainer.parameters.toVector,
     Labels = Map(
       LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
       LabelConstants.RoleLabelName -> LabelConstants.role.traefik

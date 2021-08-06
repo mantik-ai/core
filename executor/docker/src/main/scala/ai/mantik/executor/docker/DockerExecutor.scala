@@ -42,8 +42,8 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     with Executor {
 
   logger.info("Initializing Docker Executor")
-  logger.info(s"Default Repo: ${executorConfig.common.dockerConfig.defaultImageRepository}")
-  logger.info(s"Default Tag:  ${executorConfig.common.dockerConfig.defaultImageTag}")
+  logger.info(s"Default Repo: ${executorConfig.common.dockerConfig.defaultImageRepository.getOrElse("<empty>")}")
+  logger.info(s"Default Tag:  ${executorConfig.common.dockerConfig.defaultImageTag.getOrElse("<empty>")}")
   logger.info(s"Disable Pull: ${executorConfig.common.disablePull}")
   logger.info(s"Docker Host:  ${dockerClient.dockerHost}")
 
@@ -75,8 +75,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     }
   }
 
-  override def grpcProxy(isolationSpace: String): Future[GrpcProxy] = {
-    // Note: Docker Executor doesn't support one proxy per isolationSpace yet
+  override def grpcProxy(): Future[GrpcProxy] = {
     val grpcSettings = executorConfig.common.grpcProxy
     extraServices.grpcProxy.map {
       case Some(id) =>
@@ -111,7 +110,6 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
 
     val dockerConverter = new DockerConverter(
       executorConfig,
-      isolationSpace = startWorkerRequest.isolationSpace,
       internalId = internalId,
       userId = startWorkerRequest.id
     )
@@ -177,35 +175,58 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
       // TODO
       logger.warn("Filtering for node names is not performance right now.")
     }
-    listWorkers(true, listWorkerRequest.isolationSpace, listWorkerRequest.idFilter).map { response =>
-      val workers = response.flatMap(decodeListWorkerResponse(_, listWorkerRequest.nameFilter))
-      ListWorkerResponse(
-        workers
-      )
-    }
+    listContainers(true, listWorkerRequest.nameFilter, listWorkerRequest.idFilter)
+      .map { response =>
+        val workers = response.flatMap(decodeListWorkerResponse)
+        ListWorkerResponse(
+          workers
+        )
+      }
   }
 
-  private def listWorkers(
+  /** List our containers within Docker
+    *
+    * @param all also include stopped ones
+    * @param nameFilter if set, look for specific named containers
+    * @param userIdFilter if set, look for specific user id
+    * @param onlyWorkers if true, only Mnp Workers are returned.
+    */
+  private def listContainers(
       all: Boolean,
-      isolationSpace: String,
-      userIdFilter: Option[String]
+      nameFilter: Option[String],
+      userIdFilter: Option[String],
+      onlyWorkers: Boolean = true
   ): Future[Vector[ListContainerResponseRow]] = {
     val labelFilters = Seq(
-      DockerConstants.IsolationSpaceLabelName -> isolationSpace,
-      LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
-      LabelConstants.RoleLabelName -> LabelConstants.role.worker
-    ) ++ userIdFilter.map { id =>
-      LabelConstants.UserIdLabelName -> id
+      DockerConstants.IsolationSpaceLabelName -> Some(executorConfig.common.isolationSpace),
+      LabelConstants.ManagedByLabelName -> Some(LabelConstants.ManagedByLabelValue),
+      LabelConstants.UserIdLabelName -> userIdFilter,
+      LabelConstants.RoleLabelName -> (if (onlyWorkers) Some(LabelConstants.role.worker) else None)
+    ).collect { case (key, Some(value)) =>
+      key -> value
     }
-    dockerOperations.listContainers(
-      all,
-      labelFilters
-    )
+
+    dockerOperations
+      .listContainers(
+        all,
+        labelFilters
+      )
+      .map { rawResponse =>
+        nameFilter match {
+          case Some(name) =>
+            rawResponse.filter { r =>
+              r.Names.headOption.exists { s =>
+                s.stripPrefix("/").startsWith(name)
+              }
+            }
+          case None =>
+            rawResponse
+        }
+      }
   }
 
   private def decodeListWorkerResponse(
-      listContainerResponseRow: ListContainerResponseRow,
-      nameFilter: Option[String]
+      listContainerResponseRow: ListContainerResponseRow
   ): Option[ListWorkerResponseElement] = {
     def errorIfEmpty[T](name: String, value: Option[T]): Option[T] = {
       if (value.isEmpty) {
@@ -227,7 +248,6 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     for {
       rawName <- errorIfEmpty("name", listContainerResponseRow.Names.headOption)
       name = rawName.stripPrefix("/")
-      if nameFilter.isEmpty || nameFilter.contains(name)
       userId <- errorIfEmpty("user id label", listContainerResponseRow.Labels.get(LabelConstants.UserIdLabelName))
     } yield {
       ListWorkerResponseElement(
@@ -277,28 +297,37 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
   override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
     // go through all workers, if we are going to remove them
     val all = stopWorkerRequest.remove.value
-    listWorkers(all, stopWorkerRequest.isolationSpace, stopWorkerRequest.idFilter).flatMap { containers =>
-      val decoded: Vector[(StopWorkerResponseElement, ListContainerResponseRow)] = containers.flatMap { row =>
-        decodeListWorkerResponse(row, stopWorkerRequest.nameFilter).map { d =>
+    listContainers(
+      all,
+      stopWorkerRequest.nameFilter,
+      stopWorkerRequest.idFilter,
+      onlyWorkers = false
+    ).flatMap { containers =>
+      val onlyWorkers =
+        containers.filter(_.Labels.get(LabelConstants.RoleLabelName).contains(LabelConstants.role.worker))
+
+      // Note: containers may contain containers of other roles, we have to find the correct ones using onlyWorkers
+      val workerIds: Set[String] = (onlyWorkers.flatMap { worker =>
+        worker.Labels.get(LabelConstants.InternalIdLabelName)
+      }).toSet
+
+      val toDelete = containers.filter { container =>
+        container.Labels.get(LabelConstants.InternalIdLabelName).exists(id => workerIds.contains(id))
+      }
+
+      val result = onlyWorkers.flatMap { row =>
+        decodeListWorkerResponse(row).map { r =>
           StopWorkerResponseElement(
-            id = d.id,
-            name = d.nodeName
-          ) -> row
+            id = r.id,
+            name = r.nodeName
+          )
         }
       }
 
-      val byInternalId: Map[Option[String], Vector[ListContainerResponseRow]] = containers.groupBy { row =>
-        row.Labels.get(LabelConstants.InternalIdLabelName)
-      }
-
-      val associated = decoded.flatMap { case (_, row) =>
-        byInternalId.get(row.Labels.get(LabelConstants.InternalIdLabelName))
-      }.flatten
-
-      logger.info(s"Going to stop ${decoded.size} containers")
+      logger.info(s"Going to stop ${toDelete.size} containers associated to ${result.size} workers")
 
       Future
-        .sequence(associated.map { row =>
+        .sequence(toDelete.map { row =>
           if (stopWorkerRequest.remove.value) {
             // no need to kill before, we are forcing removal
             dockerOperations.removeContainer(row.Id)
@@ -312,7 +341,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
         })
         .map { _ =>
           StopWorkerResponse(
-            decoded.map(_._1)
+            result
           )
         }
     }

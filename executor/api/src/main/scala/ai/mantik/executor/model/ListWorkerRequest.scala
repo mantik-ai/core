@@ -29,7 +29,6 @@ import io.circe.generic.JsonCodec
   */
 @JsonCodec
 case class ListWorkerRequest(
-    isolationSpace: String,
     nameFilter: Option[String] = None,
     idFilter: Option[String] = None
 )

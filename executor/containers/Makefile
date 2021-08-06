@@ -63,6 +63,7 @@ docker: | build docker-unchecked
 .PHONY: docker-unchecked
 docker-unchecked: $(DOCKER_TARGETS)
 
+.PHONY: api-doc
 
 # Payload preparer has it's own dockerfile
 target/payload_preparer_docker_image.make:
@@ -85,6 +86,6 @@ docker-publish: $(DOCKER_PUBLISH_TARGETS)
 target/%_docker_publish.make: docker-login
 	$(eval DOCKER_IMAGE_NAME := $(DOCKER_IMAGE_NAME_$*))
 	$(eval IMAGE_FULL_NAME := $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME))
-	$(eval REMOTE_IMAGE_NAME := $(REMOTE_REPO_NAME)/$(REMOTE_REPO_GROUP)$(DOCKER_IMAGE_NAME):$(CI_COMMIT_REF_SLUG))
+	$(eval REMOTE_IMAGE_NAME := $(REMOTE_REPO_NAME)/$(REMOTE_REPO_GROUP)$(DOCKER_IMAGE_NAME):$(REMOTE_IMAGE_TAG))
 	$(DOCKER) tag $(IMAGE_FULL_NAME) $(REMOTE_IMAGE_NAME)
 	$(DOCKER) push $(REMOTE_IMAGE_NAME)

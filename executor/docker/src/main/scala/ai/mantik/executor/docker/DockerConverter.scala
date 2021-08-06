@@ -32,14 +32,13 @@ import io.circe.Json
 
 class DockerConverter(
     config: DockerExecutorConfig,
-    isolationSpace: String,
     internalId: String,
     userId: String
 ) {
 
   val defaultLabels = Map(
     LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue,
-    DockerConstants.IsolationSpaceLabelName -> isolationSpace,
+    DockerConstants.IsolationSpaceLabelName -> config.common.isolationSpace,
     LabelConstants.InternalIdLabelName -> internalId,
     LabelConstants.UserIdLabelName -> userId
   )
@@ -112,10 +111,14 @@ class DockerConverter(
 
     val envValue = s"MNP_INIT=${encodedInitRequest}"
 
+    val labels = defaultLabels ++ Seq(
+      LabelConstants.RoleLabelName -> LabelConstants.role.mnpInitializer
+    )
+
     val request = CreateContainerRequest(
       Image = config.common.mnpPreparer.image,
       Cmd = allParameters.toVector,
-      Labels = mnpWorkerLabels(),
+      Labels = labels,
       Env = Vector(envValue)
     )
 

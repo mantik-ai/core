@@ -36,6 +36,7 @@ import com.typesafe.sslconfig.ssl.{
 
 case class DockerConnectSettings(
     url: String,
+    host: Option[String],
     clientCert: Option[String],
     caCert: Option[String],
     clientCertSecret: SecretReader,
@@ -170,6 +171,7 @@ object DockerConnectSettings {
     val subConfig = config.getConfig(SubConfigPath)
     DockerConnectSettings(
       url = subConfig.getString("url"),
+      host = subConfig.getOptionalString("host"),
       clientCert = subConfig.getOptionalString("clientCert"),
       caCert = subConfig.getOptionalString("caCert"),
       clientCertSecret = new SecretReader("clientCertPassword", subConfig),
