@@ -29,7 +29,7 @@ publish:
 	sed -i 's/.*mnp.*/mnp = "${VERSION}"/' pyproject.toml
 
 	poetry version ${VERSION}
-	poetry publish --build --username $PYPI_USERNAME --password $PYPI_PASSWORD
+	poetry publish --build --username $$(PYPI_USERNAME) --password $$(PYPI_PASSWORD)
 
 docker-unchecked:
 

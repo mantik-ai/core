@@ -122,7 +122,7 @@ other_publish:
   stage: publish
   variables:
     PYPI_USERNAME: __token__
-    PYPI_PASSWORD: $PYPI_ACCESS_KEY
+    PYPI_PASSWORD: "$PYPI_ACCESS_KEY"
   only:
     refs:
       - master
