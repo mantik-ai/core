@@ -8,7 +8,7 @@ endif
 
 build: target/build.make
 
-clean:
+clean::
 	rm -rf target
 
 test:
