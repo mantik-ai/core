@@ -58,6 +58,9 @@ clean::
 
 protos: protos/proto.make
 
+# There is no publish for go projects yet
+.PHONY: publish
+
 protos/proto.make: $(shell find $(PROTOBUF_DIR) -name "*.proto")
 	# Pinning go protoc gen
 	go get github.com/golang/protobuf/protoc-gen-go@v1.5.2

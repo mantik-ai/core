@@ -21,6 +21,16 @@ $(eval $(call python_grpc,../bridge/protocol/protobuf,mantik/bridge/_stubs,manti
 docker:
 	@#"Nothing to do"
 
+VERSION=$(CI_COMMIT_TAG:v%=%)
+publish:
+	@if [ -z ${VERSION} ]; then echo "Version is empty"; false; fi
+	echo "Publishing version ${VERSION}"
+	# Updating MNP Dependency
+	sed -i 's/.*mnp.*/mnp = "${VERSION}"/' pyproject.toml
+
+	poetry version ${VERSION}
+	poetry publish --build --username $PYPI_USERNAME --password $PYPI_PASSWORD
+
 docker-unchecked:
 
 docker-publish:
