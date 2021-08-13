@@ -1,5 +1,25 @@
 include ../scripts/ci/Makefile.grpc_helper
 
+NAME=mantik_dev
+MANTIK_ROOT=./../
+DOCKER_IMAGE_NAME=mantik_dev
+DOCKER_FILE=$(MANTIK_ROOT)/scripts/ci/Dockerfile.mantik_dev_image
+include ./../scripts/ci/Makefile.docker_single
+include ./../scripts/ci/Makefile.pythonbridge
+
+target/copy_shared.make: $(shell find $(MANTIK_ROOT)/python_sdk -name "*.py")
+	mkdir -p target/python_sdk
+
+	cp $(MANTIK_ROOT)/python_sdk/pyproject.toml target/python_sdk
+	cp $(MANTIK_ROOT)/python_sdk/poetry.lock target/python_sdk
+	cp -v -r $(MANTIK_ROOT)/python_sdk/mantik target/python_sdk
+	cp -v -r $(MANTIK_ROOT)/mnp/mnppython target/
+
+	sed -i 's/".*mnppython"/"\.\/..\/mnppython"/' target/python_sdk/poetry.lock target/python_sdk/pyproject.toml
+
+	touch $@
+
+
 # Caching
 ifdef CACHE_DIR
   export POETRY_CACHE_DIR_PATH=$(CACHE_DIR)/poetry
@@ -18,11 +38,4 @@ test: build
 $(eval $(call python_grpc,../engine/src/main/protobuf,mantik/engine/_stubs,mantik.engine))
 $(eval $(call python_grpc,../bridge/protocol/protobuf,mantik/bridge/_stubs,mantik.bridge))
 
-docker:
-	@#"Nothing to do"
-
-docker-unchecked:
-
-docker-publish:
-
-.PHONY: api-doc build clean test typecheck docker docker-unchecked docker-publish1
+.PHONY: api-doc build clean test typecheck
