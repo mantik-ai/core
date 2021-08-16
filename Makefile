@@ -66,9 +66,7 @@ local-install:
 	$(MAKE) -C engine-app install
 
 .PHONY: publish
-# Only scala needs a publish method
-publish:
-	$(MAKE) -C engine-app publish
+publish: publish-subprojects
 
 .PHONY: clean
 clean: clean-subprojects

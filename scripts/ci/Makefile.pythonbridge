@@ -37,4 +37,4 @@ target/copy_shared.make: $(shell find $(MANTIK_ROOT)/python_sdk -name "*.py")
 
 	touch $@
 
-.PHONY: api-doc build clean test
+.PHONY: api-doc build clean test publish
