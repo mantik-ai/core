@@ -73,25 +73,6 @@ docker:
     - mkdir -p $CACHE_DIR
     - make docker-unchecked
 
-docker_publish:
-  stage: publish
-  image: reg.ambrosys.de/mantik/mantikdockerindocker
-  variables:
-    CACHE_DIR: "$PWD/cache"
-    BUILDSERVER: "true"
-  only:
-    - master
-  cache:
-    key: dependency_cache
-    paths:
-      - cache
-  services:
-    - docker:dind
-  script:
-    - mkdir -p $CACHE_DIR
-    - make docker-unchecked
-    - make docker-publish
-
 dockerhub_publish:
   stage: publish
   image: reg.ambrosys.de/mantik/mantikdockerindocker
@@ -125,7 +106,6 @@ other_publish:
     PYPI_PASSWORD: "$PYPI_ACCESS_KEY"
   only:
     refs:
-      - master
       - tags
     variables:
       - $CI_COMMIT_REF_PROTECTED == "true"
