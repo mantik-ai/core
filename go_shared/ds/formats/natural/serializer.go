@@ -142,7 +142,7 @@ func (p primitiveSerializer) Write(backend serializer.SerializingBackend, e elem
 
 func prepareTableRowSerializer(data *ds.TabularData) (*tableRowSerializer, error) {
 	subEncoders := make([]ElementSerializer, 0)
-	for _, v := range data.Columns {
+	for _, v := range data.Columns.Values {
 		subEncoder, err := lookupElementSerializer(v.SubType.Underlying)
 		if err != nil {
 			return nil, err

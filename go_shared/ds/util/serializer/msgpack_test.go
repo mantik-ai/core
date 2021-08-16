@@ -34,9 +34,9 @@ func TestMsgPackJsonSerialization(t *testing.T) {
 		ds.Int32,
 		ds.String,
 		&ds.TabularData{
-			Columns: []ds.NamedType{
+			Columns: ds.NewNamedDataTypeMap(
 				ds.NamedType{"x", ds.Ref(ds.Int32)},
-			},
+			),
 		},
 	}
 	for _, sample := range samples {

@@ -111,7 +111,7 @@ type ImageComponent struct {
 	ComponentType TypeReference `json:"componentType"`
 }
 
-// TODO: Remove Copy and Paste with OrderedMap
+// TODO: Remove Copy and Paste with NamedDataTypeMap
 func (omap OrderedComponentMap) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 
@@ -139,7 +139,7 @@ func (omap OrderedComponentMap) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// TODO: Remove Copy and Paste with OrderedMap
+// TODO: Remove Copy and Paste with NamedDataTypeMap
 func (omap *OrderedComponentMap) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()

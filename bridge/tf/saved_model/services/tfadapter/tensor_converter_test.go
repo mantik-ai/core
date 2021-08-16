@@ -26,6 +26,7 @@ import (
 	"github.com/tensorflow/tensorflow/tensorflow/go"
 	"gl.ambrosys.de/mantik/go_shared/ds"
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
+	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"testing"
 )
 
@@ -164,10 +165,10 @@ func TestBuildScalarTensor(t *testing.T) {
 }
 
 func TestBuildTensorFromTabular(t *testing.T) {
-	rows := []*element.TabularRow{
+	rows := builder.Embedded(
 		&element.TabularRow{[]element.Element{element.Primitive{2}, &element.TensorElement{[]int32{1, 2, 3, 4, 5, 6}}}},
 		&element.TabularRow{[]element.Element{element.Primitive{5}, &element.TensorElement{[]int32{7, 8, 9, 10, 11, 12}}}},
-	}
+	)
 	tensor, err := ConvertToTensorFlowFromTabularValues(
 		&ds.Tensor{
 			ds.Ref(ds.Int32),
@@ -205,7 +206,7 @@ func TestBuildEmptyTensor(t *testing.T) {
 }
 
 func TestBuildEmptyRowsTensor(t *testing.T) {
-	rows := []*element.TabularRow{}
+	rows := builder.Embedded()
 	tensor, err := ConvertToTensorFlowFromTabularValues(
 		&ds.Tensor{
 			ds.Ref(ds.Int32),

@@ -164,13 +164,11 @@ func TestToJson(t *testing.T) {
 
 func TestTabularDataJson(t *testing.T) {
 	sample := TabularData{}
-	sample.Columns = []NamedType{
+	sample.Columns = NewNamedDataTypeMap(
 		NamedType{"x", TypeReference{Int32}},
 		NamedType{"y", TypeReference{Float32}},
-	}
-	l := 3
-	sample.RowCount = &l
-	expected := "{\"type\":\"tabular\",\"columns\":{\"x\":\"int32\",\"y\":\"float32\"},\"rowCount\":3}"
+	)
+	expected := "{\"type\":\"tabular\",\"columns\":{\"x\":\"int32\",\"y\":\"float32\"}}"
 	assert.Equal(t, expected, ToJsonString(&sample))
 
 	back, err := FromJsonString(expected)
@@ -235,15 +233,15 @@ func TestStableOrder(t *testing.T) {
 }
 `
 	table := FromJsonStringOrPanic(sample).(*TabularData)
-	assert.Equal(t, table.Columns[0].Name, "x")
-	assert.Equal(t, table.Columns[1].Name, "y")
-	assert.Equal(t, table.Columns[2].Name, "s")
+	assert.Equal(t, table.Columns.IndexOf("x"), 0)
+	assert.Equal(t, table.Columns.IndexOf("y"), 1)
+	assert.Equal(t, table.Columns.IndexOf("s"), 2)
 
 	var table2Ref TypeReference
 	err := yaml.Unmarshal([]byte(sample), &table2Ref)
 	assert.NoError(t, err)
 	table2 := table2Ref.Underlying.(*TabularData)
-	assert.Equal(t, table2.Columns[0].Name, "x")
-	assert.Equal(t, table2.Columns[1].Name, "y")
-	assert.Equal(t, table2.Columns[2].Name, "s")
+	assert.Equal(t, table2.Columns.IndexOf("x"), 0)
+	assert.Equal(t, table2.Columns.IndexOf("y"), 1)
+	assert.Equal(t, table2.Columns.IndexOf("s"), 2)
 }

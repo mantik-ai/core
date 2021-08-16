@@ -178,12 +178,9 @@ Example:
     "columns": { 
         "x" : "int8",
         "y" : "string"
-    },
-    "rowCount": 400
+    }
 }
 ```
-
-The `rowCount` element is optional and only specified if the number of rows is clear.
 
 The serialization of the a row is done using an Array of the serialization of the cells.
 When tables are embedded in other tables, they are serialized as Array of Rows, which are again

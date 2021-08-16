@@ -35,15 +35,17 @@ func TestMultiplyExecute(t *testing.T) {
 	defer model.Cleanup()
 
 	assert.NoError(t, err)
-	inputData := builder.Rows(
-		builder.Row(
-			builder.Tensor([]float64{1.0}),
-		),
+	inputData := builder.Struct(
+		builder.Tensor([]float64{1.0}),
 	)
-	result, err := ExecuteData(model, inputData)
 
-	assert.Equal(t, 1, len(result))
-	destinationTensor := result[0].Columns[0].(*element.TensorElement).Values.([]float64)
+	println("Model ", ds.ToJsonString(model.AlgorithmType.Input.Underlying))
+
+	result, err := ExecuteData(model, inputData)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, result.RowCount())
+	destinationTensor := result.Get(0, 0).(*element.TensorElement).Values.([]float64)
 	assert.Equal(t, []float64{2.0}, destinationTensor)
 }
 
@@ -55,11 +57,11 @@ func TestEmptyInput(t *testing.T) {
 	assert.Equal(t, true, model.AnalyzeResult.InputTabular)
 	assert.Equal(t, true, model.AnalyzeResult.OutputTabular)
 
-	var inputData []*element.TabularRow = nil
+	var inputData = builder.Embedded()
 
 	result, err := ExecuteData(model, inputData)
 	assert.NoError(t, err)
-	assert.Equal(t, 0, len(result))
+	assert.Equal(t, 0, result.RowCount())
 }
 
 func TestSimpleRow(t *testing.T) {
@@ -68,14 +70,14 @@ func TestSimpleRow(t *testing.T) {
 	defer model.Cleanup()
 
 	numbers := make([]float32, 784)
-	inputData := builder.Rows(
+	inputData := builder.Embedded(
 		builder.Row(
 			builder.Tensor(numbers),
 		),
 	)
 	result, err := ExecuteData(model, inputData)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(result))
+	assert.Equal(t, 1, result.RowCount())
 }
 
 func TestAdaptedMnist(t *testing.T) {
@@ -134,21 +136,21 @@ func TestMultipleRows(t *testing.T) {
 	numbers1 := make([]float32, 784)
 	numbers2 := make([]float32, 784)
 
-	inputData := builder.Rows(
+	inputData := builder.Embedded(
 		builder.Row(builder.Tensor(numbers1)),
 		builder.Row(builder.Tensor(numbers2)),
 	)
 
 	result, err := ExecuteData(model, inputData)
 	assert.NoError(t, err)
-	assert.Equal(t, 2, len(result))
+	assert.Equal(t, 2, result.RowCount())
 }
 
 func TestMultiInOut(t *testing.T) {
 	model, err := LoadModel("../../test/resources/samples/multi_in_out/payload")
 	assert.NoError(t, err)
 	defer model.Cleanup()
-	inputData := builder.Rows(
+	inputData := builder.Embedded(
 		builder.Row(
 			builder.Tensor([]int64{1, 2, 3}), builder.Tensor([]int64{4, 5, 6}),
 		),
@@ -159,11 +161,11 @@ func TestMultiInOut(t *testing.T) {
 	result, err := ExecuteData(model, inputData)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 2, len(result))
-	assert.Equal(t, []int64{5, 7, 9}, result[0].Columns[0].(*element.TensorElement).Values)
-	assert.Equal(t, []int64{9}, result[0].Columns[1].(*element.TensorElement).Values)
-	assert.Equal(t, []int64{17, 19, 21}, result[1].Columns[0].(*element.TensorElement).Values)
-	assert.Equal(t, []int64{21}, result[1].Columns[1].(*element.TensorElement).Values)
+	assert.Equal(t, 2, result.RowCount())
+	assert.Equal(t, []int64{5, 7, 9}, result.Get(0, 0).(*element.TensorElement).Values)
+	assert.Equal(t, []int64{9}, result.Get(0, 1).(*element.TensorElement).Values)
+	assert.Equal(t, []int64{17, 19, 21}, result.Get(1, 0).(*element.TensorElement).Values)
+	assert.Equal(t, []int64{21}, result.Get(1, 1).(*element.TensorElement).Values)
 }
 
 // Test adaption of an algorithm which just expects one row, into one which can accept multiple ones.

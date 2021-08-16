@@ -83,7 +83,7 @@ func CreateSingleFileExtractor(reader io.ReadCloser, fullDataType *ds.TabularDat
 	return &singleFileExtractor{
 		buf,
 		reader,
-		len(fullDataType.Columns),
+		fullDataType.Columns.Arity(),
 		subExtractors,
 	}, nil
 }
@@ -141,7 +141,7 @@ func getStride(fullDataType *ds.TabularData, entry *FileEntry) (int, error) {
 			strideSum += *c.Skip
 		}
 		if c.Element != nil {
-			dataType := fullDataType.GetColumn(*c.Element)
+			dataType := fullDataType.Columns.Get(*c.Element)
 			if dataType == nil {
 				return 0, errors.Errorf("Unresolved column %s", *c.Element)
 			}
@@ -170,11 +170,11 @@ func buildSubExtractors(fullDataType *ds.TabularData, entry *FileEntry) ([]offse
 	var result []offsetExtractor
 	for _, c := range entry.Content {
 		if c.Element != nil {
-			idx := fullDataType.IndexOfColumn(*c.Element)
+			idx := fullDataType.Columns.IndexOf(*c.Element)
 			if idx < 0 {
 				return nil, errors.Errorf("Unresolved column %s", *c.Element)
 			}
-			dataType := fullDataType.Columns[idx].SubType.Underlying
+			dataType := fullDataType.Columns.Values[idx].SubType.Underlying
 			byteLen, reader, err := binreader.LookupReader(dataType, BigEndianEnabled)
 			if err != nil {
 				return nil, err

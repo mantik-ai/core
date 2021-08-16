@@ -37,6 +37,17 @@ type Element interface {
 	Kind() int
 }
 
+// An Element which can behave like a tabular data
+// (EmbeddedTabular, Record)
+type TabularLikeElement interface {
+	// The Kind of the element
+	Kind() int
+	// The number of Rows
+	RowCount() int
+	// Returns an Element at the given position
+	Get(row int, column int) Element
+}
+
 type TabularRow struct {
 	Columns []Element
 }
@@ -79,6 +90,14 @@ func (e *EmbeddedTabularElement) Kind() int {
 	return KIND_EMBEDDED_TABULAR
 }
 
+func (e *EmbeddedTabularElement) RowCount() int {
+	return len(e.Rows)
+}
+
+func (e *EmbeddedTabularElement) Get(row int, column int) Element {
+	return e.Rows[row].Columns[column]
+}
+
 type ArrayElement struct {
 	Elements []Element
 }
@@ -93,6 +112,14 @@ type StructElement struct {
 
 func (s *StructElement) Kind() int {
 	return KIND_STRUCT
+}
+
+func (s *StructElement) RowCount() int {
+	return 1
+}
+
+func (s *StructElement) Get(row int, column int) Element {
+	return s.Elements[column]
 }
 
 type StreamWriter interface {

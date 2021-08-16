@@ -80,8 +80,8 @@ func buildTabularComparison(data *ds.TabularData) EqualsOperation {
 }
 
 func buildTableRowComparer(data *ds.TabularData) func(*element.TabularRow, *element.TabularRow) bool {
-	subCompares := make([]EqualsOperation, len(data.Columns))
-	for i, c := range data.Columns {
+	subCompares := make([]EqualsOperation, data.Columns.Arity())
+	for i, c := range data.Columns.Values {
 		subCompares[i] = FindEqualsOperation(c.SubType.Underlying)
 	}
 	return func(row1 *element.TabularRow, row2 *element.TabularRow) bool {

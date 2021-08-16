@@ -41,7 +41,6 @@ func (t *TabularTypeBuilder) AddTensor(name string, componentType DataType, shap
 
 func (t *TabularTypeBuilder) Result() *TabularData {
 	return &TabularData{
-		t.columns,
-		nil,
+		NamedDataTypeMap{t.columns},
 	}
 }

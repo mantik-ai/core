@@ -136,9 +136,9 @@ type compoundComparator struct {
 	sub []Comparator
 }
 
-func newCompoundComparator(orderedMap ds.OrderedMap) (*compoundComparator, error) {
-	sub := make([]Comparator, len(orderedMap), len(orderedMap))
-	for i, c := range orderedMap {
+func newCompoundComparator(orderedMap ds.NamedDataTypeMap) (*compoundComparator, error) {
+	sub := make([]Comparator, orderedMap.Arity(), orderedMap.Arity())
+	for i, c := range orderedMap.Values {
 		subC, err := LookupComparator(c.SubType.Underlying)
 		if err != nil {
 			return nil, err

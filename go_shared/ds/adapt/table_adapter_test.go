@@ -62,17 +62,6 @@ func TestEmbeddedTabularChange(t *testing.T) {
 	assert.Equal(t, expected, adapted)
 }
 
-func TestTableRowCountMismatch(t *testing.T) {
-	in := ds.FromJsonStringOrPanic(`{ "columns": { "x": "int32", "y": "string" }, "rowCount": 1 }`)
-	out := ds.FromJsonStringOrPanic(`{ "columns": { "y": "string", "x": "int32" } }`)
-	// This should work, we can convert something with rowCount = 1 into something wihtout row Count
-	_, err := LookupAutoAdapter(in, out)
-	assert.NoError(t, err)
-	// the other way should not work, we cannot convert no row count into something with row count
-	_, err = LookupAutoAdapter(out, in)
-	assert.Error(t, err)
-}
-
 // Two columns, changed types
 func TestSimpleTypeChange(t *testing.T) {
 	in := ds.FromJsonStringOrPanic(`{ "columns": { "x": "int32", "y": "string" } }`)

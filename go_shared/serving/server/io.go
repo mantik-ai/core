@@ -163,10 +163,10 @@ func isImage(input ds.DataType) *ds.Image {
 	if !ok {
 		return nil
 	}
-	if len(inputTabular.Columns) != 1 {
+	if inputTabular.Columns.Arity() != 1 {
 		return nil
 	}
-	inputImage, ok := inputTabular.Columns[0].SubType.Underlying.(*ds.Image)
+	inputImage, ok := inputTabular.Columns.ByIdx(0).SubType.Underlying.(*ds.Image)
 	if !ok {
 		return nil
 	}

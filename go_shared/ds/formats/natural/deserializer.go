@@ -138,8 +138,8 @@ func (f fundamentalDeserializer) Read(backend serializer.DeserializingBackend) (
 }
 
 func newTabularRowDeserializer(data ds.TabularData) (*tableRowDeserializer, error) {
-	subDecoders := make([]ElementDeserializer, len(data.Columns))
-	for i, v := range data.Columns {
+	subDecoders := make([]ElementDeserializer, data.Columns.Arity())
+	for i, v := range data.Columns.Values {
 		subDecoder, err := lookupElementDeserializer(v.SubType.Underlying)
 		if err != nil {
 			return nil, err

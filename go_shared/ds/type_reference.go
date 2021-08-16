@@ -100,7 +100,7 @@ func (t *TypeReference) UnmarshalJSON(bytes []byte) error {
 		if err != nil {
 			return err
 		}
-		if len(tabular.Columns) == 0 {
+		if tabular.Columns.Arity() == 0 {
 			return errors.New("No support for tables without columns")
 		}
 		t.Underlying = &tabular
