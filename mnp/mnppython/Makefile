@@ -22,6 +22,12 @@ docker:
 
 docker-unchecked:
 
+VERSION=$(CI_COMMIT_TAG:v%=%)
+publish:
+	@if [ -z ${VERSION} ]; then echo "Version is empty"; false; fi
+	echo "Publishing version ${VERSION}"
+	poetry version ${VERSION}
+	poetry publish --build --username $${PYPI_USERNAME} --password $${PYPI_PASSWORD}
 
 docker-publish:
 

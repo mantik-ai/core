@@ -43,6 +43,9 @@ test: target/${NAME}
 # Empty
 api-doc::
 
+# There is no publish for go projects yet
+.PHONY: publish
+
 target/${NAME}: $(shell find -not -path "./target/*" -name "*.go") $(EXTRA_DEPS)
 	gofmt -w .
 	go build -mod=mod -o $@ -ldflags="-X main.AppVersion=${APP_VERSION}" $(MAIN_FILE)
