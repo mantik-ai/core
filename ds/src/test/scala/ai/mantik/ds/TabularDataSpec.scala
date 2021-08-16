@@ -35,8 +35,7 @@ class TabularDataSpec extends TestBase {
       columns = ListMap(
         "foo" -> FundamentalType.Int8,
         "bar" -> FundamentalType.BoolType
-      ),
-      rowCount = None
+      )
     )
   }
 

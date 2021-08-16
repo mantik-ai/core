@@ -43,14 +43,14 @@ func TestAnalyzeSimpleMultiply(t *testing.T) {
 	expectedInput, err := ds.FromJsonString(
 		`
 		{
-			"columns": {
+			"type": "struct",
+			"fields": {
 				"x": {
 					"type": "tensor",
 					"shape": [],
 					"componentType": "float64"
 				}
-			},
-			"rowCount": 1
+			}
 		}
 		`,
 	)
@@ -60,14 +60,14 @@ func TestAnalyzeSimpleMultiply(t *testing.T) {
 	expectedOutput, err := ds.FromJsonString(
 		`
 		{
-			"columns": {
+			"type": "struct",
+			"fields": {
 				"y": {
 					"type": "tensor",
 					"shape": [],
 					"componentType": "float64"
 				}
-			},
-			"rowCount": 1
+			}
 		}
 		`,
 	)

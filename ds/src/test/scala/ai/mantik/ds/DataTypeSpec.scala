@@ -130,8 +130,7 @@ class DataTypeSpec extends TestBase {
               ImageChannel.Red -> ImageComponent(FundamentalType.Uint32)
             )
           )
-        ),
-        rowCount = Some(10000)
+        )
       )
     ) shouldBe Json.obj(
       "columns" -> Json.obj(
@@ -147,7 +146,6 @@ class DataTypeSpec extends TestBase {
           "type" -> "image".asJson
         )
       ),
-      "rowCount" -> 10000.asJson,
       "type" -> "tabular".asJson
     )
   }
@@ -241,8 +239,7 @@ class DataTypeSpec extends TestBase {
             ImageChannel.Red -> ImageComponent(FundamentalType.Int8)
           )
         )
-      ),
-      rowCount = Some(435432353455L)
+      )
     ),
     Tensor(
       componentType = FundamentalType.BoolType,

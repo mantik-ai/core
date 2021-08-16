@@ -17,6 +17,7 @@ ifeq ($(UNAME_S), Darwin)
   CLIBURL=https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-darwin-x86_64-1.15.0.tar.gz
 else ifeq ($(UNAME_S), Linux)
   LD_LIBRARY_PATH=$(shell pwd)/$(TENSORFLOW_DIR)
+  $(info LD_LIBRARY_PATH=$(LD_LIBRARY_PATH))
   export LD_LIBRARY_PATH
   CLIBURL=$(CLIBURL_LINUX)
 else
@@ -25,6 +26,7 @@ endif
 
 CGO_LDFLAGS = -L$(shell pwd)/$(TENSORFLOW_DIR)
 export CGO_LDFLAGS
+$(info CGO_LDFLAGS=$(CGO_LDFLAGS))
 
 MANTIK_ROOT = ../../../
 

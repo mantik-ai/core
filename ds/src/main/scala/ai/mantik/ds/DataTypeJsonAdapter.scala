@@ -67,8 +67,7 @@ private[ds] object DataTypeJsonAdapter {
 
     override def encodeObject(a: TabularData): JsonObject = {
       val allFields = Seq(
-        Some("columns" -> a.columns.asJson),
-        a.rowCount.map(rc => "rowCount" -> Json.fromLong(rc))
+        Some("columns" -> a.columns.asJson)
       ).flatten
       JsonObject.fromIterable(
         allFields
@@ -78,9 +77,8 @@ private[ds] object DataTypeJsonAdapter {
     override def apply(c: HCursor): Result[TabularData] = {
       for {
         columns <- c.downField("columns").as[ListMap[String, DataType]]
-        rowCount <- c.downField("rowCount").as[Option[Long]]
       } yield {
-        TabularData(columns, rowCount)
+        TabularData(columns)
       }
     }
   }

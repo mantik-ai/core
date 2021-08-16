@@ -47,7 +47,7 @@ func newJoinRunner(j *JoinProgram) (*joinRunner, error) {
 	}
 
 	groupType := ds.TabularData{
-		Columns: j.Left.Underlying.TabularResult().Columns[0:j.GroupSize],
+		Columns: ds.NamedDataTypeMap{j.Left.Underlying.TabularResult().Columns.Values[0:j.GroupSize]},
 	}
 
 	var filter *Runner
@@ -121,8 +121,8 @@ func (j *joinRunner) executeJoin(left *ElementMultiHashMap, right *ElementMultiH
 	isLeftLike := j.program.JoinType == "left" || j.program.JoinType == "outer"
 	isRightLike := j.program.JoinType == "right" || j.program.JoinType == "outer"
 	gs := j.program.GroupSize
-	ll := len(j.program.Left.Underlying.TabularResult().Columns)
-	rl := len(j.program.Right.Underlying.TabularResult().Columns)
+	ll := j.program.Left.Underlying.TabularResult().Columns.Arity()
+	rl := j.program.Right.Underlying.TabularResult().Columns.Arity()
 	emptyRightWithoutKey := makeNullRow(rl - gs)
 	emptyLeftWithoutKey := makeNullRow(ll - gs)
 

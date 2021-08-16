@@ -33,12 +33,8 @@ type columnAdapter struct {
 }
 
 func lookupTableAdapter(from *ds.TabularData, to *ds.TabularData) (*Cast, error) {
-	columnCount := len(to.Columns)
+	columnCount := to.Columns.Arity()
 	columnAdapters := make([]columnAdapter, columnCount)
-
-	if to.RowCount != nil && from.RowCount == nil {
-		return nil, errors.Errorf("Cannot convert unrestricted row count into restricted row count (%d)", *to.RowCount)
-	}
 
 	var loosing = false
 	var canFail = false
@@ -49,8 +45,8 @@ func lookupTableAdapter(from *ds.TabularData, to *ds.TabularData) (*Cast, error)
 	}
 
 	for toIndex, fromIndex := range columnMapping {
-		fromColumnType := from.Columns[fromIndex].SubType
-		toColumnType := to.Columns[toIndex].SubType
+		fromColumnType := from.Columns.Values[fromIndex].SubType
+		toColumnType := to.Columns.Values[toIndex].SubType
 		subAdapter, err := LookupCast(fromColumnType.Underlying, toColumnType.Underlying)
 		if err != nil {
 			return nil, err
@@ -101,14 +97,14 @@ func lookupTableAdapter(from *ds.TabularData, to *ds.TabularData) (*Cast, error)
 
 // Find matching column names when matching from to to, returns a list of indices into the from tabular data.
 func matchColumnNames(from *ds.TabularData, to *ds.TabularData) ([]int, error) {
-	if len(from.Columns) < len(to.Columns) {
+	if from.Columns.Arity() < to.Columns.Arity() {
 		return nil, errors.New("Less than necessary columns provided")
 	}
-	result := make([]int, len(to.Columns))
+	result := make([]int, to.Columns.Arity())
 	missingCount := 0
 	var firstMissing int
-	for idx, column := range to.Columns {
-		fromIdx := from.IndexOfColumn(column.Name)
+	for idx, column := range to.Columns.Values {
+		fromIdx := from.Columns.IndexOf(column.Name)
 		if fromIdx >= 0 {
 			// ok
 			result[idx] = fromIdx
@@ -122,16 +118,16 @@ func matchColumnNames(from *ds.TabularData, to *ds.TabularData) ([]int, error) {
 		}
 	}
 	if missingCount > 1 {
-		return nil, errors.Errorf("%d columns not found in source tabular data (first = %s)", missingCount, to.Columns[firstMissing].Name)
+		return nil, errors.Errorf("%d columns not found in source tabular data (first = %s)", missingCount, to.Columns.Values[firstMissing].Name)
 	}
 	if missingCount == 0 {
 		return result, nil
 	}
 	// special case, one is missing, if the count is the same, we can guess it.
-	if len(from.Columns) > len(to.Columns) {
-		return nil, errors.Errorf("Cannot resolve %s as source table has more elements", to.Columns[firstMissing].Name)
+	if from.Columns.Arity() > to.Columns.Arity() {
+		return nil, errors.Errorf("Cannot resolve %s as source table has more elements", to.Columns.Values[firstMissing].Name)
 	}
-	fields := make([]bool, len(from.Columns))
+	fields := make([]bool, from.Columns.Arity())
 	for _, v := range result {
 		if v >= 0 {
 			fields[v] = true

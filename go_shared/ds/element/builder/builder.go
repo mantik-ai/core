@@ -76,3 +76,7 @@ func Tensor(values interface{}) *element.TensorElement {
 func Embedded(rows ...*element.TabularRow) *element.EmbeddedTabularElement {
 	return &element.EmbeddedTabularElement{rows}
 }
+
+func Struct(elements ...element.Element) *element.StructElement {
+	return &element.StructElement{elements}
+}

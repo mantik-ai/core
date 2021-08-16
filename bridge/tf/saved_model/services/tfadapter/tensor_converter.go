@@ -54,8 +54,8 @@ func ConvertToTensorFlowTensor(tensor *ds.Tensor, tensorElement *element.TensorE
 }
 
 /* Build a Tensor from multiple rows, indexing always one element. */
-func ConvertToTensorFlowFromTabularValues(tensor *ds.Tensor, rows []*element.TabularRow, columnIndex int) (*tensorflow.Tensor, error) {
-	fullShape := append([]int{len(rows)}, tensor.Shape...)
+func ConvertToTensorFlowFromTabularValues(tensor *ds.Tensor, rows element.TabularLikeElement, columnIndex int) (*tensorflow.Tensor, error) {
+	fullShape := append([]int{rows.RowCount()}, tensor.Shape...)
 	componentType, ok := tensor.ComponentType.Underlying.(*ds.FundamentalType)
 	if !ok {
 		return nil, errors.New("Tensors must be based on fundamental types")
@@ -64,8 +64,8 @@ func ConvertToTensorFlowFromTabularValues(tensor *ds.Tensor, rows []*element.Tab
 		return buildEmptyTensorFlowTensor(componentType, fullShape)
 	}
 	slice := AllocateMultiDimensionalSlice(componentType.GoType, fullShape)
-	for i, row := range rows {
-		subElement, ok := row.Columns[columnIndex].(*element.TensorElement)
+	for i := 0; i < rows.RowCount(); i++ {
+		subElement, ok := rows.Get(i, columnIndex).(*element.TensorElement)
 		if !ok {
 			return nil, errors.New("Selected column is not a tensor element")
 		}

@@ -49,11 +49,12 @@ func AutoAdapt(executable Executable, mantikHeader MantikHeader) (Executable, er
 /* Auto adapt an executable algorithm, looking for matching conversion functions.
    Can also adapt learnable algorithms. */
 func AutoAdaptExecutableAlgorithm(algorithm ExecutableAlgorithm, newInput ds.DataType, newOutput ds.DataType) (ExecutableAlgorithm, error) {
-	newInputTabular, newInputTabularOk := newInput.(*ds.TabularData)
-	algorithmFixedCount := algorithm.Type().FixedElementCount()
+	_, newInputTabularOk := newInput.(*ds.TabularData)
+	_, algorithmInIsStruct := algorithm.Type().Input.Underlying.(*ds.Struct)
+	_, algorithmOutIsStruct := algorithm.Type().Output.Underlying.(*ds.Struct)
 
-	if newInputTabularOk && algorithmFixedCount != nil && *algorithmFixedCount == 1 && newInputTabular.RowCount == nil {
-		// Otherwise adaption will fail immediately
+	if newInputTabularOk && algorithmInIsStruct && algorithmOutIsStruct {
+		// Build a special adapter which calls an algorithm multiple times
 		premodified := buildSingleIntoMultipleAlgorithmAdapter(algorithm)
 		return AutoAdaptExecutableAlgorithm(premodified, newInput, newOutput)
 	}
@@ -110,10 +111,13 @@ type singleIntoMultipleAlgorithmAdapter struct {
 }
 
 func buildSingleIntoMultipleAlgorithmAdapter(inner ExecutableAlgorithm) ExecutableAlgorithm {
-	updatedAlgorithmType := *inner.Type().Input.Underlying.(*ds.TabularData)
-	updatedAlgorithmType.RowCount = nil
+	inType := inner.Type().Input.Underlying.(*ds.Struct)
+	outType := inner.Type().Output.Underlying.(*ds.Struct)
+	updatedIn := ds.TabularData{inType.Fields}
+	updatedOut := ds.TabularData{outType.Fields}
+	updatedAlgorithmType := AlgorithmType{ds.Ref(&updatedIn), ds.Ref(&updatedOut)}
 	return &singleIntoMultipleAlgorithmAdapter{
-		AlgorithmType{ds.Ref(&updatedAlgorithmType), inner.Type().Output},
+		updatedAlgorithmType,
 		inner,
 	}
 }
@@ -132,12 +136,15 @@ func (s *singleIntoMultipleAlgorithmAdapter) Execute(rows []element.Element) ([]
 	}
 	var resultBuilder []element.Element = nil
 	for _, row := range rows {
-		asSingle := []element.Element{row}
+		rowAsTabularRow := row.(*element.TabularRow)
+		rowAsRecord := &element.StructElement{rowAsTabularRow.Columns}
+		asSingle := []element.Element{rowAsRecord}
 		subResult, err := s.algorithm.Execute(asSingle)
 		if err != nil {
 			return nil, err
 		}
-		resultBuilder = append(resultBuilder, subResult...)
+		subResultUnpacked := subResult[0].(*element.StructElement)
+		resultBuilder = append(resultBuilder, &element.TabularRow{subResultUnpacked.Elements})
 	}
 	return resultBuilder, nil
 }

@@ -106,7 +106,7 @@ func LookupCast(from ds.DataType, to ds.DataType) (*Cast, error) {
 		return lookupUnpackCast(fromStruct, to)
 	}
 
-	return nil, errors.New("Cast not available")
+	return nil, errors.Errorf("Cast from %s to %s not available", ds.ToJsonString(from), ds.ToJsonString(to))
 }
 
 func lookupFundamentalCast(from *ds.FundamentalType, to *ds.FundamentalType) (*Cast, error) {
@@ -233,8 +233,8 @@ func lookupStructCast(from *ds.Struct, to *ds.Struct) (*Cast, error) {
 	subCasts := make([]*Cast, from.Arity(), from.Arity())
 	var canFail = false
 	var loosing = false
-	for i, fromType := range from.Fields {
-		cast, err := LookupCast(fromType.SubType.Underlying, to.Fields[i].SubType.Underlying)
+	for i, fromType := range from.Fields.Values {
+		cast, err := LookupCast(fromType.SubType.Underlying, to.Fields.Values[i].SubType.Underlying)
 		if err != nil {
 			return nil, err
 		}
@@ -269,7 +269,7 @@ func lookupPackCast(from ds.DataType, to *ds.Struct) (*Cast, error) {
 	if to.Arity() != 1 {
 		return nil, errors.New("Can only pack structs of arity 1")
 	}
-	cast, err := LookupCast(from, to.Fields[0].SubType.Underlying)
+	cast, err := LookupCast(from, to.Fields.Values[0].SubType.Underlying)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func lookupUnpackCast(from *ds.Struct, to ds.DataType) (*Cast, error) {
 	if from.Arity() != 1 {
 		return nil, errors.New("Can only unpack structs of arity 1")
 	}
-	cast, err := LookupCast(from.Fields[0].SubType.Underlying, to)
+	cast, err := LookupCast(from.Fields.Values[0].SubType.Underlying, to)
 	if err != nil {
 		return nil, err
 	}

@@ -176,8 +176,8 @@ func TestArrayCast(t *testing.T) {
 
 func TestStructCast(t *testing.T) {
 	structCast, err := LookupCast(
-		&ds.Struct{[]ds.NamedType{{"a", ds.Ref(ds.Int32)}, {"b", ds.Ref(ds.String)}}},
-		&ds.Struct{[]ds.NamedType{{"x", ds.Ref(ds.Int64)}, {"y", ds.Ref(ds.Float64)}}},
+		&ds.Struct{ds.NewNamedDataTypeMap(ds.NamedType{"a", ds.Ref(ds.Int32)}, ds.NamedType{"b", ds.Ref(ds.String)})},
+		&ds.Struct{ds.NewNamedDataTypeMap(ds.NamedType{"x", ds.Ref(ds.Int64)}, ds.NamedType{"y", ds.Ref(ds.Float64)})},
 	)
 	assert.NoError(t, err)
 	assert.True(t, structCast.CanFail)
@@ -193,7 +193,7 @@ func TestStructCast(t *testing.T) {
 func TestStructPack(t *testing.T) {
 	structCast, err := LookupCast(
 		ds.Int32,
-		&ds.Struct{[]ds.NamedType{{"x", ds.Ref(ds.Int64)}}},
+		&ds.Struct{ds.NewNamedDataTypeMap(ds.NamedType{"x", ds.Ref(ds.Int64)})},
 	)
 	assert.NoError(t, err)
 	assert.False(t, structCast.CanFail)
@@ -207,7 +207,7 @@ func TestStructPack(t *testing.T) {
 
 func TestStructUnpack(t *testing.T) {
 	structCast, err := LookupCast(
-		&ds.Struct{[]ds.NamedType{{"x", ds.Ref(ds.Int64)}}},
+		&ds.Struct{ds.NewNamedDataTypeMap(ds.NamedType{"x", ds.Ref(ds.Int64)})},
 		ds.Int32,
 	)
 	assert.NoError(t, err)

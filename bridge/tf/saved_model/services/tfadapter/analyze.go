@@ -216,7 +216,7 @@ func isTabularBlock(values map[string]TensorReference) (bool, error) {
 
 // Convert a block of tensor references, returns
 func convertBlock(isTabular bool, order []string, values map[string]TensorReference) (*ds.TypeReference, error) {
-	columns := ds.OrderedMap{}
+	columns := []ds.NamedType{}
 	for _, n := range order {
 		x := values[n]
 		convertedTensor, err := convertTensorReference(isTabular, x)
@@ -227,10 +227,9 @@ func convertBlock(isTabular bool, order []string, values map[string]TensorRefere
 	}
 
 	if isTabular {
-		return ds.Refp(&ds.TabularData{Columns: columns}), nil
+		return ds.Refp(&ds.TabularData{Columns: ds.NamedDataTypeMap{columns}}), nil
 	} else {
-		len := 1
-		return ds.Refp(&ds.TabularData{Columns: columns, RowCount: &len}), nil
+		return ds.Refp(&ds.Struct{Fields: ds.NamedDataTypeMap{columns}}), nil
 	}
 }
 

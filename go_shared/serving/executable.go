@@ -40,16 +40,13 @@ func (at *AlgorithmType) AsJson() string {
 
 // Returns a pointer, if input value may only contain a specific number of elements.
 func (at *AlgorithmType) FixedElementCount() *int {
-	td, ok := at.Input.Underlying.(*ds.TabularData)
+	_, ok := at.Input.Underlying.(*ds.TabularData)
 	if !ok {
 		// not tabular, must be single
 		one := 1
 		return &one
 	}
-	if td.RowCount == nil {
-		return nil
-	}
-	return td.RowCount
+	return nil
 }
 
 func ParseAlgorithmType(jsonString string) (*AlgorithmType, error) {

@@ -65,17 +65,17 @@ func CreateMultiFileAdapter(directory string, mantikHeader *BinaryMantikHeader) 
 		elementExtractors = append(elementExtractors, extractor)
 	}
 	isError = false
-	return CombineFileExtractors(len(tabularData.Columns), elementExtractors), nil
+	return CombineFileExtractors(tabularData.Columns.Arity(), elementExtractors), nil
 }
 
 // Check that all columns are in use
 func checkColumns(tabularData *ds.TabularData, mantikHeader *BinaryMantikHeader) error {
-	usedColumn := make([]bool, len(tabularData.Columns))
+	usedColumn := make([]bool, tabularData.Columns.Arity())
 	for _, file := range mantikHeader.Files {
 		for _, entry := range file.Content {
 			if entry.Element != nil {
 				columnName := *entry.Element
-				index := tabularData.IndexOfColumn(columnName)
+				index := tabularData.Columns.IndexOf(columnName)
 				if index < 0 {
 					return errors.Errorf("Unresolved column %s", columnName)
 				}
@@ -88,7 +88,7 @@ func checkColumns(tabularData *ds.TabularData, mantikHeader *BinaryMantikHeader)
 	}
 	for idx, b := range usedColumn {
 		if !b {
-			columnName := tabularData.Columns[idx].Name
+			columnName := tabularData.Columns.ByIdx(idx).Name
 			return errors.Errorf("Column not given in file %s", columnName)
 		}
 	}

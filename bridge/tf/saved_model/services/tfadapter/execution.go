@@ -28,7 +28,7 @@ import (
 	"gl.ambrosys.de/mantik/go_shared/ds/element"
 )
 
-func ExecuteData(model *LoadedModel, inputRows []*element.TabularRow) ([]*element.TabularRow, error) {
+func ExecuteData(model *LoadedModel, inputRows element.TabularLikeElement) (element.TabularLikeElement, error) {
 	inputFeed, err := buildInputFeed(model, inputRows)
 	if err != nil {
 		return nil, err
@@ -48,14 +48,14 @@ func ExecuteData(model *LoadedModel, inputRows []*element.TabularRow) ([]*elemen
 	return decoded, nil
 }
 
-func buildInputFeed(model *LoadedModel, inputRows []*element.TabularRow) (*map[tensorflow.Output](*tensorflow.Tensor), error) {
-	tabularType, ok := model.AlgorithmType.Input.Underlying.(*ds.TabularData)
+func buildInputFeed(model *LoadedModel, inputRows element.TabularLikeElement) (*map[tensorflow.Output](*tensorflow.Tensor), error) {
+	tabularType, ok := model.AlgorithmType.Input.Underlying.(ds.TabularLike)
 	if !ok {
 		return nil, errors.New("Expected tabular data")
 	}
 	result := make(map[tensorflow.Output]*tensorflow.Tensor)
 
-	for columnIndex, column := range tabularType.Columns {
+	for columnIndex, column := range tabularType.FieldTypes().Values {
 		reference := model.AnalyzeResult.Input[column.Name]
 		output, err := model.lookupOutput(reference.OperationName, reference.OutputIndex)
 		if err != nil {
@@ -71,7 +71,7 @@ func buildInputFeed(model *LoadedModel, inputRows []*element.TabularRow) (*map[t
 	return &result, nil
 }
 
-func buildInputTensor(isTabular bool, inputRows []*element.TabularRow, column ds.NamedType, columnIndex int) (*tensorflow.Tensor, error) {
+func buildInputTensor(isTabular bool, inputRows element.TabularLikeElement, column ds.NamedType, columnIndex int) (*tensorflow.Tensor, error) {
 	tensorType, ok := column.SubType.Underlying.(*ds.Tensor)
 	if !ok {
 		return nil, errors.Errorf("Can only convert tensors, got %s", column.SubType.Underlying.TypeName())
@@ -79,10 +79,10 @@ func buildInputTensor(isTabular bool, inputRows []*element.TabularRow, column ds
 	if isTabular {
 		return ConvertToTensorFlowFromTabularValues(tensorType, inputRows, columnIndex)
 	} else {
-		if len(inputRows) != 1 {
+		if inputRows.RowCount() != 1 {
 			return nil, errors.Errorf("Non-Tabular data may only contain a single row")
 		}
-		tensorElement, ok := inputRows[0].Columns[columnIndex].(*element.TensorElement)
+		tensorElement, ok := inputRows.Get(0, columnIndex).(*element.TensorElement)
 		if !ok {
 			return nil, errors.Errorf("Expected Tensor element")
 		}
@@ -103,13 +103,13 @@ func buildOutputFetches(model *LoadedModel) ([]tensorflow.Output, error) {
 	return outputFetches, nil
 }
 
-func decodeResult(model *LoadedModel, tensors []*tensorflow.Tensor) ([]*element.TabularRow, error) {
+func decodeResult(model *LoadedModel, tensors []*tensorflow.Tensor) (element.TabularLikeElement, error) {
 	columns := make(map[string][]*element.TensorElement)
 	var firstColumn *[]*element.TensorElement
-	tabularOutputType := model.AlgorithmType.Output.Underlying.(*ds.TabularData)
-
+	tabularOutputType := model.AlgorithmType.Output.Underlying.(ds.TabularLike)
+	ft := tabularOutputType.FieldTypes()
 	for i, name := range model.AnalyzeResult.OutputOrder {
-		columnType := tabularOutputType.GetColumn(name)
+		columnType := ft.Get(name)
 		if columnType == nil {
 			return nil, errors.Errorf("Unexpected output column %s", name)
 		}
@@ -131,16 +131,16 @@ func decodeResult(model *LoadedModel, tensors []*tensorflow.Tensor) ([]*element.
 }
 
 /** Convert multiple columns into single rows, assuming that data is matching. */
-func columnsToRows(outputType *ds.TabularData, columns map[string][]*element.TensorElement) ([]*element.TabularRow, error) {
-	if len(outputType.Columns) != len(columns) {
-		return nil, errors.Errorf("Expected %d columns, got %d", len(outputType.Columns), len(columns))
+func columnsToRows(outputType ds.TabularLike, columns map[string][]*element.TensorElement) (element.TabularLikeElement, error) {
+	if outputType.FieldTypes().Arity() != len(columns) {
+		return nil, errors.Errorf("Expected %d columns, got %d", outputType.FieldTypes().Arity(), len(columns))
 	}
 
 	// Maps index from destination structure to source structure.
-	columnCount := len(outputType.Columns)
+	columnCount := outputType.FieldTypes().Arity()
 	reorderedSource := make([][]*element.TensorElement, columnCount)
 	rowCount := -1
-	for i, column := range outputType.Columns {
+	for i, column := range outputType.FieldTypes().Values {
 		resolved := columns[column.Name]
 		if resolved == nil {
 			return nil, errors.Errorf("Could not find %s", column.Name)
@@ -155,15 +155,26 @@ func columnsToRows(outputType *ds.TabularData, columns map[string][]*element.Ten
 		}
 	}
 
-	result := make([]*element.TabularRow, rowCount)
-	for i := 0; i < rowCount; i++ {
+	switch outputType.(type) {
+	case *ds.TabularData:
+		result := make([]*element.TabularRow, rowCount)
+		for i := 0; i < rowCount; i++ {
+			rowElements := make([]element.Element, columnCount)
+			for j := 0; j < columnCount; j++ {
+				rowElements[j] = reorderedSource[j][i]
+			}
+			result[i] = &element.TabularRow{rowElements}
+		}
+		return &element.EmbeddedTabularElement{result}, nil
+	case *ds.Struct:
 		rowElements := make([]element.Element, columnCount)
 		for j := 0; j < columnCount; j++ {
-			rowElements[j] = reorderedSource[j][i]
+			rowElements[j] = reorderedSource[j][0]
 		}
-		result[i] = &element.TabularRow{rowElements}
+		return &element.StructElement{rowElements}, nil
+	default:
+		return nil, errors.New("Unsupported type")
 	}
-	return result, nil
 }
 
 func decodeOutputTensor(isTabular bool, tensor *tensorflow.Tensor, format *ds.Tensor) ([]*element.TensorElement, error) {

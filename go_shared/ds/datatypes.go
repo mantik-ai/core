@@ -37,6 +37,11 @@ type DataType interface {
 	TypeName() string
 }
 
+// A Tabular like data structure (Records or Tables)
+type TabularLike interface {
+	FieldTypes() NamedDataTypeMap
+}
+
 func DataTypeEquality(a DataType, b DataType) bool {
 	return reflect.DeepEqual(a, b)
 }
@@ -175,29 +180,11 @@ func (n *Nullable) TypeName() string {
 }
 
 type Struct struct {
-	Fields OrderedMap `json:"fields"`
-}
-
-func (t *Struct) GetField(name string) DataType {
-	for _, value := range t.Fields {
-		if value.Name == name {
-			return value.SubType.Underlying
-		}
-	}
-	return nil
-}
-
-func (t *Struct) IndexOfField(name string) int {
-	for i, value := range t.Fields {
-		if value.Name == name {
-			return i
-		}
-	}
-	return -1
+	Fields NamedDataTypeMap `json:"fields"`
 }
 
 func (t *Struct) Arity() int {
-	return len(t.Fields)
+	return len(t.Fields.Values)
 }
 
 func (t *Struct) IsFundamental() bool {
@@ -206,6 +193,10 @@ func (t *Struct) IsFundamental() bool {
 
 func (t *Struct) TypeName() string {
 	return "struct"
+}
+
+func (t *Struct) FieldTypes() NamedDataTypeMap {
+	return t.Fields
 }
 
 type Array struct {

@@ -257,10 +257,10 @@ func TestArray(t *testing.T) {
 
 func TestStruct(t *testing.T) {
 	format := ds.BuildTabular().Add(
-		"x", &ds.Struct{[]ds.NamedType{
-			{"name", ds.Ref(ds.String)},
-			{"age", ds.Ref(&ds.Nullable{ds.Ref(ds.Int32)})},
-		}},
+		"x", &ds.Struct{ds.NewNamedDataTypeMap(
+			ds.NamedType{"name", ds.Ref(ds.String)},
+			ds.NamedType{"age", ds.Ref(&ds.Nullable{ds.Ref(ds.Int32)})},
+		)},
 	).Result()
 
 	bundle := builder.Bundle(

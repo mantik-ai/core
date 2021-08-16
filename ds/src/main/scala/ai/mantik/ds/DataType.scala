@@ -52,8 +52,7 @@ object DataType {
 
 /** Tabular data, usually the root of the data. */
 case class TabularData(
-    columns: ListMap[String, DataType],
-    rowCount: Option[Long] = None
+    columns: ListMap[String, DataType]
 ) extends DataType {
 
   /** Returns the index of a column with a given name. */
@@ -86,10 +85,6 @@ case class TabularData(
       builder ++= s"$name:${value.toString}"
       first = false
     }
-    rowCount match {
-      case None     => // nothing
-      case Some(rc) => builder ++= s" rc=${rc}"
-    }
     builder ++= ")"
     builder.result()
   }
@@ -98,7 +93,7 @@ case class TabularData(
 object TabularData {
 
   /** Build a tabular data from a name type list. */
-  def apply(columns: (String, DataType)*): TabularData = TabularData(ListMap(columns: _*), None)
+  def apply(columns: (String, DataType)*): TabularData = TabularData(ListMap(columns: _*))
 
   implicit val encoder: Encoder[TabularData] = DataTypeJsonAdapter.typeEncoder.contramap { x: TabularData =>
     x: DataType
