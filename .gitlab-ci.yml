@@ -107,9 +107,7 @@ other_publish:
   variables:
     PYPI_USERNAME: __token__
     PYPI_PASSWORD: "$PYPI_ACCESS_KEY"
-    PGP_KEY: "$MANTIK_PGP_KEY_FILE"
-    PGP_PASSPHRASE: "$MANTIK_PGP_PASSPHRASE"
-    SONATYPE_OSS_PASSWORD: "$SONATYPE_OSS_PASSWORD"
+    PGP_PASSPHRASE: "$MANTIK_PGP_PASSPHRASE" # SBT is picking that up
   only:
     refs:
       - tags
@@ -120,7 +118,7 @@ other_publish:
     paths:
       - cache
   script:
-    - echo $PGP_PASSPHRASE | gpg --import --batch --yes --passphrase-fd 0 $PGP_KEY
+    - echo $MANTIK_PGP_PASSPHRASE | gpg --import --batch --yes --passphrase-fd 0 $MANTIK_PGP_KEY_FILE
     - make publish
 
 pages:
