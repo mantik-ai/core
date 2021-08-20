@@ -46,7 +46,7 @@ install:
 
 .PHONY: publish
 publish:
-	$(SBT) publish
+	$(SBT) publishSigned sonatypePrepare sonatypeBundleUpload sonatypeRelease
 
 clean:
 	$(SBT) clean

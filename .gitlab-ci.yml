@@ -4,7 +4,7 @@ include:
     file: "/templates/storage/ci.yml"
 
 image:
-  name: reg.ambrosys.de/mantik/mantikbuilder:v4
+  name: reg.ambrosys.de/mantik/mantikbuilder:6-publish-support
   entrypoint: [""] # Bug https://gitlab.com/gitlab-org/gitlab-runner/issues/1170
 
 
@@ -44,6 +44,7 @@ validate_copyright_header:
 
 test:
   stage: verify
+  when: manual
   variables:
     USER_ID: "0" # Disables suid inside docker image
     CACHE_DIR: "$PWD/cache"
@@ -59,6 +60,7 @@ test:
 
 docker:
   stage: verify
+  when: manual
   image: reg.ambrosys.de/mantik/mantikdockerindocker
   variables:
     CACHE_DIR: "$PWD/cache"
@@ -75,6 +77,7 @@ docker:
 
 dockerhub_publish:
   stage: publish
+  when: manual
   image: reg.ambrosys.de/mantik/mantikdockerindocker
   variables:
     CACHE_DIR: "$PWD/cache"
@@ -104,6 +107,9 @@ other_publish:
   variables:
     PYPI_USERNAME: __token__
     PYPI_PASSWORD: "$PYPI_ACCESS_KEY"
+    PGP_KEY: "$MANTIK_PGP_KEY_FILE"
+    PGP_PASSPHRASE: "$MANTIK_PGP_PASSPHRASE"
+    SONATYPE_OSS_PASSWORD: "$SONATYPE_OSS_PASSWORD"
   only:
     refs:
       - tags
@@ -114,6 +120,7 @@ other_publish:
     paths:
       - cache
   script:
+    - echo $PGP_PASSPHRASE | gpg --import --batch --yes --passphrase-fd 0 $PGP_KEY
     - make publish
 
 pages:
