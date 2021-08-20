@@ -53,23 +53,22 @@ val msgpackVersion = "0.8.22"
 val metricsVersion = "4.2.0"
 
 val publishSettings = Seq(
-  publishTo := {
-    val nexus = "https://sonatype.rcxt.de/repository/mantik_maven/"
-    if (isSnapshot.value)
-      Some("snapshots" at nexus)
-    else
-      Some("releases" at nexus)
-  },
-  publishMavenStyle := true,
-  credentials += (sys.env.get("SONATYPE_MANTIK_PASSWORD") match {
-    case Some(password) =>
-      Credentials("Sonatype Nexus Repository Manager", "sonatype.rcxt.de", "mantik.ci", password)
-    case None =>
-      Credentials(Path.userHome / ".sbt" / "sonatype.rcxt.de.credentials")
-  }),
+  publishTo := sonatypePublishTo.value,
+  licenses := Seq("LAGPL3" -> url("https://github.com/mantik-ai/core/blob/main/LICENSE.md")),
+  homepage := Some(url("https://mantik.ai")),
+  developers := List(
+    Developer(
+      id = "Mantik Team",
+      name = "Mantik AI Team",
+      email = "info@mantik.ai",
+      url = url("https://mantik.ai")
+    )
+  ),
   test in publish := {},
   test in publishLocal := {}
 )
+
+usePgpKeyHex("77FA82E915CD5FFB8DF62639B2796C7D542C30FF")
 
 // Shared test code
 lazy val testutils = (project in file("testutils"))
