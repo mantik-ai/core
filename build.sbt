@@ -54,36 +54,31 @@ val metricsVersion = "4.2.0"
 
 ThisBuild / publishTo := sonatypePublishTo.value
 ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
-
-val publishSettings = Seq(
-  sonatypeCredentialHost := "s01.oss.sonatype.org",
-  licenses := Seq("LAGPL3" -> url("https://github.com/mantik-ai/core/blob/main/LICENSE.md")),
-  homepage := Some(url("https://mantik.ai")),
-  developers := List(
-    Developer(
-      id = "Mantik Team",
-      name = "Mantik AI Team",
-      email = "info@mantik.ai",
-      url = url("https://mantik.ai")
-    )
-  ),
-  publishConfiguration := publishConfiguration.value.withOverwrite(true),
-  publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true),
-  credentials ++= sys.env
-    // Note not to be confused with SONATYPE_MANTIK_PASSWORD which is for sonatype.rcxt.de
-    .get("SONATYPE_OSS_PASSWORD")
-    .map { password =>
-      Credentials(
-        realm = "Sonatype Nexus Repository Manager",
-        host = "s01.oss.sonatype.org",
-        userName = "Mantik Team",
-        passwd = password
-      )
-    }
-    .toSeq,
-  test in publish := {},
-  test in publishLocal := {}
+ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+ThisBuild / licenses := Seq("LAGPL3" -> url("https://github.com/mantik-ai/core/blob/main/LICENSE.md"))
+ThisBuild / homepage := Some(url("https://mantik.ai"))
+ThisBuild / developers := List(
+  Developer(
+    id = "Mantik Team",
+    name = "Mantik AI Team",
+    email = "info@mantik.ai",
+    url = url("https://mantik.ai")
+  )
 )
+ThisBuild / credentials ++= sys.env
+  // Note not to be confused with SONATYPE_MANTIK_PASSWORD which is for sonatype.rcxt.de
+  .get("SONATYPE_OSS_PASSWORD")
+  .map { password =>
+    Credentials(
+      realm = "Sonatype Nexus Repository Manager",
+      host = "s01.oss.sonatype.org",
+      userName = "Mantik Team",
+      passwd = password
+    )
+  }
+  .toSeq
+ThisBuild / test in publish := {}
+ThisBuild / test in publishLocal := {}
 
 usePgpKeyHex("77FA82E915CD5FFB8DF62639B2796C7D542C30FF")
 
@@ -103,7 +98,8 @@ lazy val testutils = (project in file("testutils"))
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "io.circe" %% "circe-yaml" % circeYamlVersion
     ),
-    publishSettings
+    publishConfiguration := publishConfiguration.value.withOverwrite(true),
+    publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true)
   )
 
 def enableProtocolBuffer = Seq(
@@ -147,8 +143,12 @@ def makeProject(directory: String, id: String = "", publishing: Boolean = true) 
     .configs(IntegrationTest)
     .settings(
       addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full),
-      if (publishing) { publishSettings }
-      else {
+      if (publishing) {
+        Seq(
+          publishConfiguration := publishConfiguration.value.withOverwrite(true),
+          publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true)
+        )
+      } else {
         Seq(
           publishArtifact := false,
           publish := {},
@@ -215,7 +215,6 @@ lazy val mnpScala = makeProject("mnp/mnpscala")
     libraryDependencies ++= Seq(
       "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
     ),
-    publishSettings,
     enableProtocolBuffer,
     PB.protoSources in Compile := Seq(baseDirectory.value / "../protocol/protobuf")
   )
@@ -228,8 +227,7 @@ lazy val elements = makeProject("elements")
       "io.circe" %% "circe-yaml" % circeYamlVersion,
       "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
       "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
-    ),
-    publishSettings
+    )
   )
 
 // Helper library for component building based upon gRpc and Guice
