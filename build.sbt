@@ -65,6 +65,18 @@ val publishSettings = Seq(
       url = url("https://mantik.ai")
     )
   ),
+  credentials ++= sys.env
+    // Note not to be confused with SONATYPE_MANTIK_PASSWORD which is for sonatype.rcxt.de
+    .get("SONATYPE_OSS_PASSWORD")
+    .map { password =>
+      Credentials(
+        realm = "Sonatype Nexus Repository Manager",
+        host = "s01.oss.sonatype.org",
+        userName = "Mantik Team",
+        passwd = password
+      )
+    }
+    .toSeq,
   test in publish := {},
   test in publishLocal := {}
 )
