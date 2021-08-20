@@ -55,6 +55,12 @@ ThisBuild / publishTo := sonatypePublishToBundle.value
 ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
 ThisBuild / licenses := Seq("LAGPL3" -> url("https://github.com/mantik-ai/core/blob/main/LICENSE.md"))
 ThisBuild / homepage := Some(url("https://mantik.ai"))
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/mantik-ai/core"),
+    "scm:git:https://github.com/mantik-ai/core.git"
+  )
+)
 ThisBuild / developers := List(
   Developer(
     id = "Mantik Team",
