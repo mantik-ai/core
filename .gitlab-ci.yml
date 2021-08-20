@@ -39,6 +39,7 @@ build:
 
 validate_copyright_header:
   stage: verify
+  when: manual
   script:
     - ./scripts/ci/copyright_header.sh validate
 
