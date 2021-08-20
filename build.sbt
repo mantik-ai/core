@@ -54,6 +54,7 @@ val metricsVersion = "4.2.0"
 
 val publishSettings = Seq(
   publishTo := sonatypePublishTo.value,
+  sonatypeCredentialHost := "s01.oss.sonatype.org",
   licenses := Seq("LAGPL3" -> url("https://github.com/mantik-ai/core/blob/main/LICENSE.md")),
   homepage := Some(url("https://mantik.ai")),
   developers := List(
