@@ -19,7 +19,6 @@ ThisBuild / scalacOptions += "-feature"
 ThisBuild / scalacOptions ++= Seq("-unchecked", "-deprecation")
 ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats
 ThisBuild / autoAPIMappings := true
-ThisBuild / publishArtifact in (Compile, packageDoc) := false
 
 Test / parallelExecution := true
 Test / fork := false
