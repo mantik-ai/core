@@ -52,8 +52,7 @@ val parboiledVersion = "2.1.8"
 val msgpackVersion = "0.8.22"
 val metricsVersion = "4.2.0"
 
-ThisBuild / publishTo := sonatypePublishTo.value
-ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+ThisBuild / publishTo := sonatypePublishToBundle.value
 ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
 ThisBuild / licenses := Seq("LAGPL3" -> url("https://github.com/mantik-ai/core/blob/main/LICENSE.md"))
 ThisBuild / homepage := Some(url("https://mantik.ai"))
