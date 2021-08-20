@@ -52,8 +52,10 @@ val parboiledVersion = "2.1.8"
 val msgpackVersion = "0.8.22"
 val metricsVersion = "4.2.0"
 
+ThisBuild / publishTo := sonatypePublishTo.value
+ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+
 val publishSettings = Seq(
-  publishTo := sonatypePublishTo.value,
   sonatypeCredentialHost := "s01.oss.sonatype.org",
   licenses := Seq("LAGPL3" -> url("https://github.com/mantik-ai/core/blob/main/LICENSE.md")),
   homepage := Some(url("https://mantik.ai")),
@@ -65,6 +67,8 @@ val publishSettings = Seq(
       url = url("https://mantik.ai")
     )
   ),
+  publishConfiguration := publishConfiguration.value.withOverwrite(true),
+  publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true),
   credentials ++= sys.env
     // Note not to be confused with SONATYPE_MANTIK_PASSWORD which is for sonatype.rcxt.de
     .get("SONATYPE_OSS_PASSWORD")
@@ -129,7 +133,7 @@ def configureBuildInfo(packageName: String): Seq[Def.Setting[_]] =
   )
 
 // Initializes a sub project with common settings
-def makeProject(directory: String, id: String = "") = {
+def makeProject(directory: String, id: String = "", publishing: Boolean = true) = {
   import org.scalafmt.sbt.ScalafmtPlugin._
 
   val idToUse = if (id.isEmpty) {
@@ -143,7 +147,14 @@ def makeProject(directory: String, id: String = "") = {
     .configs(IntegrationTest)
     .settings(
       addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full),
-      publishSettings,
+      if (publishing) { publishSettings }
+      else {
+        Seq(
+          publishArtifact := false,
+          publish := {},
+          publishLocal := {}
+        )
+      },
       Defaults.itSettings,
       IntegrationTest / testOptions += Tests.Argument("-oDF"),
       inConfig(IntegrationTest)(scalafmtConfigSettings)
@@ -248,7 +259,7 @@ lazy val executorCommon = makeProject("executor/common", "executorCommon")
     name := "executor-common"
   )
 
-lazy val executorCommonTest = makeProject("executor/common-test", "executorCommonTest")
+lazy val executorCommonTest = makeProject("executor/common-test", "executorCommonTest", publishing = false)
   .dependsOn(testutils, executorApi, executorCommon)
   .settings(
     name := "executor-common-test"
@@ -339,16 +350,14 @@ lazy val uiServer = makeProject("ui/server", "uiServer")
     Compile / unmanagedResourceDirectories += baseDirectory.value / ".." / "client" / "target"
   )
 
-lazy val examples = makeProject("examples")
+lazy val examples = makeProject("examples", publishing = false)
   .dependsOn(engine)
   .settings(
     name := "examples",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
-    ),
-    publish := {},
-    publishLocal := {}
+    )
   )
 
 /** Engine implementation and API. */
@@ -437,6 +446,7 @@ lazy val root = (project in file("."))
     name := "mantik-core",
     publish := {},
     publishLocal := {},
+    publishArtifact := false,
     test := {},
     addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full)
   )
