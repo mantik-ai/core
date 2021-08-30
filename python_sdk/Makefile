@@ -46,6 +46,7 @@ publish:
 	sed -i 's/.*mnp.*/mnp = "${VERSION}"/' pyproject.toml
 
 	poetry version ${VERSION}
+	poetry lock --no-update
 	poetry publish --build --username $${PYPI_USERNAME} --password $${PYPI_PASSWORD}
 
 .PHONY: api-doc build clean test typecheck
