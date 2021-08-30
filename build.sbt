@@ -19,7 +19,6 @@ ThisBuild / scalacOptions += "-feature"
 ThisBuild / scalacOptions ++= Seq("-unchecked", "-deprecation")
 ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats
 ThisBuild / autoAPIMappings := true
-ThisBuild / publishArtifact in (Compile, packageDoc) := false
 
 Test / parallelExecution := true
 Test / fork := false
@@ -52,24 +51,40 @@ val parboiledVersion = "2.1.8"
 val msgpackVersion = "0.8.22"
 val metricsVersion = "4.2.0"
 
-val publishSettings = Seq(
-  publishTo := {
-    val nexus = "https://sonatype.rcxt.de/repository/mantik_maven/"
-    if (isSnapshot.value)
-      Some("snapshots" at nexus)
-    else
-      Some("releases" at nexus)
-  },
-  publishMavenStyle := true,
-  credentials += (sys.env.get("SONATYPE_MANTIK_PASSWORD") match {
-    case Some(password) =>
-      Credentials("Sonatype Nexus Repository Manager", "sonatype.rcxt.de", "mantik.ci", password)
-    case None =>
-      Credentials(Path.userHome / ".sbt" / "sonatype.rcxt.de.credentials")
-  }),
-  test in publish := {},
-  test in publishLocal := {}
+ThisBuild / publishTo := sonatypePublishToBundle.value
+ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+ThisBuild / licenses := Seq("LAGPL3" -> url("https://github.com/mantik-ai/core/blob/main/LICENSE.md"))
+ThisBuild / homepage := Some(url("https://mantik.ai"))
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/mantik-ai/core"),
+    "scm:git:https://github.com/mantik-ai/core.git"
+  )
 )
+ThisBuild / developers := List(
+  Developer(
+    id = "Mantik Team",
+    name = "Mantik AI Team",
+    email = "info@mantik.ai",
+    url = url("https://mantik.ai")
+  )
+)
+ThisBuild / credentials ++= sys.env
+  // Note not to be confused with SONATYPE_MANTIK_PASSWORD which is for sonatype.rcxt.de
+  .get("SONATYPE_OSS_PASSWORD")
+  .map { password =>
+    Credentials(
+      realm = "Sonatype Nexus Repository Manager",
+      host = "s01.oss.sonatype.org",
+      userName = "Mantik Team",
+      passwd = password
+    )
+  }
+  .toSeq
+ThisBuild / test in publish := {}
+ThisBuild / test in publishLocal := {}
+
+usePgpKeyHex("77FA82E915CD5FFB8DF62639B2796C7D542C30FF")
 
 // Shared test code
 lazy val testutils = (project in file("testutils"))
@@ -87,7 +102,8 @@ lazy val testutils = (project in file("testutils"))
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "io.circe" %% "circe-yaml" % circeYamlVersion
     ),
-    publishSettings
+    publishConfiguration := publishConfiguration.value.withOverwrite(true),
+    publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true)
   )
 
 def enableProtocolBuffer = Seq(
@@ -117,7 +133,7 @@ def configureBuildInfo(packageName: String): Seq[Def.Setting[_]] =
   )
 
 // Initializes a sub project with common settings
-def makeProject(directory: String, id: String = "") = {
+def makeProject(directory: String, id: String = "", publishing: Boolean = true) = {
   import org.scalafmt.sbt.ScalafmtPlugin._
 
   val idToUse = if (id.isEmpty) {
@@ -131,7 +147,18 @@ def makeProject(directory: String, id: String = "") = {
     .configs(IntegrationTest)
     .settings(
       addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full),
-      publishSettings,
+      if (publishing) {
+        Seq(
+          publishConfiguration := publishConfiguration.value.withOverwrite(true),
+          publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true)
+        )
+      } else {
+        Seq(
+          publishArtifact := false,
+          publish := {},
+          publishLocal := {}
+        )
+      },
       Defaults.itSettings,
       IntegrationTest / testOptions += Tests.Argument("-oDF"),
       inConfig(IntegrationTest)(scalafmtConfigSettings)
@@ -192,7 +219,6 @@ lazy val mnpScala = makeProject("mnp/mnpscala")
     libraryDependencies ++= Seq(
       "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
     ),
-    publishSettings,
     enableProtocolBuffer,
     PB.protoSources in Compile := Seq(baseDirectory.value / "../protocol/protobuf")
   )
@@ -205,8 +231,7 @@ lazy val elements = makeProject("elements")
       "io.circe" %% "circe-yaml" % circeYamlVersion,
       "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
       "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
-    ),
-    publishSettings
+    )
   )
 
 // Helper library for component building based upon gRpc and Guice
@@ -236,7 +261,7 @@ lazy val executorCommon = makeProject("executor/common", "executorCommon")
     name := "executor-common"
   )
 
-lazy val executorCommonTest = makeProject("executor/common-test", "executorCommonTest")
+lazy val executorCommonTest = makeProject("executor/common-test", "executorCommonTest", publishing = false)
   .dependsOn(testutils, executorApi, executorCommon)
   .settings(
     name := "executor-common-test"
@@ -327,16 +352,14 @@ lazy val uiServer = makeProject("ui/server", "uiServer")
     Compile / unmanagedResourceDirectories += baseDirectory.value / ".." / "client" / "target"
   )
 
-lazy val examples = makeProject("examples")
+lazy val examples = makeProject("examples", publishing = false)
   .dependsOn(engine)
   .settings(
     name := "examples",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
-    ),
-    publish := {},
-    publishLocal := {}
+    )
   )
 
 /** Engine implementation and API. */
@@ -425,6 +448,7 @@ lazy val root = (project in file("."))
     name := "mantik-core",
     publish := {},
     publishLocal := {},
+    publishArtifact := false,
     test := {},
     addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full)
   )
