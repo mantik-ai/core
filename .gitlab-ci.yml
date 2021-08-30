@@ -28,6 +28,8 @@ build:
   artifacts:
     paths:
       # Gitlab has no wildcard globbing yet https://gitlab.com/gitlab-org/gitlab-runner/issues/2620
+      - "mnp/mnppython/mnp/_stubs"
+      - "python_sdk/mantik/engine/_stubs"
       - "target"
       - "*/target"
       - "*/*/target"
@@ -101,6 +103,8 @@ dockerhub_publish:
 
 other_publish:
   stage: publish
+  dependencies:
+    - build
   variables:
     PYPI_USERNAME: __token__
     PYPI_PASSWORD: "$PYPI_ACCESS_KEY"
