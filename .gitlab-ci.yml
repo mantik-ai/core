@@ -106,6 +106,7 @@ other_publish:
   dependencies:
     - build
   variables:
+    CACHE_DIR: "$PWD/cache"
     PYPI_USERNAME: __token__
     PYPI_PASSWORD: "$PYPI_ACCESS_KEY"
     PGP_PASSPHRASE: "$MANTIK_PGP_PASSPHRASE" # SBT is picking that up
@@ -119,6 +120,7 @@ other_publish:
     paths:
       - cache
   script:
+    - mkdir -p $CACHE_DIR
     - echo $MANTIK_PGP_PASSPHRASE | gpg --import --batch --yes --passphrase-fd 0 $MANTIK_PGP_KEY_FILE
     - make publish
 
