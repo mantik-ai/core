@@ -5,6 +5,7 @@ description = ""
 packages = [{ include = "mnp" }]
 authors = ["Mantik Team <info@mantik.ai>"]
 homepage = "https://www.mantik.ai"
+include = ["**/_stubs/**/*.py"]
 
 [tool.poetry.dependencies]
 python = "~3.7"
