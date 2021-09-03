@@ -28,6 +28,7 @@ publish: build
 	echo "Publishing version ${VERSION}"
 	poetry version ${VERSION}
 	poetry publish --build --username $${PYPI_USERNAME} --password $${PYPI_PASSWORD}
+	sleep 30 # See #264
 
 docker-publish:
 

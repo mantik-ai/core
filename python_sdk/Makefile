@@ -48,5 +48,6 @@ publish: build
 	poetry version ${VERSION}
 	poetry lock --no-update
 	poetry publish --build --username $${PYPI_USERNAME} --password $${PYPI_PASSWORD}
+	sleep 30 # See #264
 
 .PHONY: api-doc build clean test typecheck
