@@ -20,5 +20,6 @@
 # a commercial license.
 #
 
-from .compat import *
+from . import compat as stubs
 from .engine import Client
+from .engine import MantikItem

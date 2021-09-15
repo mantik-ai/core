@@ -21,7 +21,7 @@
 #
 
 from typing import List, Optional
-from dataclasses import dataclass
+import dataclasses
 from google.protobuf.any_pb2 import Any
 from enum import IntEnum
 from mnp._stubs.mantik.mnp.mnp_pb2 import SS_INITIALIZING, SS_DOWNLOADING, SS_STARTING_UP, SS_READY, SS_FAILED
@@ -33,7 +33,7 @@ from mnp.rpc_converter import string_or_none, or_empty_string
 
 # Nice python wrappers for MNP Elements
 
-@dataclass
+@dataclasses.dataclass
 class AboutResponse:
     name: str
     extra: Optional[Any] = None
@@ -45,7 +45,7 @@ class AboutResponse:
         )
 
 
-@dataclass
+@dataclasses.dataclass
 class InputPortConfiguration:
     content_type: str
 
@@ -57,7 +57,7 @@ class InputPortConfiguration:
         return ProtoConfigureInputPort(content_type=self.content_type)
 
 
-@dataclass
+@dataclasses.dataclass
 class OutputPortConfiguration:
     content_type: str
     forwarding: Optional[str] = None
@@ -76,10 +76,10 @@ class OutputPortConfiguration:
         )
 
 
-@dataclass
+@dataclasses.dataclass
 class PortConfiguration:
-    inputs: List[InputPortConfiguration]
-    outputs: List[OutputPortConfiguration]
+    inputs: List[InputPortConfiguration] = dataclasses.field(default_factory=list)
+    outputs: List[OutputPortConfiguration] = dataclasses.field(default_factory=list)
 
     @classmethod
     def from_init(cls, init: ProtoInitRequest):

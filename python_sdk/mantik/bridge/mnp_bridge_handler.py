@@ -23,8 +23,8 @@
 import logging
 import os
 import tempfile
-from typing import Callable, List, BinaryIO
-from typing import Optional
+import typing as t
+import contextlib
 from time import sleep
 import shutil
 
@@ -32,32 +32,96 @@ from google.protobuf.any_pb2 import Any
 from mnp import Handler, PortConfiguration, SessionState, SessionHandler, AboutResponse
 from mantik.util import zip_directory
 
-from mantik import MantikHeader, Bundle
+from mantik.types import MantikHeader, Bundle, UnsupportedBridgeKindError
 from mantik.bridge._stubs.mantik.bridge.bridge_pb2 import BridgeAboutResponse, MantikInitConfiguration
-from .algorithm import Algorithm
+from . import kinds
 
-AlgorithmProvider = Callable[[MantikHeader], Algorithm]
+BridgeProvider = t.Callable[[MantikHeader], kinds.Bridge]
 
 
-class MnpSessionHandlerBase(SessionHandler):
+class InvalidInputAmountError(Exception):
+    """A session handler has an invalid amount of inputs."""
 
-    def __init__(self, session_id: str, header: MantikHeader, ports: PortConfiguration, algorithm: Algorithm):
-        super().__init__(session_id, ports)
-        self.algorithm = algorithm
+
+class InvalidOutputAmountError(Exception):
+    """A session handler has an invalid amount of outputs."""
+
+
+class MnpSessionHandler(SessionHandler, contextlib.AbstractContextManager):
+    number_of_inputs: int = 0
+    number_of_outputs: int = 0
+
+    def __init__(self, session_id: str, header: MantikHeader, ports: PortConfiguration):
+        self._check_for_correct_input_and_output(ports)
+        super().__init__(session_id, ports=ports)
         self.header = header
+
+    def __enter__(self) -> "MnpSessionHandler":
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        pass
+
+    def _check_for_correct_input_and_output(
+        self,
+        ports: PortConfiguration,
+    ) -> None:
+        if len(ports.inputs) != self.number_of_inputs:
+            raise InvalidInputAmountError(
+                f"{self.__class__.__name__} requires exactly "
+                f"{self.number_of_inputs} input(s)"
+            )
+        elif len(ports.outputs) != self.number_of_outputs:
+            raise InvalidOutputAmountError(
+                f"{self.__class__.__name__} requires exactly "
+                f"{self.number_of_outputs} output(s)"
+            )
+
+
+class MnpSessionHandlerForDataSet(MnpSessionHandler):
+    number_of_inputs: int = 0
+    number_of_outputs: int = 1
+
+    def __init__(
+        self, 
+        session_id: str, 
+        header: MantikHeader, 
+        ports: PortConfiguration, 
+        dataset: kinds.DataSet,
+    ):
+        super().__init__(session_id, header=header, ports=ports)
+        self.dataset = dataset
+    
+    def run_task(self, task_id: str, inputs: t.List[t.BinaryIO], outputs: t.List[t.BinaryIO]) -> None:
+        """Run the task."""
+        result = self.dataset.get().__add__(self.header.type.output)
+        data_output = result.encode(self.ports.outputs[0].content_type)
+        outputs[0].write(data_output)
+        outputs[0].close()
+
+    def quit(self):
+        self.dataset.close()
+
+
+class MnpSessionHandlerForAlgorithm(MnpSessionHandler):
+    number_of_inputs: int = 1
+    number_of_outputs: int = 1
+
+    def __init__(
+        self, 
+        session_id: str, 
+        header: MantikHeader, 
+        ports: PortConfiguration, 
+        algorithm: kinds.Algorithm,
+    ):
+        super().__init__(session_id, header=header, ports=ports)
+        self.algorithm = algorithm
 
     def quit(self):
         self.algorithm.close()
         shutil.rmtree(self.header.basedir)
 
-
-class MnpSessionHandlerForAlgorithm(MnpSessionHandlerBase):
-
-    def __init__(self, session_id: str, header: MantikHeader, ports: PortConfiguration, algorithm: Algorithm):
-        super().__init__(session_id, header, ports, algorithm)
-        assert len(ports.inputs) == 1 and len(ports.outputs) == 1
-
-    def run_task(self, task_id: str, inputs: List[BinaryIO], outputs: List[BinaryIO]):
+    def run_task(self, task_id: str, inputs: t.List[t.BinaryIO], outputs: t.List[t.BinaryIO]):
         data_input = Bundle.decode(self.ports.inputs[0].content_type, inputs[0], self.header.type.input)
         result = self.algorithm.apply(data_input).__add__(self.header.type.output)
         data_output = result.encode(self.ports.outputs[0].content_type)
@@ -65,13 +129,11 @@ class MnpSessionHandlerForAlgorithm(MnpSessionHandlerBase):
         outputs[0].close()
 
 
-class MnpSessionHandlerForTrainable(MnpSessionHandlerBase):
+class MnpSessionHandlerForTrainableAlgorithm(MnpSessionHandlerForAlgorithm):
+    number_of_inputs: int = 1
+    number_of_outputs: int = 2
 
-    def __init__(self, session_id: str, header: MantikHeader, ports: PortConfiguration, algorithm: Algorithm):
-        super().__init__(session_id, header, ports, algorithm)
-        assert len(ports.inputs) == 1 and len(ports.outputs) == 2
-
-    def run_task(self, task_id: str, inputs: List[BinaryIO], outputs: List[BinaryIO]):
+    def run_task(self, task_id: str, inputs: t.List[t.BinaryIO], outputs: t.List[t.BinaryIO]):
         logging.debug("Feeding data for training %s/%s", self.session_id, task_id)
         data_input = Bundle.decode(self.ports.inputs[0].content_type, inputs[0], self.header.training_type)
         logging.debug("Feeding data for training finished, starting training now")
@@ -93,12 +155,25 @@ class MnpSessionHandlerForTrainable(MnpSessionHandlerBase):
 
 
 
+BRIDGE_KIND_SESSION_HANDLERS: t.Dict[str, kinds.Bridge] = {
+    "dataset": MnpSessionHandlerForDataSet,
+    "algorithm": MnpSessionHandlerForAlgorithm,
+    "trainable": MnpSessionHandlerForTrainableAlgorithm,
+}
+
+
 class MnpBridgeHandler(Handler):
 
-    def __init__(self, algorithm_provider: AlgorithmProvider, name: str,
-                 quit_handler: Optional[Callable[[], None]] = None):
-        self.algorithm_provider = algorithm_provider
+    def __init__(
+        self, 
+        bridge_provider: BridgeProvider, 
+        name: str,
+        quit_handler: t.Optional[t.Callable[[], None]] = None,
+        session_handlers: t.Optional[t.Dict[str, kinds.Bridge]] = None,
+    ):
+        self.bridge_provider = bridge_provider
         self.name = name
+        self.session_handlers = session_handlers or BRIDGE_KIND_SESSION_HANDLERS.copy()
         self.quit_handler = quit_handler
 
     def about(self) -> AboutResponse:
@@ -114,7 +189,7 @@ class MnpBridgeHandler(Handler):
             self.quit_handler()
 
     def init_session(self, session_id: str, configuration: Any, ports: PortConfiguration,
-                     callback: Callable[[SessionState], None] = None) -> SessionHandler:
+                     callback: t.Callable[[SessionState], None] = None) -> SessionHandler:
         init_config = MantikInitConfiguration()
         if configuration.Is(MantikInitConfiguration.DESCRIPTOR):
             configuration.Unpack(init_config)
@@ -133,14 +208,16 @@ class MnpBridgeHandler(Handler):
 
         header = MantikHeader.load(header_file)
 
-        algorithm = self.algorithm_provider(header)
+        kind = self.bridge_provider(header)
 
-        if header.kind == "algorithm":
-            return MnpSessionHandlerForAlgorithm(session_id, header, ports, algorithm)
-        elif header.kind == "trainable":
-            return MnpSessionHandlerForTrainable(session_id, header, ports, algorithm)
+        try:
+            session_handler = self.session_handlers[header.kind]
+        except KeyError:
+            raise UnsupportedBridgeKindError(
+                f"{header.kind} not supported for bridge MantikHeader.kind"
+            )
         else:
-            raise NotImplementedError("Unsupported header kind {}".format(header.kind))
+            return session_handler(session_id, header, ports, kind)
 
     def _prepare_directory(self, session_id: str, init_config: MantikInitConfiguration) -> str:
         """
@@ -163,7 +240,7 @@ class MnpBridgeHandler(Handler):
         return header_file
 
     @staticmethod
-    def _get_payload(init_config: MantikInitConfiguration) -> Optional[str]:
+    def _get_payload(init_config: MantikInitConfiguration) -> t.Optional[str]:
         """
         Download the embedded payload into a temporary file, returns None if there is one
         """
@@ -205,3 +282,4 @@ class MnpBridgeHandler(Handler):
         else:
             logging.info("Placing pure file of %d bytes into %s", file_size, destination)
             os.rename(payload_file, destination)
+
