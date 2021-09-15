@@ -22,10 +22,17 @@
 
 """Computes y = 2*x on the sklearn stack via mantik."""
 
+import os
+
 import logging
 
 import mantik.engine
 import mantik.types
+
+from utils import convert_relative_to_absolute_path
+
+# Define bridge path
+BRIDGE_BASE = convert_relative_to_absolute_path(__file__, "../../bridge/")
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,8 +43,8 @@ pipe2 = ["select x * CAST(2 as float64) as y"]
 
 with mantik.engine.Client("localhost", 8087) as client:
     # TODO (mq): We should be able to search/list all existing algorithms.
-    client._add_algorithm("../../bridge/sklearn/simple_learn")
-    client._add_algorithm("../../bridge/sklearn/simple_learn/example/multiply")
+    client._add_algorithm(BRIDGE_BASE + "sklearn/simple_learn")
+    client._add_algorithm(BRIDGE_BASE + "sklearn/simple_learn/example/multiply")
     with client.enter_session():
         result = client.apply(pipe, bundle).fetch()
         print(f"Result: {result.bundle}")

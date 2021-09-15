@@ -19,14 +19,15 @@ image:
 
 engine: # General values that cannot be attributed to a template
   grpcPort: 8087
+  uiPort: 4040
   labels:
     app: engine
-  
-  
+
 service: # Expose engine
   name: mantik-engine-service
   type: LoadBalancer
-  port: 8087
+  grpcPort: 8087
+  uiPort: 4040
 
 deployment:
   name: mantik-engine
@@ -41,6 +42,15 @@ deployment:
           behavior:
             defaultTimeout: "10 minutes"
           nodeAddress: null
+        s3Storage:
+          endpoint: "http://minio.minikube"
+          region: "eu-central-1"
+          bucket: "mantiktest"
+          accessKeyId: "mantikruntime"
+          secretKey: "plain:mantikruntimepassword"
+          aclWorkaround: "true"
+  akka:
+    loglevel: DEBUG
           
 volumes:
   logs:
