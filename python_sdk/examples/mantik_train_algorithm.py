@@ -22,6 +22,8 @@
 
 """Run sklearn.cluster.KMeans via mantik."""
 
+import os
+
 import time
 
 import numpy as np
@@ -32,6 +34,11 @@ from sklearn.metrics import accuracy_score
 
 import mantik.engine
 import mantik.types
+
+from utils import convert_relative_to_absolute_path
+
+# Define bridge path
+BRIDGE_BASE = convert_relative_to_absolute_path(__file__, "../../bridge/")
 
 centers = np.sort(np.array([[1, 1], [0, 0], [-1, -1]]), axis=0)
 data, _ = make_blobs(n_samples=100, n_features=2, centers=centers, cluster_std=0.95)
@@ -65,8 +72,8 @@ meta = dict(n_clusters=n_clusters)
 my_ref = "mq/kmeans_trained_on_blobs"
 
 with mantik.engine.Client("localhost", 8087) as client:
-    simple_learn = client._add_algorithm("../../bridge/sklearn/simple_learn", named_mantik_id = "mantik/sklearn.simple")
-    kmeans = client._add_algorithm("../../bridge/sklearn/simple_learn/example/kmeans")
+    simple_learn = client._add_algorithm(BRIDGE_BASE+"sklearn/simple_learn", named_mantik_id = "mantik/sklearn.simple")
+    kmeans = client._add_algorithm(BRIDGE_BASE+"sklearn/simple_learn/example/kmeans")
     with client.enter_session():
         trained_pipe, stats = client.train([kmeans], train_bundle, meta=meta, action_name="Training")
         kmeans_trained = client.tag(trained_pipe, my_ref).save()
