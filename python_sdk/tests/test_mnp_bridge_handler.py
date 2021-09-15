@@ -23,13 +23,13 @@
 from google.protobuf.any_pb2 import Any
 from mnp import PortConfiguration, InputPortConfiguration, OutputPortConfiguration
 
-from mantik import Bundle, DataType
+from mantik.types import Bundle, DataType
 from mantik.bridge import Algorithm
 from mantik.bridge._stubs.mantik.bridge.bridge_pb2 import MantikInitConfiguration
-from mantik.bridge.mnp_bridge_handler import MnpBridgeHandler, MnpSessionHandlerForTrainable, \
+from mantik.bridge.mnp_bridge_handler import MnpBridgeHandler, MnpSessionHandlerForTrainableAlgorithm, \
     MnpSessionHandlerForAlgorithm
 from mantik.types import MantikHeader
-from mantik import MIME_MANTIK_BUNDLE
+from mantik.types import MIME_MANTIK_BUNDLE
 from typing import Optional, cast
 import os
 import io
@@ -144,7 +144,7 @@ def test_mnp_bridge_simple_algorithm():
         outputs=[OutputPortConfiguration("application/json")]
     )
 
-    header = """{"type":{"input":"float32", "output":"float32"}}"""
+    header = """{"kind": "algorithm", "type":{"input":"float32", "output":"float32"}}"""
 
     init_config = MantikInitConfiguration(
         header=header
@@ -226,7 +226,7 @@ def test_simple_training():
     init_config_any = Any()
     init_config_any.Pack(init_config)
 
-    session: MnpSessionHandlerForTrainable = cast(MnpSessionHandlerForTrainable,
+    session: MnpSessionHandlerForTrainableAlgorithm = cast(MnpSessionHandlerForTrainableAlgorithm,
                                                   handler.init_session("1234", init_config_any, ports))
     assert session.session_id == "1234"
 
@@ -320,7 +320,7 @@ def test_simple_training_with_msgpack():
     init_config_any = Any()
     init_config_any.Pack(init_config)
 
-    session: MnpSessionHandlerForTrainable = cast(MnpSessionHandlerForTrainable,
+    session: MnpSessionHandlerForTrainableAlgorithm = cast(MnpSessionHandlerForTrainableAlgorithm,
                                                   handler.init_session("1234", init_config_any, ports))
     assert session.session_id == "1234"
 

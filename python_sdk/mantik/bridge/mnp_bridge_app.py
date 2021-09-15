@@ -24,20 +24,24 @@ from typing import Callable
 
 from mnp import Server
 
-from mantik import MantikHeader
-from .algorithm import Algorithm
+from mantik.types import MantikHeader
 from .mnp_bridge_handler import MnpBridgeHandler
+from . import kinds
 import logging
+from . import mnp_bridge_handler
+import mantik.types
 
-AlgorithmProvider = Callable[[MantikHeader], Algorithm]
+BridgeProvider = Callable[[MantikHeader], kinds.Bridge]
 
 
-def start_mnp_bridge(algorithm_provider: AlgorithmProvider, name: str):
-    """
-    Entry point for simple algorithm based Python Bridges
-    :param algorithm_provider:
+def start_mnp_bridge(bridge_provider: BridgeProvider, name: str):
+    """Entry point for simple algorithm based Python Bridges.
+
+    :param bridge_provider:
     :param name:
-    :return:
+
+    :return: None
+
     """
 
     def quit_handler():
@@ -47,9 +51,13 @@ def start_mnp_bridge(algorithm_provider: AlgorithmProvider, name: str):
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    handler = MnpBridgeHandler(algorithm_provider, name, quit_handler)
+    handler = MnpBridgeHandler(
+        bridge_provider=bridge_provider, 
+        name=name, 
+        quit_handler=quit_handler,
+    )
     server = Server(handler)
-    addr = "0.0.0.0:8502"
-    server.start("0.0.0.0:8502")
-    print("Starting MNP Server for {} on {}".format(name, addr))
+    address = "0.0.0.0:8502"
+    server.start(address)
+    print(f"Starting MNP Server for {name} on {address}")
     server.wait_for_termination()
