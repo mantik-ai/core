@@ -22,6 +22,8 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.ds.element.TabularBundle
+import ai.mantik.elements.errors.MantikException
+import ai.mantik.executor.model.ListWorkerRequest
 import ai.mantik.planner.DataSet
 import ai.mantik.planner.impl.PlanningContextImpl
 import ai.mantik.planner.integration.IntegrationTestBase
@@ -30,6 +32,7 @@ class MnpPlanExecutorSpec extends IntegrationTestBase {
   trait Env {
     val contextImpl = context.asInstanceOf[PlanningContextImpl]
     val mnpExecutor = contextImpl.planExecutor.asInstanceOf[MnpPlanExecutor]
+    val executor = contextImpl.executor
 
     val simpleAction = DataSet
       .literal(
@@ -52,11 +55,45 @@ class MnpPlanExecutorSpec extends IntegrationTestBase {
     executeSimplePlan()
     contextImpl.metrics.workersCreated.getCount shouldBe 1
     contextImpl.metrics.mnpConnectionsCreated.getCount shouldBe 1
-    withClue("Connections should be closed afterwards") {
+    withClue("Connections should be closed after run") {
       contextImpl.metrics.mnpConnections.getCount shouldBe 0
     }
-    withClue("Workers should be stopped") {
-      contextImpl.metrics.workers.getCount shouldBe 0
+    eventually {
+      withClue("Workers should be stopped") {
+        contextImpl.metrics.workers.getCount shouldBe 0
+      }
+    }
+  }
+
+  it should "remove containers after successful evaluation" in new Env {
+    val runningBefore = await(executor.listWorkers(ListWorkerRequest()))
+    executeSimplePlan()
+    eventually {
+      val runningAfterwards = await(executor.listWorkers(ListWorkerRequest()))
+      val delta = runningAfterwards.workers.diff(runningBefore.workers)
+      delta shouldBe empty
+    }
+  }
+
+  it should "remove containers after failed evaluation" in new Env {
+    /*
+    Casting to invalid types should let a container crash.
+     */
+    val crashing = DataSet
+      .literal(
+        TabularBundle.buildColumnWise.withPrimitives("x", "1", "2", "Bad").result
+      )
+      .select("SELECT CAST(x AS INT32)")
+      .fetch
+
+    val runningBefore = await(executor.listWorkers(ListWorkerRequest()))
+    intercept[MantikException] {
+      crashing.run()
+    }
+    eventually {
+      val runningAfterwards = await(executor.listWorkers(ListWorkerRequest()))
+      val delta = runningAfterwards.workers.diff(runningBefore.workers)
+      delta shouldBe empty
     }
   }
 }
