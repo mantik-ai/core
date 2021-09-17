@@ -21,7 +21,7 @@
 #
 
 import abc
-from mantik.types import Bundle
+import mantik.types
 
 from . import bridge
 
@@ -30,7 +30,7 @@ class Algorithm(bridge.Bridge):
     """Abstract class for executable algorithms."""
 
     @abc.abstractmethod
-    def apply(self, bundle: Bundle) -> Bundle:
+    def apply(self, bundle: mantik.types.Bundle) -> mantik.types.Bundle:
         """Applies the algorithm."""
 
 
@@ -38,7 +38,7 @@ class TrainableAlgorithm(Algorithm):
     """Abstract class for trainable algorithms."""
 
     @abc.abstractmethod
-    def train(self, bundle: Bundle):
+    def train(self, bundle: mantik.types.Bundle):
         """Starts training the algorithm."""
 
     @property
@@ -48,7 +48,7 @@ class TrainableAlgorithm(Algorithm):
 
     @property
     @abc.abstractmethod
-    def training_stats(self) -> Bundle:
+    def training_stats(self) -> mantik.types.Bundle:
         """Returns training stats."""
 
     @property

@@ -23,11 +23,11 @@
 import tempfile
 import zipfile
 import pytest
-from typing import List
+import typing as t
 
 import mantik.util.zip as zip_utils
 
-def _write_test_files(directory: str, names: List[str], contents: List[str]):
+def _write_test_files(directory: str, names: t.List[str], contents: t.List[str]):
     for name, content in zip(names, contents):
         with open(directory+"/"+name, "w") as f:
             f.write(content)

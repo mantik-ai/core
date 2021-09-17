@@ -21,7 +21,7 @@
 #
 
 import abc
-from mantik.types import Bundle
+import mantik.types
 
 from . import bridge
 
@@ -30,10 +30,5 @@ class DataSet(bridge.Bridge):
     """Base class for a dataset."""
 
     @abc.abstractmethod
-    def get(self) -> Bundle:
+    def get(self) -> mantik.types.Bundle:
         """Applies the dataset loading."""
-
-    
-    def close(self):
-        """Close an algorithm (releasing resources, etc.)."""
-        pass

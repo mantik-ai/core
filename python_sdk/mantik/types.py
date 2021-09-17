@@ -64,6 +64,9 @@ class DataType:
     representation: Representation
     """Initializes from the parsed JSON representation."""
 
+    def __repr__(self):
+        return str(self.representation)
+
     @classmethod
     def from_kw(cls, **kwargs):
         return cls(dict(columns=kwargs))
@@ -99,6 +102,14 @@ class DataType:
             return "fundamental"
         raise ValueError("Invalid representation type")
 
+    @property
+    def column_names(self) -> t.List[str]:
+        """Return the column names."""
+        if not self.is_tabular:
+            raise ValueError("Column names are only set for tabular data.")
+        columns = self.representation.get("columns")
+        return list(columns.keys())
+
     def to_json(self) -> str:
         return json.dumps(self.representation)
 
@@ -133,9 +144,6 @@ class DataType:
             raise ValueError("Column names are only set for tabular data.")
         columns = self.representation.get("columns")
         return DataType(columns.get(name))
-
-    def __repr__(self):
-        return str(self.representation)
 
 
 @dataclasses.dataclass
@@ -267,19 +275,19 @@ class MantikHeader:
             stat_type=stat_type,
         )
 
-    @property
-    def has_training(self) -> bool:
-        return self.training_type is not None
-
     @classmethod
-    def load(cls, file: str) -> MantikHeader:
+    def from_file(cls, file: str) -> MantikHeader:
         """Load a local mantik header."""
         with open(file) as f:
-            return MantikHeader.parse(f.read(), os.path.dirname(file))
+            return cls.parse(f.read(), os.path.dirname(file))
 
     @classmethod
     def parse(cls, content: str, root_dir: str) -> MantikHeader:
-        return MantikHeader.from_yaml(parse_and_decode_meta_yaml(content), root_dir)
+        return cls.from_yaml(parse_and_decode_meta_yaml(content), root_dir)
+
+    @property
+    def has_training(self) -> bool:
+        return self.training_type is not None
 
     @property
     def payload_dir(self):
@@ -390,7 +398,7 @@ class MetaVariable:
     """If true, the value may not be changed anymore (usually not relevant for Bridges)"""
 
     @classmethod
-    def from_json(cls, parsed_json):
+    def from_json(cls, parsed_json: dict) -> MetaVariable:
         return cls(
             Bundle.decode_parsed_json_bundle(parsed_json),
             str(parsed_json.get("name")),
@@ -406,7 +414,7 @@ class MetaVariables(dict):
         """Construct a MetaVariable t.List from parsed json."""
         default = default or ""
         variables = [MetaVariable.from_json(var) for var in parsed_json.get(key, default)]
-        return MetaVariables({var.name: var for var in variables})
+        return cls({var.name: var for var in variables})
 
     def get(self, key: str, default=None):
         try:
@@ -424,6 +432,14 @@ class Bundle:
     type: t.Optional[DataType] = None
     value: t.Optional[t.Any] = None
 
+    def __len__(self):
+        return len(self.value) if isinstance(self.value, list) else 1
+
+    @classmethod
+    def from_flat_column(cls, value):
+        """Generates a (untyped) bundle from a flat column, packing each element into a single row."""
+        return cls(value=[[x] for x in value])
+
     def flat_column(self, column_name: str):
         """Select a single column and returns a flat list of each value.
 
@@ -433,15 +449,10 @@ class Bundle:
         column_id = self.type.column_id(column_name)
         return [x[column_id] for x in self.value]
 
-    @classmethod
-    def from_flat_column(cls, value):
-        """Generates a (untyped) bundle from a flat column, packing each element into a single row."""
-        return cls(value=[[x] for x in value])
-
-    def __add__(self, data_type: DataType):
+    def set_type(self, data_type: DataType) -> Bundle:
         """Add a type if it's missing, returns a copy."""
-        use_type = data_type if self.type is None else self.type
-        return self.__class__(use_type, self.value)
+        self.type = data_type if self.type is None else self.type
+        return self
 
     @classmethod
     def decode(cls, content_type: str, data, assumed_type: DataType = None) -> Bundle:
@@ -452,13 +463,10 @@ class Bundle:
         """
         if content_type == MIME_MANTIK_JSON_BUNDLE:
             return cls.decode_json_bundle(data.read())
-
-        if content_type == MIME_MSGPACK:
+        elif content_type == MIME_MSGPACK:
             return cls.decode_msgpack(data, assumed_type)
-
-        if content_type == MIME_MANTIK_BUNDLE:
+        elif content_type == MIME_MANTIK_BUNDLE:
             return cls.decode_msgpack_bundle(data)
-
         return cls.decode_json(data.read(), assumed_type)
 
     @classmethod
@@ -496,23 +504,19 @@ class Bundle:
     def encode(self, content_type: str):
         if content_type == MIME_MANTIK_JSON_BUNDLE:
             return self.encode_json_bundle()
-
-        if content_type == MIME_MSGPACK:
+        elif content_type == MIME_MSGPACK:
             return self.encode_msgpack()
-
-        if content_type == MIME_MANTIK_BUNDLE:
+        elif content_type == MIME_MANTIK_BUNDLE:
             return self.encode_msgpack_bundle()
-
         return self.encode_json()
 
     def encode_json(self):
-        return _jsonify_value(self.value)
+        return json.dumps(self.value, ensure_ascii=False).encode("utf8")
 
     def encode_json_bundle(self):
         if self.type is None:
             raise Exception("No type available")
-
-        return _jsonify_bundle(type=self.type.representation, value=self.value)
+        return json.dumps({"type": self.type.representation, "value": self.value})
 
     def encode_msgpack(self) -> bytes:
         if self.type is None:
@@ -540,32 +544,3 @@ class Bundle:
         else:
             packer.pack(self.value)
         return packer.bytes()
-
-    def __len__(self):
-        return len(self.value) if isinstance(self.value, list) else 1
-
-
-@dataclasses.dataclass
-class StreamableBundle(Bundle):
-    """Bundle implementing a streamable (t.Iterator) as value."""
-
-    value: t.Optional[t.Iterator] = None
-
-    def encode_json(self) -> t.Iterator:
-        for value in self.value:
-            yield _jsonify_value(value)
-
-    def encode_json_bundle(self) -> t.Iterator:
-        if self.type is None:
-            raise Exception("No type available")
-
-        for value in self.value:
-            yield _jsonify_bundle(type=self.type.representation, value=value)
-
-
-def _jsonify_value(value: t.Any) -> str:
-    return json.dumps(value, ensure_ascii=False).encode("utf8")
-
-
-def _jsonify_bundle(type: Representation, value: t.Any) -> str:
-    return json.dumps({"type": type, "value": value})

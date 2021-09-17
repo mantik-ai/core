@@ -20,7 +20,7 @@
 # a commercial license.
 #
 
-from mantik.types import MantikHeader
+import mantik.types
 import json
 
 
@@ -41,7 +41,7 @@ type:
   output: float32 
 """
 
-    mf = MantikHeader.parse(sample, ".")
+    mf = mantik.types.MantikHeader.parse(sample, ".")
     assert mf.payload_dir == "./payload"
     assert mf.type.input.representation == json.loads(
         '{"columns": {"x":{"type":"tensor","componentType":"float32","shape":[100]}}}'
