@@ -46,12 +46,12 @@ with mantik.engine.Client("localhost", 8087) as client:
     client.add_artifact("../../bridge/sklearn/simple_learn")
     client.add_artifact("../../bridge/sklearn/simple_learn/example/multiply")
     with client.enter_session():
-        result = client.apply(pipe, bundle).fetch()
+        result = client.apply(pipe, bundle)
         print(f"Result: {result.bundle}")
         # you can explicitly upload a bundle.
         # however, just passing the bundle works, too!
         data = client.upload_bundle(bundle)
-        result2 = client.apply(pipe2, data).fetch()
+        result2 = client.apply(pipe2, data)
         print(f"Result2: {result2.bundle}")
 
 assert result.bundle == result2.bundle

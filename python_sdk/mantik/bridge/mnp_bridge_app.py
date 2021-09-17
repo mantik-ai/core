@@ -20,18 +20,20 @@
 # a commercial license.
 #
 
-from typing import Callable
+from __future__ import annotations
 
-from mnp import Server
+import typing as t
 
-from mantik.types import MantikHeader
-from .mnp_bridge_handler import MnpBridgeHandler
+import mnp
+
+import mantik.types
 from . import kinds
+from . import mnp_bridge_handler
 import logging
 from . import mnp_bridge_handler
 import mantik.types
 
-BridgeProvider = Callable[[MantikHeader], kinds.Bridge]
+BridgeProvider = t.Callable[[mantik.types.MantikHeader], kinds.Bridge]
 
 
 def start_mnp_bridge(bridge_provider: BridgeProvider, name: str):
@@ -51,12 +53,12 @@ def start_mnp_bridge(bridge_provider: BridgeProvider, name: str):
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    handler = MnpBridgeHandler(
+    handler = mnp_bridge_handler.MnpBridgeHandler(
         bridge_provider=bridge_provider, 
         name=name, 
         quit_handler=quit_handler,
     )
-    server = Server(handler)
+    server = mnp.Server(handler)
     address = "0.0.0.0:8502"
     server.start(address)
     print(f"Starting MNP Server for {name} on {address}")

@@ -21,35 +21,34 @@
 #
 
 import io
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Optional
+import dataclasses
+import typing as t
 
 import pytest
 
-from mantik import types
-from mantik.bridge import mnp_bridge_handler as handler
-from mantik.bridge.kinds import DataSet
+import mantik.types
+from mantik.bridge import mnp_session_handlers
+from mantik.bridge import kinds
 import mnp
 
 
-class FakeDataSet(DataSet):
-    def get(self) -> types.Bundle:
-        return types.Bundle()
+class FakeDataSet(kinds.DataSet):
+    def get(self) -> mantik.types.Bundle:
+        return mantik.types.Bundle()
 
     
-@dataclass
-class FakeDataSetMantikHeader(types.MantikHeader):
-    yaml_code: dict = field(default_factory=dict)
+@dataclasses.dataclass
+class FakeDataSetMantikHeader(mantik.types.MantikHeader):
+    yaml_code: dict = dataclasses.field(default_factory=dict)
     basedir: str = "test_base_dir"
     name: str = "test_mantik_header"
-    type: types.FunctionType = types.DataSetFunctionType(
-        output=types.DataType("test_output"),
+    type: mantik.types.FunctionType = mantik.types.DataSetFunctionType(
+        output=mantik.types.DataType("test_output"),
     )
-    meta_variables: types.MetaVariables = field(default_factory=types.MetaVariables)
+    meta_variables: mantik.types.MetaVariables = dataclasses.field(default_factory=mantik.types.MetaVariables)
     kind: str = "dataset"
-    training_type: Optional[types.DataType] = None
-    stat_type: Optional[types.DataType] = None
+    training_type: t.Optional[mantik.types.DataType] = None
+    stat_type: t.Optional[mantik.types.DataType] = None
 
 
 @pytest.fixture()
@@ -61,7 +60,7 @@ def handler_for_dataset():
         forwarding="test",
     )
     ports = mnp.PortConfiguration(outputs=[output_ports])
-    return handler.MnpSessionHandlerForDataSet(
+    return mnp_session_handlers.MnpSessionHandlerForDataSet(
         "test_session_id",
         header=header,
         ports=ports,
@@ -73,7 +72,7 @@ class TestMnpSessionHandlerForDataSet:
     def test_run_task(self, handler_for_dataset):
         inputs = []
         outputs = [io.BytesIO()]
-        expected = types.Bundle()
+        expected = mantik.types.Bundle()
 
         handler_for_dataset.run_task("test_task_id", inputs, outputs)
         [result] = outputs

@@ -20,7 +20,7 @@
 # a commercial license.
 #
 
-from mantik.types import parse_and_decode_meta_json, parse_and_decode_meta_yaml, decode_meta_json
+import mantik.types
 import json
 
 
@@ -40,13 +40,13 @@ def test_decode_meta_json_primitives():
     for v in json_values:
         # Plain values
         parsed = json.loads(v)
-        decoded = decode_meta_json(parsed)
+        decoded = mantik.types.decode_meta_json(parsed)
         assert decoded == parsed
 
         # Wrapped in Objects
         in_object = '{"x":' + v + "}"
         parsed = json.loads(in_object)
-        decoded = decode_meta_json(parsed)
+        decoded = mantik.types.decode_meta_json(parsed)
         assert decoded == parsed
 
 
@@ -87,7 +87,7 @@ def test_parse_meta_json():
     "b": [true, "x", "${escaped}"]
     }
     """
-    decoded = parse_and_decode_meta_json(sample)
+    decoded = mantik.types.parse_and_decode_meta_json(sample)
     expected = json.loads(expected)
     assert decoded == expected
 
@@ -103,7 +103,7 @@ def test_ignore_meta_block():
         }
     ]}
     """
-    decoded = parse_and_decode_meta_json(bogus)
+    decoded = mantik.types.parse_and_decode_meta_json(bogus)
     expected = json.loads(bogus)
     assert decoded == expected
 
@@ -124,6 +124,6 @@ x: ${foo}
         "x": 123
     }
     """
-    decoded = parse_and_decode_meta_yaml(yaml)
+    decoded = mantik.types.parse_and_decode_meta_yaml(yaml)
     parsed_expected = json.loads(expected)
     assert decoded == parsed_expected
