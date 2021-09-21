@@ -16,6 +16,10 @@ spec:
         app: {{ .Values.engine.labels.app }}
     spec:
       serviceAccountName: {{ .Values.deployment.name }}-sa
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: {{ .Values.deployment.name }}
           image: {{ .Values.image.name }}:{{ .Values.image.tag }}
@@ -24,9 +28,16 @@ spec:
             - -Dmantik.executor.docker.defaultImageTag={{ .Values.deployment.mantik.args.executor.docker.defaultImageTag }} 
             - -Dmantik.executor.behaviour.disablePull={{ .Values.deployment.mantik.args.executor.behaviour.disablePull }}
             - -Dmantik.executor.kubernetes.behavior.defaultTimeout={{ .Values.deployment.mantik.args.executor.kubernetes.behavior.defaultTimeout }}
+            - -Dmantik.executor.kubernetes.nodeAddress={{ .Values.deployment.mantik.args.executor.kubernetes.nodeAddress }}
             - -Dmantik.executor.type=kubernetes
             - -Dmantik.planner.payloadProvider=executor
-            - -Dmantik.executor.kubernetes.nodeAddress={{ .Values.deployment.mantik.args.executor.kubernetes.nodeAddress }}
+            - -Dmantik.executor.s3Storage.endpoint={{ .Values.deployment.mantik.args.executor.s3Storage.endpoint }}
+            - -Dmantik.executor.s3Storage.region={{ .Values.deployment.mantik.args.executor.s3Storage.region }}
+            - -Dmantik.executor.s3Storage.bucket={{ .Values.deployment.mantik.args.executor.s3Storage.bucket }}
+            - -Dmantik.executor.s3Storage.accessKeyId={{ .Values.deployment.mantik.args.executor.s3Storage.accessKeyId }}
+            - -Dmantik.executor.s3Storage.secretKey={{ .Values.deployment.mantik.args.executor.s3Storage.secretKey }}
+            - -Dmantik.executor.s3Storage.aclWorkaround={{ .Values.deployment.mantik.args.executor.s3Storage.aclWorkaround }}
+            - -Dakka.loglevel={{ .Values.deployment.akka.loglevel }}
           ports:
             - containerPort: {{ .Values.engine.grpcPort }}
           volumeMounts:

@@ -20,7 +20,27 @@
 # a commercial license.
 #
 
+from __future__ import annotations
+
+import functools
+
+import mantik.types
 from . import compat as stubs
-from .engine import Client
-from .objects import MantikArtifact
-from .objects import MantikItem
+
+
+@functools.singledispatch
+def convert_bundle(bundle: mantik.types.Bundle) -> stubs.Bundle:
+    """Convert mantik.types.Bundle to its protobuf equivalent."""
+    return stubs.Bundle(
+        data_type=stubs.DataType(json=bundle.type.to_json()),
+        encoding=stubs.ENCODING_JSON,
+        encoded=bundle.encode_json(),
+    )
+
+
+@convert_bundle.register
+def _(bundle: stubs.Bundle) -> mantik.types.Bundle:
+    return mantik.types.Bundle.decode_json(
+        bundle.encoded,
+        assumed_type=mantik.types.DataType.from_json(bundle.data_type.json),
+    )

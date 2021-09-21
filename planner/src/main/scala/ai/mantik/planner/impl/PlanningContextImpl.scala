@@ -50,7 +50,8 @@ private[planner] class PlanningContextImpl @Inject() (
     val remoteRegistry: RemoteMantikRegistry,
     val retriever: MantikArtifactRetriever,
     val mantikItemStateManager: MantikItemStateManager,
-    val metrics: Metrics
+    val metrics: Metrics,
+    val executor: Executor
 )(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase
     with PlanningContext {
@@ -134,7 +135,8 @@ private[mantik] object PlanningContextImpl {
         registry,
         retriever,
         mantikItemStateManager,
-        metrics
+        metrics,
+        executor
       )
     context
   }

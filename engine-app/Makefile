@@ -12,7 +12,7 @@ else
   -Dsbt.coursier.home=$(CACHE_DIR)/coursier
 endif
 
-SBT = cd ../; sbt $(SBT_CACHE_PARAMETER) -Dquill.macro.log=false -warn
+SBT = cd ../; sbt $(SBT_CACHE_PARAMETER) -Dquill.macro.log=false
 
 # .make files are there to tell Make if something is going to be rebuild
 
@@ -46,7 +46,7 @@ install:
 
 .PHONY: publish
 publish:
-	$(SBT) publish
+	$(SBT) publishSigned sonatypePrepare sonatypeBundleUpload sonatypeRelease
 
 clean:
 	$(SBT) clean

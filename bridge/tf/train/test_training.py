@@ -28,7 +28,7 @@ import time
 
 def test_simple_training():
     dir = "example/factor"
-    mf = MantikHeader.load(os.path.join(dir, "MantikHeader"))
+    mf = MantikHeader.from_file(os.path.join(dir, "MantikHeader"))
 
     with AlgorithmWrapper(mf) as wrapper:
         assert not wrapper.is_trained

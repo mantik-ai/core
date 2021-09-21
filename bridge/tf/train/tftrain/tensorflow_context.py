@@ -43,7 +43,7 @@ class TensorFlowContext(Context):
         :return:
         """
         # Assuning that script is started from data directory
-        mf = MantikHeader.load("../MantikHeader")
+        mf = MantikHeader.from_file("../MantikHeader")
 
         class LocalContext(TensorFlowContext):
             def __init__(self):

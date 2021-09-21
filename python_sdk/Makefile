@@ -39,13 +39,15 @@ $(eval $(call python_grpc,../engine/src/main/protobuf,mantik/engine/_stubs,manti
 $(eval $(call python_grpc,../bridge/protocol/protobuf,mantik/bridge/_stubs,mantik.bridge))
 
 VERSION=$(CI_COMMIT_TAG:v%=%)
-publish:
+publish: build
 	@if [ -z ${VERSION} ]; then echo "Version is empty"; false; fi
 	echo "Publishing version ${VERSION}"
 	# Updating MNP Dependency
 	sed -i 's/.*mnp.*/mnp = "${VERSION}"/' pyproject.toml
 
 	poetry version ${VERSION}
+	poetry lock --no-update
 	poetry publish --build --username $${PYPI_USERNAME} --password $${PYPI_PASSWORD}
+	sleep 30 # See #264
 
 .PHONY: api-doc build clean test typecheck

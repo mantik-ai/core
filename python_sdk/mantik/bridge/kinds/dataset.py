@@ -20,7 +20,15 @@
 # a commercial license.
 #
 
-from . import compat as stubs
-from .engine import Client
-from .objects import MantikArtifact
-from .objects import MantikItem
+import abc
+import mantik.types
+
+from . import bridge
+
+
+class DataSet(bridge.Bridge):
+    """Base class for a dataset."""
+
+    @abc.abstractmethod
+    def get(self) -> mantik.types.Bundle:
+        """Applies the dataset loading."""

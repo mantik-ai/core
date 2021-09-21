@@ -22,16 +22,17 @@
 
 from __future__ import annotations
 
+import abc
 import copy
 import dataclasses
 import json
 import os
-from typing import Union, List, Any, Optional
+import typing as t
 
 import msgpack
 import yaml
 
-Representation = Union[dict, str]
+Representation = t.Union[dict, str]
 
 META_PREFIX = "${"
 META_SUFFIX = "}"
@@ -41,6 +42,10 @@ MIME_MANTIK_JSON_BUNDLE = "application/x-mantik-bundle-json"
 MIME_MSGPACK = "application/x-msgpack"
 MIME_MANTIK_BUNDLE = "application/x-mantik-bundle"
 MIME_TYPES = [MIME_JSON, MIME_MANTIK_JSON_BUNDLE, MIME_MANTIK_BUNDLE, MIME_MSGPACK]
+
+
+class UnsupportedBridgeKindError(Exception):
+    """A given bridge kind is not available in mantik."""
 
 
 @dataclasses.dataclass
@@ -58,6 +63,9 @@ class DataType:
 
     representation: Representation
     """Initializes from the parsed JSON representation."""
+
+    def __repr__(self):
+        return str(self.representation)
 
     @classmethod
     def from_kw(cls, **kwargs):
@@ -94,6 +102,14 @@ class DataType:
             return "fundamental"
         raise ValueError("Invalid representation type")
 
+    @property
+    def column_names(self) -> t.List[str]:
+        """Return the column names."""
+        if not self.is_tabular:
+            raise ValueError("Column names are only set for tabular data.")
+        columns = self.representation.get("columns")
+        return list(columns.keys())
+
     def to_json(self) -> str:
         return json.dumps(self.representation)
 
@@ -111,7 +127,7 @@ class DataType:
         raise Exception("Column {} not found".format(column_name))
 
     @property
-    def column_names(self) -> List[str]:
+    def column_names(self) -> t.List[str]:
         """Return the column names."""
         if not self.is_tabular:
             raise ValueError("Column names are only set for tabular data.")
@@ -129,32 +145,97 @@ class DataType:
         columns = self.representation.get("columns")
         return DataType(columns.get(name))
 
-    def __repr__(self):
-        return str(self.representation)
+
+@dataclasses.dataclass
+class FunctionType(abc.ABC):
+    """Function mapping.
+    
+    Represents the mapping of a bridge. E.g. a dataset bridge maps
+    no input to an output, algorithms map an input to an output.
+
+    """
+
+    output: DataType
+
+    @classmethod
+    @abc.abstractmethod
+    def from_dict(cls, parsed_yaml: dict) -> FunctionType:
+        """Generates a function from the result of JSON Parsing."""
+
+    @abc.abstractmethod
+    def to_json(self) -> dict:
+        """Serializes to json."""
 
 
 @dataclasses.dataclass
-class FunctionType(object):
-    """Function Mapping"""
-
-    input: DataType
-    output: DataType
+class DataSetFunctionType(FunctionType):
+    """Function mapping for a dataset."""
 
     def __repr__(self):
-        return "{} -> {}".format(self.input, self.output)
+        return f"None -> {self.output}"
 
-    @staticmethod
-    def from_dict(o):
-        """Generates a function from the result of JSON Parsing."""
-        return FunctionType(DataType(o.get("input")), DataType(o.get("output")))
+    @classmethod
+    def from_dict(cls, parsed_yaml: dict) -> AlgorithmFunctionType:
+        """Generates a function from the result of JSON Parsing.
+        
+        The MantikHeader for a dataset does not expect an explicit output
+        definition of the form
+        ```YAML
+        type:
+          output:
+            ...
+        ```
+        Instead, for a dataset a reduced output definition like
+        ```YAML
+        type:
+          ...
+        ```
+        must be used.
 
-    def to_json(self):
+        """
+        return cls(output=DataType(parsed_yaml))
+
+    def to_json(self) -> str:
+        """Serializes to json."""
+        return json.dumps({"output": self.output.representation})
+
+
+@dataclasses.dataclass
+class AlgorithmFunctionType(FunctionType):
+    """Function mapping for an algorithm."""
+
+    input: DataType
+
+    def __repr__(self):
+        return f"{self.input} -> {self.output}"
+
+    @classmethod
+    def from_dict(cls, parsed_yaml: dict) -> AlgorithmFunctionType:
+        """Generates a function from the result of JSON Parsing.
+        
+        The MantikHeader for an algorithm expects an explicit definiton
+        for both input and output of the form
+        ```YAML
+        type:
+          input:
+            ...
+          output:
+            ...
+        ```
+
+        """
+        return cls(
+            input=DataType(parsed_yaml.get("input")),
+            output=DataType(parsed_yaml.get("output")),
+        )
+
+    def to_json(self) -> str:
         """Serializes to json."""
         return json.dumps({"input": self.input.representation, "output": self.output.representation})
 
 
 @dataclasses.dataclass
-class MantikHeader(object):
+class MantikHeader:
     """Represents the MantikHeader which controls the way a algorithm/dataset works."""
 
     # TODO: The base dir should not be part of a MantikHeader
@@ -165,45 +246,64 @@ class MantikHeader(object):
     type: FunctionType
     meta_variables: MetaVariables
     kind: str
-    training_type: Optional[DataType]
-    stat_type: Optional[DataType]
+    training_type: t.Optional[DataType]
+    stat_type: t.Optional[DataType]
 
     @classmethod
-    def from_yaml(cls, parsed_yaml, basedir) -> MantikHeader:
+    def from_yaml(cls, parsed_yaml: dict, basedir: str) -> MantikHeader:
         """Contruct MantikHeader from parsed yaml."""
-
-        tt = parsed_yaml.get("trainingType", None)
-        st = parsed_yaml.get("statType", None)
-        return cls(
-            parsed_yaml,
-            basedir,
-            parsed_yaml.get("name", "unnamed"),
-            FunctionType.from_dict(parsed_yaml.get("type")),
-            MetaVariables.from_parsed(parsed_yaml),
-            parsed_yaml.get("kind", "algorithm"),
-            DataType(tt) if tt is not None else None,
-            DataType(st) if st is not None else None,
+        name = parsed_yaml.get("name", None)
+        kind = parsed_yaml.get("kind")
+        type = _create_function_type_from_bridge_kind(
+            kind=kind,
+            parsed_yaml=parsed_yaml,
         )
+        meta = MetaVariables.from_parsed(parsed_yaml)
+        tt = parsed_yaml.get("trainingType", None)
+        training_type = DataType(tt) if tt is not None else None
+        st = parsed_yaml.get("statType", None)
+        stat_type = DataType(st) if st is not None else None
+
+        return cls(
+            yaml_code=parsed_yaml,
+            basedir=basedir,
+            name=name,
+            type=type,
+            meta_variables=meta,
+            kind=kind,
+            training_type=training_type,
+            stat_type=stat_type,
+        )
+
+    @classmethod
+    def from_file(cls, file: str) -> MantikHeader:
+        """Load a local mantik header."""
+        with open(file) as f:
+            return cls.parse(f.read(), os.path.dirname(file))
+
+    @classmethod
+    def parse(cls, content: str, root_dir: str) -> MantikHeader:
+        return cls.from_yaml(parse_and_decode_meta_yaml(content), root_dir)
 
     @property
     def has_training(self) -> bool:
         return self.training_type is not None
 
-    @classmethod
-    def load(cls, file: str) -> MantikHeader:
-        """Load a local mantik header."""
-
-        with open(file) as f:
-            return MantikHeader.parse(f.read(), os.path.dirname(file))
-
-    @classmethod
-    def parse(cls, content: str, root_dir: str) -> MantikHeader:
-        return MantikHeader.from_yaml(parse_and_decode_meta_yaml(content), root_dir)
-
     @property
     def payload_dir(self):
         """Returns the payload directory."""
         return os.path.join(self.basedir, "payload")
+
+
+def _create_function_type_from_bridge_kind(kind: str, parsed_yaml: dict) -> FunctionType:
+    type_definition = parsed_yaml.get("type")
+    if kind == "dataset":
+        return DataSetFunctionType.from_dict(type_definition)
+    elif kind == "algorithm" or kind == "trainable":
+        return AlgorithmFunctionType.from_dict(type_definition)
+    raise UnsupportedBridgeKindError(
+        f"{kind} not supported for bridge MantikHeader.kind"
+    )
 
 
 def parse_and_decode_meta_json(meta_json):
@@ -298,7 +398,7 @@ class MetaVariable:
     """If true, the value may not be changed anymore (usually not relevant for Bridges)"""
 
     @classmethod
-    def from_json(cls, parsed_json):
+    def from_json(cls, parsed_json: dict) -> MetaVariable:
         return cls(
             Bundle.decode_parsed_json_bundle(parsed_json),
             str(parsed_json.get("name")),
@@ -311,10 +411,10 @@ class MetaVariables(dict):
 
     @classmethod
     def from_parsed(cls, parsed_json, key="metaVariables", default=None):
-        """Construct a MetaVariable List from parsed json."""
+        """Construct a MetaVariable t.List from parsed json."""
         default = default or ""
         variables = [MetaVariable.from_json(var) for var in parsed_json.get(key, default)]
-        return MetaVariables({var.name: var for var in variables})
+        return cls({var.name: var for var in variables})
 
     def get(self, key: str, default=None):
         try:
@@ -329,8 +429,16 @@ class MetaVariables(dict):
 class Bundle:
     """A Mantik Bundle (Datatype and Value)."""
 
-    type: Optional[DataType] = None
-    value: Optional[Any] = None
+    type: t.Optional[DataType] = None
+    value: t.Optional[t.Any] = None
+
+    def __len__(self):
+        return len(self.value) if isinstance(self.value, list) else 1
+
+    @classmethod
+    def from_flat_column(cls, value):
+        """Generates a (untyped) bundle from a flat column, packing each element into a single row."""
+        return cls(value=[[x] for x in value])
 
     def flat_column(self, column_name: str):
         """Select a single column and returns a flat list of each value.
@@ -341,15 +449,10 @@ class Bundle:
         column_id = self.type.column_id(column_name)
         return [x[column_id] for x in self.value]
 
-    @classmethod
-    def from_flat_column(cls, value):
-        """Generates a (untyped) bundle from a flat column, packing each element into a single row."""
-        return cls(value=[[x] for x in value])
-
-    def __add__(self, data_type: DataType):
+    def set_type(self, data_type: DataType) -> Bundle:
         """Add a type if it's missing, returns a copy."""
-        use_type = data_type if self.type is None else self.type
-        return self.__class__(use_type, self.value)
+        self.type = data_type if self.type is None else self.type
+        return self
 
     @classmethod
     def decode(cls, content_type: str, data, assumed_type: DataType = None) -> Bundle:
@@ -360,13 +463,10 @@ class Bundle:
         """
         if content_type == MIME_MANTIK_JSON_BUNDLE:
             return cls.decode_json_bundle(data.read())
-
-        if content_type == MIME_MSGPACK:
+        elif content_type == MIME_MSGPACK:
             return cls.decode_msgpack(data, assumed_type)
-
-        if content_type == MIME_MANTIK_BUNDLE:
+        elif content_type == MIME_MANTIK_BUNDLE:
             return cls.decode_msgpack_bundle(data)
-
         return cls.decode_json(data.read(), assumed_type)
 
     @classmethod
@@ -404,13 +504,10 @@ class Bundle:
     def encode(self, content_type: str):
         if content_type == MIME_MANTIK_JSON_BUNDLE:
             return self.encode_json_bundle()
-
-        if content_type == MIME_MSGPACK:
+        elif content_type == MIME_MSGPACK:
             return self.encode_msgpack()
-
-        if content_type == MIME_MANTIK_BUNDLE:
+        elif content_type == MIME_MANTIK_BUNDLE:
             return self.encode_msgpack_bundle()
-
         return self.encode_json()
 
     def encode_json(self):
@@ -419,7 +516,6 @@ class Bundle:
     def encode_json_bundle(self):
         if self.type is None:
             raise Exception("No type available")
-
         return json.dumps({"type": self.type.representation, "value": self.value})
 
     def encode_msgpack(self) -> bytes:
@@ -448,6 +544,3 @@ class Bundle:
         else:
             packer.pack(self.value)
         return packer.bytes()
-
-    def __len__(self):
-        return len(self.value) if isinstance(self.value, list) else 1

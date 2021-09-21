@@ -20,12 +20,13 @@
 # a commercial license.
 #
 
-from mantik.types import MantikHeader
+import mantik.types
 import json
 
 
 def test_parse():
     sample = """
+kind: algorithm
 metaVariables:
   - name: width
     type: int32
@@ -38,14 +39,14 @@ type:
         componentType: float32
         shape: ["${width}"]
   output: float32 
-    """
+"""
 
-    mf = MantikHeader.parse(sample, ".")
+    mf = mantik.types.MantikHeader.parse(sample, ".")
     assert mf.payload_dir == "./payload"
     assert mf.type.input.representation == json.loads(
         '{"columns": {"x":{"type":"tensor","componentType":"float32","shape":[100]}}}'
     )
     assert mf.type.output.representation == json.loads('"float32"')
     assert mf.kind == "algorithm"
-    assert mf.name == "unnamed"
+    assert mf.name == None
     assert mf.meta_variables.get("width") == 100

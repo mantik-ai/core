@@ -69,24 +69,28 @@ private[planner] class MnpWorkerManager @Inject() (
       val containers = requiredContainersForPlan(plan)
 
       logger.info(s"Spinning up ${containers.size} containers")
-      containers
+
+      val containerReservations: Future[Vector[(Container, ReservedContainer)]] = containers
         .traverse { container =>
           startWorker(grpcProxy, jobId, container).map { reservedContainer =>
             container -> reservedContainer
           }
         }
-        .map { responses =>
-          ContainerMapping(
-            jobId = jobId,
-            responses.toMap
-          )
+
+      val containerMapping = containerReservations.map { responses =>
+        ContainerMapping(
+          jobId = jobId,
+          responses.toMap
+        )
+      }
+
+      // If something fails kill all containers for the job jobId.
+      containerMapping.recoverWith { case NonFatal(e) =>
+        logger.error(s"Spinning up containers failed, trying to stop remaining ones", e)
+        stopContainers(jobId).transformWith { _ =>
+          Future.failed(e)
         }
-        .recoverWith { case NonFatal(e) =>
-          logger.error(s"Spinning up containers failed, trying to stop remaining ones", e)
-          stopContainers(jobId).transformWith { _ =>
-            Future.failed(e)
-          }
-        }
+      }
     }
   }
 
@@ -114,7 +118,9 @@ private[planner] class MnpWorkerManager @Inject() (
   /** Close connection and remove containers. */
   def closeConnectionAndStopContainers(containerMapping: ContainerMapping): Future[Unit] = {
     for {
-      _ <- closeMnpConnections(containerMapping)
+      _ <- closeMnpConnections(containerMapping).recover { case NonFatal(e) =>
+        logger.warn(s"Error during closing MNP Connections", e)
+      }
       _ <- stopContainers(containerMapping.jobId)
     } yield { () }
   }
