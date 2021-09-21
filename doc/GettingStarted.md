@@ -127,9 +127,9 @@ once you have the engine running.
 
 ### Running Python Examples
 
-- Go into the directory `python-sdk`
+- Go into the directory `examples/python`
 - Spawn a Poetry shell using `poetry shell`
-- Run `python examples/mantik_train_algorithm.py`
+- Run `python mantik_train_algorithm.py`
 
 ### Running CLI (Command Line Interface)
 

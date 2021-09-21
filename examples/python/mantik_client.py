@@ -20,10 +20,9 @@
 # a commercial license.
 #
 
+
 """Computes y = 2*x on the sklearn stack via mantik."""
-
 import logging
-
 import mantik.engine
 import mantik.types
 
