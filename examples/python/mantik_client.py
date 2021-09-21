@@ -35,8 +35,8 @@ pipe2 = ["select x * CAST(2 as float64) as y"]
 
 with mantik.engine.Client("localhost", 8087) as client:
     # TODO (mq): We should be able to search/list all existing algorithms.
-    client._add_algorithm("../../bridge/sklearn/simple_learn")
-    client._add_algorithm("../../bridge/sklearn/simple_learn/example/multiply")
+    client.add_artifact("../../bridge/sklearn/simple_learn")
+    client.add_artifact("../../bridge/sklearn/simple_learn/example/multiply")
     with client.enter_session():
         result = client.apply(pipe, bundle).fetch()
         print(f"Result: {result.bundle}")
