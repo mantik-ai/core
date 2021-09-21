@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "mantik_python_examples"
+version = "0.1.0"
+description = ""
+authors = ["Thomas Seidler <thomas.seidler@ambrosys.de>"]
+
+[tool.poetry.dependencies]
+python = ">=3.7,<3.8"
+mantik = "0.3.0"
+numpy = "^1.21.2"
+scikit-learn = "^0.24.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

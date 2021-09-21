@@ -327,7 +327,7 @@ lazy val uiServer = makeProject("ui/server", "uiServer")
     Compile / unmanagedResourceDirectories += baseDirectory.value / ".." / "client" / "target"
   )
 
-lazy val examples = makeProject("examples")
+lazy val examples = makeProject("examples/scala")
   .dependsOn(engine)
   .settings(
     name := "examples",
