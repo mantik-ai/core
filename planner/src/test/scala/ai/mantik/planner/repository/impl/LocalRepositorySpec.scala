@@ -24,7 +24,7 @@ package ai.mantik.planner.repository.impl
 import ai.mantik.testutils.TempDirSupport
 import com.typesafe.config.ConfigFactory
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class LocalRepositorySpec extends RepositorySpecBase with TempDirSupport {
 

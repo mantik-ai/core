@@ -66,7 +66,7 @@ case class Graph[+T](
 }
 
 object Graph {
-  implicit def graphEncoder[T: Encoder]: ObjectEncoder[Graph[T]] = semiauto.deriveEncoder[Graph[T]]
+  implicit def graphEncoder[T: Encoder]: Encoder.AsObject[Graph[T]] = semiauto.deriveEncoder[Graph[T]]
   implicit def graphDecoder[T: Decoder]: Decoder[Graph[T]] = semiauto.deriveDecoder[Graph[T]]
 
   def empty[T]: Graph[T] = Graph(Map.empty)

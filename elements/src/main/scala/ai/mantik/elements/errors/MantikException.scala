@@ -46,7 +46,7 @@ class MantikException(val code: ErrorCode, msg: String, cause: Throwable = null)
 class MantikAsyncException(code: ErrorCode, msg: String, cause: Throwable = null)
     extends MantikException(code, msg, cause) {
 
-  def this(cause: Throwable) {
+  def this(cause: Throwable) = {
     this(
       {
         cause match {

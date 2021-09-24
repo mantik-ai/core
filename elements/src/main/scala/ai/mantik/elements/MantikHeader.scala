@@ -25,10 +25,9 @@ import ai.mantik.ds.element.SingleElementBundle
 import ai.mantik.elements.errors.{ErrorCodes, InvalidMantikHeaderException, MantikException}
 import ai.mantik.elements.meta.{MetaJson, MetaVariableException}
 import io.circe.Decoder.Result
-import io.circe.{Decoder, DecodingFailure, Error, HCursor, Json, JsonObject, ObjectEncoder}
 import io.circe.syntax._
-import io.circe.yaml.syntax._
 import io.circe.yaml.{Printer, parser => YamlParser}
+import io.circe._
 
 import scala.reflect.ClassTag
 
@@ -49,7 +48,7 @@ case class MantikHeader[T <: MantikDefinition](
 
   /** Returns the definition, if applicable. */
   def definitionAs[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[MantikException, T] =
-    cast[T].right.map(_.definition)
+    cast[T].map(_.definition)
 
   def cast[T <: MantikDefinition](implicit ct: ClassTag[T]): Either[MantikException, MantikHeader[T]] = {
     definition match {
@@ -197,9 +196,10 @@ object MantikHeader {
   }
 
   /** Encodes a MantikHeader to it's json value. */
-  implicit def encoder[T <: MantikDefinition]: ObjectEncoder[MantikHeader[T]] = new ObjectEncoder[MantikHeader[T]] {
-    override def encodeObject(a: MantikHeader[T]): JsonObject = a.metaJson.asJsonObject
-  }
+  implicit def encoder[T <: MantikDefinition]: Encoder.AsObject[MantikHeader[T]] =
+    new Encoder.AsObject[MantikHeader[T]] {
+      override def encodeObject(a: MantikHeader[T]): JsonObject = a.metaJson.asJsonObject
+    }
 
   /** Decodes a MantikHeader from JSON. */
   implicit def decoder[T <: MantikDefinition: ClassTag]: Decoder[MantikHeader[T]] = new Decoder[MantikHeader[T]] {

@@ -107,7 +107,7 @@ class DummyStateService(implicit akkaRuntime: AkkaRuntime) extends ComponentBase
 
   addShutdownHook {
     Future {
-      import scala.collection.JavaConverters._
+      import scala.jdk.CollectionConverters._
       val e = new RuntimeException(s"System is going on")
       lpPromises.asScala.foreach(_.tryFailure(e))
     }
@@ -122,11 +122,11 @@ class DummyStateService(implicit akkaRuntime: AkkaRuntime) extends ComponentBase
   }
 
   private def registerFakeLp[T](f: => Future[T]): Future[T] = {
-    val promise = Promise[T]
+    val promise = Promise[T]()
     lpPromises.add(promise)
 
     actorSystem.scheduler.scheduleOnce(10.seconds) {
-      promise.tryCompleteWith(f)
+      promise.completeWith(f)
       lpPromises.remove(promise)
     }
 

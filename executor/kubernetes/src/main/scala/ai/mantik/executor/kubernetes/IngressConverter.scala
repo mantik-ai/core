@@ -22,7 +22,7 @@
 package ai.mantik.executor.kubernetes
 
 import skuber.{ObjectMeta, Service}
-import skuber.ext.Ingress
+import skuber.networking.Ingress
 
 /** Handles ingress conversions for Kubernetes */
 case class IngressConverter(
@@ -38,7 +38,7 @@ case class IngressConverter(
       "The service must have a name, either by defining it, or by creating it and using the returned service."
     )
 
-    val annotations = config.kubernetes.ingressAnnotations.mapValues(interpolateIngressString)
+    val annotations = config.kubernetes.ingressAnnotations.view.mapValues(interpolateIngressString).toMap
 
     val servicePort = (for {
       spec <- service.spec
@@ -68,7 +68,7 @@ case class IngressConverter(
     val backend =
       Ingress.Backend(
         serviceName = serviceName,
-        servicePort = servicePort
+        servicePort = Left(servicePort)
       )
 
     config.kubernetes.ingressSubPath match {

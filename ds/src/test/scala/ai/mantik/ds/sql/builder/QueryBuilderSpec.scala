@@ -103,7 +103,7 @@ class QueryBuilderSpec extends TestBase {
   it should "detect type mismatches in unions" in {
     val result = QueryBuilder.buildQuery("$0 UNION $2")
     result.isLeft shouldBe true
-    result.left.get should include("Type mismatch")
+    result.forceLeft should include("Type mismatch")
   }
 
   it should "parse unions from selects" in {

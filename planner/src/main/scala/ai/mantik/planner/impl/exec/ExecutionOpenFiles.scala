@@ -39,7 +39,7 @@ private[impl] case class ExecutionOpenFiles(
 ) {
 
   lazy val fileIds: Map[PlanFileReference, String] = {
-    readFiles.mapValues(_.fileId) ++ writeFiles.mapValues(_.fileId)
+    readFiles.view.mapValues(_.fileId).toMap ++ writeFiles.view.mapValues(_.fileId).toMap
   }
 
   def resolveFileWrite(fileReference: PlanFileReference): FileStorageResult = {

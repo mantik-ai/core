@@ -24,7 +24,7 @@ package ai.mantik.ds.helper.circe
 import io.circe.Decoder.Result
 import io.circe._
 import io.circe.generic.decoding.DerivedDecoder
-import io.circe.generic.encoding.DerivedObjectEncoder
+import io.circe.generic.encoding.{DerivedAsObjectEncoder, DerivedObjectEncoder}
 import shapeless.Lazy
 
 import scala.reflect.ClassTag
@@ -36,10 +36,12 @@ import scala.reflect.ClassTag
   *
   * This is for circe JSON, not Play JSON.
   */
-abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") extends ObjectEncoder[T] with Decoder[T] {
+abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind")
+    extends Encoder.AsObject[T]
+    with Decoder[T] {
   protected case class SubType[X <: T](
       classTag: ClassTag[X],
-      encoder: ObjectEncoder[X],
+      encoder: Encoder.AsObject[X],
       decoder: Decoder[X],
       kind: String,
       isDefault: Boolean
@@ -55,7 +57,7 @@ abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") ex
       isDefault: Boolean = false
   )(
       implicit classTag: ClassTag[X],
-      encoder: Lazy[DerivedObjectEncoder[X]],
+      encoder: Lazy[DerivedAsObjectEncoder[X]],
       decoder: Lazy[DerivedDecoder[X]]
   ): SubType[X] = {
     SubType(classTag, encoder.value, decoder.value, kind, isDefault)
@@ -65,7 +67,7 @@ abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") ex
   protected def makeGivenSubType[X <: T](
       kind: String,
       isDefault: Boolean = false
-  )(implicit classTag: ClassTag[X], encoder: ObjectEncoder[X], decoder: Decoder[X]): SubType[X] = {
+  )(implicit classTag: ClassTag[X], encoder: Encoder.AsObject[X], decoder: Decoder[X]): SubType[X] = {
     SubType(classTag, encoder, decoder, kind, isDefault)
   }
 
@@ -78,11 +80,15 @@ abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") ex
 
   private lazy val decoders: Map[String, SubType[_ <: T]] = subTypes
     .groupBy(_.kind)
+    .view
     .mapValues(_.ensuring(_.size == 1, "Duplicate Detected").head)
+    .toMap
 
   private lazy val classTags: Map[Class[_], SubType[_ <: T]] = subTypes
     .groupBy(_.classTag.runtimeClass)
+    .view
     .mapValues(_.ensuring(_.size == 1, "Duplicate Class Detected").head)
+    .toMap
 
   override def encodeObject(a: T): JsonObject = {
     classTags.get(a.getClass) match {
@@ -97,7 +103,7 @@ abstract class DiscriminatorDependentCodec[T](discriminator: String = "kind") ex
     }
   }
 
-  implicit def encoder: ObjectEncoder[T] = this
+  implicit def encoder: Encoder.AsObject[T] = this
 
   override def apply(c: HCursor): Result[T] = {
     val discriminatorField = c.downField(discriminator)

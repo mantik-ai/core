@@ -26,9 +26,9 @@ import play.api.libs.json.Format
 import skuber.api.client.KubernetesClient
 import skuber.apps.v1.Deployment
 import skuber.batch.Job
-import skuber.ext.Ingress
+import skuber.networking.Ingress
 import skuber.json.batch.format._
-import skuber.json.ext.format._
+import skuber.json.networking.format._
 import skuber.json.format._
 import skuber.json.apps.format.deployListFormat
 import skuber.{ConfigMap, ListResource, Namespace, ObjectResource, Pod, ResourceDefinition, Secret, Service}

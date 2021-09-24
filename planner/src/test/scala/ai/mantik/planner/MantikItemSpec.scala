@@ -70,7 +70,6 @@ object MantikItemSpec extends FakeBridges {
           |  output: float32
       """.stripMargin
       )
-      .right
       .getOrElse(???)
       .cast[AlgorithmDefinition]
       .getOrElse(???),

@@ -83,7 +83,7 @@ trait StartWorkerSpecBase {
 
     eventually {
       val listResponse2 = await(executor.listWorkers(ListWorkerRequest()))
-      listResponse2.workers.find(_.nodeName == startWorkerResponse.nodeName).get.state shouldBe 'terminal
+      listResponse2.workers.find(_.nodeName == startWorkerResponse.nodeName).get.state.isTerminal shouldBe true
     }
 
     val stopResponse2 = await(

@@ -147,13 +147,13 @@ object KubernetesNamer {
     // _ is encoded as __
     // If the last char is not valid, use a trailing _
 
-    val resultBuilder = StringBuilder.newBuilder
+    val resultBuilder = new StringBuilder()
     value.foreach {
       case c if middleAllowed(c) => resultBuilder += c
       case '_'                   => resultBuilder ++= "__"
       case other                 => resultBuilder ++= "_" + charToHex(other)
     }
-    resultBuilder.result
+    resultBuilder.result()
   }
 
   /** The character is allowed at the start or end in custom encoding */
@@ -192,7 +192,7 @@ object KubernetesNamer {
   }
 
   private def decodeCustomLabel(value: String): String = {
-    val resultBuilder = StringBuilder.newBuilder
+    val resultBuilder = new StringBuilder()
     var i = 0
     while (i < value.length) {
       val c = value(i)

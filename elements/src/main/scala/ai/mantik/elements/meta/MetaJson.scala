@@ -128,7 +128,7 @@ object MetaJson {
     }
   }
 
-  implicit val encoder: ObjectEncoder[MetaJson] = new ObjectEncoder[MetaJson] {
+  implicit val encoder: Encoder.AsObject[MetaJson] = new Encoder.AsObject[MetaJson] {
 
     override def encodeObject(a: MetaJson): JsonObject = {
       val skipMeta = a.missingMetaVariables && a.metaVariables.isEmpty

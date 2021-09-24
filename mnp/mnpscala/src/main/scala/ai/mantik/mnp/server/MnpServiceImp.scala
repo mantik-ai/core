@@ -108,7 +108,7 @@ class MnpServiceImp(
 
     val forwarders = request.outputs.zipWithIndex.collect {
       case (output, idx) if output.destinationUrl.nonEmpty =>
-        val url = MnpUrl.parse(output.destinationUrl).right.getOrElse {
+        val url = MnpUrl.parse(output.destinationUrl).getOrElse {
           throw new MnpException(s"Bad forwarding URL")
         }
         if (url.port.isEmpty) {

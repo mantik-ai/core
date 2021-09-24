@@ -197,9 +197,9 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   it should "get algorithms" in new Env {
     val algoGet = await(graphBuilder.get(GetRequest(session1.id, algorithm1.mantikId.toString)))
     algoGet.itemId shouldBe "1"
-    algoGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_ALGORITHM
+    algoGet.item.get.kind shouldBe ObjectKind.KIND_ALGORITHM
 
-    val algoItem = algoGet.item.getOrElse(fail).getAlgorithm
+    val algoItem = algoGet.item.get.getAlgorithm
     val ad = algorithm1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition]
     algoItem.inputType.get.json shouldBe ad.`type`.input.toJsonString
     algoItem.outputType.get.json shouldBe ad.`type`.output.toJsonString
@@ -208,9 +208,9 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   it should "get trainable algorithms" in new Env {
     val trainableGet = await(graphBuilder.get(GetRequest(session1.id, trainable1.mantikId.toString)))
     trainableGet.itemId shouldBe "1"
-    trainableGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_TRAINABLE_ALGORITHM
+    trainableGet.item.get.kind shouldBe ObjectKind.KIND_TRAINABLE_ALGORITHM
 
-    val trainableItem = trainableGet.item.getOrElse(fail).getTrainableAlgorithm
+    val trainableItem = trainableGet.item.get.getTrainableAlgorithm
 
     val td = trainable1.parsedMantikHeader.definition.asInstanceOf[TrainableAlgorithmDefinition]
     trainableItem.trainingType.get.json shouldBe td.trainingType.toJsonString
@@ -222,9 +222,9 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   it should "get pipelines" in new Env {
     val pipelineGet = await(graphBuilder.get(GetRequest(session1.id, pipeline1.mantikId.toString)))
     pipelineGet.itemId shouldBe "1"
-    pipelineGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_PIPELINE
+    pipelineGet.item.get.kind shouldBe ObjectKind.KIND_PIPELINE
 
-    val pipelineItem = pipelineGet.item.getOrElse(fail).getPipeline
+    val pipelineItem = pipelineGet.item.get.getPipeline
     val ad = algorithm1.parsedMantikHeader.definition.asInstanceOf[AlgorithmDefinition]
     // Type is deducted from algorithm
     pipelineItem.inputType.get.json shouldBe ad.`type`.input.toJsonString
@@ -234,8 +234,8 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
   it should "get bridges" in new Env {
     val bridgeGet = await(graphBuilder.get(GetRequest(session1.id, TestArtifacts.algoBridge1.mantikId.toString)))
     bridgeGet.itemId shouldBe "1"
-    bridgeGet.item.getOrElse(fail).kind shouldBe ObjectKind.KIND_BRIDGE
-    val bridgeItem = bridgeGet.item.getOrElse(fail).getBridge
+    bridgeGet.item.get.kind shouldBe ObjectKind.KIND_BRIDGE
+    val bridgeItem = bridgeGet.item.get.getBridge
     val pd = TestArtifacts.algoBridge1.parsedMantikHeader.definition.asInstanceOf[BridgeDefinition]
     bridgeItem.dockerImage shouldBe pd.dockerImage
     bridgeItem.suitable shouldBe pd.suitable

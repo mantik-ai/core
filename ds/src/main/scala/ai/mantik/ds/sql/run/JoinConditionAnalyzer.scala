@@ -180,7 +180,7 @@ private[run] object JoinConditionAnalyzer {
     /** Returns the dependencies of an expression */
     def dependencies(expression: Expression): BitSet = {
       ExpressionTransformation.foldTree(expression)(BitSet.empty) {
-        case (current, ColumnExpression(id, _)) => current + id
+        case (current, ColumnExpression(id, _)) => current.union(BitSet(id))
         case (current, _)                       => current
       }
     }

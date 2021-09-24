@@ -58,7 +58,7 @@ class SelectBuilderSpec extends TestBase {
     got shouldBe Right(
       Select(AnonymousInput(simpleInput))
     )
-    got.right.get.resultingTabularType shouldBe simpleInput
+    got.forceRight.resultingTabularType shouldBe simpleInput
     testReparsable(got.forceRight)
   }
 
@@ -67,7 +67,7 @@ class SelectBuilderSpec extends TestBase {
     got shouldBe Right(
       Select(AnonymousInput(simpleInput))
     )
-    got.right.get.resultingTabularType shouldBe simpleInput
+    got.forceRight.resultingTabularType shouldBe simpleInput
     testReparsable(got.forceRight)
   }
 
@@ -84,7 +84,7 @@ class SelectBuilderSpec extends TestBase {
         )
       )
     )
-    got.right.get.resultingTabularType shouldBe simpleInput
+    got.forceRight.resultingTabularType shouldBe simpleInput
     testReparsable(got.forceRight)
   }
 
@@ -100,7 +100,7 @@ class SelectBuilderSpec extends TestBase {
     got shouldBe Right(
       Select(AnonymousInput(simpleInput))
     )
-    got.right.get.resultingTabularType shouldBe simpleInput
+    got.forceRight.resultingTabularType shouldBe simpleInput
     testReparsable(got.forceRight)
 
     val got2 = SelectBuilder.buildSelect("SELECT 3 FROM $1")
@@ -129,7 +129,7 @@ class SelectBuilderSpec extends TestBase {
         )
       )
     )
-    got.right.get.resultingTabularType shouldBe TabularData(
+    got.forceRight.resultingTabularType shouldBe TabularData(
       "y" -> FundamentalType.StringType
     )
     testReparsable(got.forceRight)
@@ -148,7 +148,7 @@ class SelectBuilderSpec extends TestBase {
         )
       )
     )
-    got.right.get.resultingTabularType shouldBe TabularData(
+    got.forceRight.resultingTabularType shouldBe TabularData(
       "y" -> FundamentalType.StringType,
       "x" -> FundamentalType.Int32
     )
@@ -173,7 +173,7 @@ class SelectBuilderSpec extends TestBase {
         )
       )
     )
-    got.right.get.resultingTabularType shouldBe TabularData(
+    got.forceRight.resultingTabularType shouldBe TabularData(
       "x" -> FundamentalType.Int64
     )
     testReparsable(got.forceRight)
@@ -193,7 +193,7 @@ class SelectBuilderSpec extends TestBase {
         )
       )
     )
-    got.right.get.projections.zip(expected.projections).foreach { case (a, b) =>
+    got.forceRight.projections.zip(expected.projections).foreach { case (a, b) =>
       a shouldBe b
     }
     got shouldBe Right(

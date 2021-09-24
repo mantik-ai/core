@@ -101,7 +101,7 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     val response = startWorker("foo")
     response.nodeName shouldNot be(empty)
     val containers = await(dockerClient.listContainers(true))
-    val container = containers.find(_.Names.contains("/" + response.nodeName)).getOrElse(fail)
+    val container = containers.find(_.Names.contains("/" + response.nodeName)).getOrElse(fail())
     container.Labels(DockerConstants.IsolationSpaceLabelName) shouldBe config.common.isolationSpace
     container.Labels(LabelConstants.UserIdLabelName) shouldBe "foo"
     container.Labels(LabelConstants.ManagedByLabelName) shouldBe LabelConstants.ManagedByLabelValue

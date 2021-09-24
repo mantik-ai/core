@@ -24,16 +24,17 @@ package ai.mantik.ds.sql.run
 import ai.mantik.ds.DataType
 import ai.mantik.ds.element.SingleElementBundle
 import io.circe.Decoder.Result
-import io.circe.{ArrayEncoder, Decoder, DecodingFailure, HCursor, Json, JsonObject, ObjectEncoder}
-import io.circe.syntax._
 import io.circe.generic.semiauto
+import io.circe.syntax._
+import io.circe._
+
 import scala.annotation.tailrec
 
 /** Json Support for [[Program]] and [[OpCode]]. */
 object ProgramJson {
 
   /** Translates many opcodes to json. */
-  implicit val opCodesEncoder: ArrayEncoder[Vector[OpCode]] = new ArrayEncoder[Vector[OpCode]] {
+  implicit val opCodesEncoder: Encoder.AsArray[Vector[OpCode]] = new Encoder.AsArray[Vector[OpCode]] {
     override def encodeArray(a: Vector[OpCode]): Vector[Json] = {
       a.flatMap(opCodeToJson)
     }
@@ -50,7 +51,7 @@ object ProgramJson {
   }
 
   /** Encoder for Programs. */
-  implicit val programEncoder: ObjectEncoder[Program] = semiauto.deriveEncoder[Program]
+  implicit val programEncoder: Encoder.AsObject[Program] = semiauto.deriveEncoder[Program]
 
   /** Decoder for Programs */
   implicit val programDecoder: Decoder[Program] = semiauto.deriveDecoder[Program]

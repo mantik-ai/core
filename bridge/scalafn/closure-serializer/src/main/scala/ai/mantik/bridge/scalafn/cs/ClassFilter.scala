@@ -39,7 +39,9 @@ object ClassFilter {
     "java.",
     "jdk.",
     "sun.",
-    "scala."
+    "scala.",
+    // With Scala 2.13, various arrays, like [[Ljava.lang.Object or [[[[Ljava/lang/Object;
+    "[["
   )
 
   /** Simple Filter which just matches a list of ignored prefixes. */

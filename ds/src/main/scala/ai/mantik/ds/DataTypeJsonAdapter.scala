@@ -63,7 +63,7 @@ private[ds] object DataTypeJsonAdapter {
     FundamentalTypeCodec.elementToString(fundamentalType)
   }
 
-  private implicit object tabularFormat extends ObjectEncoder[TabularData] with Decoder[TabularData] {
+  private implicit object tabularFormat extends Encoder.AsObject[TabularData] with Decoder[TabularData] {
 
     override def encodeObject(a: TabularData): JsonObject = {
       val allFields = Seq(
@@ -100,7 +100,7 @@ private[ds] object DataTypeJsonAdapter {
     channelCodec.stringToElement(name.toLowerCase)
   }
 
-  implicit private object imageComponentCodec extends ObjectEncoder[ImageComponent] with Decoder[ImageComponent] {
+  implicit private object imageComponentCodec extends Encoder.AsObject[ImageComponent] with Decoder[ImageComponent] {
     override def encodeObject(a: ImageComponent): JsonObject = {
       JsonObject(
         "componentType" -> a.componentType.asJson(FundamentalTypeCodec)
@@ -121,7 +121,7 @@ private[ds] object DataTypeJsonAdapter {
     )
   )
 
-  private implicit object imageCodec extends ObjectEncoder[Image] with Decoder[Image] {
+  private implicit object imageCodec extends Encoder.AsObject[Image] with Decoder[Image] {
 
     implicit val componentsDecoder = ExtraCirceCodecs.enumMapDecoder[ImageChannel, ImageComponent]
     implicit val componentsEncoder = ExtraCirceCodecs.enumMapEncoder[ImageChannel, ImageComponent]
@@ -147,7 +147,7 @@ private[ds] object DataTypeJsonAdapter {
 
   private implicit val tensorCodec = CirceJson.makeSimpleCodec[Tensor]
 
-  private implicit object nullableCodec extends ObjectEncoder[Nullable] with Decoder[Nullable] {
+  private implicit object nullableCodec extends Encoder.AsObject[Nullable] with Decoder[Nullable] {
     override def encodeObject(a: Nullable): JsonObject = {
       JsonObject(
         "underlying" -> typeEncoder(a.`underlying`)
@@ -161,7 +161,7 @@ private[ds] object DataTypeJsonAdapter {
     }
   }
 
-  private implicit object arrayCodec extends ObjectEncoder[ArrayT] with Decoder[ArrayT] {
+  private implicit object arrayCodec extends Encoder.AsObject[ArrayT] with Decoder[ArrayT] {
     override def encodeObject(a: ArrayT): JsonObject = {
       JsonObject(
         "underlying" -> typeEncoder(a.underlying)
@@ -175,7 +175,7 @@ private[ds] object DataTypeJsonAdapter {
     }
   }
 
-  private implicit object structCodec extends ObjectEncoder[Struct] with Decoder[Struct] {
+  private implicit object structCodec extends Encoder.AsObject[Struct] with Decoder[Struct] {
     override def encodeObject(a: Struct): JsonObject = {
       JsonObject(
         "fields" -> a.fields.asJson

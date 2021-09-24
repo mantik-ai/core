@@ -105,6 +105,7 @@ class QuillSqlite(dbFile: Path) {
 
     withoutComments
       .split(";")
+      .toIndexedSeq
       .map(_.trim)
       .filterNot(_.isEmpty) // no empty lines
       .map(_.stripSuffix(";")) // strip trailing ;

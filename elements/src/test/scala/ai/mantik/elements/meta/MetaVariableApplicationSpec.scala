@@ -58,8 +58,7 @@ class MetaVariableApplicationSpec extends TestBase {
           |}
       """.stripMargin
       )
-      .right
-      .getOrElse(fail)
+      .forceRight
 
     val expected = parser
       .parse(
@@ -75,8 +74,7 @@ class MetaVariableApplicationSpec extends TestBase {
           |}
       """.stripMargin
       )
-      .right
-      .getOrElse(fail)
+      .forceRight
 
     transformation.apply(json1) shouldBe Right(expected)
   }

@@ -58,10 +58,9 @@ class MetaJsonSpec extends TestBase {
         |}
     """.stripMargin
     )
-    .right
-    .getOrElse(fail)
+    .forceRight
 
-  lazy val parsed = sample.as[MetaJson].getOrElse(fail)
+  lazy val parsed = sample.as[MetaJson].forceRight
 
   it should "serialize well" in {
     parsed.metaVariables shouldBe List(
@@ -91,12 +90,12 @@ class MetaJsonSpec extends TestBase {
     val value = Json.obj(
       "foo" -> Json.fromString("bar")
     )
-    value.as[MetaJson].right.getOrElse(fail).asJson shouldBe value
+    value.as[MetaJson].forceRight.asJson shouldBe value
     val value2 = Json.obj(
       "foo" -> Json.fromString("bar"),
       "metaVariables" -> Json.arr()
     )
-    value2.as[MetaJson].right.getOrElse(fail).asJson shouldBe value2
+    value2.as[MetaJson].forceRight.asJson shouldBe value2
   }
 
   "withMetaValues" should "allow new values" in {

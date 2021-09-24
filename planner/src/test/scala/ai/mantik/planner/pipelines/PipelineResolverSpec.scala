@@ -157,9 +157,9 @@ class PipelineResolverSpec extends TestBase {
 
   it should "validate input/output types if present" in {
     val resolved = resolvePipeline2(algorithm1, algorithm2, inputType = Some(algorithm1.functionType.input))
-    resolved shouldBe 'right
+    resolved.forceRight
     val resolved2 = resolvePipeline2(algorithm1, algorithm2, outputType = Some(algorithm2.functionType.output))
-    resolved2 shouldBe 'right
+    resolved2.forceRight
 
     val badInput = resolvePipeline2(algorithm1, algorithm2, inputType = Some(FundamentalType.Int32))
     badInput.forceLeft shouldBe an[PipelineTypeException]
@@ -174,7 +174,7 @@ class PipelineResolverSpec extends TestBase {
       algorithm2,
       inputType = Some(algorithm1.functionType.input)
     )
-    resolved shouldBe 'right
+    resolved.forceRight
     val missingInput = resolvePipeline2Select("select cast (x as string) as y", algorithm2, inputType = None)
     missingInput.forceLeft shouldBe an[InvalidPipelineException]
     val badType = resolvePipeline2Select(

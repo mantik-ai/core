@@ -24,6 +24,7 @@ package ai.mantik.planner.repository.impl
 import ai.mantik.elements.errors.MantikException
 import ai.mantik.planner.repository.{ContentTypes, FileRepository}
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 class LocalFileRepositorySpec extends FileRepositorySpecBase {
@@ -34,6 +35,7 @@ class LocalFileRepositorySpec extends FileRepositorySpecBase {
     new LocalFileRepository(tempDirectory) with NonAsyncFileRepository
   }
 
+  @nowarn
   trait Env {
     val repo = new LocalFileRepository(tempDirectory) with NonAsyncFileRepository
   }

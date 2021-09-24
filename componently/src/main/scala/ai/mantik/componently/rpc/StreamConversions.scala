@@ -79,7 +79,7 @@ object StreamConversions {
     var subscribed = false
     var first = true
     var state = initialState
-    val stateResult = Promise[S]
+    val stateResult = Promise[S]()
     val subscriber = new Subscriber[U] {
       override def onSubscribe(s: Subscription): Unit = {
         require(!subscribed, "Can only subscribed once")
@@ -232,7 +232,7 @@ object StreamConversions {
 
   /** Generates a StreamObserver, which takes a single element and puts it into a future. */
   def singleStreamObserverFuture[T](): (StreamObserver[T], Future[T]) = {
-    val promise = Promise[T]
+    val promise = Promise[T]()
     val streamObserver = new StreamObserver[T] {
       override def onNext(value: T): Unit = {
         promise.success(value)
@@ -253,7 +253,7 @@ object StreamConversions {
     */
   def streamObserverCollector[T](): (StreamObserver[T], Future[Vector[T]]) = {
     val collector = Vector.newBuilder[T]
-    val promise = Promise[Vector[T]]
+    val promise = Promise[Vector[T]]()
     val streamObserver = new StreamObserver[T] {
       override def onNext(value: T): Unit = {
         collector += value

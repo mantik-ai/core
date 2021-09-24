@@ -58,7 +58,7 @@ object FutureHelper {
       implicit akkaRuntime: AkkaRuntime
   ): Future[T] = {
     implicit def ec = akkaRuntime.executionContext
-    val promise = Promise[T]
+    val promise = Promise[T]()
     val cancellable = akkaRuntime.actorSystem.scheduler.scheduleOnce(timeout) {
       promise.tryFailure(new TimeoutException(s"$operationName timed out"))
     }
@@ -78,7 +78,7 @@ object FutureHelper {
   def afterEachOtherStateful[T, S](in: Iterable[T], s0: S)(
       f: (S, T) => Future[S]
   )(implicit ec: ExecutionContext): Future[S] = {
-    val result = Promise[S]
+    val result = Promise[S]()
     def continueRunning(pending: List[T], lastResult: S): Unit = {
       pending match {
         case head :: tail =>
@@ -110,7 +110,7 @@ object FutureHelper {
   def tryMultipleTimes[T](timeout: FiniteDuration, tryAgainWaitDuration: FiniteDuration)(
       f: => Future[Option[T]]
   )(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[T] = {
-    val result = Promise[T]
+    val result = Promise[T]()
     val clock = Clock.systemUTC()
     val finalTimeout = clock.instant().plus(timeout.toMillis, ChronoUnit.MILLIS)
     val timeoutException = new TimeoutException(s"Timeout after ${timeout}")

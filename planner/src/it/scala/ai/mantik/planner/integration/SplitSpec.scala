@@ -42,14 +42,14 @@ class SplitSpec extends IntegrationTestBase {
 
     val Seq(a, b, c) = dataset.split(Seq(0.5, 0.2))
 
-    MantikItemAnalyzer(b).isCached shouldBe true
-    MantikItemAnalyzer(b).isCacheEvaluated shouldBe false
+    b.isCached shouldBe true
+    b.state.isCacheEvaluated shouldBe false
 
     a.fetch.run() shouldBe sample.copy(
       rows = sample.rows.slice(0, 50)
     )
 
-    MantikItemAnalyzer(b).isCacheEvaluated shouldBe true
+    b.state.isCacheEvaluated shouldBe true
 
     b.fetch.run() shouldBe sample.copy(
       rows = sample.rows.slice(50, 70)
@@ -109,8 +109,8 @@ class SplitSpec extends IntegrationTestBase {
 
     val Seq(a, b) = dataset.split(Seq(0.5), cached = false)
 
-    MantikItemAnalyzer(b).isCached shouldBe false
-    MantikItemAnalyzer(b).isCacheEvaluated shouldBe false
+    b.isCached shouldBe false
+    b.state.isCacheEvaluated shouldBe false
 
     a.fetch.run() shouldBe sample.copy(
       rows = sample.rows.slice(0, 50)
@@ -119,6 +119,6 @@ class SplitSpec extends IntegrationTestBase {
       rows = sample.rows.slice(50, 100)
     )
 
-    MantikItemAnalyzer(b).isCacheEvaluated shouldBe false
+    b.state.isCacheEvaluated shouldBe false
   }
 }

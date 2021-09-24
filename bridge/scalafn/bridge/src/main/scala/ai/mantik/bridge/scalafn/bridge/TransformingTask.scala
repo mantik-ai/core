@@ -46,8 +46,8 @@ class TransformingTask(
     transformation: Transformation
 )(implicit akkaRuntime: AkkaRuntime)
     extends ServerTask {
-  private val inputPromise = Promise[Source[ByteString, NotUsed]]
-  private val resultPromise = Promise[Done]
+  private val inputPromise = Promise[Source[ByteString, NotUsed]]()
+  private val resultPromise = Promise[Done]()
   import ai.mantik.componently.AkkaHelper._
 
   private val inputDecoder = StreamCodec.decoder(
@@ -77,7 +77,7 @@ class TransformingTask(
     }
 
     Source
-      .fromFutureSource(futureSource)
+      .futureSource(futureSource)
       .mapMaterializedValue(_ => NotUsed)
       .wireTap(monitor)
   }

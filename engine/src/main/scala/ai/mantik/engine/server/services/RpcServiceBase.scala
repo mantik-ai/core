@@ -54,7 +54,7 @@ private[services] trait RpcServiceBase {
       case Failure(NonFatal(e)) if translateError.isDefinedAt(e) =>
         logger.debug("Something failed", e)
         Failure(translateError(e))
-      case Failure(NonFatal(e)) =>
+      case Failure(e) =>
         logger.warn("Something failed", e)
         Failure(e)
     }

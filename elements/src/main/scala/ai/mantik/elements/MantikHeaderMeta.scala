@@ -22,7 +22,7 @@
 package ai.mantik.elements
 
 import ai.mantik.ds.helper.circe.CirceJson
-import io.circe.{Decoder, ObjectEncoder}
+import io.circe.{Decoder, Encoder}
 
 /**
   * Contains Meta information inside a [[MantikHeader]].
@@ -72,6 +72,6 @@ case class MantikHeaderMeta(
 }
 
 object MantikHeaderMeta {
-  implicit val codec: ObjectEncoder[MantikHeaderMeta] with Decoder[MantikHeaderMeta] =
+  implicit val codec: Encoder.AsObject[MantikHeaderMeta] with Decoder[MantikHeaderMeta] =
     CirceJson.makeSimpleCodec[MantikHeaderMeta]
 }

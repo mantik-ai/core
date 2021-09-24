@@ -221,7 +221,7 @@ object Bundle {
   def voidNull: SingleElementBundle = SingleElementBundle(Nullable(FundamentalType.VoidType), NullElement)
 
   /** JSON Encoder. */
-  implicit val encoder: ObjectEncoder[Bundle] = JsonFormat
+  implicit val encoder: Encoder.AsObject[Bundle] = JsonFormat
 
   /** JSON Decoder. */
   implicit val decoder: Decoder[Bundle] = JsonFormat

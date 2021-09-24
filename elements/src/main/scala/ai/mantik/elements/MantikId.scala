@@ -157,7 +157,7 @@ final case class NamedMantikId(
 ) extends MantikId {
 
   override def toString: String = {
-    val builder = StringBuilder.newBuilder
+    val builder = new StringBuilder()
     if (account != NamedMantikId.DefaultAccount) {
       builder ++= account
       builder += '/'

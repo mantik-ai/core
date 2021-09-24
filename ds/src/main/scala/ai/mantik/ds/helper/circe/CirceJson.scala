@@ -24,7 +24,7 @@ package ai.mantik.ds.helper.circe
 import io.circe.Decoder.Result
 import io.circe._
 import io.circe.generic.decoding.DerivedDecoder
-import io.circe.generic.encoding.DerivedObjectEncoder
+import io.circe.generic.encoding.{DerivedAsObjectEncoder, DerivedObjectEncoder}
 import shapeless.Lazy
 
 /** Helper for Circe Json. */
@@ -59,12 +59,12 @@ object CirceJson {
 
   /** Auto generates a Encoder/Decoder for Circe JSON. */
   def makeSimpleCodec[T](
-      implicit encoder: Lazy[DerivedObjectEncoder[T]],
+      implicit encoder: Lazy[DerivedAsObjectEncoder[T]],
       decoder: Lazy[DerivedDecoder[T]]
-  ): ObjectEncoder[T] with Decoder[T] = {
+  ): Encoder.AsObject[T] with Decoder[T] = {
     val encoderImpl = encoder.value
     val decoderImpl = decoder.value
-    new ObjectEncoder[T] with Decoder[T] {
+    new Encoder.AsObject[T] with Decoder[T] {
       override def encodeObject(a: T): JsonObject = encoderImpl.encodeObject(a)
 
       override def apply(c: HCursor): Result[T] = decoderImpl.apply(c)

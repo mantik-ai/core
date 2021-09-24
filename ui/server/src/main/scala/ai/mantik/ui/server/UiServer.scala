@@ -44,7 +44,7 @@ class UiServer(config: UiConfig, stateService: StateService)(implicit akkaRuntim
     None
   } else {
     logger.info(s"Starting UiServer on ${config.interface}:${config.port}")
-    val bindResult = Http().bindAndHandle(uiRouter.route, config.interface, config.port)
+    val bindResult = Http().newServerAt(config.interface, config.port).bind(uiRouter.route)
     if (config.port == 0) {
       bindResult.foreach { result =>
         logger.info(s"Successfully bound on port ${result.localAddress.getPort}")

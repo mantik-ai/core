@@ -31,10 +31,9 @@ import scala.collection.mutable
 /**
   * A Trivial interpreter for Programs.
   */
-@throws[FeatureNotSupported]("if some op code could not be translated.")
-class ProgramRunner(program: Program) {
+class ProgramRunner @throws[FeatureNotSupported]("if some op code could not be translated.") (program: Program) {
 
-  type StackType = mutable.ArrayStack[Element]
+  type StackType = mutable.Stack[Element]
 
   /**
     * The operation as it is executed.

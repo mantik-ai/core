@@ -41,7 +41,13 @@ case class MantikItemState(
     payloadFile: Option[String] = None,
     deployment: Option[DeploymentState] = None,
     cacheFile: Option[String] = None
-)
+) {
+
+  /** Return true if the item's payload is inside the cache. */
+  def isCacheEvaluated: Boolean = {
+    cacheFile.isDefined
+  }
+}
 
 object MantikItemState {
 

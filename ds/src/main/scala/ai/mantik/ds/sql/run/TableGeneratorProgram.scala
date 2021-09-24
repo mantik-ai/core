@@ -156,7 +156,7 @@ object TableGeneratorProgram {
     }
   }
 
-  implicit def singleGeneratorProgramEncoder: ObjectEncoder[SingleTableGeneratorProgram] = {
+  implicit def singleGeneratorProgramEncoder: Encoder.AsObject[SingleTableGeneratorProgram] = {
     codec.contramapObject(x => x: TableGeneratorProgram)
   }
 
@@ -167,7 +167,7 @@ object TableGeneratorProgram {
     }
   }
 
-  implicit val codec: ObjectEncoder[TableGeneratorProgram] with Decoder[TableGeneratorProgram] =
+  implicit val codec: Encoder.AsObject[TableGeneratorProgram] with Decoder[TableGeneratorProgram] =
     new DiscriminatorDependentCodec[TableGeneratorProgram]("type") {
       override val subTypes = Seq(
         makeSubType[UnionProgram]("union"),

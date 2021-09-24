@@ -28,7 +28,7 @@ import ai.mantik.executor.model.{MnpPipelineDefinition, MnpWorkerDefinition, Sta
 import ai.mantik.executor.model.docker.DockerLogin
 import io.circe.Json
 import skuber.apps.v1.Deployment
-import skuber.ext.Ingress
+import skuber.networking.Ingress
 import skuber.{Container, EnvVar, LabelSelector, ObjectMeta, Pod, Secret, Service}
 
 /** Converts requests into Kubernetes Structures */
@@ -78,7 +78,7 @@ case class KubernetesConverter(
     Workload(
       internalId = internalId,
       pod = workLoad.left.toOption,
-      deployment = workLoad.right.toOption,
+      deployment = workLoad.toOption,
       service,
       ingress = ingress
     )
@@ -270,7 +270,7 @@ case class KubernetesConverter(
 
     Workload(
       internalId = internalId,
-      pod = deploymentOrPod.right.toOption,
+      pod = deploymentOrPod.toOption,
       deployment = deploymentOrPod.left.toOption,
       service = service,
       ingress = ingress
@@ -295,9 +295,9 @@ case class KubernetesConverter(
 
   /** Create an ingress. Note: the service name may be empty still if it's not defined within the service */
   private def createPlainIngress(service: Service, ingressName: String): Ingress = {
-    val annotations = config.kubernetes.ingressAnnotations.mapValues { annotation =>
+    val annotations = config.kubernetes.ingressAnnotations.view.mapValues { annotation =>
       interpolateIngressString(annotation, ingressName)
-    }
+    }.toMap
 
     val servicePort = (for {
       spec <- service.spec
@@ -322,7 +322,7 @@ case class KubernetesConverter(
     val backend =
       Ingress.Backend(
         serviceName = serviceName,
-        servicePort = servicePort
+        servicePort = Left(servicePort)
       )
 
     config.kubernetes.ingressSubPath match {

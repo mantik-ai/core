@@ -42,7 +42,7 @@ import skuber.api.patch.{JsonMergePatch, MetadataPatch}
 import skuber.apps.v1.Deployment
 import skuber.apps.v1.ReplicaSet
 import skuber.batch.Job
-import skuber.ext.Ingress
+import skuber.networking.Ingress
 import skuber.json.batch.format._
 import skuber.json.ext.format._
 import skuber.json.format._
@@ -308,7 +308,7 @@ class K8sOperations(config: Config, rootClient: KubernetesClient)(implicit akkaR
       }
     }
 
-    val response = Promise[T]
+    val response = Promise[T]()
 
     def tryAgain(remaining: Int): Unit = {
       f.andThen {

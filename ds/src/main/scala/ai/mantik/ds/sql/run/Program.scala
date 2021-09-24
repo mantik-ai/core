@@ -21,7 +21,7 @@
  */
 package ai.mantik.ds.sql.run
 
-import io.circe.{Decoder, ObjectEncoder}
+import io.circe.{Decoder, Encoder, ObjectEncoder}
 
 /**
   * A Program for running select statements.
@@ -77,6 +77,6 @@ object Program {
     } :+ -1).max + 1
   }
 
-  implicit val encoder: ObjectEncoder[Program] = ProgramJson.programEncoder
+  implicit val encoder: Encoder.AsObject[Program] = ProgramJson.programEncoder
   implicit val decoder: Decoder[Program] = ProgramJson.programDecoder
 }

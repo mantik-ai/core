@@ -59,7 +59,7 @@ private class TableFormatter(headers: Seq[String], lines: Seq[Seq[String]], opti
     if (headers.isEmpty && lines.isEmpty) {
       return ""
     }
-    val output = StringBuilder.newBuilder
+    val output = new StringBuilder()
 
     val headerFormatted = headers
       .zip(columnLengths)

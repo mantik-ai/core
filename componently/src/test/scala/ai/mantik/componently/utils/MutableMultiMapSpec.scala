@@ -19,28 +19,34 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.mnp
+package ai.mantik.componently.utils
 
 import ai.mantik.testutils.TestBase
 
-class MnpUrlSpec extends TestBase {
-
-  val samples = Seq(
-    s"mnp://127.0.0.1:1234/session1/1234" -> MnpUrl("127.0.0.1:1234", "session1", Some(1234)),
-    s"mnp://hostname/session/1234" -> MnpUrl("hostname", "session", Some(1234)),
-    s"mnp://hostname.foo.bar:1234/session1" -> MnpUrl("hostname.foo.bar:1234", "session1")
-  )
-
-  it should "parse and serialize" in {
-    samples.foreach { case (s, url) =>
-      url.toString shouldBe s
-      MnpUrl.parse(s) shouldBe Right(url)
-    }
-  }
-
-  it should "handle errors" in {
-    MnpUrl.parse("http://foo/bar").forceLeft should include("Expected mnp://")
-    MnpUrl.parse("mnp://foo/bar/1/2").forceLeft should include("Illegal Mnp URL")
-    MnpUrl.parse("mnp://foo/bar/port").forceLeft should include("Could not parse port")
+class MutableMultiMapSpec extends TestBase {
+  it should "work" in {
+    val map = new MutableMultiMap[Int, String]()
+    map.get(1) shouldBe Set.empty
+    map.add(2, "Hello")
+    map.add(2, "World")
+    map.get(2) shouldBe Set("Hello", "World")
+    map.add(1, "Foo")
+    map.remove(2, "Not existing")
+    map.get(2) shouldBe Set("Hello", "World")
+    map.valueCount(2) shouldBe 2
+    map.valueCount(-1) shouldBe 0
+    map.keyCount shouldBe 2
+    map.remove(1)
+    map.get(1) shouldBe empty
+    map.keyCount shouldBe 1
+    map.remove(2, "Hello")
+    map.valueCount(2) shouldBe 1
+    map.get(2) shouldBe Set("World")
+    map.add(2, "Bar")
+    map.remove(2)
+    map.add(1, "Buz")
+    map.get(1) shouldBe Set("Buz")
+    map.clear()
+    map.keyCount shouldBe 0
   }
 }

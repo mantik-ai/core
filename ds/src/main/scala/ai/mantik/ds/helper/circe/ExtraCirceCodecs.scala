@@ -68,7 +68,7 @@ object ExtraCirceCodecs {
   implicit def enumMapEncoder[K, V](
       implicit subDecoder: Encoder[V],
       ed: EnumDiscriminatorCodec[K]
-  ): ObjectEncoder[ListMap[K, V]] = new ObjectEncoder[ListMap[K, V]] {
+  ): Encoder.AsObject[ListMap[K, V]] = new Encoder.AsObject[ListMap[K, V]] {
     override def encodeObject(a: ListMap[K, V]): JsonObject = {
       JsonObject.fromIterable(
         a.map { case (k, v) => ed.elementToString(k) -> subDecoder(v) }

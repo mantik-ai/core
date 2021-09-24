@@ -24,7 +24,6 @@ package ai.mantik.componently.rpc
 import java.time.Instant
 
 import akka.util.ByteString
-import akka.util.ccompat.IterableOnce
 import com.google.protobuf.{Timestamp, ByteString => ProtoByteString}
 import io.grpc.Status.Code
 import io.grpc.StatusRuntimeException
@@ -42,18 +41,6 @@ object RpcConversions {
     bs.asByteBuffers.foldLeft(ProtoByteString.EMPTY) { case (c, n) =>
       c.concat(ProtoByteString.copyFrom(n))
     }
-  }
-
-  /** Encode many ByteStrings into Protobuf variant. */
-  def encodeByteString(bs: IterableOnce[ByteString]): ProtoByteString = {
-    var result = ProtoByteString.EMPTY
-    for {
-      b <- bs
-      p <- b.asByteBuffers
-    } {
-      result = result.concat(ProtoByteString.copyFrom(p))
-    }
-    result
   }
 
   /** Encode an Optional string, None is encoded as "". */

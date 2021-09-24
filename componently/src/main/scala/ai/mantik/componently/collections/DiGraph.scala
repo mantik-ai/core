@@ -68,7 +68,9 @@ object DiGraph {
   }
 
   implicit def linkEncoder[K: KeyEncoder, L: Encoder]: Encoder[DiLink[K, L]] = semiauto.deriveEncoder
-  implicit def encoder[K: KeyEncoder, N: Encoder, L: Encoder]: Encoder[DiGraph[K, N, L]] = semiauto.deriveEncoder
+  implicit def encoder[K: KeyEncoder, N: Encoder, L: Encoder]: Encoder[DiGraph[K, N, L]] =
+    semiauto.deriveEncoder
   implicit def linkDecoder[K: KeyDecoder, L: Decoder]: Decoder[DiLink[K, L]] = semiauto.deriveDecoder
-  implicit def decoder[K: KeyDecoder, N: Decoder, L: Decoder]: Decoder[DiGraph[K, N, L]] = semiauto.deriveDecoder
+  implicit def decoder[K: KeyDecoder, N: Decoder, L: Decoder]: Decoder[DiGraph[K, N, L]] =
+    semiauto.deriveDecoder
 }

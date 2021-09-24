@@ -77,7 +77,7 @@ class KubernetesConverterSpec extends TestBase {
       .get
 
     val value = secrets.data.ensuring(_.size == 1)(".dockerconfigjson")
-    val parsed = io.circe.parser.parse(new String(value, StandardCharsets.UTF_8)).right.get
+    val parsed = io.circe.parser.parse(new String(value, StandardCharsets.UTF_8)).forceRight
     parsed shouldBe Json.obj(
       "auths" -> Json.obj(
         "repo1" -> Json.obj(

@@ -22,7 +22,7 @@
 package ai.mantik.elements
 
 import ai.mantik.ds.helper.circe.{CirceJson, TrialDependentCodec}
-import io.circe.{Decoder, Json, ObjectEncoder}
+import io.circe.{Decoder, Json, Encoder}
 
 /** A Single step within a [[PipelineDefinition]]. */
 sealed trait PipelineStep {
@@ -52,13 +52,13 @@ object PipelineStep {
       description: Option[String] = None
   ) extends PipelineStep
 
-  implicit val metaVariableCodec: ObjectEncoder[MetaVariableSetting] with Decoder[MetaVariableSetting] =
+  implicit val metaVariableCodec: Encoder.AsObject[MetaVariableSetting] with Decoder[MetaVariableSetting] =
     CirceJson.makeSimpleCodec[MetaVariableSetting]
 
   implicit val codec = new TrialDependentCodec[PipelineStep] {
     override val subTypes: Seq[SubType[_ <: PipelineStep]] = Seq(
-      makeSubType[AlgorithmStep],
-      makeSubType[SelectStep]
+      makeSubType[AlgorithmStep](),
+      makeSubType[SelectStep]()
     )
   }
 }

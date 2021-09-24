@@ -59,7 +59,7 @@ class DeployPipelineSpec extends IntegrationTestBase with Samples with HttpSuppo
     deploymentState.externalUrl shouldNot be(empty)
 
     // Sub algorithms are now also deployed
-    context.state(doubleMultiply).deployment shouldBe 'defined
+    context.state(doubleMultiply).deployment shouldBe defined
 
     context.state(pipeline).deployment.get.sub.size shouldBe 2 // SQLs are deployed as sub steps
 

@@ -117,8 +117,8 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
     }
   }
 
-  val bindResult = Await.result(Http().bindAndHandle(route, interface, port), 60.seconds)
-  logger.info(s"Listening on ${interface}:${boundPort}, external ${address}")
+  val bindResult = Await.result(Http().newServerAt(interface, port).bind(route), 60.seconds)
+  logger.info(s"Listening on ${interface}:${boundPort}, external ${address()}")
 
   addShutdownHook {
     bindResult.terminate(60.seconds)
@@ -140,7 +140,7 @@ private[mantik] class FileRepositoryServer @Inject() (fileRepository: FileReposi
     // This is tricky: https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
     // We can't know which one is available from kubernetes
     // hopefully the first non-loopback is it.
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
     def score(address: InetAddress): Int = {
       address match {
