@@ -20,5 +20,7 @@
 # a commercial license.
 #
 
-from .algorithm import Algorithm
+from .kinds import DataSet
+from .kinds import Algorithm
+from .kinds import TrainableAlgorithm
 from .mnp_bridge_app import start_mnp_bridge

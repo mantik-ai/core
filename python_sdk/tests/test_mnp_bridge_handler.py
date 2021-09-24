@@ -20,32 +20,31 @@
 # a commercial license.
 #
 
-from google.protobuf.any_pb2 import Any
-from mnp import PortConfiguration, InputPortConfiguration, OutputPortConfiguration
+import google.protobuf.any_pb2 as protobuf
+import mnp
 
-from mantik import Bundle, DataType
-from mantik.bridge import Algorithm
-from mantik.bridge._stubs.mantik.bridge.bridge_pb2 import MantikInitConfiguration
-from mantik.bridge.mnp_bridge_handler import MnpBridgeHandler, MnpSessionHandlerForTrainable, \
-    MnpSessionHandlerForAlgorithm
-from mantik.types import MantikHeader
-from mantik import MIME_MANTIK_BUNDLE
-from typing import Optional, cast
+from mantik.bridge import kinds
+import mantik.bridge._stubs.mantik.bridge.bridge_pb2 as stubs
+from mantik.bridge import mnp_bridge_handler
+from mantik.bridge import mnp_session_handlers
+    
+import mantik.types
+import typing as t
 import os
 import io
 import logging
 
 
-class EchoAlgorithm(Algorithm):
+class EchoAlgorithm(kinds.Algorithm):
 
-    def __init__(self, header: MantikHeader):
+    def __init__(self, header: mantik.types.MantikHeader):
         self.header = header
         self.is_closed = False
 
-    def apply(self, bundle: Bundle) -> Bundle:
+    def apply(self, bundle: mantik.types.Bundle) -> mantik.types.Bundle:
         return bundle
 
-    def train(self, bundle: Bundle):
+    def train(self, bundle: mantik.types.Bundle):
         pass
 
     @property
@@ -53,7 +52,7 @@ class EchoAlgorithm(Algorithm):
         return True
 
     @property
-    def training_stats(self) -> Bundle:
+    def training_stats(self) -> mantik.types.Bundle:
         raise NotImplementedError("Pure algorithm")
 
     @property
@@ -64,19 +63,19 @@ class EchoAlgorithm(Algorithm):
         self.is_closed = True
 
 
-class SimpleTrainer(Algorithm):
+class SimpleTrainer(kinds.Algorithm):
     """
     Figures out the sum of training x values
     During application it multiples them
     """
 
-    def __init__(self, header: MantikHeader):
+    def __init__(self, header: mantik.types.MantikHeader):
         self.header = header
         self.is_closed = False
         self.training_dir = os.path.join(header.basedir, "payload")
         self.trained_file = os.path.join(self.training_dir, "sum")
 
-    def train(self, bundle: Bundle):
+    def train(self, bundle: mantik.types.Bundle):
         summarized = 0
         column = bundle.flat_column("x")
         for x in column:
@@ -91,16 +90,16 @@ class SimpleTrainer(Algorithm):
         return os.path.exists(self.trained_file)
 
     @property
-    def training_stats(self) -> Bundle:
+    def training_stats(self) -> mantik.types.Bundle:
         f = self.read_factor()
-        return Bundle.decode_json(str(f), DataType.from_json("\"bool\""))
+        return mantik.types.Bundle.decode_json(str(f), mantik.types.DataType.from_json("\"bool\""))
 
     def read_factor(self):
         with open(self.trained_file, "r") as f:
             data = f.read()
             return int(data)
 
-    def apply(self, bundle: Bundle) -> Bundle:
+    def apply(self, bundle: mantik.types.Bundle) -> mantik.types.Bundle:
         assert self.is_trained
         factor = self.read_factor()
         column = bundle.flat_column("x")
@@ -109,7 +108,7 @@ class SimpleTrainer(Algorithm):
             return factor * v
 
         result = list(map(apply, column))
-        result_bundle = Bundle.from_flat_column(result)
+        result_bundle = mantik.types.Bundle.from_flat_column(result)
         return result_bundle
 
     @property
@@ -124,9 +123,9 @@ def test_mnp_bridge_simple_algorithm():
     """
     Test the MNP Bridge with a simple algorithm without payload
     """
-    echo: Optional[EchoAlgorithm] = None
+    echo: t.Optional[EchoAlgorithm] = None
 
-    def provider(header: MantikHeader) -> Algorithm:
+    def provider(header: mantik.types.MantikHeader) -> kinds.Algorithm:
         nonlocal echo
         echo = EchoAlgorithm(header)
         return echo
@@ -137,22 +136,22 @@ def test_mnp_bridge_simple_algorithm():
         nonlocal quit_called
         quit_called = True
 
-    handler = MnpBridgeHandler(provider, "echo", quit_handler)
+    handler = mnp_bridge_handler.MnpBridgeHandler(provider, "echo", quit_handler)
 
-    ports = PortConfiguration(
-        inputs=[InputPortConfiguration("application/json")],
-        outputs=[OutputPortConfiguration("application/json")]
+    ports = mnp.PortConfiguration(
+        inputs=[mnp.InputPortConfiguration("application/json")],
+        outputs=[mnp.OutputPortConfiguration("application/json")]
     )
 
-    header = """{"type":{"input":"float32", "output":"float32"}}"""
+    header = """{"kind": "algorithm", "type":{"input":"float32", "output":"float32"}}"""
 
-    init_config = MantikInitConfiguration(
+    init_config = stubs.MantikInitConfiguration(
         header=header
     )
-    init_config_any = Any()
+    init_config_any = protobuf.Any()
     init_config_any.Pack(init_config)
 
-    session: MnpSessionHandlerForAlgorithm = cast(MnpSessionHandlerForAlgorithm,
+    session: mnp_session_handlers.MnpSessionHandlerForAlgorithm = t.cast(mnp_session_handlers.MnpSessionHandlerForAlgorithm,
                                                   handler.init_session("1234", init_config_any, ports))
     assert session.session_id == "1234"
 
@@ -176,9 +175,9 @@ def test_simple_training():
     """
     Test the MNP Handler with a simple training algorithm
     """
-    echo: Optional[SimpleTrainer] = None
+    echo: t.Optional[SimpleTrainer] = None
 
-    def provider(header: MantikHeader) -> SimpleTrainer:
+    def provider(header: mantik.types.MantikHeader) -> SimpleTrainer:
         nonlocal echo
         echo = SimpleTrainer(header)
         return echo
@@ -189,11 +188,11 @@ def test_simple_training():
         nonlocal quit_called
         quit_called = True
 
-    handler = MnpBridgeHandler(provider, "multipler", quit_handler)
+    handler = mnp_bridge_handler.MnpBridgeHandler(provider, "multipler", quit_handler)
 
-    ports = PortConfiguration(
-        inputs=[InputPortConfiguration("application/json")],
-        outputs=[OutputPortConfiguration("application/zip"), OutputPortConfiguration("application/json")]
+    ports = mnp.PortConfiguration(
+        inputs=[mnp.InputPortConfiguration("application/json")],
+        outputs=[mnp.OutputPortConfiguration("application/zip"), mnp.OutputPortConfiguration("application/json")]
     )
 
     header = """
@@ -220,13 +219,13 @@ def test_simple_training():
     }
     """
 
-    init_config = MantikInitConfiguration(
+    init_config = stubs.MantikInitConfiguration(
         header=header
     )
-    init_config_any = Any()
+    init_config_any = protobuf.Any()
     init_config_any.Pack(init_config)
 
-    session: MnpSessionHandlerForTrainable = cast(MnpSessionHandlerForTrainable,
+    session: mnp_session_handlers.MnpSessionHandlerForTrainableAlgorithm = t.cast(mnp_session_handlers.MnpSessionHandlerForTrainableAlgorithm,
                                                   handler.init_session("1234", init_config_any, ports))
     assert session.session_id == "1234"
 
@@ -239,9 +238,9 @@ def test_simple_training():
     session.quit()
     assert echo.is_closed
 
-    ports2 = PortConfiguration(
-        inputs=[InputPortConfiguration("application/json")],
-        outputs=[OutputPortConfiguration("application/json")]
+    ports2 = mnp.PortConfiguration(
+        inputs=[mnp.InputPortConfiguration("application/json")],
+        outputs=[mnp.OutputPortConfiguration("application/json")]
     )
 
     execution_header = """
@@ -261,15 +260,15 @@ def test_simple_training():
             }
         }
         """
-    init_config2 = MantikInitConfiguration(
+    init_config2 = stubs.MantikInitConfiguration(
         header=execution_header,
         payload_content_type="application/zip",
         content=result[0]
     )
-    init_config2_any = Any()
+    init_config2_any = protobuf.Any()
     init_config2_any.Pack(init_config2)
 
-    session2: MnpSessionHandlerForAlgorithm = cast(MnpSessionHandlerForAlgorithm,
+    session2: mnp_session_handlers.MnpSessionHandlerForAlgorithm = t.cast(mnp_session_handlers.MnpSessionHandlerForAlgorithm,
                                                    handler.init_session("session2", init_config2_any, ports2))
 
     result2 = session2.run_task_with_bytes("task2", [b"[[1],[2],[3]]"])
@@ -283,11 +282,11 @@ def test_simple_training_with_msgpack():
     """
     Like the test_simple_training, but using msgpack with type encoding.
     """
-    handler = MnpBridgeHandler(SimpleTrainer, "multipler")
+    handler = mnp_bridge_handler.MnpBridgeHandler(SimpleTrainer, "multipler")
 
-    ports = PortConfiguration(
-        inputs=[InputPortConfiguration(MIME_MANTIK_BUNDLE)],
-        outputs=[OutputPortConfiguration("application/zip"), OutputPortConfiguration(MIME_MANTIK_BUNDLE)]
+    ports = mnp.PortConfiguration(
+        inputs=[mnp.InputPortConfiguration(mantik.types.MIME_MANTIK_BUNDLE)],
+        outputs=[mnp.OutputPortConfiguration("application/zip"), mnp.OutputPortConfiguration(mantik.types.MIME_MANTIK_BUNDLE)]
     )
 
     header = """
@@ -314,31 +313,31 @@ def test_simple_training_with_msgpack():
         }
         """
 
-    init_config = MantikInitConfiguration(
+    init_config = stubs.MantikInitConfiguration(
         header=header
     )
-    init_config_any = Any()
+    init_config_any = protobuf.Any()
     init_config_any.Pack(init_config)
 
-    session: MnpSessionHandlerForTrainable = cast(MnpSessionHandlerForTrainable,
+    session: mnp_session_handlers.MnpSessionHandlerForTrainableAlgorithm = t.cast(mnp_session_handlers.MnpSessionHandlerForTrainableAlgorithm,
                                                   handler.init_session("1234", init_config_any, ports))
     assert session.session_id == "1234"
 
-    header_parsed = MantikHeader.parse(header, ".")
-    training = Bundle.decode_json("[[1],[2],[3]]", header_parsed.training_type)
+    header_parsed = mantik.types.MantikHeader.parse(header, ".")
+    training = mantik.types.Bundle.decode_json("[[1],[2],[3]]", header_parsed.training_type)
     training_msgpack = training.encode_msgpack_bundle()
 
     result = session.run_task_with_bytes("task1", [training_msgpack])
     assert result[0][:2] == b"PK"  # Magic bytes in ZIP
 
-    result_parsed = Bundle.decode_msgpack_bundle(io.BytesIO(result[1]))
+    result_parsed = mantik.types.Bundle.decode_msgpack_bundle(io.BytesIO(result[1]))
     assert result_parsed.value == 6  # Stats result
 
     session.quit()
 
-    ports2 = PortConfiguration(
-        inputs=[InputPortConfiguration(MIME_MANTIK_BUNDLE)],
-        outputs=[OutputPortConfiguration(MIME_MANTIK_BUNDLE)]
+    ports2 = mnp.PortConfiguration(
+        inputs=[mnp.InputPortConfiguration(mantik.types.MIME_MANTIK_BUNDLE)],
+        outputs=[mnp.OutputPortConfiguration(mantik.types.MIME_MANTIK_BUNDLE)]
     )
 
     execution_header = """
@@ -358,21 +357,21 @@ def test_simple_training_with_msgpack():
                 }
             }
             """
-    init_config2 = MantikInitConfiguration(
+    init_config2 = stubs.MantikInitConfiguration(
         header=execution_header,
         payload_content_type="application/zip",
         content=result[0]
     )
-    init_config2_any = Any()
+    init_config2_any = protobuf.Any()
     init_config2_any.Pack(init_config2)
 
-    session2: MnpSessionHandlerForAlgorithm = cast(MnpSessionHandlerForAlgorithm,
+    session2: mnp_session_handlers.MnpSessionHandlerForAlgorithm = t.cast(mnp_session_handlers.MnpSessionHandlerForAlgorithm,
                                                    handler.init_session("session2", init_config2_any, ports2))
 
-    input_data = Bundle.decode_json("[[1],[2],[3]]", header_parsed.type.input)
+    input_data = mantik.types.Bundle.decode_json("[[1],[2],[3]]", header_parsed.type.input)
     input_data_msgpack = input_data.encode_msgpack_bundle()
     result2 = session2.run_task_with_bytes("task2", [input_data_msgpack])
-    result_data_parsed = Bundle.decode_msgpack_bundle(io.BytesIO(result2[0]))
+    result_data_parsed = mantik.types.Bundle.decode_msgpack_bundle(io.BytesIO(result2[0]))
     assert result_data_parsed.flat_column("x") == [6, 12, 18]  # Multiplied by 6
 
     handler.quit()

@@ -20,7 +20,12 @@
 # a commercial license.
 #
 
-from . import compat as stubs
-from .engine import Client
-from .objects import MantikArtifact
-from .objects import MantikItem
+import abc
+
+
+class Bridge(abc.ABC):
+    """A mantik bridge kind."""
+
+    def close(self):
+        """Close a bridge releasing resources, etc.)."""
+        pass

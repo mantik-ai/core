@@ -35,15 +35,15 @@ pipe2 = ["select x * CAST(2 as float64) as y"]
 
 with mantik.engine.Client("localhost", 8087) as client:
     # TODO (mq): We should be able to search/list all existing algorithms.
-    client._add_algorithm("../../bridge/sklearn/simple_learn")
-    client._add_algorithm("../../bridge/sklearn/simple_learn/example/multiply")
+    client.add_artifact("../../bridge/sklearn/simple_learn")
+    client.add_artifact("../../bridge/sklearn/simple_learn/example/multiply")
     with client.enter_session():
-        result = client.apply(pipe, bundle).fetch()
+        result = client.apply(pipe, bundle)
         print(f"Result: {result.bundle}")
         # you can explicitly upload a bundle.
         # however, just passing the bundle works, too!
         data = client.upload_bundle(bundle)
-        result2 = client.apply(pipe2, data).fetch()
+        result2 = client.apply(pipe2, data)
         print(f"Result2: {result2.bundle}")
 
 assert result.bundle == result2.bundle

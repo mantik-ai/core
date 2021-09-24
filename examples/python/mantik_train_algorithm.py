@@ -64,21 +64,15 @@ meta = dict(n_clusters=n_clusters)
 my_ref = "mq/kmeans_trained_on_blobs"
 
 with mantik.engine.Client("localhost", 8087) as client:
-    simple_learn = client._add_algorithm(
-        "../../bridge/sklearn/simple_learn", named_mantik_id="mantik/sklearn.simple"
-    )
-    kmeans = client._add_algorithm("../../bridge/sklearn/simple_learn/example/kmeans")
+    simple_learn = client.add_artifact("../../bridge/sklearn/simple_learn", named_mantik_id = "mantik/sklearn.simple")
+    kmeans = client.add_artifact("../../bridge/sklearn/simple_learn/example/kmeans")
     with client.enter_session():
         trained_pipe, stats = client.train(
             [kmeans], train_bundle, meta=meta, action_name="Training"
         )
-        kmeans_trained = client.tag(trained_pipe, my_ref).save()
-        train_result = client.apply(trained_pipe, train_bundle).fetch(
-            action_name="Fetching Train Results"
-        )
-        test_result = client.apply(trained_pipe, test_bundle).fetch(
-            action_name="Fetching Train Results"
-        )
+        kmeans_trained = client.tag(trained_pipe, my_ref)
+        train_result = client.apply(trained_pipe, train_bundle)
+        test_result = client.apply(trained_pipe, test_bundle)
 
 end_time = time.time()
 

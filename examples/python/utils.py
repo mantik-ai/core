@@ -20,7 +20,21 @@
 # a commercial license.
 #
 
-from . import compat as stubs
-from .engine import Client
-from .objects import MantikArtifact
-from .objects import MantikItem
+import os
+
+def convert_relative_to_absolute_path(current_path: str=__file__, relative_path: str= "../../bridge"):
+    """
+    Get the absolute path from any given relative path.
+
+    :param current_path: The current filepath.
+    :param relative_path: Path relative to current_path.
+    :return: Absolute path.
+
+    Note: This function solves the problem that when using relative paths in scripts, those scripts cannot be executed from any location.
+    """
+    if os.path.isdir(current_path):
+        current_abspath = os.path.abspath(current_path)
+    else:
+        current_abspath = os.path.abspath(current_path).rsplit("/",1)[0] #Remove file name from dir path
+    absolute_path = os.path.join(current_abspath, relative_path)
+    return absolute_path

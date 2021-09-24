@@ -1,4 +1,4 @@
-# Expose the engine as a service
+# Expose the engine (grpc and UI) as a service
 apiVersion: v1
 kind: Service
 metadata:
@@ -8,8 +8,13 @@ spec:
   selector:
     app: {{ .Values.engine.labels.app }}
   ports:
-  - port: {{ .Values.service.port }}
+  - port: {{ .Values.service.grpcPort }}
+    name: grpc-port
     protocol: TCP
     targetPort: {{ .Values.engine.grpcPort }}
+  - port: {{ .Values.service.uiPort }}
+    name: ui-port
+    protocol: TCP
+    targetPort: {{ .Values.engine.uiPort }}
   selector:
     app: {{ .Values.engine.labels.app }}

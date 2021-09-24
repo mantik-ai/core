@@ -85,24 +85,47 @@ class MnpPlanExecutor @Inject() (
 
     val result = for {
       _ <- executionCleanup.isReady
-      containerMapping <- uiStateService.executingNamedOperation(jobId, UiStateService.PrepareContainerName) {
-        mnpWorkerManager.reserveContainers(jobId, plan)
+      result <- withContainers(jobId, plan) { containerMapping =>
+        executeWithContainers(containerMapping, jobId, plan)
       }
-      files <- uiStateService.executingNamedOperation(jobId, UiStateService.PrepareFilesName) {
-        openFilesBuilder.openFiles(plan.files)
-      }
-      memory = new Memory()
-      result <- executeOp(jobId, plan.op, Nil)(files, memory, containerMapping)
-      _ <- mnpWorkerManager.closeConnectionAndStopContainers(containerMapping)
     } yield {
       result
     }
+
     result.andThen {
       case Success(_) => uiStateService.finishJob(jobId)
       case Failure(exception) =>
         uiStateService.finishJob(jobId, Some(Option(exception.getMessage).getOrElse("Unknown error")))
     }
     result
+  }
+
+  /** Ensure the existence of containers while f is running, and clean them up afterwards
+    * (Note: we won't wait for cleanup, it's done async)
+    */
+  private def withContainers[T](jobId: String, plan: Plan[T])(f: ContainerMapping => Future[T]): Future[T] = {
+    uiStateService
+      .executingNamedOperation(jobId, UiStateService.PrepareContainerName) {
+        mnpWorkerManager.reserveContainers(jobId, plan)
+      }
+      .flatMap { containerMapping =>
+        val result = f(containerMapping)
+
+        result.andThen { case _ =>
+          mnpWorkerManager.closeConnectionAndStopContainers(containerMapping)
+        }
+      }
+  }
+
+  /** Execute a plan with given containers. */
+  private def executeWithContainers[T](containerMapping: ContainerMapping, jobId: String, plan: Plan[T]): Future[T] = {
+    for {
+      files <- uiStateService.executingNamedOperation(jobId, UiStateService.PrepareFilesName) {
+        openFilesBuilder.openFiles(plan.files)
+      }
+      memory = new Memory()
+      result <- executeOp(jobId, plan.op, Nil)(files, memory, containerMapping)
+    } yield result
   }
 
   /** Execute a single operation
