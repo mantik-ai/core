@@ -193,25 +193,6 @@ lazy val ds = makeProject("ds")
     )
   )
 
-// Utility stuff, may only depend on Akka, Http and JSON.
-lazy val util = makeProject("util")
-  .settings(
-    name := "util",
-    libraryDependencies ++= Seq(
-      "org.slf4j" % "slf4j-api" % slf4jVersion,
-      // Akka
-      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
-      "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
-      // Circe
-      "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
-      "io.circe" %% "circe-generic-extras" % circeVersion
-    )
-  )
-
 lazy val mnpScala = makeProject("mnp/mnpscala")
   .dependsOn(componently)
   .settings(
@@ -224,11 +205,12 @@ lazy val mnpScala = makeProject("mnp/mnpscala")
   )
 
 lazy val elements = makeProject("elements")
-  .dependsOn(ds, util)
+  .dependsOn(ds)
   .settings(
     name := "elements",
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-yaml" % circeYamlVersion,
+      "io.circe" %% "circe-generic-extras" % circeVersion,
       "net.reactivecore" %% "fhttp-akka" % fhttpVersion,
       "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
     )
@@ -236,10 +218,20 @@ lazy val elements = makeProject("elements")
 
 // Helper library for component building based upon gRpc and Guice
 lazy val componently = makeProject("componently")
-  .dependsOn(util)
   .settings(
     name := "componently",
     libraryDependencies ++= Seq(
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      // Akka
+      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
+      "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
+      // Circe
+      "io.circe" %% "circe-generic" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion,
+      "io.circe" %% "circe-generic-extras" % circeVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
       // gRPC
       "io.grpc" % "grpc-stub" % scalapb.compiler.Version.grpcJavaVersion,
@@ -280,7 +272,7 @@ lazy val executorDocker = makeProject("executor/docker", "executorDocker")
   .settings(configureBuildInfo("ai.mantik.executor.docker.buildinfo"))
 
 lazy val executorS3Storage = makeProject("executor/s3-storage", "executorS3Storage")
-  .dependsOn(testutils, executorApi, executorCommon)
+  .dependsOn(executorApi, executorCommon)
   .settings(
     name := "executor-s3-storage",
     libraryDependencies ++= Seq(
@@ -439,7 +431,6 @@ lazy val root = (project in file("."))
     engine,
     engineApp,
     componently,
-    util,
     scalaFnClosureSerializer,
     scalaFnApi,
     scalaFnBridge
