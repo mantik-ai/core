@@ -6,7 +6,7 @@ authors = ["Thomas Seidler <thomas.seidler@ambrosys.de>"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.8"
-mantik = "0.3.0"
+mantik = { version = "^0.3.1rc1", allows-prereleases = true}
 numpy = "^1.21.2"
 scikit-learn = "^0.24.2"
 

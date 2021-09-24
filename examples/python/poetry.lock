@@ -61,21 +61,21 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "mantik"
-version = "0.3.0"
+version = "0.3.1rc1"
 description = ""
 category = "main"
 optional = false
 python-versions = ">=3.7,<3.8"
 
 [package.dependencies]
-mnp = "0.3.0"
+mnp = "0.3.1-rc1"
 msgpack = ">=1.0.2,<2.0.0"
 pyyaml = ">=5.4.1,<6.0.0"
 requests = ">=2.25.1,<3.0.0"
 
 [[package]]
 name = "mnp"
-version = "0.3.0"
+version = "0.3.1rc1"
 description = ""
 category = "main"
 optional = false
@@ -133,7 +133,7 @@ idna = {version = ">=2.5,<4", markers = "python_version >= \"3\""}
 urllib3 = ">=1.21.1,<1.27"
 
 [package.extras]
-socks = ["PySocks (>=1.5.6,<1.5.7 || >1.5.7)", "win-inet-pton"]
+socks = ["PySocks (>=1.5.6,!=1.5.7)", "win-inet-pton"]
 use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
 
 [[package]]
@@ -185,7 +185,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "urllib3"
-version = "1.26.6"
+version = "1.26.7"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 category = "main"
 optional = false
@@ -194,12 +194,12 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4"
 [package.extras]
 brotli = ["brotlipy (>=0.6.0)"]
 secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "ipaddress"]
-socks = ["PySocks (>=1.5.6,<1.5.7 || >1.5.7,<2.0)"]
+socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7,<3.8"
-content-hash = "37fd34f5888e6bdd7743d3b2f8463b01c6d6f6c4dae78c8b6bb24604dc3dda74"
+content-hash = "8dac7d1aafcdd80fc6ca8ddd289564b2f32fefee84d8f41900cd5a201323f651"
 
 [metadata.files]
 certifi = [
@@ -311,12 +311,12 @@ joblib = [
     {file = "joblib-1.0.1.tar.gz", hash = "sha256:9c17567692206d2f3fb9ecf5e991084254fe631665c450b443761c4186a613f7"},
 ]
 mantik = [
-    {file = "mantik-0.3.0-py3-none-any.whl", hash = "sha256:81ea2c36c7f3cf4830b04e994dac044e950a71d2d8b3ce97a263c221a8941f9e"},
-    {file = "mantik-0.3.0.tar.gz", hash = "sha256:7eb699da50bb4b6a1275927d5498b12c3450adae072a28b6b7426039e2762fad"},
+    {file = "mantik-0.3.1rc1-py3-none-any.whl", hash = "sha256:51a2307ef9dd6a13d6055705c983b7043cbe382123de5eef28f72eb550f1c0cd"},
+    {file = "mantik-0.3.1rc1.tar.gz", hash = "sha256:91872210cf24af645d485a38b6dfbc12ff003af72674789763bff5f4db00549f"},
 ]
 mnp = [
-    {file = "mnp-0.3.0-py3-none-any.whl", hash = "sha256:3af397d431f0fbe845523d91918ffc5bae32d26cc991bacfb6f7925b5a807607"},
-    {file = "mnp-0.3.0.tar.gz", hash = "sha256:67b96afbf966fc88bd2f0113dc57f594fcee4c544079471f9aa36365dbfc270e"},
+    {file = "mnp-0.3.1rc1-py3-none-any.whl", hash = "sha256:0ffee683dd801a38f89824668bdce23822ac79722959815b6b2cab4408bec0f4"},
+    {file = "mnp-0.3.1rc1.tar.gz", hash = "sha256:e31f062cf6728a5bfeb0701ed409aa810cb32a087f536b742a0d553dcb1248b4"},
 ]
 msgpack = [
     {file = "msgpack-1.0.2-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:b6d9e2dae081aa35c44af9c4298de4ee72991305503442a5c74656d82b581fe9"},
@@ -503,6 +503,6 @@ threadpoolctl = [
     {file = "threadpoolctl-2.2.0.tar.gz", hash = "sha256:86d4b6801456d780e94681d155779058759eaef3c3564758b17b6c99db5f81cb"},
 ]
 urllib3 = [
-    {file = "urllib3-1.26.6-py2.py3-none-any.whl", hash = "sha256:39fb8672126159acb139a7718dd10806104dec1e2f0f6c88aab05d17df10c8d4"},
-    {file = "urllib3-1.26.6.tar.gz", hash = "sha256:f57b4c16c62fa2760b7e3d97c35b255512fb6b59a259730f36ba32ce9f8e342f"},
+    {file = "urllib3-1.26.7-py2.py3-none-any.whl", hash = "sha256:c4fdf4019605b6e5423637e01bc9fe4daef873709a7973e195ceba0a62bbc844"},
+    {file = "urllib3-1.26.7.tar.gz", hash = "sha256:4987c65554f7a2dbf30c18fd48778ef124af6fab771a377103da0585e2336ece"},
 ]
