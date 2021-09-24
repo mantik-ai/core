@@ -272,7 +272,7 @@ class MnpPlanExecutor @Inject() (
   /** Helper which tracks and prints progress of tasks within the graph. */
   private class ProgressTracker(nodes: Map[String, MnpSession], taskId: String) {
 
-    private val cancellable = actorSystem.scheduler.schedule(0.second, 5.second) { printProgress() }
+    private val cancellable = actorSystem.scheduler.scheduleWithFixedDelay(0.second, 5.second) { () => printProgress() }
 
     private def printProgress(): Unit = {
       val progresses: Future[Vector[(String, String, QueryTaskResponse)]] = nodes.toVector.map {
@@ -502,12 +502,12 @@ class MnpPlanExecutor @Inject() (
 
   private def deployPipeline(dp: PlanOp.DeployPipeline): Future[DeploymentState] = {
     deployPipelineSubNodes(dp).flatMap { subNodes =>
-      val subDeploymentStates: Map[String, SubDeploymentState] = subNodes.mapValues { subDeploymentResult =>
+      val subDeploymentStates: Map[String, SubDeploymentState] = subNodes.view.mapValues { subDeploymentResult =>
         SubDeploymentState(
           name = subDeploymentResult.nodeName,
           internalUrl = s"mnp://${subDeploymentResult.nodeName}:8502/${DeployedSessionName}"
         )
-      }
+      }.toMap
 
       val runtimeDefinition = buildPipelineRuntimeDefinition(dp, subDeploymentStates)
 
@@ -528,12 +528,12 @@ class MnpPlanExecutor @Inject() (
           name = deploymentState.name,
           internalUrl = deploymentState.internalUrl,
           timestamp = akkaRuntime.clock.instant(),
-          sub = subDeploymentStates.mapValues { s =>
+          sub = subDeploymentStates.view.mapValues { s =>
             SubDeploymentInfo(
               name = s.name,
               internalUrl = s.internalUrl
             )
-          }
+          }.toMap
         )
         _ = mantikItemStateManager.upsert(dp.item, _.copy(deployment = Some(deploymentState)))
         _ <- repository.setDeploymentInfo(dp.item.itemId, Some(deploymentInfo))

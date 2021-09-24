@@ -34,7 +34,7 @@ import org.msgpack.core.{MessagePack, MessageUnpacker}
 import io.circe.syntax._
 import org.msgpack.core.buffer.{MessageBuffer, MessageBufferInput}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.{Future, Promise}
 
 /**
@@ -58,7 +58,7 @@ class MessagePackReaderWriter(dataType: DataType, withHeader: Boolean = true) {
 
     val elementsWithoutHeader: Flow[ByteString, ByteString, _] =
       messagePackFramer.prefixAndTail(1).flatMapConcat { case (header, followUp) =>
-        val parsedHeader = MessagePackJsonSupport.fromMessagePackBytes(header.head).as[Header].right.getOrElse {
+        val parsedHeader = MessagePackJsonSupport.fromMessagePackBytes(header.head).as[Header].getOrElse {
           throw new EncodingException(s"Could not parse header")
         }
         if (parsedHeader.format != dataType) {
@@ -86,7 +86,7 @@ class MessagePackReaderWriter(dataType: DataType, withHeader: Boolean = true) {
   private[messagepack] def decodeFromMessageUnpacker(unpacker: MessageUnpacker): Bundle = {
     if (withHeader) {
       val json = MessagePackJsonSupport.readJsonToMessagePack(unpacker)
-      val header = json.as[Header].right.getOrElse {
+      val header = json.as[Header].getOrElse {
         throw new EncodingException(s"Could not decode header")
       }
       if (header.format != dataType) {
@@ -159,7 +159,7 @@ object MessagePackReaderWriter {
     */
   def autoFormatDecoder(): Flow[ByteString, RootElement, Future[DataType]] = {
     val messagePackFramer = MessagePackFramer.make()
-    val result = Promise[DataType]
+    val result = Promise[DataType]()
 
     val decoded: Flow[ByteString, RootElement, _] =
       messagePackFramer.prefixAndTail(1).flatMapConcat { case (header, followUp) =>
@@ -172,7 +172,7 @@ object MessagePackReaderWriter {
               result.tryFailure(exc)
               throw exc
           }
-        val parsedHeader = asJson.as[Header].right.getOrElse {
+        val parsedHeader = asJson.as[Header].getOrElse {
           val exc = new EncodingException(s"Could not parse header")
           result.tryFailure(exc)
           throw exc
@@ -196,7 +196,7 @@ object MessagePackReaderWriter {
     val input = new ByteStringMessageBufferInput(byteString)
     val unpacker = MessagePack.newDefaultUnpacker(input)
     val json = MessagePackJsonSupport.readJsonToMessagePack(unpacker)
-    val header = json.as[Header].right.getOrElse {
+    val header = json.as[Header].getOrElse {
       throw new EncodingException(s"Could not decode header")
     }
     new MessagePackReaderWriter(header.format, withHeader = false)

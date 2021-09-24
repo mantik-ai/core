@@ -75,7 +75,7 @@ case class TabularData(
   }
 
   override def toString: String = {
-    val builder = StringBuilder.newBuilder
+    val builder = new StringBuilder()
     var first = true
     builder ++= "TabularData("
     columns.foreach { case (name, value) =>

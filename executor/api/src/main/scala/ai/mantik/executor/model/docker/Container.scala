@@ -68,10 +68,10 @@ object Container {
   /** Parses a Container from Typesafe Config. */
   @throws[ConfigException]
   def parseFromTypesafeConfig(config: Config): Container = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
     val parameters = if (config.hasPath("parameters")) {
-      config.getStringList("parameters").asScala
+      config.getStringList("parameters").asScala.toSeq
     } else {
       Nil
     }

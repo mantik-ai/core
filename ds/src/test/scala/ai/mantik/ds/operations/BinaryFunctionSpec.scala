@@ -33,8 +33,8 @@ class BinaryFunctionSpec extends TestBase {
       if sampleType.isInstanceOf[FundamentalType.IntegerType] || sampleType.isInstanceOf[FundamentalType.FloatingPoint]
       if !isSpecialFloat(value)
     } {
-      val add = BinaryFunction.findBinaryFunction(BinaryOperation.Add, sampleType).right.getOrElse(fail())
-      val sub = BinaryFunction.findBinaryFunction(BinaryOperation.Sub, sampleType).right.getOrElse(fail())
+      val add = BinaryFunction.findBinaryFunction(BinaryOperation.Add, sampleType).forceRight
+      val sub = BinaryFunction.findBinaryFunction(BinaryOperation.Sub, sampleType).forceRight
       add.dataType shouldBe sampleType
       sub.dataType shouldBe sampleType
 
@@ -52,8 +52,8 @@ class BinaryFunctionSpec extends TestBase {
       if sampleType.isInstanceOf[FundamentalType.IntegerType] || sampleType.isInstanceOf[FundamentalType.FloatingPoint]
       if !isSpecialFloat(value)
     } {
-      val mul = BinaryFunction.findBinaryFunction(BinaryOperation.Mul, sampleType).right.getOrElse(fail())
-      val div = BinaryFunction.findBinaryFunction(BinaryOperation.Div, sampleType).right.getOrElse(fail())
+      val mul = BinaryFunction.findBinaryFunction(BinaryOperation.Mul, sampleType).forceRight
+      val div = BinaryFunction.findBinaryFunction(BinaryOperation.Div, sampleType).forceRight
       mul.dataType shouldBe sampleType
       div.dataType shouldBe sampleType
 
@@ -69,25 +69,25 @@ class BinaryFunctionSpec extends TestBase {
   }
 
   it should "have handling for unsigned types for 8bit" in {
-    val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int8).right.getOrElse(fail)
+    val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int8).forceRight
     val unsigendDiv =
-      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint8).right.getOrElse(fail)
+      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint8).forceRight
     signedDiv.op(Primitive(-1.toByte), Primitive(5.toByte)) shouldBe Primitive(0.toByte)
     unsigendDiv.op(Primitive(-1.toByte), Primitive(5.toByte)) shouldBe Primitive(51.toByte)
   }
 
   it should "have handling for unsigned types for 32bit" in {
-    val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int32).right.getOrElse(fail)
+    val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int32).forceRight
     val unsigendDiv =
-      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint32).right.getOrElse(fail)
+      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint32).forceRight
     signedDiv.op(Primitive(-1), Primitive(5)) shouldBe Primitive(0)
     unsigendDiv.op(Primitive(-1), Primitive(5)) shouldBe Primitive(858993459)
   }
 
   it should "have handling for unsigned types for 64bit" in {
-    val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int64).right.getOrElse(fail)
+    val signedDiv = BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Int64).forceRight
     val unsigendDiv =
-      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint64).right.getOrElse(fail)
+      BinaryFunction.findBinaryFunction(BinaryOperation.Div, FundamentalType.Uint64).forceRight
     signedDiv.op(Primitive(-1L), Primitive(5L)) shouldBe Primitive(0)
     unsigendDiv.op(Primitive(-1L), Primitive(5L)) shouldBe Primitive(3689348814741910323L)
   }

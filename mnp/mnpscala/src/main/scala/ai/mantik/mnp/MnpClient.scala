@@ -85,7 +85,7 @@ class MnpClient(val address: String, mnpService: MnpService) {
       outputs
     )
 
-    val resultPromise = Promise[MnpSession]
+    val resultPromise = Promise[MnpSession]()
 
     object waiter extends StreamObserver[InitResponse] {
       override def onNext(value: InitResponse): Unit = {

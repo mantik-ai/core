@@ -30,8 +30,11 @@ import ai.mantik.executor.model.{
 }
 import ai.mantik.executor.model.docker.Container
 
+import scala.annotation.nowarn
+
 class WorkerSpec extends IntegrationTestBase {
 
+  @nowarn
   trait Env extends super.Env {
     def startWorker(id: String): StartWorkerResponse = {
       val startWorkerRequest = StartWorkerRequest(

@@ -35,7 +35,7 @@ private[planner] class Metrics {
 
   /** Return all metrics. */
   def all: Map[String, Metric] = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     metricsRegistry.getMetrics.asScala.toMap
   }
 

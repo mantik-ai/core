@@ -30,7 +30,7 @@ object JavaFutureConverter {
   /** Extends CompletionStage with conversions to Scala. */
   implicit class CompletionStageExtensions[T](completionStage: CompletionStage[T]) {
     def asScala: Future[T] = {
-      val promise = Promise[T]
+      val promise = Promise[T]()
       completionStage.whenComplete(new BiConsumer[T, Throwable] {
         override def accept(t: T, u: Throwable): Unit = {
           if (u != null) {

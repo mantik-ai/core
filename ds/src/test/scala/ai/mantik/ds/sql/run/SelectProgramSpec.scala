@@ -34,8 +34,8 @@ class SelectProgramSpec extends TestBase {
       "y" -> FundamentalType.Int32,
       "z" -> FundamentalType.StringType
     )
-    val select = Select.parse(sampleData, "select x where y = 1").getOrElse(fail)
-    val program = Compiler.compile(select).getOrElse(fail)
+    val select = Select.parse(sampleData, "select x where y = 1").forceRight
+    val program = Compiler.compile(select).forceRight
     (program: TableGeneratorProgram).asJson.as[TableGeneratorProgram] shouldBe Right(program)
   }
 }

@@ -201,7 +201,7 @@ class MessagePackAdaptersSpec extends TestBase {
       Seq(2, 3)
     )
     val value = TensorElement[Int](
-      Array(1, 2, 3, 4, 5, 6)
+      IndexedSeq(1, 2, 3, 4, 5, 6)
     )
     val adapter = MessagePackAdapters.lookupAdapter(tensor)
     testSerializationAndBack(adapter, value)
@@ -227,7 +227,7 @@ class MessagePackAdaptersSpec extends TestBase {
       Seq(2, 3)
     )
     val value = TensorElement[Int](
-      Array(1, 2, 3)
+      IndexedSeq(1, 2, 3)
     )
     val adapter = MessagePackAdapters.lookupAdapter(tensor)
     intercept[IllegalArgumentException] {

@@ -35,10 +35,12 @@ import skuber.json.batch.format._
 import skuber.json.format._
 import skuber.{Container, K8SException, LabelSelector, ObjectMeta, Pod, RestartPolicy}
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 
 class K8sOperationsSpec extends KubernetesTestBase {
 
+  @nowarn
   trait Env extends super.Env {
     implicit val clock = Clock.systemUTC()
     val k8sOperations = new K8sOperations(config, kubernetesClient)

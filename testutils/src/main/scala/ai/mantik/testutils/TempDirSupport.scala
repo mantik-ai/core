@@ -73,7 +73,8 @@ trait TempDirSupport extends BeforeAndAfterEach {
           val fileInOther = other.resolve(relativize)
           val otherBytes = Files.readAllBytes(fileInOther)
           val thisBytes = Files.readAllBytes(file)
-          if (!util.Arrays.equals(otherBytes, thisBytes)) fail(file + " is not equal to " + fileInOther)
+          if (!util.Arrays.equals(otherBytes, thisBytes))
+            fail(file.toString + " is not equal to " + fileInOther.toString)
           logger.info(s"Compared ${file} with ${fileInOther}")
           result
         }

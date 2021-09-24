@@ -55,7 +55,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BiFunction
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import io.circe.syntax._
@@ -89,7 +89,7 @@ class UiStateService @Inject() (executor: Executor, metricsService: Metrics)(imp
   )
 
   override def settings: SettingsResponse = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val mantikConfig = config.getConfig("mantik")
     val allValues = mantikConfig
       .entrySet()

@@ -45,7 +45,7 @@ import scala.util.{Failure, Success}
 class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with Repository {
 
   @Inject
-  def this()(implicit akkaRuntime: AkkaRuntime) {
+  def this()(implicit akkaRuntime: AkkaRuntime) = {
     this(
       new File(
         akkaRuntime.config.getString(LocalRepository.DirectoryConfigKey)

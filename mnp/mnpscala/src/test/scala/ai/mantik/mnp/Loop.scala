@@ -22,25 +22,25 @@
 package ai.mantik.mnp
 
 import ai.mantik.componently.AkkaRuntime
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import akka.stream.scaladsl._
 import akka.util.ByteString
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 /**
- * Loops input to output
- * Note: this is blocking, should not be used outside of testcases
- */
+  * Loops input to output
+  * Note: this is blocking, should not be used outside of testcases
+  */
 class Loop(implicit akkaRuntime: AkkaRuntime) {
   import ai.mantik.componently.AkkaHelper._
 
   // None is acting as a symbol for last element
   private val blockingQueue = new ArrayBlockingQueue[Option[ByteString]](10)
-  private val donePromise = Promise[Done]
+  private val donePromise = Promise[Done]()
   private val pushing = new AtomicBoolean()
   private val pulling = new AtomicBoolean()
 
@@ -48,13 +48,14 @@ class Loop(implicit akkaRuntime: AkkaRuntime) {
     if (!pushing.compareAndSet(false, true)) {
       throw new IllegalStateException(s"Already pushing")
     }
-    source.runForeach { byteString =>
-      blockingQueue.put(Some(byteString))
-    }.andThen {
-      case result =>
+    source
+      .runForeach { byteString =>
+        blockingQueue.put(Some(byteString))
+      }
+      .andThen { case result =>
         blockingQueue.put(None)
         donePromise.tryComplete(result)
-    }
+      }
   }
 
   akkaRuntime.lifecycle.addShutdownHook {

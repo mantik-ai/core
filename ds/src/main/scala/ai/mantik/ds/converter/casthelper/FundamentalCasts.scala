@@ -71,7 +71,7 @@ private[converter] object FundamentalCasts {
       added = castAdd.nonEmpty
     }
 
-    val result = builder.mapValues {
+    val result = builder.view.mapValues {
       case List(single) => single
       case multiple =>
         multiple.reduce(_.append(_))

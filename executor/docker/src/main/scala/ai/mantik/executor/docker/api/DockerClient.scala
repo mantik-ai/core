@@ -22,7 +22,6 @@
 package ai.mantik.executor.docker.api
 
 import java.nio.file.Files
-
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.docker.api.structures._
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
@@ -32,6 +31,7 @@ import akka.util.ByteString
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import net.reactivecore.fhttp.akka.ApiClient
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 
 class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
@@ -43,6 +43,8 @@ class DockerClient()(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
     .derive(intermediateTempFile)
 
   private val httpExt = Http()
+
+  @nowarn
   private val clientHttpsSettings: HttpsConnectionContext = connectSettings.sslConfigSettings
     .map { sslConfigSettings =>
       val akkaSettings = AkkaSSLConfig().withSettings(sslConfigSettings)

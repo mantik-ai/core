@@ -46,7 +46,7 @@ class EnumDiscriminatorCodecSpec extends TestBase {
 
   it should "decode and encode them all" in {
     for (x <- Seq(Blue, Red, Green)) {
-      (x: Example).asJson.as[Example].right.get shouldBe x
+      (x: Example).asJson.as[Example].forceRight shouldBe x
     }
   }
 
@@ -61,8 +61,8 @@ class EnumDiscriminatorCodecSpec extends TestBase {
   }
 
   it should "handle decoding errors" in {
-    Json.fromString("unknown").as[Example] shouldBe 'left
-    Json.fromBoolean(true).as[Example] shouldBe 'left
+    Json.fromString("unknown").as[Example].forceLeft
+    Json.fromBoolean(true).as[Example].forceLeft
   }
 
   it should "provide simple serializers" in {

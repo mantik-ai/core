@@ -35,7 +35,9 @@ object PipelineExample extends ExampleBase {
     context.pushLocalMantikItem(mnistAnnotated, id = Some("mnist_annotated"))
 
     val mnist = context.loadAlgorithm("mnist_annotated").tag("nob/mnist_annotated") //otherwise it can't be pushed
-    val select = Select.parse(mnist.functionType.output.asInstanceOf[TabularData], "SELECT y AS x").right.get
+    val select = Select.parse(mnist.functionType.output.asInstanceOf[TabularData], "SELECT y AS x").getOrElse {
+      throw new IllegalStateException(s"Could not parse simple select")
+    }
 
     val pipeline = Pipeline.build(
       Right(mnist),

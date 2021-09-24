@@ -157,7 +157,7 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     // Regression Bug #47
     val source = Source.empty
     awaitException[EncodingException] {
-      source.runWith(Bundle.fromStreamWithHeader)
+      source.runWith(Bundle.fromStreamWithHeader())
     }
   }
 
@@ -173,7 +173,7 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
     val dir = new File(getClass.getResource("/sample_directory").toURI).toPath
     val source = ZipUtils.zipDirectory(dir, 10.seconds)
     awaitException[EncodingException] {
-      source.runWith(Bundle.fromStreamWithHeader)
+      source.runWith(Bundle.fromStreamWithHeader())
     }
     awaitException[EncodingException] {
       source.runWith(Bundle.fromStreamWithoutHeader(sampleBundle.model))
@@ -189,12 +189,12 @@ class BundleSpec extends TestBase with TempDirSupport with GlobalAkkaSupport {
 
   "cast" should "work" in {
     Bundle.fundamental(100).cast(FundamentalType.Float64) shouldBe Right(Bundle.fundamental(100.0))
-    Bundle.void.cast(FundamentalType.Int32).left.getOrElse(fail) should include("No cast found")
-    Bundle.fundamental(100).cast(FundamentalType.Float32).left.getOrElse(fail) should include("loose precision")
+    Bundle.void.cast(FundamentalType.Int32).forceLeft should include("No cast found")
+    Bundle.fundamental(100).cast(FundamentalType.Float32).forceLeft should include("loose precision")
     Bundle.fundamental(100).cast(FundamentalType.Float32, allowLoosing = true) shouldBe Right(
       Bundle.fundamental(100.0f)
     )
-    Bundle.fundamental("Hello").cast(FundamentalType.Int32).left.getOrElse(fail) should include("Cast failed")
+    Bundle.fundamental("Hello").cast(FundamentalType.Int32).forceLeft should include("Cast failed")
   }
 
   "sorted" should "work" in {

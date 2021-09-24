@@ -37,7 +37,7 @@ private[messagepack] object MessagePackAdapters {
   trait AnonymousMessagePackAdapter {
 
     /** Write an element, assuming it is of correct type. */
-    def elementWriter(messagePacker: MessagePacker, value: Element)
+    def elementWriter(messagePacker: MessagePacker, value: Element): Unit
 
     /** Read an element. */
     def read(messageUnpacker: MessageUnpacker): Element
@@ -245,7 +245,7 @@ private[messagepack] object MessagePackAdapters {
       for (i <- 0 until arrayLength) {
         array(i) = underlyingAdapter.reader(messageUnpacker)
       }
-      TensorElement(array)
+      TensorElement(array.toIndexedSeq)
     }
   }
 

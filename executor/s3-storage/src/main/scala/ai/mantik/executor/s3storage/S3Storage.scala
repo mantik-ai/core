@@ -67,7 +67,7 @@ import java.util.concurrent.atomic.AtomicLong
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.FiniteDuration
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 @Singleton
 class S3Storage(s3Config: S3Config)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase with ExecutorFileStorage {
@@ -179,7 +179,7 @@ class S3Storage(s3Config: S3Config)(implicit akkaRuntime: AkkaRuntime) extends C
       .key(id)
       .build()
 
-    val result = Promise[Source[ByteString, NotUsed]]
+    val result = Promise[Source[ByteString, NotUsed]]()
 
     s3Client.getObject(
       req,

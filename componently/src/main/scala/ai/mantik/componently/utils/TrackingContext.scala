@@ -41,21 +41,20 @@ class TrackingContext(defaultTimeout: FiniteDuration)(implicit akkaRuntime: Akka
   private var nextId: Int = 1
   private val callbacks = new mutable.HashMap[Int, Callback]()
 
-  private val callbacksByTracked = new mutable.HashMap[Tracked[_], mutable.Set[Int]]
-    with mutable.MultiMap[Tracked[_], Int]
+  private val callbacksByTracked = new MutableMultiMap[Tracked[_], Int]()
 
   object lock
 
   /** Add a tracked object */
   def add(tracked: Tracked[_]): Future[Unit] = {
-    val promise = Promise[Unit]
+    val promise = Promise[Unit]()
     // Protecting that the callback is faster than our registration
     lock.synchronized {
       val id = nextId
       nextId += 1
       val cancellable = akkaRuntime.actorSystem.scheduler.scheduleOnce(defaultTimeout)(onTimeout(id))
       callbacks.put(id, Callback(promise, cancellable, tracked))
-      callbacksByTracked.addBinding(tracked, id)
+      callbacksByTracked.add(tracked, id)
     }
     promise.future
   }
@@ -70,14 +69,14 @@ class TrackingContext(defaultTimeout: FiniteDuration)(implicit akkaRuntime: Akka
   /** Returns the number of registered callbacks for a trackable. */
   def callbackByTrackedCount(t: Tracked[_]): Int = {
     lock.synchronized {
-      callbacksByTracked.get(t).map(_.size).getOrElse(0)
+      callbacksByTracked.valueCount(t)
     }
   }
 
   /** To be called if the tracked object is updated */
   def onUpdate(tracked: Tracked[_]): Unit = {
     val cbs = lock.synchronized {
-      val ids = callbacksByTracked.getOrElse(tracked, Nil)
+      val ids = callbacksByTracked.get(tracked)
       // Note: we are assuming eager execution here, this is not functional
       val cbs = ids.flatMap { id =>
         callbacks.remove(id)
@@ -96,7 +95,7 @@ class TrackingContext(defaultTimeout: FiniteDuration)(implicit akkaRuntime: Akka
     val cbs = lock.synchronized {
       val maybeCallback = callbacks.remove(id)
       maybeCallback.foreach { callback =>
-        callbacksByTracked.removeBinding(callback.tracked, id)
+        callbacksByTracked.remove(callback.tracked, id)
       }
       maybeCallback
     }

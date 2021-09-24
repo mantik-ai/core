@@ -103,7 +103,7 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     semiauto.deriveDecoder[MantikItemCore[T]]
   }
 
-  private val pureDatasetEncoder: ObjectEncoder[DataSet] = semiauto.deriveEncoder[DataSet]
+  private val pureDatasetEncoder: Encoder.AsObject[DataSet] = semiauto.deriveEncoder[DataSet]
   private val pureDatasetDecoder: Decoder[DataSet] = {
     implicit val itemDecoder = mantikItemCoreDecoder[DataSetDefinition]
     semiauto.deriveDecoder[DataSet]
@@ -114,46 +114,49 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
       statement: String
   )
 
-  private implicit val queryEncoder: Encoder[MultiQuery] = semiauto.deriveEncoder[EncodedQuery].contramap { s =>
-    val inputPorts = s.figureOutInputPorts match {
-      case Left(error) => throw new IllegalArgumentException(s"Invalid query input ports ${error}")
-      case Right(ok) =>
-        ok
+  private implicit val queryEncoder: Encoder[MultiQuery] =
+    semiauto.deriveEncoder[EncodedQuery].contramap { s =>
+      val inputPorts = s.figureOutInputPorts match {
+        case Left(error) => throw new IllegalArgumentException(s"Invalid query input ports ${error}")
+        case Right(ok) =>
+          ok
+      }
+      EncodedQuery(inputPorts, s.toStatement)
     }
-    EncodedQuery(inputPorts, s.toStatement)
-  }
 
   private implicit val selectEncoder: Encoder[Select] = queryEncoder.contramap { s => SingleQuery(s): MultiQuery }
 
-  private implicit val queryDecoder: Decoder[MultiQuery] = semiauto.deriveDecoder[EncodedQuery].emap { encoded =>
-    implicit val sqlContext = SqlContext(encoded.inputs)
-    MultiQuery.parse(encoded.statement)
-  }
+  private implicit val queryDecoder: Decoder[MultiQuery] =
+    semiauto.deriveDecoder[EncodedQuery].emap { encoded =>
+      implicit val sqlContext = SqlContext(encoded.inputs)
+      MultiQuery.parse(encoded.statement)
+    }
 
   private implicit val selectDecoder: Decoder[Select] = queryDecoder.emap {
     case SingleQuery(s: Select) => Right(s)
     case other                  => Left(s"Expected Select, got ${other.getClass.getSimpleName}")
   }
 
-  private val pureAlgorithmEncoder: ObjectEncoder[Algorithm] = semiauto.deriveEncoder[Algorithm]
+  private val pureAlgorithmEncoder: Encoder.AsObject[Algorithm] = semiauto.deriveEncoder[Algorithm]
   private val pureAlgorithmDecoder: Decoder[Algorithm] = {
     implicit val itemDecoder = mantikItemCoreDecoder[AlgorithmDefinition]
     semiauto.deriveDecoder[Algorithm]
   }
 
-  private val pureTrainableEncoder: ObjectEncoder[TrainableAlgorithm] = semiauto.deriveEncoder[TrainableAlgorithm]
+  private val pureTrainableEncoder: Encoder.AsObject[TrainableAlgorithm] =
+    semiauto.deriveEncoder[TrainableAlgorithm]
   private val pureTrainableDecoder: Decoder[TrainableAlgorithm] = {
     implicit val itemDecoder = mantikItemCoreDecoder[TrainableAlgorithmDefinition]
     semiauto.deriveDecoder[TrainableAlgorithm]
   }
 
-  private val pureBridgeEncoder: ObjectEncoder[Bridge] = semiauto.deriveEncoder[Bridge]
+  private val pureBridgeEncoder: Encoder.AsObject[Bridge] = semiauto.deriveEncoder[Bridge]
   private val pureBridgeDecoder: Decoder[Bridge] = {
     implicit val itemDecoder = mantikItemCoreDecoder[BridgeDefinition]
     semiauto.deriveDecoder[Bridge]
   }
 
-  implicit val resolvedPipelineStep: ObjectEncoder[ResolvedPipelineStep] with Decoder[ResolvedPipelineStep] =
+  implicit val resolvedPipelineStep: Encoder.AsObject[ResolvedPipelineStep] with Decoder[ResolvedPipelineStep] =
     new DiscriminatorDependentCodec[ResolvedPipelineStep]() {
       implicit val algoEncoder = pureAlgorithmEncoder
       implicit val algoDecoder = pureAlgorithmDecoder
@@ -173,7 +176,7 @@ private[mantik] object MantikItemCodec extends DiscriminatorDependentCodec[Manti
     semiauto.deriveDecoder[ResolvedPipeline]
   }
 
-  private val purePipelineEncoder: ObjectEncoder[Pipeline] = semiauto.deriveEncoder[Pipeline]
+  private val purePipelineEncoder: Encoder.AsObject[Pipeline] = semiauto.deriveEncoder[Pipeline]
   private val purePipelineDecoder: Decoder[Pipeline] = {
     implicit val itemDecoder = mantikItemCoreDecoder[PipelineDefinition]
     semiauto.deriveDecoder[Pipeline]

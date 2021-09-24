@@ -87,7 +87,7 @@ object AkkaRuntime {
       clock: Clock = Clock.systemUTC()
   ): AkkaRuntime = {
     implicit val actorSystem: ActorSystem = ActorSystem("default", config)
-    implicit val materializer: Materializer = ActorMaterializer.create(actorSystem)
+    implicit val materializer: Materializer = Materializer.apply(actorSystem)
     implicit val ec = actorSystem.dispatcher
     val lifecycle = new Lifecycle.SimpleLifecycle()
     AkkaRuntimeImpl(config, materializer, ec, actorSystem, clock, lifecycle, ownAkka = true)

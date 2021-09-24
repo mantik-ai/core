@@ -55,7 +55,7 @@ case class QueryTabularType(
     } else {
       plainName
     }
-    val zipped = columns.view.zipWithIndex
+    val zipped = columns.view.zipWithIndex.toIndexedSeq
     val collector: PartialFunction[(QueryColumn, Int), (Int, QueryColumn)] = {
       case (column, id) if column.matches(alias, plainNameLc, !caseSensitive) => (id -> column)
     }

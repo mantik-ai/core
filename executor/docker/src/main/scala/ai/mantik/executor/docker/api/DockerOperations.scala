@@ -210,6 +210,7 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
     dockerClient.inspectContainer(containerName).transform {
       case Success(result)                                   => Success(Some(result))
       case Failure(e: WrappedErrorResponse) if e.code == 404 => Success(None)
+      case Failure(e)                                        => Failure(e)
     }
   }
 
@@ -225,7 +226,7 @@ class DockerOperations(dockerClient: DockerClient)(implicit akkaRuntime: AkkaRun
         case networks if networks.nonEmpty =>
           logger.info(s"Network ${name} already exists with id ${networks.head.Id}")
           Future.successful(networks.head.Id)
-        case networks if networks.isEmpty =>
+        case networks =>
           dockerClient.createNetwork(createNetworkRequest).map(_.Id).andThen {
             case Success(id)  => logger.info(s"Creating Network ${name} with ${id} succeded")
             case Failure(err) => logger.error(s"Could not ensure network ${name}", err)

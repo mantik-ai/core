@@ -134,7 +134,9 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
 
   private val checkPodCancellation = config.kubernetes.checkPodInterval match {
     case f: FiniteDuration =>
-      actorSystem.scheduler.schedule(f, f)(checkPods())
+      actorSystem.scheduler.scheduleWithFixedDelay(f, f) { () =>
+        checkPods()
+      }
     case _ => // nothing
       Cancellable.alreadyCancelled
   }

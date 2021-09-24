@@ -31,7 +31,7 @@ private[sql] object QueryParser {
 
   /** Parse a SELECT statement into a SelectNode */
   def parseSelectToNode(select: String): Either[String, SelectNode] = {
-    parseQueryNode(select).right.flatMap {
+    parseQueryNode(select).flatMap {
       case s: SelectNode => Right(s)
       case other         => Left(s"Expected SELECT, got ${other.getClass.getSimpleName}")
     }

@@ -124,7 +124,7 @@ case class StringPreviewGenerator(maxCellLength: Int = 64, maxRows: Int = 20) {
 
   /** Render a tensor, may render slightly to many elements. */
   private def renderTensorLike(shape: List[Int], elementIterator: Iterator[String], pendingLength: Int): String = {
-    val result = StringBuilder.newBuilder
+    val result = new StringBuilder()
     var pending = pendingLength
 
     // Note: not tail recursive

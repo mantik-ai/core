@@ -102,12 +102,12 @@ class JsonFormatSpec extends TestBase {
         ) {
           // io.circe translates them all to null and parses them to NaN
           // also, equals on NaN is always false
-          deserialized.right.get.single.get.asInstanceOf[Primitive[Float]].x.isNaN shouldBe true
+          deserialized.forceRight.single.get.asInstanceOf[Primitive[Float]].x.isNaN shouldBe true
         } else if (
           t == FundamentalType.Float64 && (v.x == Float.NaN || v.x == Float.NegativeInfinity || v.x == Float.PositiveInfinity)
         ) {
           // the same for doubles
-          deserialized.right.get.single.get.asInstanceOf[Primitive[Double]].x.isNaN shouldBe true
+          deserialized.forceRight.single.get.asInstanceOf[Primitive[Double]].x.isNaN shouldBe true
         } else {
           deserialized shouldBe Right(bundle)
         }

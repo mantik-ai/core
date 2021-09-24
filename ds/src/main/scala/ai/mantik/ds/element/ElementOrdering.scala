@@ -76,8 +76,8 @@ object ElementOrdering {
   }
 
   private def embeddedTabularOrdering(tabularData: TabularData): Ordering[EmbeddedTabularElement] = {
-    implicit val rowOrdering = tableRowOrdering(tabularData)
-    val seqOrdering = implicitly[Ordering[IndexedSeq[TabularRow]]]
+    implicit val rowOrdering: Ordering[TabularRow] = tableRowOrdering(tabularData)
+    val seqOrdering = Ordering.Implicits.seqOrdering[IndexedSeq, TabularRow](rowOrdering)
     seqOrdering.on[EmbeddedTabularElement] { x =>
       x.rows
     }

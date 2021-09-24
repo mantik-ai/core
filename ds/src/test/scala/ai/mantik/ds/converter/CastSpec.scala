@@ -43,67 +43,67 @@ import scala.collection.immutable.ListMap
 class CastSpec extends TestBase {
 
   it should "have identity" in {
-    val id = Cast.findCast(FundamentalType.Uint8, FundamentalType.Uint8).right.get
+    val id = Cast.findCast(FundamentalType.Uint8, FundamentalType.Uint8).forceRight
     id.canFail shouldBe false
     id.loosing shouldBe false
     id.op(ValueEncoder.wrap(8.toByte)) shouldBe Primitive(8)
   }
 
   it should "work for simple conversions" in {
-    val c1 = Cast.findCast(FundamentalType.Int32, FundamentalType.Int64).right.get
+    val c1 = Cast.findCast(FundamentalType.Int32, FundamentalType.Int64).forceRight
     c1.canFail shouldBe false
     c1.loosing shouldBe false
     c1.op(ValueEncoder.wrap(123)) shouldBe ValueEncoder.wrap(123L)
 
-    val c2 = Cast.findCast(FundamentalType.Int64, FundamentalType.Int32).right.get
+    val c2 = Cast.findCast(FundamentalType.Int64, FundamentalType.Int32).forceRight
     c2.canFail shouldBe false
     c2.loosing shouldBe true
     c2.op(ValueEncoder.wrap(123L)) shouldBe ValueEncoder.wrap(123)
   }
 
   it should "cast 8 bit integers to float32" in {
-    val c1 = Cast.findCast(FundamentalType.Uint8, FundamentalType.Float32).right.get
+    val c1 = Cast.findCast(FundamentalType.Uint8, FundamentalType.Float32).forceRight
     c1.op(Primitive(200.toByte)) shouldBe Primitive(200.toFloat)
     c1.canFail shouldBe false
     c1.loosing shouldBe false // 23 bits of precision in float32
 
-    val c2 = Cast.findCast(FundamentalType.Int8, FundamentalType.Float32).right.get
+    val c2 = Cast.findCast(FundamentalType.Int8, FundamentalType.Float32).forceRight
     c2.op(Primitive(-10.toByte)) shouldBe Primitive(-10.toFloat)
     c2.canFail shouldBe false
     c2.loosing shouldBe false // 23 bits of precision in float32
   }
 
   it should "cast 32 bit integers to float64" in {
-    val c1 = Cast.findCast(FundamentalType.Uint32, FundamentalType.Float64).right.get
+    val c1 = Cast.findCast(FundamentalType.Uint32, FundamentalType.Float64).forceRight
     c1.op(Primitive(4000000000L.toInt)) shouldBe Primitive(4000000000L.toDouble)
     c1.canFail shouldBe false
     c1.loosing shouldBe false // 52 bits of precision in float32
 
-    val c2 = Cast.findCast(FundamentalType.Int32, FundamentalType.Float64).right.get
+    val c2 = Cast.findCast(FundamentalType.Int32, FundamentalType.Float64).forceRight
     c2.op(Primitive(-200)) shouldBe Primitive(-200.toDouble)
     c2.canFail shouldBe false
     c2.loosing shouldBe false // 52 bits of precision in float32
   }
 
   it should "cast floats to ints" in {
-    val c1 = Cast.findCast(FundamentalType.Float64, FundamentalType.Int32).right.getOrElse(fail)
+    val c1 = Cast.findCast(FundamentalType.Float64, FundamentalType.Int32).forceRight
     c1.op(Primitive(100.5)) shouldBe Primitive(100)
     c1.loosing shouldBe true
     c1.canFail shouldBe false
 
-    val c2 = Cast.findCast(FundamentalType.Float32, FundamentalType.Uint8).right.getOrElse(fail)
+    val c2 = Cast.findCast(FundamentalType.Float32, FundamentalType.Uint8).forceRight
     c2.op(Primitive(100.5f)) shouldBe Primitive(100.toByte)
     c2.loosing shouldBe true
     c2.canFail shouldBe false
   }
 
   it should "work for chained conversions" in {
-    val c1 = Cast.findCast(FundamentalType.Int8, FundamentalType.Int64).right.get
+    val c1 = Cast.findCast(FundamentalType.Int8, FundamentalType.Int64).forceRight
     c1.loosing shouldBe false
     c1.canFail shouldBe false
     c1.op(ValueEncoder.wrap(8.toByte)) shouldBe ValueEncoder.wrap(8L)
 
-    val c2 = Cast.findCast(FundamentalType.Uint8, FundamentalType.Int32).right.get
+    val c2 = Cast.findCast(FundamentalType.Uint8, FundamentalType.Int32).forceRight
     c2.loosing shouldBe false
     c2.canFail shouldBe false
     c2.op(ValueEncoder.wrap(-1.toByte)) shouldBe ValueEncoder.wrap(255)
@@ -112,8 +112,8 @@ class CastSpec extends TestBase {
   it should "convert everything to string and back" in {
     for ((ft, value) <- TypeSamples.fundamentalSamples) {
       withClue(s"It should work for ${ft}") {
-        val toString = Cast.findCast(ft, FundamentalType.StringType).right.getOrElse(fail())
-        val fromString = Cast.findCast(FundamentalType.StringType, ft).right.getOrElse(fail())
+        val toString = Cast.findCast(ft, FundamentalType.StringType).forceRight
+        val fromString = Cast.findCast(FundamentalType.StringType, ft).forceRight
         val asString = toString.op(value)
         fromString.op(asString) shouldBe value
       }
@@ -121,7 +121,7 @@ class CastSpec extends TestBase {
   }
 
   it should "cast from primitive to tensor" in {
-    val c = Cast.findCast(FundamentalType.Int32, Tensor(FundamentalType.Int64, List(1))).right.getOrElse(fail())
+    val c = Cast.findCast(FundamentalType.Int32, Tensor(FundamentalType.Int64, List(1))).forceRight
     c.from shouldBe FundamentalType.Int32
     c.to shouldBe Tensor(FundamentalType.Int64, List(1))
     c.loosing shouldBe false
@@ -134,7 +134,7 @@ class CastSpec extends TestBase {
   }
 
   it should "cast tensors to primitives" in {
-    val c = Cast.findCast(Tensor(FundamentalType.Int64, List(1)), FundamentalType.Int32).right.getOrElse(fail())
+    val c = Cast.findCast(Tensor(FundamentalType.Int64, List(1)), FundamentalType.Int32).forceRight
     c.from shouldBe Tensor(FundamentalType.Int64, List(1))
     c.to shouldBe FundamentalType.Int32
     c.loosing shouldBe true
@@ -147,7 +147,7 @@ class CastSpec extends TestBase {
   }
 
   it should "cast images to tensors" in {
-    val c = Cast.findCast(TypeSamples.image._1, Tensor(FundamentalType.Int32, List(3, 2))).right.getOrElse(fail())
+    val c = Cast.findCast(TypeSamples.image._1, Tensor(FundamentalType.Int32, List(3, 2))).forceRight
     c.from shouldBe TypeSamples.image._1
     c.to shouldBe Tensor(FundamentalType.Int32, List(3, 2))
     c.loosing shouldBe false
@@ -157,7 +157,7 @@ class CastSpec extends TestBase {
   }
 
   it should "cast tensors to images" in {
-    val c = Cast.findCast(Tensor(FundamentalType.Int32, List(3, 2)), TypeSamples.image._1).right.getOrElse(fail())
+    val c = Cast.findCast(Tensor(FundamentalType.Int32, List(3, 2)), TypeSamples.image._1).forceRight
     c.from shouldBe Tensor(FundamentalType.Int32, List(3, 2))
     c.to shouldBe TypeSamples.image._1
     c.loosing shouldBe true
@@ -171,8 +171,7 @@ class CastSpec extends TestBase {
         Tensor(FundamentalType.Int32, List(3, 2)),
         Tensor(FundamentalType.Int32, List(6))
       )
-      .right
-      .getOrElse(fail())
+      .forceRight
     c.canFail shouldBe false
     c.loosing shouldBe false
     c.from shouldBe Tensor(FundamentalType.Int32, List(3, 2))
@@ -187,8 +186,7 @@ class CastSpec extends TestBase {
         Tensor(FundamentalType.Int32, List(3, 2)),
         Tensor(FundamentalType.Int8, List(2, 3))
       )
-      .right
-      .getOrElse(fail())
+      .forceRight
     c.canFail shouldBe false
     c.loosing shouldBe true
     c.from shouldBe Tensor(FundamentalType.Int32, List(3, 2))
@@ -222,7 +220,7 @@ class CastSpec extends TestBase {
     Cast.findCast(invalid1, to).isLeft shouldBe true
     Cast.findCast(invalid2, to).isLeft shouldBe true
 
-    val c = Cast.findCast(from, to).right.getOrElse(fail())
+    val c = Cast.findCast(from, to).forceRight
     c.canFail shouldBe false
     c.loosing shouldBe false
     val casted = c.op(TypeSamples.image._2).asInstanceOf[ImageElement]

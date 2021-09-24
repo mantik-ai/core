@@ -28,11 +28,11 @@ import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.model.WorkerState
 import com.typesafe.scalalogging.Logger
 import skuber.apps.v1.Deployment
-import skuber.ext.Ingress
-import skuber.ext.Ingress.Backend
+import skuber.networking.Ingress
+import skuber.networking.Ingress.Backend
 import skuber.{ObjectResource, Pod, ResourceDefinition, Service}
 import skuber.json.batch.format._
-import skuber.json.ext.format._
+import skuber.json.networking.format._
 import skuber.json.format._
 import skuber.json.apps.format.depFormat
 import skuber.json.apps.format.deployListFormat
@@ -177,7 +177,7 @@ case class Workload(
     def updateBackend(backend: Backend): Backend = {
       backend.copy(
         serviceName = service.name,
-        servicePort = port
+        servicePort = Left(port)
       )
     }
     ingress.copy(

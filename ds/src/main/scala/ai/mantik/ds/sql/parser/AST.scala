@@ -93,7 +93,7 @@ private[sql] object AST {
   case class NumberNode(value: BigDecimal) extends ConstantExpressionNode
   case class BoolNode(value: Boolean) extends ConstantExpressionNode
   case object VoidNode extends ConstantExpressionNode {
-    val value = Unit
+    val value = ()
     override def toString: String = "void"
   }
 

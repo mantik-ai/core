@@ -24,7 +24,7 @@ package ai.mantik.componently.utils
 import com.typesafe.config.Config
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** Extensions for [[com.typesafe.config.Config]] */
 object ConfigExtensions {

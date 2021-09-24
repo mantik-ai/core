@@ -74,7 +74,7 @@ class MantikDbEvolutions(
 
     val itemIdWithKind: IndexedSeq[(String, String)] = result.map { case (itemId, mantikHeaderJson) =>
       val json = CirceJson.forceParseJson(mantikHeaderJson)
-      val mantikHeader = MantikHeader.parseSingleDefinition(json).right.getOrElse {
+      val mantikHeader = MantikHeader.parseSingleDefinition(json).getOrElse {
         throw new IllegalStateException(s"Could not parse json ${json}")
       }
       itemId -> mantikHeader.definition.kind

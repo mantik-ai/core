@@ -31,7 +31,7 @@ import scala.collection.immutable.ListMap
 class ImageHelperSpec extends TestBase {
 
   "imageUnpacker" should "work" in {
-    val unpacker = ImageHelper.imageUnpacker(TypeSamples.image._1).right.getOrElse(fail())
+    val unpacker = ImageHelper.imageUnpacker(TypeSamples.image._1).forceRight
 
     val unpacked = unpacker(TypeSamples.image._2)
     unpacked shouldBe IndexedSeq(
@@ -43,7 +43,7 @@ class ImageHelperSpec extends TestBase {
       Primitive(6)
     )
 
-    val back = ImageHelper.imagePacker(TypeSamples.image._1).right.getOrElse(fail())
+    val back = ImageHelper.imagePacker(TypeSamples.image._1).forceRight
     back(unpacked) shouldBe TypeSamples.image._2
   }
 
@@ -52,7 +52,7 @@ class ImageHelperSpec extends TestBase {
     val data = ImageElement(
       ByteString(0 until 24: _*)
     )
-    val unpacker = ImageHelper.imageUnpacker(image).right.getOrElse(fail())
+    val unpacker = ImageHelper.imageUnpacker(image).forceRight
     val unpacked = unpacker(data)
 
     unpacked shouldBe IndexedSeq(
@@ -63,7 +63,7 @@ class ImageHelperSpec extends TestBase {
       Primitive(0x10111213),
       Primitive(0x14151617)
     )
-    val packer = ImageHelper.imagePacker(image).right.getOrElse(fail())
+    val packer = ImageHelper.imagePacker(image).forceRight
     packer(unpacked) shouldBe data
   }
 }

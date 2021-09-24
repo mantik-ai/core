@@ -13,11 +13,10 @@ val artefactVersion = versionTag.getOrElse(snapshotVersion)
 
 ThisBuild / organization := "ai.mantik"
 ThisBuild / version := artefactVersion
-ThisBuild / scalaVersion := "2.12.13"
-// ThisBuild / scalacOptions += "-Xfatal-warnings" // this breaks the doc target due https://github.com/scala/bug/issues/10134
+ThisBuild / scalaVersion := "2.13.5"
 ThisBuild / scalacOptions += "-feature"
 ThisBuild / scalacOptions ++= Seq("-unchecked", "-deprecation")
-ThisBuild / scalacOptions += "-Ypartial-unification" // Needed for Cats
+ThisBuild / scalacOptions += "-Ymacro-annotations"
 ThisBuild / autoAPIMappings := true
 
 Test / parallelExecution := true
@@ -27,27 +26,26 @@ IntegrationTest / fork := true
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
-val akkaVersion = "2.5.32"
-val akkaHttpVersion = "10.1.14"
+val akkaVersion = "2.6.14"
+val akkaHttpVersion = "10.2.4"
 val scalaTestVersion = "3.0.9"
-val circeVersion = "0.11.2"
+val circeVersion = "0.13.0"
 val slf4jVersion = "1.7.30"
-val fhttpVersion = "0.2.2"
+val fhttpVersion = "0.3.0"
 val shapelessVersion = "2.3.3"
 val scalaLoggingVersion = "3.9.3"
-val commonsIoVersion = "2.8.0"
+val commonsIoVersion = "2.9.0"
 val guavaVersion = "30.1.1-jre"
-val guiceVersion = "5.0.1"
-val circeYamlVersion = "0.8.0"
+val guiceVersion = "4.2.3"
+val circeYamlVersion = "0.13.1"
 val logbackVersion = "1.2.3"
-val macroParadiseVersion = "2.1.1"
 val akkaHttpCirceVerson = "1.25.2"
-val awsSdkVersion = "2.16.45"
-val skuberVersion = "2.3.0"
+val awsSdkVersion = "2.16.46"
+val skuberVersion = "2.6.1"
 val sqliteJdbcVersion = "3.28.0"
-val quillVersion = "3.2.2"
-val catsVersion = "1.6.1"
-val parboiledVersion = "2.1.8"
+val quillVersion = "3.7.0"
+val catsVersion = "2.6.0"
+val parboiledVersion = "2.3.0"
 val msgpackVersion = "0.8.22"
 val metricsVersion = "4.2.0"
 
@@ -146,7 +144,6 @@ def makeProject(directory: String, id: String = "", publishing: Boolean = true) 
     .dependsOn(testutils % "it,test")
     .configs(IntegrationTest)
     .settings(
-      addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full),
       if (publishing) {
         Seq(
           publishConfiguration := publishConfiguration.value.withOverwrite(true),
@@ -293,8 +290,12 @@ lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubern
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       // Kubernetes Client
-      "io.skuber" %% "skuber" % skuberVersion,
+      "io.skuber" %% "skuber" % skuberVersion excludeAll (
+        // Skuber uses a slightly newever akka version and they are not compatible
+        ExclusionRule(organization = "com.typesafe.akka")
+      ),
       // Guava
       "com.google.guava" % "guava" % guavaVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion
@@ -439,9 +440,8 @@ lazy val root = (project in file("."))
     name := "mantik-core",
     publish := {},
     publishLocal := {},
-    publishArtifact := false,
     test := {},
-    addCompilerPlugin("org.scalamacros" % "paradise" % macroParadiseVersion cross CrossVersion.full)
+    publishArtifact := false
   )
   .enablePlugins(ScalaUnidocPlugin)
   .settings(

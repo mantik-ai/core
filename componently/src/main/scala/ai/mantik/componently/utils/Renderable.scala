@@ -40,12 +40,12 @@ object Renderable {
   sealed trait RenderTree {
 
     def renderAsString: String = {
-      val builder = new StringBuilder
+      val builder = new StringBuilder()
       render(builder, 0)
       builder.result()
     }
 
-    private[utils] def render(builder: StringBuilder, depth: Int)
+    private[utils] def render(builder: StringBuilder, depth: Int): Unit
 
   }
 

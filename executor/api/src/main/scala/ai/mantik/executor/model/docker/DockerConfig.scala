@@ -69,7 +69,7 @@ object DockerConfig {
   /** Parses docker configuration from typesafe config. */
   @throws[ConfigException]
   def parseFromConfig(config: Config): DockerConfig = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
     def optionalString(key: String): Option[String] = {
       if (config.hasPath(key)) {
@@ -81,7 +81,7 @@ object DockerConfig {
       }
     }
     val logins: Seq[DockerLogin] = if (config.hasPath("logins")) {
-      config.getList("logins").asScala.map {
+      config.getList("logins").asScala.toSeq.map {
         case c: ConfigObject => DockerLogin.parseFromConfig(c.toConfig)
         case c               => throw new WrongType(c.origin(), "Expected object")
       }

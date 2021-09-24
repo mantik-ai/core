@@ -25,8 +25,8 @@ import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.common.test.integration.StartWorkerSpecBase
 import ai.mantik.executor.kubernetes.{K8sOperations, KubernetesConstants}
 import skuber.apps.v1.Deployment
-import skuber.ext.Ingress
-import skuber.json.ext.format._
+import skuber.networking.Ingress
+import skuber.json.networking.format._
 import skuber.json.format._
 import skuber.{Pod, Service}
 

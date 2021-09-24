@@ -23,7 +23,7 @@ package ai.mantik.ds.sql.run
 
 import ai.mantik.ds.element.{TabularBundle, TabularRow}
 import ai.mantik.ds.sql.run.MultiTableGeneratorProgramRunner.MultiQueryRunner
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** A Runner for [[MultiTableGeneratorProgram]] */
 class MultiTableGeneratorProgramRunner(multiTableGeneratorProgram: MultiTableGeneratorProgram) {

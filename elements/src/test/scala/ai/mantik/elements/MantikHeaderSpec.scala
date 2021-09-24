@@ -78,7 +78,7 @@ class MantikHeaderSpec extends TestBase {
       """.stripMargin
     val pure = MantikHeader.fromYamlWithoutCheck(sample).forceRight
     pure.violations shouldBe Seq("Invalid Name", "Invalid Version")
-    val errorMessage = MantikHeader.fromYamlWithType[AlgorithmDefinition](sample).left.get.getMessage
+    val errorMessage = MantikHeader.fromYamlWithType[AlgorithmDefinition](sample).forceLeft.getMessage
     errorMessage shouldBe "Invalid MantikHeader: Invalid Name,Invalid Version"
   }
 
@@ -98,9 +98,9 @@ class MantikHeaderSpec extends TestBase {
     for {
       ymlCode <- Seq(sample, minimalFile)
     } {
-      val parsed = MantikHeader.fromYaml(ymlCode).right.get
+      val parsed = MantikHeader.fromYaml(ymlCode).forceRight
       val asYml = parsed.toYaml
-      val parsedAgain = MantikHeader.fromYaml(asYml).right.get
+      val parsedAgain = MantikHeader.fromYaml(asYml).forceRight
       parsed shouldBe parsedAgain
     }
   }
@@ -255,7 +255,7 @@ class MantikHeaderSpec extends TestBase {
       name = Some("pipeline1")
     )
     val asJson = mantikHeader.toJsonValue
-    val parsedAgain = MantikHeader.parseSingleDefinition(asJson).right.getOrElse(fail)
+    val parsedAgain = MantikHeader.parseSingleDefinition(asJson).forceRight
     parsedAgain.definition shouldBe mantikHeader.definition
   }
 
@@ -271,7 +271,7 @@ class MantikHeaderSpec extends TestBase {
         |unknown: must still be stored.
         |type: int32
       """.stripMargin
-    val mantikHeader = MantikHeader.fromYaml(definition).right.get
+    val mantikHeader = MantikHeader.fromYaml(definition).forceRight
     mantikHeader.toYaml should include("must still be stored")
   }
 
@@ -290,9 +290,9 @@ class MantikHeaderSpec extends TestBase {
         |trainingType: int32
         |statType: string
       """.stripMargin
-    val mantikHeader = MantikHeader.fromYaml(definition).right.get.cast[TrainableAlgorithmDefinition].right.get
+    val mantikHeader = MantikHeader.fromYaml(definition).forceRight.cast[TrainableAlgorithmDefinition].forceRight
 
-    val casted = MantikHeader.generateTrainedMantikHeader(mantikHeader).right.get
+    val casted = MantikHeader.generateTrainedMantikHeader(mantikHeader).forceRight
     casted.definition shouldBe elements.AlgorithmDefinition(
       bridge = "foo1",
       `type` = FunctionType(
@@ -318,9 +318,9 @@ class MantikHeaderSpec extends TestBase {
         |trainingType: int32
         |statType: string
       """.stripMargin
-    val mantikHeader = MantikHeader.fromYaml(definition).right.get.cast[TrainableAlgorithmDefinition].right.get
+    val mantikHeader = MantikHeader.fromYaml(definition).forceRight.cast[TrainableAlgorithmDefinition].forceRight
 
-    val casted = MantikHeader.generateTrainedMantikHeader(mantikHeader).right.get
+    val casted = MantikHeader.generateTrainedMantikHeader(mantikHeader).forceRight
     casted.definition shouldBe elements.AlgorithmDefinition(
       bridge = "foo2",
       `type` = FunctionType(
@@ -353,8 +353,8 @@ class MantikHeaderSpec extends TestBase {
         |statType: string
       """.stripMargin
     val parsedDefinition = MantikHeader.fromYaml(definition)
-    val mantikHeader = parsedDefinition.right.getOrElse(fail).cast[TrainableAlgorithmDefinition].right.get
-    val casted = MantikHeader.generateTrainedMantikHeader(mantikHeader).right.get
+    val mantikHeader = parsedDefinition.forceRight.cast[TrainableAlgorithmDefinition].forceRight
+    val casted = MantikHeader.generateTrainedMantikHeader(mantikHeader).forceRight
     casted.metaJson.metaVariables shouldBe List(
       MetaVariable("abc", Bundle.fundamental(100), fix = true)
     )
@@ -379,7 +379,7 @@ class MantikHeaderSpec extends TestBase {
         |trainingType: int32
         |statType: string
       """.stripMargin
-    val parsedExpected = MantikHeader.fromYaml(expected).getOrElse(fail)
+    val parsedExpected = MantikHeader.fromYaml(expected).forceRight
     casted.toJsonValue shouldBe parsedExpected.toJsonValue
     casted shouldBe parsedExpected
   }

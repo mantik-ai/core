@@ -111,7 +111,7 @@ object UiTranslation {
 
   private def translateRunGraph(plan: Plan[_], runGraph: PlanOp.RunGraph): RunGraph = {
     // Note: the planOp graph has a slightly different understanding of links, as it also involves port references
-    val nodes = runGraph.graph.nodes.mapValues(n => translateNode(plan, n.service))
+    val nodes = runGraph.graph.nodes.view.mapValues(n => translateNode(plan, n.service)).toMap
     val links = runGraph.graph.links.map { link =>
       translateLink(runGraph, link)
     }.toVector

@@ -88,9 +88,9 @@ class DockerConverter(
   }
 
   private def mnpWorkerLabels(): Map[String, String] = {
-    defaultLabels + (
+    defaultLabels ++ Seq(
       LabelConstants.RoleLabelName -> LabelConstants.role.worker,
-      LabelConstants.WorkerTypeLabelName -> LabelConstants.workerType.mnpWorker,
+      LabelConstants.WorkerTypeLabelName -> LabelConstants.workerType.mnpWorker
     )
   }
 
@@ -150,7 +150,7 @@ class DockerConverter(
     val request = CreateContainerRequest(
       Image = container.image,
       Cmd = allParameters.toVector,
-      Labels = defaultLabels + (
+      Labels = defaultLabels ++ Seq(
         LabelConstants.RoleLabelName -> LabelConstants.role.worker,
         LabelConstants.WorkerTypeLabelName -> LabelConstants.workerType.mnpPipeline
       ),

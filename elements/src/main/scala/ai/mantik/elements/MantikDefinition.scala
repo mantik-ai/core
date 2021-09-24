@@ -78,8 +78,8 @@ object BridgeDefinition {
   // BridgeDefinition has DefaultValues, so it gets a special treating
   import io.circe.generic.extras.semiauto
   private implicit val config = Configuration.default.withDefaults
-  implicit val encoder: ObjectEncoder[BridgeDefinition] = semiauto.deriveEncoder[BridgeDefinition]
-  implicit val decoder: Decoder[BridgeDefinition] = semiauto.deriveDecoder[BridgeDefinition]
+  implicit val encoder: Encoder.AsObject[BridgeDefinition] = semiauto.deriveConfiguredEncoder[BridgeDefinition]
+  implicit val decoder: Decoder[BridgeDefinition] = semiauto.deriveConfiguredDecoder[BridgeDefinition]
 }
 
 /** A MantikDefinition which needs a Bridge. */

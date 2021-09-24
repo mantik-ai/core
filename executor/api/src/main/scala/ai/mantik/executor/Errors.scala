@@ -30,7 +30,7 @@ object Errors {
   class ExecutorException(val msg: String, val statusCode: Int, cause: Throwable = null)
       extends RuntimeException(msg, cause)
 
-  implicit val encoder: ObjectEncoder[ExecutorException] = new ObjectEncoder[ExecutorException] {
+  implicit val encoder: Encoder.AsObject[ExecutorException] = new Encoder.AsObject[ExecutorException] {
 
     override def encodeObject(a: ExecutorException): JsonObject = JsonObject(
       "code" -> Json.fromInt(a.statusCode),

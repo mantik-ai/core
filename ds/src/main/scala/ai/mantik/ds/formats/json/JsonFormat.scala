@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory
 /**
   * Bundle JSON Serializer.
   */
-object JsonFormat extends ObjectEncoder[Bundle] with Decoder[Bundle] {
+object JsonFormat extends Encoder.AsObject[Bundle] with Decoder[Bundle] {
   private val logger = LoggerFactory.getLogger(getClass)
 
   /** Raw Encoded value, used for decoding type in the first pass. */

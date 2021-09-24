@@ -48,9 +48,6 @@ import ai.mantik.engine.protos.graph_executor.{ActionMeta => ProtoActionMeta}
 import ai.mantik.planner.repository.{Bridge, DeploymentInfo, MantikArtifact, SubDeploymentInfo}
 import com.google.protobuf.{ByteString => ProtoByteString}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
-import akka.util.ByteString
-import akka.util.ccompat.IterableOnce
 import com.google.protobuf.timestamp.Timestamp
 import io.circe.syntax._
 import io.circe.parser
@@ -237,12 +234,12 @@ private[engine] object Converters {
       timestamp = Some(
         encodeInstantToScalaProto(deploymentInfo.timestamp)
       ),
-      sub = deploymentInfo.sub.mapValues { s =>
+      sub = deploymentInfo.sub.view.mapValues { s =>
         ProtoSubDeploymentInfo(
           name = s.name,
           internalUrl = s.internalUrl
         )
-      }
+      }.toMap
     )
   }
 
@@ -256,12 +253,12 @@ private[engine] object Converters {
           throw new IllegalArgumentException("Expected timestamp")
         )
       ),
-      sub = deploymentInfo.sub.mapValues { s =>
+      sub = deploymentInfo.sub.view.mapValues { s =>
         SubDeploymentInfo(
           name = s.name,
           internalUrl = s.internalUrl
         )
-      }
+      }.toMap
     )
   }
 

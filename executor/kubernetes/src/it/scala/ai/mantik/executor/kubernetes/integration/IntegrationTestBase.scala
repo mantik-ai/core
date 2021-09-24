@@ -22,11 +22,11 @@
 package ai.mantik.executor.kubernetes.integration
 
 import java.time.Clock
-
 import ai.mantik.executor.Executor
 import ai.mantik.executor.common.test.integration.IntegrationBase
 import ai.mantik.executor.kubernetes.{K8sOperations, KubernetesExecutor}
 
+import scala.annotation.nowarn
 import scala.concurrent.duration.{FiniteDuration, _}
 
 abstract class IntegrationTestBase extends KubernetesTestBase with IntegrationBase {
@@ -42,6 +42,7 @@ abstract class IntegrationTestBase extends KubernetesTestBase with IntegrationBa
     _executor = new KubernetesExecutor(config, k8sOperations)
   }
 
+  @nowarn
   protected trait Env extends super.Env {
     val executor: Executor = _executor
   }

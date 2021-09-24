@@ -24,7 +24,7 @@ package ai.mantik.ds.helper.circe
 import io.circe.Decoder.Result
 import io.circe._
 import io.circe.generic.decoding.DerivedDecoder
-import io.circe.generic.encoding.DerivedObjectEncoder
+import io.circe.generic.encoding.{DerivedAsObjectEncoder, DerivedObjectEncoder}
 import shapeless.Lazy
 
 import scala.reflect.ClassTag
@@ -33,10 +33,10 @@ import scala.reflect.ClassTag
   * A JSON codec which is built from other codecs and just tries them out during decoding.
   * Similar to [[DiscriminatorDependentCodec]] but without the kind type as they are all distinct.
   */
-abstract class TrialDependentCodec[T] extends ObjectEncoder[T] with Decoder[T] {
+abstract class TrialDependentCodec[T] extends Encoder.AsObject[T] with Decoder[T] {
   protected case class SubType[X <: T](
       classTag: ClassTag[X],
-      encoder: ObjectEncoder[X],
+      encoder: Encoder.AsObject[X],
       decoder: Decoder[X]
   ) {
     final type subType = X
@@ -47,7 +47,7 @@ abstract class TrialDependentCodec[T] extends ObjectEncoder[T] with Decoder[T] {
   /** Make a sub type with automatically derived encoders/decoders. */
   protected def makeSubType[X <: T]()(
       implicit classTag: ClassTag[X],
-      encoder: Lazy[DerivedObjectEncoder[X]],
+      encoder: Lazy[DerivedAsObjectEncoder[X]],
       decoder: Lazy[DerivedDecoder[X]]
   ): SubType[X] = {
     SubType(classTag, encoder.value, decoder.value)
@@ -56,7 +56,7 @@ abstract class TrialDependentCodec[T] extends ObjectEncoder[T] with Decoder[T] {
   /** Make a sub type with given encoders/decoders. */
   protected def makeGivenSubType[X <: T]()(
       implicit classTag: ClassTag[X],
-      encoder: ObjectEncoder[X],
+      encoder: Encoder.AsObject[X],
       decoder: Decoder[X]
   ): SubType[X] = {
     SubType(classTag, encoder, decoder)
@@ -66,7 +66,9 @@ abstract class TrialDependentCodec[T] extends ObjectEncoder[T] with Decoder[T] {
 
   private lazy val classTags: Map[Class[_], SubType[_ <: T]] = subTypes
     .groupBy(_.classTag.runtimeClass)
+    .view
     .mapValues(_.ensuring(_.size == 1, "Duplicate Class Detected").head)
+    .toMap
 
   override def encodeObject(a: T): JsonObject = {
     classTags.get(a.getClass) match {

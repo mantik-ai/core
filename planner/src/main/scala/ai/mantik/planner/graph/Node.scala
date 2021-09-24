@@ -48,7 +48,7 @@ case class NodePort(
 
 object Node {
 
-  implicit def encoder[T: Encoder]: ObjectEncoder[Node[T]] = semiauto.deriveEncoder[Node[T]]
+  implicit def encoder[T: Encoder]: Encoder.AsObject[Node[T]] = semiauto.deriveEncoder[Node[T]]
   implicit def decoder[T: Decoder]: Decoder[Node[T]] = semiauto.deriveDecoder[Node[T]]
 
   /** Generates a Default Sink with one input port */

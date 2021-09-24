@@ -44,7 +44,7 @@ import javax.inject.{Inject, Singleton}
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import ai.mantik.elements.errors.ConfigurationException
 import akka.NotUsed
 
@@ -67,7 +67,7 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     with FileRepository {
 
   @Inject
-  def this()(implicit akkaRuntime: AkkaRuntime) {
+  def this()(implicit akkaRuntime: AkkaRuntime) = {
     this(new File(akkaRuntime.config.getString(LocalFileRepository.DirectoryConfigKey)).toPath)
   }
 
@@ -91,10 +91,10 @@ class LocalFileRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime
     }
   }
 
-  private[impl] val timeoutScheduler = actorSystem.scheduler.schedule(
+  private[impl] val timeoutScheduler = actorSystem.scheduler.scheduleWithFixedDelay(
     10.seconds,
     cleanupInterval
-  ) {
+  ) { () =>
     removeTimeoutedFiles()
   }
 
@@ -327,7 +327,6 @@ object LocalFileRepository {
       requestTime: Instant
   )
 
-  import io.circe.java8.time._
   implicit val metaDataFormat: Encoder[FileMetaData] with Decoder[FileMetaData] =
     CirceJson.makeSimpleCodec[FileMetaData]
 }

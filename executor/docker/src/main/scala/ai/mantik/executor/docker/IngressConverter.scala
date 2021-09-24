@@ -36,9 +36,9 @@ case class IngressConverter(
 
   /** Creates necessary Labels to make ingress working */
   private def ingressLabels(containerPort: Int): Map[String, String] = {
-    config.ingress.labels.mapValues { labelValue =>
+    config.ingress.labels.view.mapValues { labelValue =>
       interpolateIngressString(labelValue, containerPort)
-    } + (DockerConstants.IngressLabelName -> ingressName)
+    }.toMap + (DockerConstants.IngressLabelName -> ingressName)
   }
 
   /** Returns the ingress URL */

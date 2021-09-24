@@ -35,8 +35,7 @@ class SimplePipelineSpec extends IntegrationTestBase with Samples {
     val toStringConversion =
       Select
         .parse(doubleMultiply.functionType.output.asInstanceOf[TabularData], "select CAST (y as int32) AS z")
-        .right
-        .get
+        .forceRight
 
     val pipeline = Pipeline.build(
       Right(doubleMultiply),

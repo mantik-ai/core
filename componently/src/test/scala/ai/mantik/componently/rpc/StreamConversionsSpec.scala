@@ -75,7 +75,7 @@ class StreamConversionsSpec extends TestBase with AkkaSupport {
     var closed = false
     var collector = Seq.newBuilder[T]
     var error: Option[Throwable] = None
-    private val promise = Promise[Seq[T]]
+    private val promise = Promise[Seq[T]]()
 
     override def onNext(value: T): Unit = collector += value
 

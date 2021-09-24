@@ -24,7 +24,7 @@ package ai.mantik.executor.s3storage
 import ai.mantik.componently.utils.SecretReader
 import com.typesafe.config.{Config, ConfigException}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 case class S3Config(
     endpoint: String,

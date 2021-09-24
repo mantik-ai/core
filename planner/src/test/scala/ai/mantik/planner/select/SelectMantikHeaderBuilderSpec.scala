@@ -46,7 +46,7 @@ class SelectMantikHeaderBuilderSpec extends TestBase {
     val select = Select.parse(simpleBundle.model, "select x where x = 1").forceRight
     val mantikHeader = SelectMantikHeaderBuilder.compileToMantikHeader(select).forceRight
     mantikHeader.definition.bridge shouldBe Bridge.selectBridge.mantikId
-    val program = Compiler.compile(select).right.getOrElse(fail)
+    val program = Compiler.compile(select).forceRight
     mantikHeader.toJsonValue.asObject.get("program").get.as[TableGeneratorProgram] shouldBe Right(program)
   }
 
@@ -60,7 +60,7 @@ class SelectMantikHeaderBuilderSpec extends TestBase {
     val join = Query.parse("select l.x, r.z from $0 AS l JOIN $1 AS r ON l.x = r.x").forceRight
     val mantikHeader = SelectMantikHeaderBuilder.compileToMantikHeader(join).forceRight
     mantikHeader.definition.bridge shouldBe Bridge.selectBridge.mantikId
-    val program = Compiler.compile(join).right.getOrElse(fail)
+    val program = Compiler.compile(join).forceRight
     mantikHeader.toJsonValue.asObject.get("program").get.as[TableGeneratorProgram] shouldBe Right(program)
   }
 }

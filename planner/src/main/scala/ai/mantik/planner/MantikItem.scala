@@ -100,6 +100,26 @@ trait MantikItem {
   def push(): Action.PushAction = Action.PushAction(this)
 
   /**
+    * Return true if the item is requested for caching
+    * (This doesn't have to mean that the cache is evaluated)
+    */
+  def isCached: Boolean = {
+    def check(payloadSource: PayloadSource): Boolean = {
+      payloadSource match {
+        case _: PayloadSource.Cached     => true
+        case p: PayloadSource.Projection => check(p.source)
+        case _                           => false
+      }
+    }
+    check(core.source.payload)
+  }
+
+  /** Returns the state of the item. */
+  def state(implicit planningContext: PlanningContext): MantikItemState = {
+    planningContext.state(this)
+  }
+
+  /**
     * Returns the [[ai.mantik.elements.ItemId]] of the item.
     */
   def itemId: ItemId = core.itemId
@@ -141,7 +161,7 @@ trait MantikItem {
   }
 
   override def toString: String = {
-    val builder = StringBuilder.newBuilder
+    val builder = new StringBuilder()
     builder ++= getClass.getSimpleName
     builder += ' '
     builder ++= itemId.toString
@@ -253,7 +273,7 @@ object MantikItem {
     }
 
     def forceExtract[T <: MantikDefinition: ClassTag]: MantikItemCore[T] = {
-      val mantikHeader = artifact.parsedMantikHeader.cast[T].right.get
+      val mantikHeader = artifact.parsedMantikHeader.cast[T].fold(e => throw e, identity)
       MantikItemCore(source, mantikHeader, bridge, MantikItemCore.generateItemId(source))
     }
 

@@ -157,7 +157,7 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
       val slowData2Iterator = data2.map { b =>
         Thread.sleep(10)
         b
-      }.toIterator
+      }.iterator
 
       val source1 = task.pull(0)
       val source2 = task.pull(1)

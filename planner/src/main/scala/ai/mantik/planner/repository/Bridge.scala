@@ -73,7 +73,7 @@ object Bridge {
     val bridgeArtifact = artifacts.find(_.namedId.contains(name)).getOrElse {
       ErrorCodes.MantikItemNotFound.throwIt(s"Missing bridge ${name}")
     }
-    val mantikHeader = bridgeArtifact.parsedMantikHeader.cast[BridgeDefinition].right.getOrElse {
+    val mantikHeader = bridgeArtifact.parsedMantikHeader.cast[BridgeDefinition].getOrElse {
       ErrorCodes.MantikItemWrongType
         .throwIt(s"${name} references a a${bridgeArtifact.parsedMantikHeader.definition.kind}, expected bridge")
     }

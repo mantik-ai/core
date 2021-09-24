@@ -27,6 +27,6 @@ import ai.mantik.testutils.TestBase
 trait IntegrationBase {
   self: TestBase =>
 
-  def withExecutor[T](f: Executor => T)
+  def withExecutor[T](f: Executor => T): Unit
 
 }

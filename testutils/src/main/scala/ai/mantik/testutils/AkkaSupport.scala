@@ -45,7 +45,7 @@ trait AkkaSupport extends BeforeAndAfterAll {
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     _actorSystem = ActorSystem("testcase", configForAkka())
-    _materializer = ActorMaterializer.create(_actorSystem)
+    _materializer = Materializer.apply(_actorSystem)
   }
 
   private def configForAkka(): Config = {

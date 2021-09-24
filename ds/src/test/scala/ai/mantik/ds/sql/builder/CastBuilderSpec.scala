@@ -42,7 +42,7 @@ class CastBuilderSpec extends TestBase {
   it should "figure out matching floating points" in {
     CastBuilder.comparisonType(FundamentalType.Int8, FundamentalType.Float32) shouldBe Right(FundamentalType.Float32)
     CastBuilder.comparisonType(FundamentalType.Int32, FundamentalType.Float32) shouldBe Right(FundamentalType.Float64)
-    CastBuilder.comparisonType(FundamentalType.Int64, FundamentalType.Float64) shouldBe 'left
+    CastBuilder.comparisonType(FundamentalType.Int64, FundamentalType.Float64).forceLeft
   }
 
   it should "handle nullable values" in {
@@ -72,9 +72,11 @@ class CastBuilderSpec extends TestBase {
   }
 
   it should "fail for impossible casts" in {
-    CastBuilder.wrapType(
-      ColumnExpression(1, FundamentalType.VoidType),
-      FundamentalType.Int32
-    ) shouldBe 'left
+    CastBuilder
+      .wrapType(
+        ColumnExpression(1, FundamentalType.VoidType),
+        FundamentalType.Int32
+      )
+      .forceLeft
   }
 }

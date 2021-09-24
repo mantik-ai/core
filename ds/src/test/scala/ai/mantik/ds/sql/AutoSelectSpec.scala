@@ -36,7 +36,7 @@ class AutoSelectSpec extends TestBase {
   )
 
   "autoSelect" should "select single renamings" in {
-    val s = AutoSelect.autoSelect(type1, type2).right.getOrElse(fail)
+    val s = AutoSelect.autoSelect(type1, type2).forceRight
     s.inputTabularType shouldBe type1
     s.resultingTabularType shouldBe type2
     s.selection shouldBe empty
@@ -56,7 +56,7 @@ class AutoSelectSpec extends TestBase {
       "b" -> FundamentalType.Int32,
       "a" -> FundamentalType.StringType
     )
-    val s = AutoSelect.autoSelect(type3, type4).right.getOrElse(fail)
+    val s = AutoSelect.autoSelect(type3, type4).forceRight
     s.inputTabularType shouldBe type3
     s.selection shouldBe empty
     s.resultingTabularType shouldBe type4
@@ -78,7 +78,7 @@ class AutoSelectSpec extends TestBase {
       "b" -> FundamentalType.Int32,
       "a" -> FundamentalType.StringType
     )
-    val s = AutoSelect.autoSelect(type3, type4).right.getOrElse(fail)
+    val s = AutoSelect.autoSelect(type3, type4).forceRight
     s.inputTabularType shouldBe type3
     s.selection shouldBe empty
     s.resultingTabularType shouldBe type4
@@ -98,7 +98,7 @@ class AutoSelectSpec extends TestBase {
     val type4 = TabularData(
       "a" -> FundamentalType.Int64
     )
-    val s = AutoSelect.autoSelect(type3, type4).right.getOrElse(fail)
+    val s = AutoSelect.autoSelect(type3, type4).forceRight
     s.inputTabularType shouldBe type3
     s.selection shouldBe empty
     s.resultingTabularType shouldBe type4
@@ -117,7 +117,7 @@ class AutoSelectSpec extends TestBase {
     val type4 = TabularData(
       "a" -> FundamentalType.Int8
     )
-    val s = AutoSelect.autoSelect(type3, type4).left.getOrElse(fail)
+    val s = AutoSelect.autoSelect(type3, type4).forceLeft
     s should include("loose")
   }
 
@@ -129,7 +129,7 @@ class AutoSelectSpec extends TestBase {
     val type4 = TabularData(
       "a" -> FundamentalType.Int32
     )
-    val s = AutoSelect.autoSelect(type3, type4).left.getOrElse(fail)
+    val s = AutoSelect.autoSelect(type3, type4).forceLeft
     s should include("fail")
   }
 

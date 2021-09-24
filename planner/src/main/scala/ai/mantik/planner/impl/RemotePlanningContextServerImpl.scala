@@ -67,7 +67,7 @@ class RemotePlanningContextServerImpl @Inject() (
     try {
       val responseJson = executeJsonAction(request.actionJson, request.actionMetaJson)
       // Note: This is memory expensive
-      val asBuffer = ByteString(Printer.noSpaces.prettyByteBuffer(responseJson))
+      val asBuffer = ByteString(Printer.noSpaces.printToByteBuffer(responseJson))
 
       val source = Source.fromIterator { () =>
         val groups = asBuffer.grouped(maxChunkSize)

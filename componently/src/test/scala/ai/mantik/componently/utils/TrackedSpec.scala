@@ -28,7 +28,7 @@ import scala.concurrent.duration._
 
 class TrackedSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
 
-  override protected def beforeEach() {
+  override protected def beforeEach(): Unit = {
     super.beforeEach()
     enterTestcase()
   }

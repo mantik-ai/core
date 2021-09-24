@@ -24,7 +24,7 @@ package ai.mantik.bridge.scalafn
 import ai.mantik.elements
 import ai.mantik.elements.meta.MetaJson
 import ai.mantik.elements._
-import io.circe.{Decoder, DecodingFailure, Json, ObjectEncoder}
+import io.circe.{Decoder, DecodingFailure, Encoder, Json, ObjectEncoder}
 import io.circe.syntax._
 
 /** Header for ScalaFn-Bridge */
@@ -46,7 +46,7 @@ case class ScalaFnHeader(
 object ScalaFnHeader {
   val bridgeName = NamedMantikId("builtin/scalafn")
 
-  implicit val encoder: ObjectEncoder[ScalaFnHeader] = ObjectEncoder { instance =>
+  implicit val encoder: Encoder.AsObject[ScalaFnHeader] = Encoder.AsObject { instance =>
     (instance.combiner: elements.MantikDefinition).asJsonObject.+:(
       "fnType" -> instance.fnType.asJson
     )
