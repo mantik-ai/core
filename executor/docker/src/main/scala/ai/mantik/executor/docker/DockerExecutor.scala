@@ -21,18 +21,18 @@
  */
 package ai.mantik.executor.docker
 import java.util.UUID
-
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
-import ai.mantik.executor.common.LabelConstants
+import ai.mantik.executor.common.{GrpcProxy, LabelConstants}
 import ai.mantik.executor.docker.api.structures.ListContainerResponseRow
 import ai.mantik.executor.docker.api.{DockerApiHelper, DockerClient, DockerOperations}
 import ai.mantik.executor.docker.buildinfo.BuildInfo
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.{Errors, Executor}
+import ai.mantik.mnp.{MnpAddressUrl, MnpClient}
 import cats.implicits._
-import javax.inject.{Inject, Provider}
 
+import javax.inject.{Inject, Provider}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -52,22 +52,6 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
 
   val extraServices = new ExtraServices(executorConfig, dockerOperations)
 
-  override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = {
-    if (publishServiceRequest.port != publishServiceRequest.externalPort) {
-      return Future.failed(
-        new Errors.BadRequestException("Cannot use different internal/external ports")
-      )
-    }
-    // Nothing to do, services should be reachable directly from docker
-    val name = s"${publishServiceRequest.externalName}:${publishServiceRequest.externalPort}"
-    Future.successful(
-      PublishServiceResponse(
-        name
-      )
-    )
-
-  }
-
   override def nameAndVersion: Future[String] = {
     dockerClient.version(()).map { dockerVersion =>
       s"DockerExecutor ${BuildInfo.version}  (${BuildInfo.gitVersion}-${BuildInfo.buildNum}) with docker ${dockerVersion.Version} on ${dockerVersion.KernelVersion} "
@@ -75,7 +59,8 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     }
   }
 
-  override def grpcProxy(): Future[GrpcProxy] = {
+  /** Returns a GrpcProxy. */
+  def grpcProxy(): Future[GrpcProxy] = {
     val grpcSettings = executorConfig.common.grpcProxy
     extraServices.grpcProxy.map {
       case Some(id) =>
@@ -90,6 +75,15 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
           logger.info(s"gRpc Proxy not enabled")
           GrpcProxy(None)
         }
+    }
+  }
+
+  override def connectMnp(address: String): Future[MnpClient] = {
+    grpcProxy().map { grpcProxy =>
+      grpcProxy.proxyUrl match {
+        case Some(proxyUrl) => MnpClient.connectViaProxy(proxyUrl, address)
+        case None           => MnpClient.connect(address)
+      }
     }
   }
 
@@ -130,7 +124,8 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
           _ <- maybeInitializer.map(runInitializer).sequence
         } yield {
           StartWorkerResponse(
-            nodeName = name
+            nodeName = name,
+            internalUrl = MnpAddressUrl(s"${name}:${executorConfig.common.mnpDefaultPort}").toString
           )
         }
       case pipelineDefinition: MnpPipelineDefinition =>
@@ -146,6 +141,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
         } yield {
           StartWorkerResponse(
             nodeName = name,
+            internalUrl = s"http://${name}:${executorConfig.common.pipelineDefaultPort}",
             externalUrl = ingressConverter.map(_.ingressUrl)
           )
         }

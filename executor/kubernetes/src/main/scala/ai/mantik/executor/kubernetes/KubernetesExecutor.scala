@@ -21,16 +21,19 @@
  */
 package ai.mantik.executor.kubernetes
 
+import ai.mantik.componently.utils.FutureHelper
+
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
-import ai.mantik.executor.common.LabelConstants
+import ai.mantik.executor.common.{GrpcProxy, LabelConstants}
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.{Errors, Executor}
+import ai.mantik.mnp.MnpClient
 import akka.actor.Cancellable
 import com.google.common.net.InetAddresses
 
@@ -38,9 +41,9 @@ import javax.inject.{Inject, Provider}
 import play.api.libs.json.Json
 import skuber.apps.v1.Deployment
 import skuber.json.format._
-import skuber.{Endpoints, LabelSelector, ObjectMeta, Pod, Service}
+import skuber.{Endpoints, LabelSelector, Namespace, ObjectMeta, Pod, Service}
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
 
@@ -58,79 +61,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   logger.info(s"Node Address:        ${nodeAddress}")
   val namespace = config.namespace
   logger.info(s"Namespace:           ${namespace}")
-
-  override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] =
-    logErrors(s"PublishService ${publishServiceRequest.serviceName}") {
-      // IP Adresses need an endpoint, while DNS names can be done via ExternalName
-      // (See https://kubernetes.io/docs/concepts/services-networking/service/#externalname )
-
-      val isIpAddress = InetAddresses.isInetAddress(publishServiceRequest.externalName)
-
-      if (!isIpAddress && publishServiceRequest.externalPort != publishServiceRequest.port) {
-        return Future.failed(
-          new Errors.BadRequestException("Can't bind a service name with a different port number to kubernetes")
-        )
-      }
-
-      val service = Service(
-        metadata = ObjectMeta(
-          name = publishServiceRequest.serviceName,
-          namespace = namespace
-        ),
-        spec = Some(
-          Service.Spec(
-            ports = List(
-              Service.Port(
-                port = publishServiceRequest.port,
-                name = s"port${publishServiceRequest.port}" // create unique name
-              )
-            ),
-            _type = if (isIpAddress) Service.Type.ClusterIP else Service.Type.ExternalName,
-            externalName = if (isIpAddress) "" else publishServiceRequest.externalName
-          )
-        )
-      )
-
-      val endpoints =
-        if (isIpAddress)
-          Some(
-            Endpoints(
-              metadata = ObjectMeta(
-                name = publishServiceRequest.serviceName,
-                namespace = namespace
-              ),
-              subsets = List(
-                Endpoints.Subset(
-                  addresses = List(
-                    Endpoints.Address(
-                      ip = publishServiceRequest.externalName
-                    )
-                  ),
-                  notReadyAddresses = None,
-                  ports = List(
-                    Endpoints.Port(
-                      port = publishServiceRequest.externalPort,
-                      name = Some(s"port${publishServiceRequest.port}")
-                    )
-                  )
-                )
-              )
-            )
-          )
-        else None
-
-      for {
-        _ <- ops.ensureNamespace(namespace)
-        service <- ops.createOrReplace(Some(namespace), service)
-        _ <- endpoints.map(ops.createOrReplace(Some(namespace), _)).getOrElse(Future.successful(()))
-      } yield {
-        logger.info(s"Ensured service ${namespace}/${publishServiceRequest.serviceName}")
-        val name = s"${service.name}.${service.namespace}.svc.cluster.local:${publishServiceRequest.port}"
-        PublishServiceResponse(
-          name
-        )
-      }
-    }
 
   private val checkPodCancellation = config.kubernetes.checkPodInterval match {
     case f: FiniteDuration =>
@@ -173,11 +103,9 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     Future.successful(str)
   }
 
-  override def grpcProxy(): Future[GrpcProxy] = {
-    lazyGrpcProxy
-  }
-
-  private lazy val lazyGrpcProxy: Future[GrpcProxy] = ensureGrpcProxy()
+  // Ensure namespace on init
+  private val namespaceFuture: Future[Namespace] = ops.ensureNamespace(namespace)
+  private val grpcProxy: Future[GrpcProxy] = ensureGrpcProxy()
 
   private def ensureGrpcProxy(): Future[GrpcProxy] = logErrors("GrpcProxy") {
     val grpcProxyContainer = config.common.grpcProxyContainer
@@ -253,9 +181,10 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     )
     import skuber.json.apps.format.depFormat
     for {
-      withNamespace <- ops.ensureNamespace(namespace)
+      withNamespace <- namespaceFuture
       deploymentAssembled <- ops.createOrReplace(Some(namespace), deployment)
       serviceAssembled <- ops.createOrReplace(Some(namespace), service)
+      _ <- FutureHelper.asyncWait(grpcProxyConfig.startupTime)
     } yield {
       val nodePort = serviceAssembled.spec.get.ports.head.nodePort
       val grpcProxy = GrpcProxy(
@@ -266,6 +195,15 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
     }
   }
 
+  override def connectMnp(address: String): Future[MnpClient] = {
+    grpcProxy.map { grpcProxy =>
+      grpcProxy.proxyUrl match {
+        case Some(proxyUrl) => MnpClient.connectViaProxy(proxyUrl, address)
+        case None           => MnpClient.connect(address)
+      }
+    }
+  }
+
   override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] =
     logErrors(s"StartWorker ${startWorkerRequest.id}") {
       val converter = KubernetesConverter(config, kubernetesHost)
@@ -273,7 +211,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       val converted = converter.convertStartWorkRequest(internalId, startWorkerRequest)
 
       val t0 = System.currentTimeMillis()
-      ops.ensureNamespace(namespace).flatMap { _ =>
+      namespaceFuture.flatMap { _ =>
         converted.create(Some(namespace), ops).map { created =>
           val t1 = System.currentTimeMillis()
           val ingressUrl = created.ingressUrl(config, kubernetesHost)
@@ -282,6 +220,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
           )
           StartWorkerResponse(
             nodeName = created.service.name,
+            internalUrl = created.internalUrl,
             externalUrl = ingressUrl
           )
         }
@@ -312,13 +251,6 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 
   private def generateListWorkerResponseElement(workload: Workload): ListWorkerResponseElement = {
-    val workerType = workload.service.metadata.labels.get(LabelConstants.WorkerTypeLabelName) match {
-      case Some(LabelConstants.workerType.mnpWorker)   => WorkerType.MnpWorker
-      case Some(LabelConstants.workerType.mnpPipeline) => WorkerType.MnpPipeline
-      case other =>
-        logger.warn(s"Unexpected worker type ${other}, assuming regular mnp worker")
-        WorkerType.MnpWorker
-    }
     val ingressUrl = workload.ingressUrl(config, kubernetesHost)
     ListWorkerResponseElement(
       nodeName = workload.service.name,
@@ -339,7 +271,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
           )
         }
       },
-      `type` = workerType,
+      `type` = workload.workerType,
       externalUrl = ingressUrl
     )
   }

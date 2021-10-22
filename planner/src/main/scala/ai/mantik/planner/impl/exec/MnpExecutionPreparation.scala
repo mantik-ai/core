@@ -23,6 +23,7 @@ package ai.mantik.planner.impl.exec
 
 import ai.mantik.bridge.protocol.bridge.MantikInitConfiguration
 import ai.mantik.componently.rpc.RpcConversions
+import ai.mantik.mnp.{MnpAddressUrl, MnpSessionPortUrl, MnpSessionUrl}
 import ai.mantik.mnp.protocol.mnp.{ConfigureInputPort, ConfigureOutputPort}
 import ai.mantik.planner.PlanNodeService.DockerContainer
 import ai.mantik.planner.Planner.InconsistencyException
@@ -75,7 +76,7 @@ object MnpExecutionPreparation {
 class MnpExecutionPreparer(
     graphId: String,
     graph: Graph[PlanNodeService],
-    containerAddresses: Map[String, String], // maps nodeId to running name + port
+    containerAddresses: Map[String, MnpAddressUrl], // maps nodeId to running name + port
     files: ExecutionOpenFiles,
     remoteFileUrls: Map[String, String] // maps nodeId to URLs of file payload
 ) {
@@ -128,7 +129,7 @@ class MnpExecutionPreparer(
       }
       ConfigureOutputPort(
         contentType = output.contentType,
-        destinationUrl = singleForwarding.getOrElse("")
+        destinationUrl = singleForwarding.map(_.toString).getOrElse("")
       )
     }
 
@@ -219,7 +220,7 @@ class MnpExecutionPreparer(
     }.toVector
   }
 
-  private def mnpUrlForResource(from: NodePortRef, target: NodePortRef): String = {
+  private def mnpUrlForResource(from: NodePortRef, target: NodePortRef): MnpSessionPortUrl = {
     val fromAddress = containerAddresses.getOrElse(
       from.node,
       throw new InconsistencyException(s"Container ${from.node} not prepared?")
@@ -234,18 +235,20 @@ class MnpExecutionPreparer(
     val addressToUse = if (fromAddress == address) {
       /*
       Special case: A connection back to the container
-      In Tests kubernetes sometimes has problems to resolve container pods own address
+      In Tests kubernetes pods sometimes have problems to resolve their own pod address ?!
        */
-      val port = address.indexOf(':') match {
-        case -1 => 8502
-        case n  => address.substring(n + 1).toInt
+      val port = address.address.indexOf(':') match {
+        case -1 => throw new InconsistencyException(s"Mnp url without port?!")
+        case n  => address.address.substring(n + 1).toInt
       }
-      s"localhost:$port"
+      address.copy(
+        address = s"localhost:${port}"
+      )
     } else {
       address
     }
 
-    s"mnp://$addressToUse/$sessionId/$port"
+    addressToUse.withSession(sessionId).withPort(port)
   }
 
   private def sessionIdForNode(nodeId: String): String = {

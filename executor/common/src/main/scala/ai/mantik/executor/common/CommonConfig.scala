@@ -32,7 +32,9 @@ case class CommonConfig(
     grpcProxyContainer: Container,
     dockerConfig: DockerConfig,
     disablePull: Boolean,
-    grpcProxy: GrpcProxyConfig
+    grpcProxy: GrpcProxyConfig,
+    mnpDefaultPort: Int,
+    pipelineDefaultPort: Int
 )
 
 object CommonConfig {
@@ -52,7 +54,9 @@ object CommonConfig {
       grpcProxyContainer = rc("grpcProxy"),
       dockerConfig = dockerConfig,
       disablePull = root.getBoolean("behaviour.disablePull"),
-      grpcProxy = GrpcProxyConfig.fromTypesafeConfig(c)
+      grpcProxy = GrpcProxyConfig.fromTypesafeConfig(c),
+      mnpDefaultPort = root.getInt("mnpDefaultPort"),
+      pipelineDefaultPort = root.getInt("pipelineDefaultPort")
     )
   }
 }

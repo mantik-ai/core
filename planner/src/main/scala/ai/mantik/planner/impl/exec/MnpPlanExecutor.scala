@@ -26,7 +26,7 @@ import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.model._
 import ai.mantik.mnp.protocol.mnp._
-import ai.mantik.mnp.{MnpSession, SessionInitException}
+import ai.mantik.mnp.{MnpAddressUrl, MnpSession, MnpSessionUrl, SessionInitException}
 import ai.mantik.planner.PlanExecutor.PlanExecutorException
 import ai.mantik.planner._
 import ai.mantik.planner.graph.{Graph, Node}
@@ -185,9 +185,9 @@ class MnpPlanExecutor @Inject() (
       files: ExecutionOpenFiles
   ): Future[Unit] = {
     val graphId = UUID.randomUUID().toString
-    val containerAddresses: Map[String, String] = graph.nodes.collect {
+    val containerAddresses: Map[String, MnpAddressUrl] = graph.nodes.collect {
       case (name, Node(c: PlanNodeService.DockerContainer, _, _)) =>
-        name -> containerMapping.containers(c.container).address
+        name -> containerMapping.containers(c.container).mnpAddress
     }
     val taskId = "evaluation"
 
@@ -352,7 +352,7 @@ class MnpPlanExecutor @Inject() (
       )
       .recover { case e: SessionInitException =>
         throw new PlanExecutorException(
-          s"Could not init MNP session on ${container.address} (image=${container.image})",
+          s"Could not init MNP session on ${container.mnpAddress} (image=${container.image})",
           e
         )
       }
@@ -450,9 +450,12 @@ class MnpPlanExecutor @Inject() (
           deployAlgorithm.node.service.container,
           initCall
         )
+        mnpUrl = MnpAddressUrl.parse(response.internalUrl).getOrElse {
+          throw new PlanExecutorException(s"Could not parse internal url")
+        }
         deploymentState = DeploymentState(
           name = response.nodeName,
-          internalUrl = s"mnp://${response.nodeName}:${mnpWorkerManager.mnpPort}/${DeployedSessionName}",
+          internalUrl = mnpUrl.withSession(DeployedSessionName).toString,
           externalUrl = None
         )
         deploymentInfo = DeploymentInfo(
@@ -503,9 +506,14 @@ class MnpPlanExecutor @Inject() (
   private def deployPipeline(dp: PlanOp.DeployPipeline): Future[DeploymentState] = {
     deployPipelineSubNodes(dp).flatMap { subNodes =>
       val subDeploymentStates: Map[String, SubDeploymentState] = subNodes.view.mapValues { subDeploymentResult =>
+        val addressUrl = MnpAddressUrl.parse(subDeploymentResult.internalUrl) match {
+          case Left(bad) => throw new PlanExecutorException(s"Invalid Mnp URL: ${bad}")
+          case Right(ok) => ok
+        }
+        val sessionUrl = addressUrl.withSession(DeployedSessionName)
         SubDeploymentState(
           name = subDeploymentResult.nodeName,
-          internalUrl = s"mnp://${subDeploymentResult.nodeName}:8502/${DeployedSessionName}"
+          internalUrl = sessionUrl.toString
         )
       }.toMap
 
@@ -520,7 +528,7 @@ class MnpPlanExecutor @Inject() (
         )
         deploymentState = DeploymentState(
           name = response.nodeName,
-          internalUrl = s"http://${response.nodeName}:8502",
+          internalUrl = response.internalUrl,
           externalUrl = response.externalUrl,
           sub = subDeploymentStates
         )

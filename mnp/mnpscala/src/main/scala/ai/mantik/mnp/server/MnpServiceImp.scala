@@ -23,7 +23,7 @@ package ai.mantik.mnp.server
 
 import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
-import ai.mantik.mnp.{MnpClient, MnpException, MnpUrl}
+import ai.mantik.mnp.{MnpClient, MnpException, MnpSessionPortUrl, MnpUrl}
 import ai.mantik.mnp.protocol.mnp.MnpServiceGrpc.MnpService
 import ai.mantik.mnp.protocol.mnp.{
   AboutResponse,
@@ -60,7 +60,7 @@ private[server] case class ServerSessionState(
     id: String,
     session: ServerSession,
     initRequest: InitRequest,
-    forwardDefinitions: Map[Int, MnpUrl],
+    forwardDefinitions: Map[Int, MnpSessionPortUrl],
     tasks: ConcurrentHashMap[String, ServerTaskState] = new ConcurrentHashMap()
 )
 
@@ -110,9 +110,9 @@ class MnpServiceImp(
       case (output, idx) if output.destinationUrl.nonEmpty =>
         val url = MnpUrl.parse(output.destinationUrl).getOrElse {
           throw new MnpException(s"Bad forwarding URL")
-        }
-        if (url.port.isEmpty) {
-          throw new MnpException(s"Forwarding URL is missing port")
+        } match {
+          case port: MnpSessionPortUrl => port
+          case _                       => throw new MnpException(s"Forwarding URL is missing port")
         }
         idx -> url
     }.toMap
@@ -303,7 +303,7 @@ class MnpServiceImp(
   private def startForwarders(sessionState: ServerSessionState, taskId: String, task: ServerTaskState): Unit = {
     sessionState.forwardDefinitions.foreach { case (outPortNum, destination) =>
       Future {
-        val (channel, client) = MnpClient.connect(destination.address)
+        val client = MnpClient.connect(destination.address)
         try {
           val source = pullRun(task, outPortNum).getOrElse {
             throw new IllegalStateException(s"Could not issue forwarding pull run")
@@ -312,13 +312,13 @@ class MnpServiceImp(
           val clientSession = client.joinSession(destination.session)
           val sink = clientSession
             .task(taskId)
-            .push(destination.port.getOrElse(throw new IllegalStateException(s"No Session in MNP URL")))
+            .push(destination.port)
           source.runWith(sink).andThen { case result =>
-            channel.shutdownNow()
+            client.channel.shutdownNow()
           }
         } catch {
           case NonFatal(e) =>
-            channel.shutdownNow()
+            client.channel.shutdownNow()
         }
       }
     }

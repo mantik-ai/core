@@ -22,9 +22,8 @@
 package ai.mantik.executor.kubernetes
 
 import java.time.Clock
-
 import ai.mantik.componently.AkkaRuntime
-import ai.mantik.executor.ExecutorForIntegrationTest
+import ai.mantik.executor.{Executor, ExecutorForIntegrationTest}
 import com.typesafe.config.{Config => TypesafeConfig}
 
 /** An embedded executor for integration tests. */
@@ -35,16 +34,28 @@ class KubernetesExecutorForIntegrationTests(config: TypesafeConfig)(implicit akk
   implicit val clock = Clock.systemUTC()
   import ai.mantik.componently.AkkaHelper._
   val kubernetesClient = skuber.k8sInit
-  val k8sOperations = new K8sOperations(executorConfig, kubernetesClient)
-  val executor = new KubernetesExecutor(executorConfig, k8sOperations)
+  private var _executor: Option[KubernetesExecutor] = None
 
-  override def start(): Unit = {}
+  override def executor: Executor = {
+    _executor.getOrElse {
+      throw new IllegalStateException(s"Executor not yet started")
+    }
+  }
+
+  override def start(): Unit = {
+    val k8sOperations = new K8sOperations(executorConfig, kubernetesClient)
+    val executor = new KubernetesExecutor(executorConfig, k8sOperations)
+    _executor = Some(executor)
+  }
 
   def stop(): Unit = {
     kubernetesClient.close
   }
 
   override def scrap(): Unit = {
+    if (_executor.nonEmpty) {
+      throw new IllegalStateException(s"Executor already started")
+    }
     val cleaner = new KubernetesCleaner(kubernetesClient, executorConfig)
     cleaner.deleteKubernetesContent()
   }

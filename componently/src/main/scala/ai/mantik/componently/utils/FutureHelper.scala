@@ -69,6 +69,15 @@ object FutureHelper {
     promise.future
   }
 
+  /** Returns a future which fires after given duration */
+  def asyncWait(duration: FiniteDuration)(implicit akkaRuntime: AkkaRuntime): Future[Unit] = {
+    val promise = Promise[Unit]()
+    akkaRuntime.actorSystem.scheduler.scheduleOnce(duration) {
+      promise.success(())
+    }(akkaRuntime.executionContext)
+    promise.future
+  }
+
   /**
     * Runs a function `f` on a given list, each after each other. Each method receives the state returned by the function before.
     * @param in input data for the function

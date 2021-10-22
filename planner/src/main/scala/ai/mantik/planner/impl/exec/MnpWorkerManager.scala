@@ -27,15 +27,15 @@ import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{
-  GrpcProxy,
   MnpPipelineDefinition,
   MnpWorkerDefinition,
   StartWorkerRequest,
   StartWorkerResponse,
   StopWorkerRequest
 }
-import ai.mantik.mnp.MnpClient
+import ai.mantik.mnp.{MnpAddressUrl, MnpClient, MnpUrl}
 import ai.mantik.mnp.protocol.mnp.AboutResponse
+import ai.mantik.planner.PlanExecutor.PlanExecutorException
 import ai.mantik.planner.impl.Metrics
 import ai.mantik.planner.{Plan, PlanNodeService, PlanOp}
 import akka.util.ByteString
@@ -61,35 +61,32 @@ private[planner] class MnpWorkerManager @Inject() (
   val mnpConnectionTimeout: FiniteDuration = config.getFiniteDuration("mantik.planner.execution.mnpConnectionTimeout")
   val mnpCloseConnectionTimeout: FiniteDuration =
     config.getFiniteDuration("mantik.planner.execution.mnpCloseConnectionTimeout")
-  val mnpPort: Int = config.getInt("mantik.planner.execution.mnpPort")
 
   /** Spins up containers needed for a plan. */
   def reserveContainers[T](jobId: String, plan: Plan[T]): Future[ContainerMapping] = {
-    executor.grpcProxy().flatMap { grpcProxy =>
-      val containers = requiredContainersForPlan(plan)
+    val containers = requiredContainersForPlan(plan)
 
-      logger.info(s"Spinning up ${containers.size} containers")
+    logger.info(s"Spinning up ${containers.size} containers")
 
-      val containerReservations: Future[Vector[(Container, ReservedContainer)]] = containers
-        .traverse { container =>
-          startWorker(grpcProxy, jobId, container).map { reservedContainer =>
-            container -> reservedContainer
-          }
+    val containerReservations: Future[Vector[(Container, ReservedContainer)]] = containers
+      .traverse { container =>
+        startWorker(jobId, container).map { reservedContainer =>
+          container -> reservedContainer
         }
-
-      val containerMapping = containerReservations.map { responses =>
-        ContainerMapping(
-          jobId = jobId,
-          responses.toMap
-        )
       }
 
-      // If something fails kill all containers for the job jobId.
-      containerMapping.recoverWith { case NonFatal(e) =>
-        logger.error(s"Spinning up containers failed, trying to stop remaining ones", e)
-        stopContainers(jobId).transformWith { _ =>
-          Future.failed(e)
-        }
+    val containerMapping = containerReservations.map { responses =>
+      ContainerMapping(
+        jobId = jobId,
+        responses.toMap
+      )
+    }
+
+    // If something fails kill all containers for the job jobId.
+    containerMapping.recoverWith { case NonFatal(e) =>
+      logger.error(s"Spinning up containers failed, trying to stop remaining ones", e)
+      stopContainers(jobId).transformWith { _ =>
+        Future.failed(e)
       }
     }
   }
@@ -137,8 +134,8 @@ private[planner] class MnpWorkerManager @Inject() (
   private def closeMnpConnection(reservedContainer: ReservedContainer): Future[Unit] = {
     Future {
       try {
-        reservedContainer.mnpChannel.shutdownNow()
-        reservedContainer.mnpChannel.awaitTermination(mnpCloseConnectionTimeout.toMillis, TimeUnit.MILLISECONDS)
+        reservedContainer.mnpClient.channel.shutdownNow()
+        reservedContainer.mnpClient.channel.awaitTermination(mnpCloseConnectionTimeout.toMillis, TimeUnit.MILLISECONDS)
       } catch {
         case NonFatal(e) =>
           logger.warn(s"Error on closing MNP Connection", e)
@@ -164,7 +161,7 @@ private[planner] class MnpWorkerManager @Inject() (
   }
 
   /** Spin up a container and creates a connection to it. */
-  private def startWorker(grpcProxy: GrpcProxy, jobId: String, container: Container): Future[ReservedContainer] = {
+  private def startWorker(jobId: String, container: Container): Future[ReservedContainer] = {
     val nameHint = "mantik-" + container.simpleImageName
     val startWorkerRequest = StartWorkerRequest(
       id = jobId,
@@ -176,7 +173,7 @@ private[planner] class MnpWorkerManager @Inject() (
     val t0 = System.currentTimeMillis()
     for {
       response <- executor.startWorker(startWorkerRequest)
-      (address, aboutResponse, channel, mnpClient) <- buildConnection(grpcProxy, response.nodeName)
+      (address, aboutResponse, mnpClient) <- buildConnection(response.internalUrl)
     } yield {
       val t1 = System.currentTimeMillis()
       logger.info(
@@ -188,7 +185,6 @@ private[planner] class MnpWorkerManager @Inject() (
         response.nodeName,
         container.image,
         address,
-        channel,
         mnpClient,
         aboutResponse
       )
@@ -197,19 +193,19 @@ private[planner] class MnpWorkerManager @Inject() (
 
   /**
     * Build a connection to the container.
-    * @return address, about response, mnp channel and mnp client.
+    * @return address, about response, and mnp client.
     */
   private def buildConnection(
-      grpcProxy: GrpcProxy,
-      nodeName: String
-  ): Future[(String, AboutResponse, ManagedChannel, MnpClient)] = {
-    val address = s"${nodeName}:${mnpPort}"
-    Future {
-      grpcProxy.proxyUrl match {
-        case Some(proxy) => MnpClient.connectViaProxy(proxy, address)
-        case None        => MnpClient.connect(address)
-      }
-    }.flatMap { case (channel, client) =>
+      internalUrl: String
+  ): Future[(MnpAddressUrl, AboutResponse, MnpClient)] = {
+    val address = MnpUrl.parse(internalUrl) match {
+      case Right(ok: MnpAddressUrl) => ok
+      case Left(bad)                => return Future.failed(new PlanExecutorException(s"Executor returned bad internal url: ${bad}"))
+      case Right(other) =>
+        return Future.failed(new PlanExecutorException(s"Executor returned url of wrong type: ${other}"))
+
+    }
+    executor.connectMnp(address.address).flatMap { client =>
       FutureHelper
         .tryMultipleTimes(mnpConnectionTimeout, 200.milliseconds) {
           client.about().transform {
@@ -220,7 +216,7 @@ private[planner] class MnpWorkerManager @Inject() (
         .map { aboutResponse =>
           metrics.mnpConnections.inc()
           metrics.mnpConnectionsCreated.inc()
-          (address, aboutResponse, channel, client)
+          (address, aboutResponse, client)
         }
     }
   }
@@ -273,8 +269,7 @@ private[planner] object MnpWorkerManager {
   case class ReservedContainer(
       name: String,
       image: String,
-      address: String,
-      mnpChannel: ManagedChannel,
+      mnpAddress: MnpAddressUrl,
       mnpClient: MnpClient,
       aboutResponse: AboutResponse
   )

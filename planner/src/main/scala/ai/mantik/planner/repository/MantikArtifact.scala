@@ -22,9 +22,9 @@
 package ai.mantik.planner.repository
 
 import java.time.Instant
-
 import ai.mantik.elements.errors.InvalidMantikHeaderException
-import ai.mantik.elements.{ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId}
+import ai.mantik.elements.{ItemId, MantikDefinition, MantikHeader, MantikId, NamedMantikId}
+import ai.mantik.mnp.MnpSessionUrl
 
 /**
   * A Mantik Artefact.

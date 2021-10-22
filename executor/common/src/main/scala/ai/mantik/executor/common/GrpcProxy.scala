@@ -19,12 +19,13 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.executor.model
+package ai.mantik.executor.common
 
 import io.circe.generic.JsonCodec
 
 /**
   * Defines an GrpcProxy needed to communicate with MNP Nodes
+  *
   * @param proxyUrl if set, a proxy is needed in order to talk to nodes.
   *                 If None, MNP Nodes can be talked to directly
   */

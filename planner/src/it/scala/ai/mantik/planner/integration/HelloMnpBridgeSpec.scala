@@ -23,14 +23,13 @@ package ai.mantik.planner.integration
 
 import ai.mantik.executor.model.{MnpWorkerDefinition, StartWorkerRequest}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.mnp.MnpClient
+import ai.mantik.mnp.{MnpClient, MnpUrl}
 import ai.mantik.planner.BuiltInItems
 
 /** Test that we can communicate with an MNP Bridge. */
 class HelloMnpBridgeSpec extends IntegrationTestBase {
 
   private def executor = embeddedExecutor.executor
-  private val MnpPort = 8502
 
   it should "initialize" in {
     val startResponse = await(
@@ -47,19 +46,11 @@ class HelloMnpBridgeSpec extends IntegrationTestBase {
     )
     logger.info(s"Started container ${startResponse.nodeName}")
 
-    val grpcProxy = await(executor.grpcProxy())
-    logger.info(s"gRpc Proxy: ${grpcProxy}")
-
-    val destinationAddress = s"${startResponse.nodeName}:${MnpPort}"
-
     Thread.sleep(2000) // Some time ot make it available
 
-    val (channel, client) = grpcProxy.proxyUrl match {
-      case Some(defined) =>
-        MnpClient.connectViaProxy(defined, destinationAddress)
-      case None =>
-        MnpClient.connect(destinationAddress)
-    }
+    val mnpUrl = MnpUrl.parse(startResponse.internalUrl).forceRight
+
+    val client = await(executor.connectMnp(mnpUrl.address))
 
     try {
       eventually {
@@ -67,7 +58,7 @@ class HelloMnpBridgeSpec extends IntegrationTestBase {
         response.name shouldNot be(empty)
       }
     } finally {
-      channel.shutdownNow()
+      client.channel.shutdownNow()
     }
   }
 }

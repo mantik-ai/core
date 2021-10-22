@@ -49,40 +49,6 @@ class DockerExecutorIntegrationSpec extends IntegrationTestBase {
     val dockerExecutor = new DockerExecutor(dockerClient, config)
   }
 
-  "publishService" should "be a dummy" in new Env {
-    val namedService = PublishServiceRequest(
-      serviceName = "service1",
-      port = 4000,
-      externalName = "servicename",
-      externalPort = 4000
-    )
-    val result = await(dockerExecutor.publishService(namedService))
-    result.name shouldBe "servicename:4000"
-  }
-
-  it should "work with ip addresses" in new Env {
-    val ipService = PublishServiceRequest(
-      serviceName = "service1",
-      port = 4000,
-      externalName = "192.168.1.1",
-      externalPort = 4000
-    )
-    val result = await(dockerExecutor.publishService(ipService))
-    result.name shouldBe "192.168.1.1:4000"
-  }
-
-  it should "fail on different ports inside and outside" in new Env {
-    val invalid = PublishServiceRequest(
-      serviceName = "service1",
-      port = 4000,
-      externalName = "ignored",
-      externalPort = 4001
-    )
-    awaitException[Errors.BadRequestException] {
-      dockerExecutor.publishService(invalid)
-    }
-  }
-
   trait EnvForWorkers extends Env {
     def startWorker(id: String): StartWorkerResponse = {
       val startWorkerRequest = StartWorkerRequest(

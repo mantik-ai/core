@@ -70,10 +70,12 @@ case class MnpPipelineDefinition(
   * Response for [[StartWorkerRequest]]
   *
   * @param nodeName name of the Node (usually container or service name)
+  * @param internalUrl URL of the Node (usually mnp:// for MNP Nodes and http:// for Pipelines)
   * @param externalUrl an URL under which the Node is reachable from the outside.
   */
 @JsonCodec
 case class StartWorkerResponse(
     nodeName: String,
+    internalUrl: String,
     externalUrl: Option[String] = None
 )

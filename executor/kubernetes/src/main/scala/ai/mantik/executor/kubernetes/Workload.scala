@@ -23,9 +23,8 @@ package ai.mantik.executor.kubernetes
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-
 import ai.mantik.executor.common.LabelConstants
-import ai.mantik.executor.model.WorkerState
+import ai.mantik.executor.model.{WorkerState, WorkerType}
 import com.typesafe.scalalogging.Logger
 import skuber.apps.v1.Deployment
 import skuber.networking.Ingress
@@ -76,6 +75,37 @@ case class Workload(
         ingress = createdIngress,
         loaded = true
       )
+    }
+  }
+
+  /** Returns the internal address (service name and port) */
+  private def internalAddress: String = {
+    // the first port of the service must be set, which is the case on our workloads.
+    val port = (for {
+      serviceSpec <- service.spec
+      firstPort <- serviceSpec.ports.headOption
+    } yield firstPort.port).getOrElse(0)
+
+    s"${service.name}:${port}"
+  }
+
+  /** Returns the Mantik internal URL for the workload */
+  def internalUrl: String = {
+    val prefix = workerType match {
+      case WorkerType.MnpWorker   => "mnp://"
+      case WorkerType.MnpPipeline => "http://"
+    }
+    prefix + internalAddress
+  }
+
+  /** Figures out the worker type */
+  def workerType: WorkerType = {
+    service.metadata.labels.get(LabelConstants.WorkerTypeLabelName) match {
+      case Some(LabelConstants.workerType.mnpWorker)   => WorkerType.MnpWorker
+      case Some(LabelConstants.workerType.mnpPipeline) => WorkerType.MnpPipeline
+      case other =>
+        Workload.logger.warn(s"Unexpected worker type ${other}, assuming regular mnp worker")
+        WorkerType.MnpWorker
     }
   }
 

@@ -70,7 +70,7 @@ case class KubernetesConverter(
       Left(generateWorkerPod(mainLabels, nameHintPrefix, definition))
     }
 
-    val service = generateWorkerService(internalId, mainLabels, nameHintPrefix)
+    val service = generateWorkerService(internalId, mainLabels, nameHintPrefix, config.common.mnpDefaultPort)
     val ingress = startWorkerRequest.ingressName.map { ingressName =>
       createPlainIngress(service, ingressName)
     }
@@ -156,7 +156,7 @@ case class KubernetesConverter(
       definition: MnpWorkerDefinition
   ): Option[skuber.Container] = {
     definition.initializer.map { initRequest =>
-      val mainAddress = s"localhost:8502"
+      val mainAddress = s"localhost:${config.common.mnpDefaultPort}"
       val parameters = Seq(
         "--address",
         mainAddress,
@@ -182,7 +182,8 @@ case class KubernetesConverter(
   private def generateWorkerService(
       internalId: String,
       mainLabels: Map[String, String],
-      nameHintPrefix: String
+      nameHintPrefix: String,
+      port: Int
   ): Service = {
     Service(
       metadata = ObjectMeta(
@@ -196,7 +197,7 @@ case class KubernetesConverter(
           ),
           ports = List(
             Service.Port(
-              port = 8502
+              port = port
             )
           )
         )
@@ -263,7 +264,7 @@ case class KubernetesConverter(
       )
     }
 
-    val service = generateWorkerService(internalId, mainLabels, nameHintPrefix)
+    val service = generateWorkerService(internalId, mainLabels, nameHintPrefix, config.common.pipelineDefaultPort)
     val ingress = request.ingressName.map { ingressName =>
       createPlainIngress(service, ingressName)
     }
@@ -280,7 +281,7 @@ case class KubernetesConverter(
   private def generatePipelineContainer(definition: MnpPipelineDefinition): skuber.Container = {
     val container = config.common.mnpPipelineController
     val pipelineValue = definition.definition.noSpaces
-    val extraArgs = Vector("-port", "8502")
+    val extraArgs = Vector("-port", config.common.pipelineDefaultPort.toString)
     val allParameters = container.parameters ++ extraArgs
     skuber.Container(
       name = "pipeline-controller",
