@@ -23,27 +23,13 @@ package ai.mantik.planner.impl.exec
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.ds.FundamentalType
-import ai.mantik.ds.functional.FunctionType
-import ai.mantik.elements.{AlgorithmDefinition, DataSetDefinition, ItemId, MantikHeader, NamedMantikId}
+import ai.mantik.elements.{DataSetDefinition, ItemId, MantikHeader}
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{
-  GrpcProxy,
-  ListWorkerRequest,
-  ListWorkerResponse,
-  ListWorkerResponseElement,
-  PublishServiceRequest,
-  PublishServiceResponse,
-  StartWorkerRequest,
-  StartWorkerResponse,
-  StopWorkerRequest,
-  StopWorkerResponse,
-  WorkerState,
-  WorkerType
-}
-import ai.mantik.planner.repository
-import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact}
+import ai.mantik.executor.model._
+import ai.mantik.mnp.MnpClient
 import ai.mantik.planner.repository.impl.TempRepository
+import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact}
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
 import ai.mantik.testutils.Instants
 import com.typesafe.config.{Config, ConfigValueFactory}
@@ -51,11 +37,9 @@ import com.typesafe.config.{Config, ConfigValueFactory}
 import scala.concurrent.Future
 
 class ExecutorMock(implicit val akkaRuntime: AkkaRuntime) extends Executor {
-  override def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse] = ???
-
   override def nameAndVersion: Future[String] = ???
 
-  override def grpcProxy(): Future[GrpcProxy] = ???
+  override def connectMnp(address: String): Future[MnpClient] = ???
 
   override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = ???
 

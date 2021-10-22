@@ -239,7 +239,7 @@ lazy val componently = makeProject("componently")
   )
 
 lazy val executorApi = makeProject("executor/api", "executorApi")
-  .dependsOn(componently)
+  .dependsOn(componently, mnpScala)
   .settings(
     name := "executor-api"
   )

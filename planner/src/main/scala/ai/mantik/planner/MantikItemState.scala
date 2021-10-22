@@ -22,7 +22,8 @@
 package ai.mantik.planner
 
 import ai.mantik.elements.NamedMantikId
-import io.circe.{Encoder, Decoder}
+import ai.mantik.mnp.MnpSessionUrl
+import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto
 
 /**

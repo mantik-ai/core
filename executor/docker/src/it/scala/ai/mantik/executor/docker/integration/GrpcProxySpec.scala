@@ -21,10 +21,13 @@
  */
 package ai.mantik.executor.docker.integration
 
+import ai.mantik.executor.docker.DockerExecutor
+
 class GrpcProxySpec extends IntegrationTestBase {
   it should "have a grpc proxy running" in {
     withExecutor { executor =>
-      val proxy = await(executor.grpcProxy())
+      val dockerExecutor = executor.asInstanceOf[DockerExecutor]
+      val proxy = await(dockerExecutor.grpcProxy())
       proxy.proxyUrl shouldBe defined
       logger.info(s"Proxy url ${proxy.proxyUrl}")
     // TODO: Check that something is responding

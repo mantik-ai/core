@@ -64,11 +64,11 @@ class EchoSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
 
   trait Env {
     def withClient[T](f: MnpClient => T): T = {
-      val (channel, client) = MnpClient.connect(s"localhost:${Port}")
+      val client = MnpClient.connect(s"localhost:${Port}")
       try {
         f(client)
       } finally {
-        channel.shutdownNow()
+        client.channel.shutdownNow()
       }
     }
   }

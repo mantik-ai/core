@@ -26,9 +26,10 @@ import ai.mantik.testutils.TestBase
 class MnpUrlSpec extends TestBase {
 
   val samples = Seq(
-    s"mnp://127.0.0.1:1234/session1/1234" -> MnpUrl("127.0.0.1:1234", "session1", Some(1234)),
-    s"mnp://hostname/session/1234" -> MnpUrl("hostname", "session", Some(1234)),
-    s"mnp://hostname.foo.bar:1234/session1" -> MnpUrl("hostname.foo.bar:1234", "session1")
+    "mnp://127.0.0.1:1234/session1/1234" -> MnpSessionPortUrl.build("127.0.0.1:1234", "session1", 1234),
+    "mnp://hostname/session/1234" -> MnpSessionPortUrl.build("hostname", "session", 1234),
+    "mnp://hostname.foo.bar:1234/session1" -> MnpSessionUrl.build("hostname.foo.bar:1234", "session1"),
+    "mnp://hostname.foo.bar:1234" -> MnpAddressUrl("hostname.foo.bar:1234")
   )
 
   it should "parse and serialize" in {
@@ -42,5 +43,6 @@ class MnpUrlSpec extends TestBase {
     MnpUrl.parse("http://foo/bar").forceLeft should include("Expected mnp://")
     MnpUrl.parse("mnp://foo/bar/1/2").forceLeft should include("Illegal Mnp URL")
     MnpUrl.parse("mnp://foo/bar/port").forceLeft should include("Could not parse port")
+    MnpUrl.parse("mnp://").forceLeft should include("Illegal")
   }
 }

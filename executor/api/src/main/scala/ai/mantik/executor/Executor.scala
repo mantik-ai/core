@@ -23,23 +23,20 @@ package ai.mantik.executor
 
 import ai.mantik.componently.Component
 import ai.mantik.executor.model._
+import ai.mantik.mnp.MnpClient
 
 import scala.concurrent.Future
 
 /** Defines the interface for the Executor. */
 trait Executor extends Component {
 
-  /**
-    * Publish a external service to the cluster.
-    * Note: this only for simplifying local deployments.
-    */
-  def publishService(publishServiceRequest: PublishServiceRequest): Future[PublishServiceResponse]
-
   /** Returns the name and version string of the server (displayed on about page). */
   def nameAndVersion: Future[String]
 
-  /** Returns the gRpc proxy which enables the Engine to communicate with MNP Nodes. */
-  def grpcProxy(): Future[GrpcProxy]
+  /** Connect to a node using MNP
+    * Note: the returned connection can be lazy, established upon first call.
+    */
+  def connectMnp(address: String): Future[MnpClient]
 
   /** Start a new Worker. */
   def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse]

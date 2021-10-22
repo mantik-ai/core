@@ -22,7 +22,6 @@
 package ai.mantik.executor.common.test.integration
 
 import java.util.Base64
-
 import ai.mantik.executor.Executor
 import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{
@@ -35,6 +34,7 @@ import ai.mantik.executor.model.{
   WorkerState,
   WorkerType
 }
+import ai.mantik.mnp.MnpAddressUrl
 import ai.mantik.testutils.TestBase
 import akka.util.ByteString
 
@@ -131,8 +131,13 @@ trait StartWorkerSpecBase {
     val response = await(executor.startWorker(simpleStartWorker))
     response.nodeName shouldNot be(empty)
     response.externalUrl shouldBe empty
+    response.internalUrl shouldNot be(empty)
+    response.internalUrl should startWith("mnp://")
 
     checkExistence(executor, response, WorkerType.MnpWorker)
+    val client = await(executor.connectMnp(MnpAddressUrl.parse(response.internalUrl).forceRight.address))
+    await(client.about()).name shouldNot be(empty)
+    client.channel.shutdownNow()
 
     stopAndKill(executor, response)
   }
@@ -172,6 +177,8 @@ trait StartWorkerSpecBase {
   it should "allow deploying a pipeline" in withExecutor { executor =>
     val response = await(executor.startWorker(pipelineRequest))
     response.nodeName shouldNot be(empty)
+    response.internalUrl shouldNot be(empty)
+    response.internalUrl should startWith("http://")
     response.externalUrl shouldBe empty
 
     checkExistence(executor, response, WorkerType.MnpPipeline)

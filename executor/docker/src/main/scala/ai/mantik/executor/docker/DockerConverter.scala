@@ -81,7 +81,7 @@ class DockerConverter(
 
     ContainerDefinition(
       containerName,
-      mainPort = Some(8502),
+      mainPort = Some(config.common.mnpDefaultPort),
       pullPolicy = pullPolicy(resolved),
       requestWithNetwork
     )
@@ -101,7 +101,7 @@ class DockerConverter(
       workerNetworkId: Option[String]
   ): ContainerDefinition = {
     val preparerName = mainContainerName + "_init"
-    val mainAddress = s"${mainContainerName}:8502"
+    val mainAddress = s"${mainContainerName}:${config.common.mnpDefaultPort}"
     val parameters = Seq(
       "--address",
       mainAddress
@@ -145,7 +145,7 @@ class DockerConverter(
   ): ContainerDefinition = {
     val container = config.common.mnpPipelineController
     val pipelineEnv = "PIPELINE=" + pipelineDefinition.noSpaces
-    val extraArgs = Vector("-port", "8502")
+    val extraArgs = Vector("-port", config.common.pipelineDefaultPort.toString)
     val allParameters = container.parameters ++ extraArgs
     val request = CreateContainerRequest(
       Image = container.image,
@@ -167,7 +167,7 @@ class DockerConverter(
 
     ContainerDefinition(
       containerName,
-      Some(8502),
+      Some(config.common.pipelineDefaultPort),
       pullPolicy = pullPolicy(config.common.mnpPreparer),
       requestWithNetwork
     )

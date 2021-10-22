@@ -48,8 +48,12 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-/** Small shim on top of MnpService to make it better usable. */
-class MnpClient(val address: String, mnpService: MnpService) {
+/** Small shim on top of MnpService to make it better usable.
+  * @param address adress of the node (for constructing URLs)
+  * @param mnpService gRpc Service
+  * @param channel gRpc Managed Channel (for shutdown)
+  */
+class MnpClient(val address: String, mnpService: MnpService, val channel: ManagedChannel) {
 
   def about(): Future[AboutResponse] = {
     mnpService.about(Empty())
@@ -125,20 +129,20 @@ object MnpClient {
 
   def forChannel(address: String, channel: ManagedChannel): MnpClient = {
     val serviceStub = new MnpServiceStub(channel)
-    val client = new MnpClient(address, serviceStub)
+    val client = new MnpClient(address, serviceStub, channel)
     client
   }
 
-  def connect(address: String): (ManagedChannel, MnpClient) = {
+  def connect(address: String): MnpClient = {
     val channel: ManagedChannel = ManagedChannelBuilder
       .forTarget(address)
       .usePlaintext()
       .build()
-    (channel, forChannel(address, channel))
+    forChannel(address, channel)
   }
 
   @throws[MalformedURLException]("For bad Proxy URLs")
-  def connectViaProxy(proxy: String, address: String): (ManagedChannel, MnpClient) = {
+  def connectViaProxy(proxy: String, address: String): MnpClient = {
     val proxyUrlParsed = new URL(proxy)
     val proxyDetector = new MnpProxyDetector(proxyUrlParsed)
     val channel: ManagedChannel = ManagedChannelBuilder
@@ -146,6 +150,6 @@ object MnpClient {
       .proxyDetector(proxyDetector)
       .usePlaintext()
       .build()
-    (channel, forChannel(address, channel))
+    forChannel(address, channel)
   }
 }

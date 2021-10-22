@@ -21,60 +21,98 @@
  */
 package ai.mantik.mnp
 
-import java.net.URL
 import scala.util.Try
-import scala.util.control.NonFatal
 
-/**
-  * An MNP Url of the form
-  * {{{
-  * mnp://address/session
-  * }}}
-  * (Describing a Session)
-  * or
-  *
-  * {{{
-  *  mnp://address/session/port
-  * }}}
-  * (Describing a port of a session (task dynamically generated)
-  *
-  * @param address host (including port)
-  */
-case class MnpUrl(
-    address: String,
-    session: String,
-    port: Option[Int] = None
-) {
-  override def toString: String = {
-    val plain = s"mnp://${address}/${session}"
-    port match {
-      case Some(p) => plain + s"/${p}"
-      case None    => plain
-    }
-  }
+/** Base trait for MNP Urls. */
+sealed trait MnpUrl {
+  def address: String
 }
 
 object MnpUrl {
-  private val prefix = "mnp://"
+  val prefix = "mnp://"
 
   def parse(s: String): Either[String, MnpUrl] = {
-    if (!s.startsWith("mnp://")) {
-      return Left("Expected mnp:// url")
+    if (!s.startsWith(prefix)) {
+      return Left(s"Expected ${prefix} url")
     }
     val rest = s.stripPrefix(prefix)
-    val parts = rest.split('/').toSeq
+    val parts = rest.split('/').toList
 
     parts match {
+      case Seq(address) if address.nonEmpty =>
+        Right(MnpAddressUrl(address))
       case Seq(address, session) =>
-        Right(MnpUrl(address, session))
+        Right(MnpAddressUrl(address).withSession(session))
       case Seq(address, session, port) =>
         Try(port.toInt).toEither.left.map(_ => s"Could not parse port").map { port =>
-          MnpUrl(address, session, Some(port))
+          MnpAddressUrl(address).withSession(session).withPort(port)
         }
       case somethingElse if somethingElse.size > 3 =>
         Left("Illegal Mnp URL, too many components")
       case _ =>
         Left(s"Illegal Mnp URL")
     }
+  }
+}
+
+/** A MnpUrl describing a Host */
+case class MnpAddressUrl(
+    address: String
+) extends MnpUrl {
+
+  /** Add a session to the address. */
+  def withSession(session: String): MnpSessionUrl = MnpSessionUrl(this, session)
+
+  override def toString: String = MnpUrl.prefix + address
+}
+
+object MnpAddressUrl {
+  def parse(s: String): Either[String, MnpAddressUrl] = {
+    MnpUrl.parse(s).flatMap {
+      case a: MnpAddressUrl => Right(a)
+      case somethingElse    => Left(s"Expected address url, got ${somethingElse}")
+    }
+  }
+}
+
+/** A MnpUrl describing a session of the form mnp://address/session */
+case class MnpSessionUrl(
+    base: MnpAddressUrl,
+    session: String
+) extends MnpUrl {
+  override def toString: String = {
+    base.toString + "/" + session
+  }
+
+  override def address: String = base.address
+
+  /** Add a port to the session. */
+  def withPort(port: Int): MnpSessionPortUrl = MnpSessionPortUrl(this, port)
+}
+
+object MnpSessionUrl {
+  def build(address: String, session: String): MnpSessionUrl = {
+    MnpSessionUrl(MnpAddressUrl(address), session)
+  }
+}
+
+/** A MnpUrl describing a session and a Mnp Port of the form mnp://address/session/port */
+case class MnpSessionPortUrl(
+    base: MnpSessionUrl,
+    port: Int
+) extends MnpUrl {
+  override def toString: String = {
+    base.toString + "/" + port
+  }
+
+  override def address: String = base.address
+
+  /** Returns the session name */
+  def session: String = base.session
+}
+
+object MnpSessionPortUrl {
+  def build(address: String, session: String, port: Int): MnpSessionPortUrl = {
+    MnpSessionPortUrl(MnpSessionUrl.build(address, session), port)
   }
 }

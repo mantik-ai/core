@@ -36,10 +36,10 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
     val backend = new DummyBackend()
     val server = new MnpServer(backend)
     server.start()
-    val (channel, client) = MnpClient.connect(s"127.0.0.1:${server.port}")
+    val client = MnpClient.connect(s"127.0.0.1:${server.port}")
     akkaRuntime.lifecycle.addShutdownHook {
       Future {
-        channel.shutdown()
+        client.channel.shutdown()
       }
     }
   }
@@ -201,10 +201,10 @@ class MnpServerClientSpec extends TestBaseWithAkkaRuntime {
     val backend2 = new DummyBackend()
     val server2 = new MnpServer(backend2)
     server2.start()
-    val (channel2, client2) = MnpClient.connect(s"127.0.0.1:${server2.port}")
+    val client2 = MnpClient.connect(s"127.0.0.1:${server2.port}")
     akkaRuntime.lifecycle.addShutdownHook {
       Future {
-        channel2.shutdown()
+        client2.channel.shutdown()
       }
     }
   }

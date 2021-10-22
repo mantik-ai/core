@@ -24,22 +24,27 @@ package ai.mantik.executor.common
 import ai.mantik.executor.model.docker.Container
 import com.typesafe.config.Config
 
+import scala.concurrent.duration.FiniteDuration
+
 case class GrpcProxyConfig(
     enabled: Boolean,
     containerName: String,
     port: Int,
-    externalPort: Int
+    externalPort: Int,
+    startupTime: FiniteDuration
 )
 
 object GrpcProxyConfig {
   def fromTypesafeConfig(config: Config): GrpcProxyConfig = {
+    import ai.mantik.componently.utils.ConfigExtensions._
     val path = "mantik.executor.grpcProxy"
     val subConfig = config.getConfig(path)
     GrpcProxyConfig(
       enabled = subConfig.getBoolean("enabled"),
       containerName = subConfig.getString("containerName"),
       port = subConfig.getInt("port"),
-      externalPort = subConfig.getInt("externalPort")
+      externalPort = subConfig.getInt("externalPort"),
+      startupTime = subConfig.getFiniteDuration("startupTime")
     )
   }
 }

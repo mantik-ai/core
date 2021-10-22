@@ -21,6 +21,7 @@
  */
 package ai.mantik.executor.docker
 
+import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.docker.api.{DockerClient, DockerOperations}
@@ -129,7 +130,10 @@ class ExtraServices(
           NetworkID = Some(networkId)
         )
       )
-      dockerOperations.ensureContainer(executorConfig.common.grpcProxy.containerName, fullContainer).map(Some(_))
+      for {
+        id <- dockerOperations.ensureContainer(executorConfig.common.grpcProxy.containerName, fullContainer)
+        _ <- FutureHelper.asyncWait(executorConfig.common.grpcProxy.startupTime)
+      } yield Some(id)
     } else {
       Future.successful(None)
     }
