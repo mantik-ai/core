@@ -292,7 +292,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
 
   override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
     // go through all workers, if we are going to remove them
-    val all = stopWorkerRequest.remove.value
+    val all = stopWorkerRequest.remove
     listContainers(
       all,
       stopWorkerRequest.nameFilter,
@@ -324,7 +324,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
 
       Future
         .sequence(toDelete.map { row =>
-          if (stopWorkerRequest.remove.value) {
+          if (stopWorkerRequest.remove) {
             // no need to kill before, we are forcing removal
             dockerOperations.removeContainer(row.Id)
           } else {

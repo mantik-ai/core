@@ -32,7 +32,6 @@ import ai.mantik.executor.model.docker.Container
 import ai.mantik.executor.model.{
   ListWorkerRequest,
   MnpWorkerDefinition,
-  PublishServiceRequest,
   StartWorkerRequest,
   StartWorkerResponse,
   StopWorkerRequest,

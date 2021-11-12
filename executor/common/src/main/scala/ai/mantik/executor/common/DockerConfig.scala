@@ -19,15 +19,14 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.executor.model.docker
+package ai.mantik.executor.common
 
 import ai.mantik.componently.utils.SecretReader
+import ai.mantik.executor.model.docker.Container
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.{Config, ConfigException, ConfigObject}
-import io.circe.generic.JsonCodec
 
 /** Common configuration for interacting with docker images. */
-@JsonCodec
 case class DockerConfig(
     defaultImageTag: Option[String] = None,
     defaultImageRepository: Option[String] = None,
@@ -97,7 +96,6 @@ object DockerConfig {
   }
 }
 
-@JsonCodec
 case class DockerLogin(
     repository: String,
     username: String,

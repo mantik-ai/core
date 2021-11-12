@@ -19,7 +19,7 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.executor.model.docker
+package ai.mantik.executor.common
 
 import ai.mantik.testutils.TestBase
 

@@ -21,9 +21,10 @@
  */
 package ai.mantik.executor.kubernetes
 
-import java.nio.charset.StandardCharsets
+import ai.mantik.executor.common.{DockerConfig, DockerLogin}
 
-import ai.mantik.executor.model.docker.{Container, DockerConfig, DockerLogin}
+import java.nio.charset.StandardCharsets
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.testutils.TestBase
 import io.circe.Json
 

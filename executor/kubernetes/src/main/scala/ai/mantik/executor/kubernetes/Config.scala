@@ -21,8 +21,7 @@
  */
 package ai.mantik.executor.kubernetes
 
-import ai.mantik.executor.common.CommonConfig
-import ai.mantik.executor.model.docker.DockerConfig
+import ai.mantik.executor.common.{CommonConfig, DockerConfig}
 import com.typesafe.config.{Config => TypesafeConfig}
 
 /**

@@ -27,19 +27,16 @@ import io.circe.generic.JsonCodec
 /**
   * Request current workers.
   */
-@JsonCodec
 case class ListWorkerRequest(
     nameFilter: Option[String] = None,
     idFilter: Option[String] = None
 )
 
 /** Response for [[ListWorkerRequest]] */
-@JsonCodec
 case class ListWorkerResponse(
     workers: Seq[ListWorkerResponseElement]
 )
 
-@JsonCodec
 sealed trait WorkerState {
   def isTerminal: Boolean
 }
@@ -59,7 +56,6 @@ object WorkerState {
   }
 }
 
-@JsonCodec
 sealed trait WorkerType
 
 object WorkerType {
@@ -67,7 +63,6 @@ object WorkerType {
   case object MnpPipeline extends WorkerType
 }
 
-@JsonCodec
 case class ListWorkerResponseElement(
     nodeName: String,
     id: String,
