@@ -21,7 +21,7 @@
  */
 package ai.mantik.executor.common
 
-import ai.mantik.executor.model.docker.{Container, DockerConfig}
+import ai.mantik.executor.model.docker.Container
 import com.typesafe.config.{Config => TypesafeConfig}
 
 /** Common settings for various executors. */

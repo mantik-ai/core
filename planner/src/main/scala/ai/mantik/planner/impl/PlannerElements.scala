@@ -24,7 +24,7 @@ package ai.mantik.planner.impl
 import ai.mantik.bridge.scalafn.ScalaFnDefinition
 import ai.mantik.ds.Errors.FeatureNotSupported
 import ai.mantik.ds.sql.{MultiQuery, Query, Select}
-import ai.mantik.executor.model.docker.{Container, DockerConfig}
+import ai.mantik.executor.model.docker.{Container}
 import ai.mantik.planner
 import ai.mantik.planner.Operation.ScalaFnOperation
 import ai.mantik.planner.Planner.{InconsistencyException, PlannerException}

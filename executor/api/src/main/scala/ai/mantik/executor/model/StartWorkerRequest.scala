@@ -24,7 +24,6 @@ package ai.mantik.executor.model
 import ai.mantik.executor.model.docker.Container
 import akka.util.ByteString
 import io.circe.generic.JsonCodec
-import ByteStringCodec._
 import io.circe.Json
 
 /**
@@ -36,7 +35,6 @@ import io.circe.Json
   * @param nameHint if given, try to give the worker a name similar to this given name
   * @param ingressName if given, make the worker accessible from the outside
   */
-@JsonCodec
 case class StartWorkerRequest(
     id: String,
     definition: WorkerDefinition,
@@ -45,7 +43,6 @@ case class StartWorkerRequest(
     ingressName: Option[String] = None
 )
 
-@JsonCodec
 sealed trait WorkerDefinition {}
 
 /**
@@ -73,7 +70,6 @@ case class MnpPipelineDefinition(
   * @param internalUrl URL of the Node (usually mnp:// for MNP Nodes and http:// for Pipelines)
   * @param externalUrl an URL under which the Node is reachable from the outside.
   */
-@JsonCodec
 case class StartWorkerResponse(
     nodeName: String,
     internalUrl: String,

@@ -288,7 +288,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       }
 
       val subFutures = workloads.map { workload =>
-        workload.stop(stopWorkerRequest.remove.value, ops)
+        workload.stop(stopWorkerRequest.remove, ops)
       }
 
       Future.sequence(subFutures).map { _ =>

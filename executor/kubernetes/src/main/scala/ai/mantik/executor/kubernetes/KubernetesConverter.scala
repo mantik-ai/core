@@ -23,9 +23,8 @@ package ai.mantik.executor.kubernetes
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
-import ai.mantik.executor.common.LabelConstants
+import ai.mantik.executor.common.{DockerLogin, LabelConstants}
 import ai.mantik.executor.model.{MnpPipelineDefinition, MnpWorkerDefinition, StartWorkerRequest}
-import ai.mantik.executor.model.docker.DockerLogin
 import io.circe.Json
 import skuber.apps.v1.Deployment
 import skuber.networking.Ingress

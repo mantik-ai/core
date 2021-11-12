@@ -21,53 +21,24 @@
  */
 package ai.mantik.executor
 
-import io.circe.Decoder.Result
-import io.circe._
-
 /** Errors from Executor. */
 object Errors {
 
-  class ExecutorException(val msg: String, val statusCode: Int, cause: Throwable = null)
-      extends RuntimeException(msg, cause)
-
-  implicit val encoder: Encoder.AsObject[ExecutorException] = new Encoder.AsObject[ExecutorException] {
-
-    override def encodeObject(a: ExecutorException): JsonObject = JsonObject(
-      "code" -> Json.fromInt(a.statusCode),
-      "error" -> Json.fromString(a.msg)
-    )
-  }
-
-  implicit val decoder: Decoder[ExecutorException] = new Decoder[ExecutorException] {
-    override def apply(c: HCursor): Result[ExecutorException] = {
-      for {
-        code <- c.downField("code").as[Int]
-        msg <- c.downField("error").as[String]
-      } yield {
-        code match {
-          case 400 => new BadRequestException(msg)
-          case 404 => new NotFoundException(msg)
-          case 409 => new ConflictException(msg)
-          case 500 => new InternalException(msg)
-          case 502 => new CouldNotExecutePayload(msg)
-          case _   => new ExecutorException(msg, code)
-        }
-      }
-    }
-  }
+  /** Base class for errors from the executor. */
+  class ExecutorException(val msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
 
   /** A resource was not found. */
-  class NotFoundException(msg: String, cause: Throwable = null) extends ExecutorException(msg, 404, cause)
+  class NotFoundException(msg: String, cause: Throwable = null) extends ExecutorException(msg, cause)
 
   /** A Conflict (e.g. Exists Already). */
-  class ConflictException(msg: String) extends ExecutorException(msg, 409)
+  class ConflictException(msg: String) extends ExecutorException(msg)
 
   /** The request was not ok */
-  class BadRequestException(msg: String) extends ExecutorException(msg, 400)
+  class BadRequestException(msg: String) extends ExecutorException(msg)
 
   /** A strange internal error. */
-  class InternalException(msg: String, cause: Throwable = null) extends ExecutorException(msg, 500, cause)
+  class InternalException(msg: String, cause: Throwable = null) extends ExecutorException(msg, cause)
 
   /** There was a problem with the payload. */
-  class CouldNotExecutePayload(msg: String) extends ExecutorException(msg, 502)
+  class CouldNotExecutePayload(msg: String) extends ExecutorException(msg)
 }
