@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mantik"
-version = "0.4.0-dev"
+version = "0.5.0-dev"
 description = ""
 packages = [{ include = "mantik" }]
 authors = ["Mantik Team <info@mantik.ai>"]

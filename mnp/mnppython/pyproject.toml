@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mnp"
-version = "0.4.0-dev"
+version = "0.5.0-dev"
 description = ""
 packages = [{ include = "mnp" }]
 authors = ["Mantik Team <info@mantik.ai>"]
