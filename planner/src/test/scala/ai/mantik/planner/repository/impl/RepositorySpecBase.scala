@@ -77,26 +77,16 @@ abstract class RepositorySpecBase extends TestBaseWithAkkaRuntime with ErrorCode
   )
 
   val deploymentInfo1 = DeploymentInfo(
-    name = "name1",
+    evaluationId = "name1",
     internalUrl = "url1",
     externalUrl = Some("external_url1"),
     timestamp = FakeClock.DefaultTime
   )
 
   val deploymentInfo2 = DeploymentInfo(
-    name = "name2",
+    evaluationId = "name2",
     internalUrl = "url2",
-    timestamp = FakeClock.DefaultTime.plus(1, ChronoUnit.HOURS),
-    sub = Map(
-      "A" -> SubDeploymentInfo(
-        name = "subA",
-        internalUrl = "mnp://subA"
-      ),
-      "B" -> SubDeploymentInfo(
-        name = "subB",
-        internalUrl = "mnp://subB"
-      )
-    )
+    timestamp = FakeClock.DefaultTime.plus(1, ChronoUnit.HOURS)
   )
 
   val artifact1DifferentVersion = artifact1.copy(

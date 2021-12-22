@@ -21,8 +21,13 @@
  */
 package ai.mantik.executor.common.test.integration
 
+import ai.mantik.executor.common.workerexec.model.{
+  ListWorkerRequest,
+  MnpWorkerDefinition,
+  StartWorkerRequest,
+  WorkerState
+}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{ListWorkerRequest, MnpWorkerDefinition, StartWorkerRequest, WorkerState}
 import ai.mantik.testutils.TestBase
 
 import scala.concurrent.Await
@@ -40,16 +45,21 @@ trait MissingImageSpecBase {
     )
   )
 
-  it should "fail correctly for missing images." in withExecutor { executor =>
+  it should "fail correctly for missing images." in withBackend { executor =>
     // It may either fail immediately or go into error stage later
     Try {
       Await.result(executor.startWorker(simpleStartWorker), timeout)
     } match {
       case Failure(error) if error.getMessage.toLowerCase.contains("no such image") =>
-      // ok (docker acts this way)
+        // ok (docker acts this way)
+        ()
+      case Failure(error) if error.getMessage.toLowerCase.contains("image error") =>
+        // ok (kubernetes acts this way)
+        ()
       case Failure(error) =>
         fail("Unexpected error", error)
       case Success(_) =>
+        // Old behaviour of Kubernetes
         eventually {
           val listing = await(
             executor.listWorkers(

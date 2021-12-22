@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS mantik_item (
 -- Holds the deployment info for a item id
 CREATE TABLE IF NOT EXISTS mantik_deployment_info (
     item_id VARCHAR PRIMARY KEY,
-    -- Name of the service
-    name VARCHAR NOT NULL,
+    -- Name of the evaluation id
+    evaluation_id VARCHAR NOT NULL,
     -- URL inside the execution context
     internal_url VARCHAR NOT NULL,
     -- External URL, if an ingress service is activated
@@ -29,22 +29,6 @@ CREATE TABLE IF NOT EXISTS mantik_deployment_info (
     timestamp TIMESTAMP,
     FOREIGN KEY (item_id) REFERENCES mantik_item(item_id)
 );
-
-CREATE TABLE IF NOT EXISTS mantik_sub_deployment_info (
-    item_id VARCHAR NOT NULL,
-    -- Name of  the Sub deployment info
-    sub_id VARCHAR NOT NULL,
-
-    -- Name of the service
-    name VARCHAR NOT NULL,
-    -- URL inside the execution context
-    internal_url VARCHAR NOT NULL,
-
-    PRIMARY KEY (item_id, sub_id),
-    FOREIGN KEY (item_id) REFERENCES mantik_item (item_id)
-);
-
-CREATE INDEX IF NOT EXISTS mantik_sub_deployment_info_item_id ON mantik_sub_deployment_info(item_id);
 
 -- Maps Mantik ids to Item ids.
 CREATE TABLE IF NOT EXISTS mantik_name (

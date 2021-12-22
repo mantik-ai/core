@@ -61,7 +61,7 @@ func CreateRequestRunner(pipeline *MnpPipeline) (*RequestRunner, error) {
 	if err != nil {
 		return nil, err
 	}
-	outputDeserializer, err := natural.LookupRootElementDeserializer(pipeline.OutputType().Underlying)
+	outputDeserializer, err := natural.LookupRootElementDeserializer(pipeline.OutputType.Underlying)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (r *RequestRunner) ExtensionInfo() interface{} {
 func (r *RequestRunner) Type() *serving.AlgorithmType {
 	return &serving.AlgorithmType{
 		Input:  r.pipeline.InputType,
-		Output: r.pipeline.OutputType(),
+		Output: r.pipeline.OutputType,
 	}
 }
 
@@ -104,11 +104,10 @@ func (r *RequestRunner) Execute(input []element.Element) ([]element.Element, err
 
 	inputReader, err := r.buildInputReader(input)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	var currentReader = inputReader
-	var currentType = r.pipeline.InputType.Underlying
 
 	taskId := uuid.New().String()
 
@@ -117,7 +116,7 @@ func (r *RequestRunner) Execute(input []element.Element) ([]element.Element, err
 	// Readers we got from MnpNodes (for error handling)
 	var nodeReaders []io.Reader
 
-	for stepId, step := range r.pipeline.Steps {
+	for stepId, _ := range r.pipeline.Steps {
 		nextReader, err := r.callMnpNode(&errgroup, taskId, stepId, currentReader)
 		if err != nil {
 			// there are still open readers. let's close them all.
@@ -126,12 +125,11 @@ func (r *RequestRunner) Execute(input []element.Element) ([]element.Element, err
 		}
 		nodeReaders = append(nodeReaders, nextReader)
 		currentReader = nextReader
-		currentType = step.OutputType.Underlying
 	}
 
-	resultRows, err := r.decodeOutput(currentReader, currentType)
+	resultRows, err := r.decodeOutput(currentReader, r.pipeline.OutputType.Underlying)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	err = errgroup.Wait()
@@ -165,7 +163,7 @@ func throwAwayReader(reader io.Reader) {
 func (r *RequestRunner) callMnpNode(group *errgroup.Group, taskId string, stepId int, input io.Reader) (io.Reader, error) {
 	client, err := r.ensureMnpClientSession(stepId)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	outReader, outWriter := io.Pipe()
 	// Das hier funktioniert nicht so einfach!
@@ -174,7 +172,7 @@ func (r *RequestRunner) callMnpNode(group *errgroup.Group, taskId string, stepId
 		if err != nil {
 			outReader.Close()
 			outWriter.Close()
-			return err
+			return errors.WithStack(err)
 		}
 		return err
 	})

@@ -51,7 +51,7 @@ func ExecuteData(model *LoadedModel, inputRows element.TabularLikeElement) (elem
 func buildInputFeed(model *LoadedModel, inputRows element.TabularLikeElement) (*map[tensorflow.Output](*tensorflow.Tensor), error) {
 	tabularType, ok := model.AlgorithmType.Input.Underlying.(ds.TabularLike)
 	if !ok {
-		return nil, errors.New("Expected tabular data")
+		return nil, errors.Errorf("Expected tabular data, but got %s", ds.ToJsonString(model.AlgorithmType.Input.Underlying))
 	}
 	result := make(map[tensorflow.Output]*tensorflow.Tensor)
 

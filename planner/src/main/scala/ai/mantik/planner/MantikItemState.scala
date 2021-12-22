@@ -72,10 +72,9 @@ object MantikItemState {
 
 /** Deployment information of one [[MantikItem]]. */
 case class DeploymentState(
-    name: String,
+    evaluationId: String,
     internalUrl: String,
-    externalUrl: Option[String] = None,
-    sub: Map[String, SubDeploymentState] = Map.empty
+    externalUrl: Option[String] = None
 )
 
 /** Sub Deployment state (e.g. Query Nodes) */

@@ -21,30 +21,22 @@
  */
 package ai.mantik.planner.impl
 
-import java.nio.file.Paths
-
 import ai.mantik.ds.FundamentalType
 import ai.mantik.ds.functional.FunctionType
 import ai.mantik.elements.errors.ErrorCodes
-import ai.mantik.elements.{
-  AlgorithmDefinition,
-  BridgeDefinition,
-  DataSetDefinition,
-  MantikDefinition,
-  NamedMantikId,
-  PipelineDefinition,
-  PipelineStep
-}
+import ai.mantik.elements._
 import ai.mantik.planner.BuiltInItems
-import ai.mantik.planner.repository.{ContentTypes, FileRepositoryServer, MantikArtifact, RemoteMantikRegistry}
 import ai.mantik.planner.repository.impl.{
   LocalFileRepository,
   LocalMantikRegistryImpl,
   LocalRepository,
   MantikArtifactRetrieverImpl
 }
+import ai.mantik.planner.repository.{ContentTypes, MantikArtifact, RemoteMantikRegistry}
 import ai.mantik.planner.util.{ErrorCodeTestUtils, TestBaseWithAkkaRuntime}
-import ai.mantik.testutils.{AkkaSupport, TempDirSupport, TestBase}
+import ai.mantik.testutils.TempDirSupport
+
+import java.nio.file.Paths
 
 class MantikArtifactRetrieverImplSpec extends TestBaseWithAkkaRuntime with TempDirSupport with ErrorCodeTestUtils {
 

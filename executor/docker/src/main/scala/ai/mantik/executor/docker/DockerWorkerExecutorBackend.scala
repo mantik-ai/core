@@ -20,26 +20,41 @@
  * a commercial license.
  */
 package ai.mantik.executor.docker
-import java.util.UUID
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.executor.common.workerexec.model.{
+  ListWorkerRequest,
+  ListWorkerResponse,
+  ListWorkerResponseElement,
+  MnpPipelineDefinition,
+  MnpWorkerDefinition,
+  StartWorkerRequest,
+  StartWorkerResponse,
+  StopWorkerRequest,
+  StopWorkerResponse,
+  StopWorkerResponseElement,
+  WorkerState,
+  WorkerType
+}
+import ai.mantik.executor.common.workerexec.{WorkerExecutorBackend, WorkerBasedExecutor, WorkerMetrics, model}
 import ai.mantik.executor.common.{GrpcProxy, LabelConstants}
 import ai.mantik.executor.docker.api.structures.ListContainerResponseRow
 import ai.mantik.executor.docker.api.{DockerApiHelper, DockerClient, DockerOperations}
 import ai.mantik.executor.docker.buildinfo.BuildInfo
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.{Errors, Executor}
+import ai.mantik.executor.{Errors, Executor, PayloadProvider}
 import ai.mantik.mnp.{MnpAddressUrl, MnpClient}
 import cats.implicits._
 
+import java.util.UUID
 import javax.inject.{Inject, Provider}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: DockerExecutorConfig)(
+class DockerWorkerExecutorBackend @Inject() (dockerClient: DockerClient, executorConfig: DockerExecutorConfig)(
     implicit akkaRuntime: AkkaRuntime
 ) extends ComponentBase
-    with Executor {
+    with WorkerExecutorBackend {
 
   logger.info("Initializing Docker Executor")
   logger.info(s"Default Repo: ${executorConfig.common.dockerConfig.defaultImageRepository.getOrElse("<empty>")}")
@@ -174,7 +189,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
     listContainers(true, listWorkerRequest.nameFilter, listWorkerRequest.idFilter)
       .map { response =>
         val workers = response.flatMap(decodeListWorkerResponse)
-        ListWorkerResponse(
+        model.ListWorkerResponse(
           workers
         )
       }
@@ -336,7 +351,7 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
           }
         })
         .map { _ =>
-          StopWorkerResponse(
+          model.StopWorkerResponse(
             result
           )
         }
@@ -344,10 +359,13 @@ class DockerExecutor @Inject() (dockerClient: DockerClient, executorConfig: Dock
   }
 }
 
-class DockerExecutorProvider @Inject() (implicit akkaRuntime: AkkaRuntime) extends Provider[DockerExecutor] {
-  override def get(): DockerExecutor = {
+class DockerExecutorProvider @Inject() (metrics: WorkerMetrics, payloadProvider: PayloadProvider)(
+    implicit akkaRuntime: AkkaRuntime
+) extends Provider[Executor] {
+  override def get(): Executor = {
     val dockerExecutorConfig = DockerExecutorConfig.fromTypesafeConfig(akkaRuntime.config)
     val dockerClient = new DockerClient()
-    new DockerExecutor(dockerClient, dockerExecutorConfig)
+    val dockerBackend = new DockerWorkerExecutorBackend(dockerClient, dockerExecutorConfig)
+    new WorkerBasedExecutor(dockerBackend, metrics, payloadProvider)
   }
 }

@@ -58,11 +58,6 @@ class DeployPipelineSpec extends IntegrationTestBase with Samples with HttpSuppo
     context.state(pipeline).deployment shouldBe Some(deploymentState)
     deploymentState.externalUrl shouldNot be(empty)
 
-    // Sub algorithms are now also deployed
-    context.state(doubleMultiply).deployment shouldBe defined
-
-    context.state(pipeline).deployment.get.sub.size shouldBe 2 // SQLs are deployed as sub steps
-
     val applyUrl = s"${deploymentState.externalUrl.get}/apply"
     val sampleData = ByteString("[[4],[5]]")
 

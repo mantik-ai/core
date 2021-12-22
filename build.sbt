@@ -234,7 +234,11 @@ lazy val componently = makeProject("componently")
       "io.grpc" % "grpc-stub" % scalapb.compiler.Version.grpcJavaVersion,
       "com.google.protobuf" % "protobuf-java" % scalapb.compiler.Version.protobufVersion,
       // Guice
-      "com.google.inject" % "guice" % guiceVersion
+      "com.google.inject" % "guice" % guiceVersion,
+      // Metrics
+      "io.dropwizard.metrics" % "metrics-core" % metricsVersion,
+      // Commons IO
+      "commons-io" % "commons-io" % commonsIoVersion
     )
   )
 
@@ -245,7 +249,7 @@ lazy val executorApi = makeProject("executor/api", "executorApi")
   )
 
 lazy val executorCommon = makeProject("executor/common", "executorCommon")
-  .dependsOn(executorApi)
+  .dependsOn(executorApi, bridgeProtocol)
   .settings(
     name := "executor-common"
   )
@@ -279,7 +283,7 @@ lazy val executorS3Storage = makeProject("executor/s3-storage", "executorS3Stora
   )
 
 lazy val executorKubernetes = makeProject("executor/kubernetes", "executorKubernetes")
-  .dependsOn(executorApi, executorCommon)
+  .dependsOn(executorApi, executorCommon, executorS3Storage)
   .dependsOn(executorCommonTest % "it")
   .settings(
     name := "executor-kubernetes",
@@ -322,8 +326,7 @@ lazy val planner = makeProject("planner")
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "org.xerial" % "sqlite-jdbc" % sqliteJdbcVersion,
-      "io.getquill" %% "quill-jdbc" % quillVersion,
-      "io.dropwizard.metrics" % "metrics-core" % metricsVersion
+      "io.getquill" %% "quill-jdbc" % quillVersion
     ),
     enableProtocolBuffer,
     configureBuildInfo("ai.mantik.planner.buildinfo")

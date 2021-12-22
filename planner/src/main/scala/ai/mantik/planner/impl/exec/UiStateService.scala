@@ -22,47 +22,29 @@
 package ai.mantik.planner.impl.exec
 
 import ai.mantik.componently.utils.{Tracked, TrackingContext}
-import ai.mantik.componently.{AkkaRuntime, ComponentBase}
-import ai.mantik.elements.{MantikId, NamedMantikId}
+import ai.mantik.componently.{AkkaRuntime, ComponentBase, MetricRegistry}
 import ai.mantik.executor.Executor
-import ai.mantik.planner.PlanOp.AddMantikItem
-import ai.mantik.planner.{Plan, PlanFile, PlanFileReference, PlanOp}
+import ai.mantik.planner.Plan
 import ai.mantik.planner.buildinfo.BuildInfo
-import ai.mantik.planner.impl.Metrics
 import ai.mantik.ui.StateService
-import ai.mantik.ui.model.{
-  Job,
-  JobHeader,
-  JobResponse,
-  JobState,
-  JobsResponse,
-  MetricsResponse,
-  Operation,
-  OperationDefinition,
-  OperationId,
-  OperationState,
-  RunGraph,
-  RunGraphResponse,
-  SettingEntry,
-  SettingsResponse,
-  VersionResponse
-}
+import ai.mantik.ui.model._
 import com.codahale.metrics.{Counter, Gauge}
-import com.typesafe.config.{ConfigValue, ConfigValueType}
+import com.typesafe.config.ConfigValueType
 import io.circe.Json
-
-import java.util.concurrent.ConcurrentHashMap
-import java.util.function.BiFunction
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future
-import scala.jdk.CollectionConverters._
-import scala.util.{Failure, Success}
-import scala.concurrent.duration._
 import io.circe.syntax._
 
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.jdk.CollectionConverters._
+import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
+
 @Singleton
-class UiStateService @Inject() (executor: Executor, metricsService: Metrics)(implicit akkaRuntime: AkkaRuntime)
-    extends ComponentBase
+class UiStateService @Inject() (executor: Executor, metricsService: MetricRegistry)(
+    implicit akkaRuntime: AkkaRuntime
+) extends ComponentBase
     with StateService {
 
   private implicit val trackingContext = new TrackingContext(10.seconds)
@@ -82,10 +64,17 @@ class UiStateService @Inject() (executor: Executor, metricsService: Metrics)(imp
 
   private val trackedJobList = new Tracked[Unit](())
 
+  private val workerVersion: Future[String] = executor.nameAndVersion
+
   override def version: VersionResponse = VersionResponse(
     version = BuildInfo.version,
     scalaVersion = BuildInfo.scalaVersion,
-    executorBackend = executor.getClass.getSimpleName
+    executorBackend =
+      try {
+        Await.result(workerVersion, 60.seconds)
+      } catch {
+        case NonFatal(e) => s"Failed to fetch: ${e.getMessage}"
+      }
   )
 
   override def settings: SettingsResponse = {
@@ -317,6 +306,5 @@ class UiStateService @Inject() (executor: Executor, metricsService: Metrics)(imp
 
 object UiStateService {
   // Named Operation names
-  val PrepareContainerName = "prepare_containers"
   val PrepareFilesName = "prepare_files"
 }

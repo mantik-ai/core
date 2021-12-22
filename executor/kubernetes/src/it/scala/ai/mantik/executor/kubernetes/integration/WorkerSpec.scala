@@ -21,7 +21,7 @@
  */
 package ai.mantik.executor.kubernetes.integration
 
-import ai.mantik.executor.model.{
+import ai.mantik.executor.common.workerexec.model.{
   ListWorkerRequest,
   MnpWorkerDefinition,
   StartWorkerRequest,

@@ -23,7 +23,9 @@ package ai.mantik.componently.utils
 
 import ai.mantik.componently.utils.Tracked.{EndOfLiveException, ShutdownException}
 import ai.mantik.testutils.{AkkaSupport, TestBase}
+import akka.stream.scaladsl.{Keep, Sink}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class TrackedSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime {
@@ -83,14 +85,13 @@ class TrackedSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime 
   }
 
   it should "be possible to mark end of objects" in new Env {
-    val f = test.monitor(1)
+    test.isEndOfLive shouldBe false
     test.markEndOfLive()
-    intercept[EndOfLiveException] {
-      test.get()
-    }
-    awaitException[EndOfLiveException] {
-      f
-    }
+    test.get() shouldBe ("Hello", 1)
+    test.isEndOfLive shouldBe true
+
+    val f = test.monitor(1)
+    awaitException[EndOfLiveException](f)
   }
 
   it should "time out" in new Env {
@@ -105,5 +106,44 @@ class TrackedSpec extends TestBase with AkkaSupport with GlobalLocalAkkaRuntime 
     val cb = test.monitor(1)
     akkaRuntime.shutdown()
     awaitException[ShutdownException](cb).getMessage should include("Akka")
+  }
+
+  it should "be possible to track objects as stream" in new Env {
+    val source = test.trackAsSource()
+    val collector = Sink.seq[String]
+    new Thread {
+      override def run(): Unit = {
+        println(s"Helper Thread")
+        Thread.sleep(150)
+        test.update(_ => "Hi")
+        Thread.sleep(150)
+        test.update(_ => "How")
+        Thread.sleep(150)
+        test.update(_ => "Are you?")
+        test.markEndOfLive()
+      }
+    }.start()
+
+    val collected = await(source.runWith(collector))
+    collected shouldBe Seq("Hello", "Hi", "How", "Are you?")
+  }
+
+  it should "emit at least one element" in new Env {
+    test.markEndOfLive()
+    val source = test.trackAsSource()
+    val collector = Sink.seq[String]
+    val collected = await(source.runWith(collector))
+    collected shouldBe Seq("Hello")
+  }
+
+  it should "be possible to cancel the stream" in new Env {
+    val source = test.trackAsSource()
+    val collector = Sink.seq[String]
+
+    val (cancellation, result) = source.toMat(collector)(Keep.both).run()
+    test.update(_ => "World")
+    Thread.sleep(50)
+    cancellation.cancel()
+    await(result) should contain("World")
   }
 }

@@ -119,7 +119,7 @@ class GraphExecutorServiceImplSpec extends TestBaseWithSessions {
     )
     components.nextItemToReturnByExecutor = Future.successful(
       DeploymentState(
-        name = "name1",
+        evaluationId = "name1",
         internalUrl = "internalUrl1",
         externalUrl = Some("externalUrl1")
       )

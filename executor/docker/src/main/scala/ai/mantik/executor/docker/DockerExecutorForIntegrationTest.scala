@@ -21,11 +21,12 @@
  */
 package ai.mantik.executor.docker
 
-import ai.mantik.componently.AkkaRuntime
+import ai.mantik.componently.{AkkaRuntime, MetricRegistry}
 import ai.mantik.executor.common.LabelConstants
+import ai.mantik.executor.common.workerexec.{LocalServerPayloadProvider, WorkerBasedExecutor, WorkerMetrics}
 import ai.mantik.executor.docker.api.DockerClient
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
-import ai.mantik.executor.{Executor, ExecutorForIntegrationTest}
+import ai.mantik.executor.{ExecutorForIntegrationTest, Executor}
 import com.typesafe.config.{Config => TypesafeConfig}
 import com.typesafe.scalalogging.Logger
 
@@ -38,14 +39,27 @@ class DockerExecutorForIntegrationTest(config: TypesafeConfig)(implicit akkaRunt
 
   val executorConfig = DockerExecutorConfig.fromTypesafeConfig(config)
   val dockerClient = new DockerClient()
-  var _executor: Option[DockerExecutor] = None
+  var _backend: Option[DockerWorkerExecutorBackend] = None
+
+  private var _scopedAkkaRuntime: AkkaRuntime = _
+  private var _payloadProvider: LocalServerPayloadProvider = _
+  private var _executor: Option[WorkerBasedExecutor] = None
 
   override def executor: Executor = _executor.getOrElse(
-    throw new IllegalStateException("Not yet started")
+    throw new IllegalStateException(s"Not yet started")
   )
 
   override def start(): Unit = {
-    _executor = Some(new DockerExecutor(dockerClient, executorConfig))
+    _scopedAkkaRuntime = akkaRuntime.withExtraLifecycle()
+    _backend = Some(new DockerWorkerExecutorBackend(dockerClient, executorConfig)(_scopedAkkaRuntime))
+    _payloadProvider = new LocalServerPayloadProvider()(_scopedAkkaRuntime)
+    _executor = Some(
+      new WorkerBasedExecutor(
+        _backend.get,
+        new WorkerMetrics(new MetricRegistry),
+        _payloadProvider
+      )
+    )
   }
 
   /** Remove old containers */
@@ -83,6 +97,7 @@ class DockerExecutorForIntegrationTest(config: TypesafeConfig)(implicit akkaRunt
   }
 
   def stop(): Unit = {
-    // nothing extra to do
+    _scopedAkkaRuntime.shutdown()
+    _scopedAkkaRuntime = null
   }
 }

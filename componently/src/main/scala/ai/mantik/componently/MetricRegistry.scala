@@ -19,27 +19,23 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.executor.model
+package ai.mantik.componently
 
-/**
-  * Request for stopping workers.
-  * @param nameFilter if set, only remove workers of a given node name
-  * @param idFilter if set, only remove workers of a given user id
-  * @param remove if true, remove the workers completely
-  */
-case class StopWorkerRequest(
-    nameFilter: Option[String] = None,
-    idFilter: Option[String] = None,
-    remove: Boolean = true
-)
+import com.codahale.metrics.Metric
+import com.codahale.metrics.{MetricRegistry => CodahaleMetrics}
 
-/** Response for stopping workers. */
-case class StopWorkerResponse(
-    removed: Seq[StopWorkerResponseElement]
-)
+import javax.inject.Singleton
 
-/** Element for removing workers. */
-case class StopWorkerResponseElement(
-    id: String,
-    name: String
-)
+/** Holds global Metrics Registry */
+@Singleton
+class MetricRegistry {
+
+  /** The global registry. */
+  val registry = new CodahaleMetrics()
+
+  /** Return all metrics. */
+  def all: Map[String, Metric] = {
+    import scala.jdk.CollectionConverters._
+    registry.getMetrics.asScala.toMap
+  }
+}

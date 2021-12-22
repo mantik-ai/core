@@ -21,29 +21,48 @@
  */
 package ai.mantik.executor
 
-import ai.mantik.componently.Component
-import ai.mantik.executor.model._
-import ai.mantik.mnp.MnpClient
+import ai.mantik.executor.model.{
+  EvaluationDeploymentRequest,
+  EvaluationDeploymentResponse,
+  EvaluationWorkloadRequest,
+  EvaluationWorkloadResponse,
+  EvaluationWorkloadState,
+  ListResponse
+}
+import akka.actor.Cancellable
+import akka.stream.scaladsl.Source
 
 import scala.concurrent.Future
 
 /** Defines the interface for the Executor. */
-trait Executor extends Component {
+trait Executor {
 
   /** Returns the name and version string of the server (displayed on about page). */
   def nameAndVersion: Future[String]
 
-  /** Connect to a node using MNP
-    * Note: the returned connection can be lazy, established upon first call.
-    */
-  def connectMnp(address: String): Future[MnpClient]
+  /** Start a new evaluation. */
+  def startEvaluation(evaluationWorkloadRequest: EvaluationWorkloadRequest): Future[EvaluationWorkloadResponse]
 
-  /** Start a new Worker. */
-  def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse]
+  /** Get the state of evaluation */
+  def getEvaluation(id: String): Future[EvaluationWorkloadState]
 
-  /** List workers. */
-  def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse]
+  /** Track evaluation. */
+  def trackEvaluation(id: String): Source[EvaluationWorkloadState, Cancellable]
 
-  /** Stop worker(s). */
-  def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse]
+  /** Cancel the evaluation of something. */
+  def cancelEvaluation(id: String): Future[Unit]
+
+  /** Start a deployment. May not be supported. */
+  def startDeployment(deploymentRequest: EvaluationDeploymentRequest): Future[EvaluationDeploymentResponse] =
+    Future.failed(
+      new Errors.NotSupportedException(s"Deployments not supported by Executor")
+    )
+
+  /** Remove a Deployment. May not be supported. */
+  def removeDeployment(id: String): Future[Unit] = Future.failed(
+    new Errors.NotSupportedException(s"Deployments not supported by Executor")
+  )
+
+  /** List running elements. */
+  def list(): Future[ListResponse]
 }

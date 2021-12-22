@@ -25,15 +25,8 @@ message MantikArtifact {
 
 // Contains information if some artifact is deployed
 message DeploymentInfo {
-    string name = 1;
+    string evaluation_id = 1;
     string internal_url = 2;
     string external_url = 3;
     google.protobuf.Timestamp timestamp = 4;
-    map<string, SubDeploymentInfo> sub = 5;
-}
-
-// Contains infor about a sub deployment
-message SubDeploymentInfo {
-    string name = 1;
-    string internal_url = 2;
 }

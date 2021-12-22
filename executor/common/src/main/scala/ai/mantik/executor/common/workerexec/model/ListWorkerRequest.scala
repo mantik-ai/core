@@ -19,10 +19,9 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.executor.model
+package ai.mantik.executor.common.workerexec.model
 
 import ai.mantik.executor.model.docker.Container
-import io.circe.generic.JsonCodec
 
 /**
   * Request current workers.
@@ -39,6 +38,8 @@ case class ListWorkerResponse(
 
 sealed trait WorkerState {
   def isTerminal: Boolean
+
+  def isFailure: Boolean = false
 }
 
 object WorkerState {
@@ -50,6 +51,8 @@ object WorkerState {
   }
   case class Failed(status: Int, error: Option[String] = None) extends WorkerState {
     override def isTerminal: Boolean = true
+
+    override def isFailure: Boolean = true
   }
   case object Succeeded extends WorkerState {
     override def isTerminal: Boolean = true

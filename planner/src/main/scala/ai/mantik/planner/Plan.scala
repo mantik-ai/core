@@ -26,7 +26,7 @@ import ai.mantik.ds.DataType
 import ai.mantik.ds.element.Bundle
 import ai.mantik.elements.{ItemId, MantikDefinition, MantikHeader, NamedMantikId}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.planner.graph.{Graph, Node}
+import ai.mantik.planner.graph.{Graph, Node, NodePortRef}
 import akka.NotUsed
 import akka.util.ByteString
 
@@ -171,27 +171,29 @@ object PlanOp {
     */
   case class PushMantikItem(item: MantikItem) extends ProceduralPlanOp with BasicOp[Unit]
 
-  /** Deploy an algorithm. */
-  case class DeployAlgorithm(
-      node: Node[PlanNodeService.DockerContainer],
-      serviceId: String,
-      serviceNameHint: Option[String],
-      item: Algorithm
-  ) extends PlanOp[DeploymentState]
-
-  /** Deploy a Pipeline. */
+  /**
+    * Deploys a pipeline.
+    * @param itemId the item id
+    * @param graph the evaluation graph, must have one open in- and output
+    * @param input the node/port where data flows in
+    * @param inputDataType input data type
+    * @param output the node/port where dat flows out
+    * @param outputDataType output data type
+    * @param serviceId the service id (evaluation.id) to deploy it
+    * @param serviceNameHint name hint for the service
+    * @param ingress name for the ingress
+    */
   case class DeployPipeline(
-      item: Pipeline,
-      sub: Map[String, DeployPipelineSubItem],
+      itemId: ItemId,
+      graph: Graph[PlanNodeService],
+      input: NodePortRef,
+      inputDataType: DataType,
+      output: NodePortRef,
+      outputDataType: DataType,
       serviceId: String,
       serviceNameHint: Option[String],
       ingress: Option[String]
   ) extends PlanOp[DeploymentState]
-
-  /** A Dependent sub item of the pipeline */
-  case class DeployPipelineSubItem(
-      node: Node[PlanNodeService.DockerContainer]
-  )
 
   /** Mark files as being cached. */
   case class MarkCached(files: Vector[(ItemId, PlanFileReference)]) extends ProceduralPlanOp with BasicOp[Unit] {

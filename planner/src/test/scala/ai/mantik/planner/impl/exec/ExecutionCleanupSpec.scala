@@ -32,6 +32,9 @@ import ai.mantik.planner.repository.impl.TempRepository
 import ai.mantik.planner.repository.{DeploymentInfo, MantikArtifact}
 import ai.mantik.planner.util.TestBaseWithAkkaRuntime
 import ai.mantik.testutils.Instants
+import akka.actor.Cancellable
+import akka.stream.KillSwitch
+import akka.stream.scaladsl.Source
 import com.typesafe.config.{Config, ConfigValueFactory}
 
 import scala.concurrent.Future
@@ -39,26 +42,29 @@ import scala.concurrent.Future
 class ExecutorMock(implicit val akkaRuntime: AkkaRuntime) extends Executor {
   override def nameAndVersion: Future[String] = ???
 
-  override def connectMnp(address: String): Future[MnpClient] = ???
+  override def startEvaluation(
+      evaluationWorkloadRequest: EvaluationWorkloadRequest
+  ): Future[EvaluationWorkloadResponse] = ???
 
-  override def startWorker(startWorkerRequest: StartWorkerRequest): Future[StartWorkerResponse] = ???
+  override def getEvaluation(id: String): Future[EvaluationWorkloadState] = ???
 
-  var listWorkerResponse: ListWorkerResponse = _
+  override def trackEvaluation(id: String): Source[EvaluationWorkloadState, Cancellable] = ???
 
-  override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] = {
-    Future.successful(listWorkerResponse)
+  override def cancelEvaluation(id: String): Future[Unit] = {
+    toStop += id
+    Future.successful(())
   }
 
-  var workersToStop = Seq.newBuilder[StopWorkerRequest]
-
-  override def stopWorker(stopWorkerRequest: StopWorkerRequest): Future[StopWorkerResponse] = {
-    workersToStop += stopWorkerRequest
-    Future.successful(
-      StopWorkerResponse(
-        Nil
-      )
-    )
+  override def removeDeployment(id: String): Future[Unit] = {
+    toStop += id
+    Future.successful(())
   }
+
+  override def list(): Future[ListResponse] = Future.successful(listResponse)
+
+  var listResponse: ListResponse = _
+
+  var toStop = Seq.newBuilder[String]
 }
 
 class ExecutionCleanupSpec extends TestBaseWithAkkaRuntime {
@@ -66,27 +72,21 @@ class ExecutionCleanupSpec extends TestBaseWithAkkaRuntime {
 
     val pending = Seq(
       // Note: content except NodeName is not of importance for this test
-      ListWorkerResponseElement(
-        nodeName = "a",
+      ListElement(
         id = "id1",
-        container = Some(Container("foo")),
-        state = WorkerState.Running,
-        `type` = WorkerType.MnpWorker,
-        externalUrl = None
+        status = WorkloadStatus.Running,
+        kind = ListElementKind.Evaluation
       ),
-      ListWorkerResponseElement(
-        nodeName = "b",
-        id = "id1",
-        container = Some(Container("foo")),
-        state = WorkerState.Running,
-        `type` = WorkerType.MnpPipeline,
-        externalUrl = None
+      ListElement(
+        id = "id2",
+        status = WorkloadStatus.Running,
+        kind = ListElementKind.Evaluation
       )
     )
     lazy val configOverride: Config => Config = identity
     lazy val runtimeOverride = akkaRuntime.withConfigOverride(configOverride)
     lazy val executorMock = new ExecutorMock()
-    executorMock.listWorkerResponse = ListWorkerResponse(pending)
+    executorMock.listResponse = ListResponse(pending)
     lazy val repo = new TempRepository()
     lazy val cleanup = new ExecutionCleanup(executorMock, repo)(runtimeOverride)
   }
@@ -96,7 +96,7 @@ class ExecutionCleanupSpec extends TestBaseWithAkkaRuntime {
     withClue("It should not fail") {
       await(cleanup.isReady)
     }
-    executorMock.workersToStop.result() shouldBe empty
+    executorMock.toStop.result() shouldBe empty
   }
 
   it should "remove pending workers" in new Env {
@@ -105,12 +105,7 @@ class ExecutionCleanupSpec extends TestBaseWithAkkaRuntime {
     }
     cleanup.isEnabled shouldBe true
     await(cleanup.isReady)
-    executorMock.workersToStop.result().map { req =>
-      (req.nameFilter)
-    } should contain theSameElementsAs Seq(
-      (Some("a")),
-      (Some("b"))
-    )
+    executorMock.toStop.result() should contain theSameElementsAs Seq("id1", "id2")
   }
 
   it should "not remove them, if they are used by deployed items" in new Env {
@@ -127,11 +122,10 @@ class ExecutionCleanupSpec extends TestBaseWithAkkaRuntime {
           itemId = ItemId.generate(),
           deploymentInfo = Some(
             DeploymentInfo(
-              name = "b",
+              evaluationId = "id2",
               internalUrl = "",
               externalUrl = None,
-              timestamp = Instants.makeInstant(0),
-              sub = Map.empty
+              timestamp = Instants.makeInstant(0)
             )
           ),
           executorStorageId = None
@@ -145,10 +139,8 @@ class ExecutionCleanupSpec extends TestBaseWithAkkaRuntime {
     cleanup.isEnabled shouldBe true
     await(cleanup.isReady)
 
-    executorMock.workersToStop.result().map { req =>
-      req.nameFilter
-    } should contain theSameElementsAs Seq(
-      Some("a")
+    executorMock.toStop.result() should contain theSameElementsAs Seq(
+      "id1"
     )
   }
 }

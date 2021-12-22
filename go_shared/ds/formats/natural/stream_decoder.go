@@ -106,7 +106,7 @@ func (d *streamReader) Read() (element.Element, error) {
 	if d.waitTabular {
 		err := d.backend.StartReadingTabularValues()
 		if err != nil {
-			return nil, errors.New("Expected tabular data")
+			return nil, errors.Wrap(err, "Expected tabular data")
 		}
 		d.waitTabular = false
 	}

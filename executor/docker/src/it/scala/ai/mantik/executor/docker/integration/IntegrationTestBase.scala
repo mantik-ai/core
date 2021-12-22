@@ -22,12 +22,13 @@
 package ai.mantik.executor.docker.integration
 
 import ai.mantik.componently.AkkaRuntime
-import ai.mantik.executor.Executor
+import ai.mantik.executor.PayloadProvider
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.common.test.integration.IntegrationBase
+import ai.mantik.executor.common.workerexec.{WorkerExecutorBackend, LocalServerPayloadProvider}
 import ai.mantik.executor.docker.api.DockerClient
 import ai.mantik.executor.docker.api.structures.ListNetworkRequestFilter
-import ai.mantik.executor.docker.{DockerConstants, DockerExecutor, DockerExecutorConfig}
+import ai.mantik.executor.docker.{DockerConstants, DockerWorkerExecutorBackend, DockerExecutorConfig}
 import ai.mantik.testutils.{AkkaSupport, TempDirSupport, TestBase}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.time.{Millis, Span}
@@ -90,12 +91,22 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with TempDi
     ConfigFactory.load("systemtest.conf")
   }
 
-  override def withExecutor[T](f: Executor => T): Unit = {
+  override def withBackend[T](f: WorkerExecutorBackend => T): T = {
     val config = DockerExecutorConfig.fromTypesafeConfig(typesafeConfig)
     val extraLifecycle = akkaRuntime.withExtraLifecycle()
-    val executor = new DockerExecutor(dockerClient, config)(extraLifecycle)
+    val executor = new DockerWorkerExecutorBackend(dockerClient, config)(extraLifecycle)
     try {
       f(executor)
+    } finally {
+      extraLifecycle.shutdown()
+    }
+  }
+
+  override def withPayloadProvider[T](f: PayloadProvider => T): T = {
+    val extraLifecycle = akkaRuntime.withExtraLifecycle()
+    val provider = new LocalServerPayloadProvider()(extraLifecycle)
+    try {
+      f(provider)
     } finally {
       extraLifecycle.shutdown()
     }

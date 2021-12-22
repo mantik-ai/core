@@ -23,9 +23,9 @@ services:
       -Dmantik.executor.docker.workerNetwork="mantik-workers"
       -Dmantik.executor.docker.host="localhost"
       -Dmantik.executor.grpcProxy.enabled=false
-      -Dmantik.planner.payloadProvider="local"
+      -Dmantik.executor.payloadProvider="local"
       -Dmantik.planner.cleanupOnStart=true
-      -Dmantik.fileRepositoryServer.host="mantik-engine"
+      -Dmantik.executor.localPayloadProvider.host="mantik-engine"
     container_name: mantik-engine
     networks:
       - mantik-docker-proxy

@@ -23,18 +23,56 @@ package ai.mantik.executor
 
 import ai.mantik.componently.AkkaRuntime
 import ai.mantik.componently.di.ConfigurableDependencies
+import com.google.inject.AbstractModule
 
-class ExecutorModule(implicit akkaRuntime: AkkaRuntime) extends ConfigurableDependencies {
+class ExecutorModule(implicit akkaRuntime: AkkaRuntime) extends AbstractModule {
+  override def configure(): Unit = {
+    install(new ExecutorModule.PayloadProviderModule())
+    install(new ExecutorModule.ExecutorFileStorageModule())
+    install(new ExecutorModule.ExecutorBackendModule())
+  }
+}
 
-  override protected val configKey: String = "mantik.executor.type"
+object ExecutorModule {
 
-  private val kubernetesType = "kubernetes"
-  private val dockerType = "docker"
+  private class ExecutorBackendModule(implicit akkaRuntime: AkkaRuntime) extends ConfigurableDependencies {
 
-  override protected def variants: Seq[Classes] = Seq(
-    variation[Executor](
-      kubernetesType -> provider("ai.mantik.executor.kubernetes.KubernetesExecutorProvider", asSingleton = true),
-      dockerType -> provider("ai.mantik.executor.docker.DockerExecutorProvider", asSingleton = true)
+    override protected val configKey: String = "mantik.executor.type"
+
+    private val kubernetesType = "kubernetes"
+    private val dockerType = "docker"
+
+    override protected def variants: Seq[Classes] = Seq(
+      variation[Executor](
+        kubernetesType -> provider("ai.mantik.executor.kubernetes.KubernetesExecutorProvider", asSingleton = true),
+        dockerType -> provider("ai.mantik.executor.docker.DockerExecutorProvider", asSingleton = true)
+      )
     )
-  )
+  }
+
+  private class PayloadProviderModule(implicit akkaRuntime: AkkaRuntime) extends ConfigurableDependencies {
+    override protected val configKey: String = "mantik.executor.payloadProvider"
+
+    val executorVariant = "executor"
+    val localVariant = "local"
+
+    override protected def variants: Seq[Classes] = Seq(
+      variation[PayloadProvider](
+        executorVariant -> "ai.mantik.executor.common.workerexec.ExecutorFileStoragePayloadProvider",
+        localVariant -> "ai.mantik.executor.common.workerexec.LocalServerPayloadProvider"
+      )
+    )
+  }
+
+  private class ExecutorFileStorageModule(implicit akkaRuntime: AkkaRuntime) extends ConfigurableDependencies {
+    override protected val configKey: String = "mantik.executor.storageType"
+
+    private val s3Type = "s3"
+
+    override protected def variants: Seq[Classes] = Seq(
+      variation[ExecutorFileStorage](
+        s3Type -> "ai.mantik.executor.s3storage.S3Storage"
+      )
+    )
+  }
 }

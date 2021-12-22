@@ -24,7 +24,7 @@ package ai.mantik.executor.kubernetes
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import ai.mantik.executor.common.LabelConstants
-import ai.mantik.executor.model.{WorkerState, WorkerType}
+import ai.mantik.executor.common.workerexec.model.{WorkerState, WorkerType}
 import com.typesafe.scalalogging.Logger
 import skuber.apps.v1.Deployment
 import skuber.networking.Ingress

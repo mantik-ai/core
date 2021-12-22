@@ -30,7 +30,7 @@ spec:
             - -Dmantik.executor.kubernetes.behavior.defaultTimeout={{ .Values.deployment.mantik.args.executor.kubernetes.behavior.defaultTimeout }}
             - -Dmantik.executor.kubernetes.nodeAddress={{ .Values.deployment.mantik.args.executor.kubernetes.nodeAddress }}
             - -Dmantik.executor.type=kubernetes
-            - -Dmantik.planner.payloadProvider=executor
+            - -Dmantik.executor.payloadProvider=executor
             - -Dmantik.executor.s3Storage.endpoint={{ .Values.deployment.mantik.args.executor.s3Storage.endpoint }}
             - -Dmantik.executor.s3Storage.region={{ .Values.deployment.mantik.args.executor.s3Storage.region }}
             - -Dmantik.executor.s3Storage.bucket={{ .Values.deployment.mantik.args.executor.s3Storage.bucket }}

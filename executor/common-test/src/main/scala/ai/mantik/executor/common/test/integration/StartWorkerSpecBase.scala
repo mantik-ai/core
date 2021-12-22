@@ -21,19 +21,19 @@
  */
 package ai.mantik.executor.common.test.integration
 
-import java.util.Base64
-import ai.mantik.executor.Executor
-import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{
+import ai.mantik.executor.common.workerexec.WorkerExecutorBackend
+import ai.mantik.executor.common.workerexec.model.{
   ListWorkerRequest,
   MnpPipelineDefinition,
   MnpWorkerDefinition,
   StartWorkerRequest,
   StartWorkerResponse,
   StopWorkerRequest,
-  WorkerState,
   WorkerType
 }
+
+import java.util.Base64
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.mnp.MnpAddressUrl
 import ai.mantik.testutils.TestBase
 import akka.util.ByteString
@@ -49,7 +49,7 @@ trait StartWorkerSpecBase {
   }
 
   protected def checkExistence(
-      executor: Executor,
+      executor: WorkerExecutorBackend,
       startWorkerResponse: StartWorkerResponse,
       expectedType: WorkerType
   ): Unit = {
@@ -70,7 +70,7 @@ trait StartWorkerSpecBase {
     element.externalUrl shouldBe startWorkerResponse.externalUrl
   }
 
-  protected def stopAndKill(executor: Executor, startWorkerResponse: StartWorkerResponse): Unit = {
+  protected def stopAndKill(executor: WorkerExecutorBackend, startWorkerResponse: StartWorkerResponse): Unit = {
     val stopResponse = await(
       executor.stopWorker(
         StopWorkerRequest(
@@ -120,14 +120,15 @@ trait StartWorkerSpecBase {
         .parse("""{
                  |  "name": "my_pipeline",
                  |  "steps": [],
-                 |  "inputType": "int32"
+                 |  "inputType": "int32",
+                 |  "outputType": "int32"
                  |}
                  |""".stripMargin)
         .forceRight
     )
   )
 
-  it should "allow running a simple worker" in withExecutor { executor =>
+  it should "allow running a simple worker" in withBackend { executor =>
     val response = await(executor.startWorker(simpleStartWorker))
     response.nodeName shouldNot be(empty)
     response.externalUrl shouldBe empty
@@ -142,7 +143,7 @@ trait StartWorkerSpecBase {
     stopAndKill(executor, response)
   }
 
-  it should "allow running a simple worker with name hint" in withExecutor { executor =>
+  it should "allow running a simple worker with name hint" in withBackend { executor =>
     val nameHint = "name1"
     val response = await(executor.startWorker(simpleStartWorker.copy(nameHint = Some(nameHint))))
     response.nodeName shouldNot be(empty)
@@ -153,7 +154,7 @@ trait StartWorkerSpecBase {
     stopAndKill(executor, response)
   }
 
-  it should "allow deploying a persistent worker with initializer" in withExecutor { executor =>
+  it should "allow deploying a persistent worker with initializer" in withBackend { executor =>
     val startWorkerRequest = StartWorkerRequest(
       id = userId,
       definition = MnpWorkerDefinition(
@@ -174,7 +175,7 @@ trait StartWorkerSpecBase {
     stopAndKill(executor, response)
   }
 
-  it should "allow deploying a pipeline" in withExecutor { executor =>
+  it should "allow deploying a pipeline" in withBackend { executor =>
     val response = await(executor.startWorker(pipelineRequest))
     response.nodeName shouldNot be(empty)
     response.internalUrl shouldNot be(empty)
@@ -186,7 +187,7 @@ trait StartWorkerSpecBase {
     stopAndKill(executor, response)
   }
 
-  it should "allow deploying a persistent pipeline" in withExecutor { executor =>
+  it should "allow deploying a persistent pipeline" in withBackend { executor =>
     val response = await(
       executor.startWorker(
         pipelineRequest.copy(
@@ -202,7 +203,7 @@ trait StartWorkerSpecBase {
     stopAndKill(executor, response)
   }
 
-  it should "allow deplying a persistent pipeline with ingress" in withExecutor { executor =>
+  it should "allow deplying a persistent pipeline with ingress" in withBackend { executor =>
     val response = await(
       executor.startWorker(
         pipelineRequest.copy(

@@ -26,11 +26,13 @@ import ai.mantik.componently.utils.Tracked.ShutdownException
 import akka.actor.Cancellable
 
 import scala.collection.mutable
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.FiniteDuration
 
 /** Maintains open tracking requests for [[Tracked]] */
 class TrackingContext(defaultTimeout: FiniteDuration)(implicit akkaRuntime: AkkaRuntime) extends ComponentBase {
+
+  private[utils] def ec: ExecutionContext = akkaRuntime.executionContext
 
   private case class Callback(
       promise: Promise[Unit],

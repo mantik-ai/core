@@ -49,8 +49,6 @@ object OperationDefinition {
   /** Do something with an item */
   case class ItemOp(op: String, id: MantikId, name: Option[NamedMantikId] = None) extends OperationDefinition
 
-  case class UpdateDeployState(id: MantikId, deploy: Boolean) extends OperationDefinition
-
   /** Some other operation */
   case class Other(name: String) extends OperationDefinition
 
@@ -62,7 +60,6 @@ object OperationDefinition {
       makeSubType[UploadFile]("upload_file"),
       makeSubType[DownloadFile]("download_file"),
       makeSubType[ItemOp]("item_op"),
-      makeSubType[UpdateDeployState]("deploy_state"),
       makeSubType[Other]("other")
     )
   }

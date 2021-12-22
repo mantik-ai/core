@@ -114,23 +114,9 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     }
   }
 
-  "ensureAlgorithmDeployed" should "ensure an algorithm is deployed" in new Env {
-    val (state, result) = runWithEmptyState(planner.ensureAlgorithmDeployed(algorithm1))
-    state(algorithm1).deployment shouldBe empty // no state change
-    state.overrideState(algorithm1, stateManager).deployed shouldBe Some(Right("var1"))
-    val ops = splitOps(result)
-    ops.size shouldBe 2
-    ops(0) shouldBe an[PlanOp.DeployAlgorithm]
-    ops(1) shouldBe an[PlanOp.MemoryWriter[_]]
-
-    val (state2, result2) = planner.ensureAlgorithmDeployed(algorithm1).run(state).value
-    state2 shouldBe state
-    result2 shouldBe an[PlanOp.MemoryReader[_]]
-  }
-
   "deployPipeline" should "do nothing, if already deployed" in new Env {
     val pipe = Pipeline.build(algorithm1)
-    val deploymentState = DeploymentState(name = "foo1", internalUrl = "http://url1")
+    val deploymentState = DeploymentState(evaluationId = "foo1", internalUrl = "http://url1")
     stateManager.upsert(pipe, _.copy(deployment = Some(deploymentState)))
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
     state shouldBe PlanningState()
@@ -141,29 +127,10 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val pipe = Pipeline.build(algorithm1)
     val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
     state(pipe).deployment shouldBe empty // no state changes
-    state.overrideState(pipe, stateManager).deployed shouldBe Some(Right("var2"))
-    withClue("dependent items are also deployed") {
-      state.overrideState(algorithm1, stateManager).deployed shouldBe Some(Right("var1"))
-    }
+    state.overrideState(pipe, stateManager).deployed shouldBe Some(Right("var1"))
     withClue("It must also be stored") {
       state.overrideState(pipe, stateManager).stored shouldBe true
     }
-  }
-
-  it should "also store all dependent items, if not yet done" in new Env {
-    val unstored = Algorithm(
-      Source(
-        DefinitionSource.Constructed(),
-        PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)
-      ),
-      TestItems.algorithm1,
-      TestItems.algoBridge
-    )
-    val pipe = Pipeline.build(unstored)
-    val (state, result) = runWithEmptyState(planner.deployPipeline(pipe, Some("name1"), Some("ingress1")))
-
-    state.overrideState(unstored, stateManager).stored shouldBe true
-    state.overrideState(pipe, stateManager).stored shouldBe true
   }
 
   "convert" should "convert a simple save action" in new Env {
@@ -311,28 +278,6 @@ class PlannerImplSpec extends TestBase with PlanTestUtils {
     val ops = splitOps(plan.op)
     ops.size shouldBe 3 // pushing, calculation and pulling
     plan.files.size shouldBe 2 // push file, calculation
-  }
-
-  it should "convert a deploy action algorithm action" in new Env {
-    val deployAction = algorithm1.deploy() // algorithm1 is loaded, so it doesn't have to be stored.
-    val plan = planner.convert(deployAction)
-    val ops = splitOps(plan.op)
-    ops.size shouldBe 2
-    ops.head shouldBe an[PlanOp.DeployAlgorithm]
-    ops(1) shouldBe an[PlanOp.MemoryWriter[_]]
-  }
-
-  it should "save a non-loaded algorithm first" in new Env {
-    val algorithm2 = Algorithm(
-      Source(DefinitionSource.Constructed(), PayloadSource.Loaded("algo1", ContentTypes.ZipFileContentType)),
-      TestItems.algorithm1,
-      TestItems.algoBridge
-    )
-    val deployAction = algorithm2.deploy()
-    val plan = planner.convert(deployAction)
-    val ops = splitOps(plan.op)
-    ops.find(_.isInstanceOf[PlanOp.AddMantikItem]) shouldBe defined
-    ops.find(_.isInstanceOf[PlanOp.DeployAlgorithm]) shouldBe defined
   }
 
   it should "convert a push operation" in new Env {

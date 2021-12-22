@@ -22,16 +22,17 @@
 package ai.mantik.executor.kubernetes.integration
 
 import java.time.Clock
-import ai.mantik.executor.Executor
+import ai.mantik.executor.PayloadProvider
 import ai.mantik.executor.common.test.integration.IntegrationBase
-import ai.mantik.executor.kubernetes.{K8sOperations, KubernetesExecutor}
+import ai.mantik.executor.common.workerexec.{WorkerExecutorBackend, LocalServerPayloadProvider}
+import ai.mantik.executor.kubernetes.{K8sOperations, KubernetesWorkerExecutorBackend}
 
 import scala.annotation.nowarn
 import scala.concurrent.duration.{FiniteDuration, _}
 
 abstract class IntegrationTestBase extends KubernetesTestBase with IntegrationBase {
 
-  private var _executor: KubernetesExecutor = _
+  private var _executor: KubernetesWorkerExecutorBackend = _
 
   override protected val timeout: FiniteDuration = 60.seconds
 
@@ -39,16 +40,28 @@ abstract class IntegrationTestBase extends KubernetesTestBase with IntegrationBa
     super.beforeAll()
     implicit val clock = Clock.systemUTC()
     val k8sOperations = new K8sOperations(config, _kubernetesClient)
-    _executor = new KubernetesExecutor(config, k8sOperations)
+    _executor = new KubernetesWorkerExecutorBackend(config, k8sOperations)
   }
 
   @nowarn
   protected trait Env extends super.Env {
-    val executor: Executor = _executor
+    val executor: WorkerExecutorBackend = _executor
   }
 
-  override def withExecutor[T](f: Executor => T): Unit = {
+  override def withBackend[T](f: WorkerExecutorBackend => T): T = {
     val env = new Env {}
     f(env.executor)
+  }
+
+  override def withPayloadProvider[T](f: PayloadProvider => T): T = {
+    // Note: this is not really correct in Case of Kubernetes, however the S3 Payload Provider
+    // is not available in this namespace, and the Integration Tests do not use payload in the moment
+    val extraLifecycle = akkaRuntime.withExtraLifecycle()
+    val provider = new LocalServerPayloadProvider()(extraLifecycle)
+    try {
+      f(provider)
+    } finally {
+      extraLifecycle.shutdown()
+    }
   }
 }

@@ -39,11 +39,7 @@ import ai.mantik.engine.protos.items.{Pipeline => ProtoPipeline}
 import ai.mantik.engine.protos.items.{Bridge => ProtoBridge}
 import ai.mantik.engine.protos.items.{TrainableAlgorithm => ProtoTrainableAlgorithm}
 import ai.mantik.engine.protos.ds.{BundleEncoding, Bundle => ProtoBundle, DataType => ProtoDataType}
-import ai.mantik.engine.protos.registry.{
-  DeploymentInfo => ProtoDeploymentInfo,
-  MantikArtifact => ProtoMantikArtifact,
-  SubDeploymentInfo => ProtoSubDeploymentInfo
-}
+import ai.mantik.engine.protos.registry.{DeploymentInfo => ProtoDeploymentInfo, MantikArtifact => ProtoMantikArtifact}
 import ai.mantik.engine.protos.graph_executor.{ActionMeta => ProtoActionMeta}
 import ai.mantik.planner.repository.{Bridge, DeploymentInfo, MantikArtifact, SubDeploymentInfo}
 import com.google.protobuf.{ByteString => ProtoByteString}
@@ -228,37 +224,25 @@ private[engine] object Converters {
 
   def encodeDeploymentInfo(deploymentInfo: DeploymentInfo): ProtoDeploymentInfo = {
     ProtoDeploymentInfo(
-      name = deploymentInfo.name,
+      evaluationId = deploymentInfo.evaluationId,
       internalUrl = deploymentInfo.internalUrl,
       externalUrl = RpcConversions.encodeOptionalString(deploymentInfo.externalUrl),
       timestamp = Some(
         encodeInstantToScalaProto(deploymentInfo.timestamp)
-      ),
-      sub = deploymentInfo.sub.view.mapValues { s =>
-        ProtoSubDeploymentInfo(
-          name = s.name,
-          internalUrl = s.internalUrl
-        )
-      }.toMap
+      )
     )
   }
 
   def decodeDeploymentInfo(deploymentInfo: ProtoDeploymentInfo): DeploymentInfo = {
     DeploymentInfo(
-      name = deploymentInfo.name,
+      evaluationId = deploymentInfo.evaluationId,
       internalUrl = deploymentInfo.internalUrl,
       externalUrl = RpcConversions.decodeOptionalString(deploymentInfo.externalUrl),
       timestamp = decodeInstantFromScalaProto(
         deploymentInfo.timestamp.getOrElse(
           throw new IllegalArgumentException("Expected timestamp")
         )
-      ),
-      sub = deploymentInfo.sub.view.mapValues { s =>
-        SubDeploymentInfo(
-          name = s.name,
-          internalUrl = s.internalUrl
-        )
-      }.toMap
+      )
     )
   }
 

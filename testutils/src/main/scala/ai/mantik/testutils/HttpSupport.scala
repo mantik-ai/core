@@ -24,7 +24,7 @@ package ai.mantik.testutils
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model.headers.Accept
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, RequestEntity, Uri}
+import akka.http.scaladsl.model.{ContentType, HttpRequest, HttpResponse, RequestEntity, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.util.ByteString
 
@@ -37,7 +37,7 @@ trait HttpSupport {
     import akka.http.scaladsl._
 
     logger.info(s"Accessing POST ${url}")
-    val entity = await(Marshal(in).to[RequestEntity])
+    val entity = await(Marshal(in).to[RequestEntity]).withContentType(ContentType.parse(contentType).forceRight)
     val uri = Uri(url)
     val req = HttpRequest(method = HttpMethods.POST, uri = uri).withEntity(entity)
     val http = Http()

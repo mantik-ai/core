@@ -23,16 +23,17 @@ package ai.mantik.planner.impl.exec
 
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.executor.Executor
-import ai.mantik.executor.model.{ListWorkerRequest, ListWorkerResponse, ListWorkerResponseElement, StopWorkerRequest}
+import ai.mantik.executor.model.{ListElement, ListElementKind, ListResponse}
 import ai.mantik.planner.repository.{MantikArtifact, Repository}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 
-/** Helper for deleting workers of old cancelled runs */
+/** Helper for deleting evaluations/deployments of old cancelled runs */
 @Singleton
-class ExecutionCleanup @Inject() (executor: Executor, repo: Repository)(implicit akkaRuntime: AkkaRuntime)
-    extends ComponentBase {
+class ExecutionCleanup @Inject() (executor: Executor, repo: Repository)(
+    implicit akkaRuntime: AkkaRuntime
+) extends ComponentBase {
 
   /** True if enabled */
   val isEnabled = config.getBoolean("mantik.planner.cleanupOnStart")
@@ -57,28 +58,28 @@ class ExecutionCleanup @Inject() (executor: Executor, repo: Repository)(implicit
 
     for {
       deployedItems <- repo.list(alsoAnonymous = true, deployedOnly = true)
-      workers <- executor.listWorkers(ListWorkerRequest())
-      workersToDelete = calculateWorkersToDelete(workers, deployedItems)
-      stoppedCount <- deleteWorkers(workersToDelete)
+      listResponse <- executor.list()
+      elementsToDelete = calculateElementsToDelete(listResponse, deployedItems)
+      stoppedCount <- deleteElements(elementsToDelete)
     } yield {
       logger.info(s"Stopped ${stoppedCount} workers")
       ()
     }
   }
 
-  private def calculateWorkersToDelete(
-      listWorkerResponse: ListWorkerResponse,
+  private def calculateElementsToDelete(
+      listResponse: ListResponse,
       items: IndexedSeq[MantikArtifact]
-  ): Seq[ListWorkerResponseElement] = {
-    val deployedWorkerNames: Set[String] = (for {
+  ): Seq[ListElement] = {
+    val deployedEvaluations: Set[String] = (for {
       item <- items
       deploymentInfo <- item.deploymentInfo
-      name = deploymentInfo.name // contains the worker name
+      name = deploymentInfo.evaluationId
     } yield name).toSet
 
-    listWorkerResponse.workers.filter { worker =>
-      if (deployedWorkerNames.contains(worker.nodeName)) {
-        logger.info(s"Not deleting worker ${worker.nodeName} as it is referenced by deployed Mantik Item")
+    listResponse.elements.filter { element =>
+      if (deployedEvaluations.contains(element.id)) {
+        logger.info(s"Not deleting element ${element.id} as it is referenced by deployed Mantik Item")
         false
       } else {
         true
@@ -86,14 +87,13 @@ class ExecutionCleanup @Inject() (executor: Executor, repo: Repository)(implicit
     }
   }
 
-  private def deleteWorkers(workers: Seq[ListWorkerResponseElement]): Future[Int] = {
-    val futures = workers.map { worker =>
-      logger.info(s"Stopping Worker ${worker.nodeName} in state ${worker.state}")
-      executor.stopWorker(
-        StopWorkerRequest(
-          nameFilter = Some(worker.nodeName)
-        )
-      )
+  private def deleteElements(elements: Seq[ListElement]): Future[Int] = {
+    val futures = elements.map { element =>
+      logger.info(s"Stopping Evaluation ${element.id} in status ${element.status}")
+      element.kind match {
+        case ListElementKind.Evaluation => executor.cancelEvaluation(element.id)
+        case ListElementKind.Deployment => executor.removeDeployment(element.id)
+      }
     }
     Future.sequence(futures).map { _.size }
   }

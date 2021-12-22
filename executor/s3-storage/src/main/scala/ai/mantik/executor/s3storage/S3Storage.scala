@@ -31,6 +31,7 @@ import akka.http.scaladsl.util.FastFuture
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import com.google.common.util.concurrent.SettableFuture
+import org.apache.commons.io.FileUtils
 import org.reactivestreams.{Publisher, Subscriber}
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import software.amazon.awssdk.core.async.{AsyncRequestBody, AsyncResponseTransformer, SdkPublisher}
@@ -149,7 +150,7 @@ class S3Storage(s3Config: S3Config)(implicit akkaRuntime: AkkaRuntime) extends C
           .mapMaterializedValue { _ =>
             response.map { s3Response =>
               val bytes = counter.get()
-              logger.debug(s"Stored ${id} with ${bytes} bytes")
+              logger.debug(s"Stored ${id} with ${FileUtils.byteCountToDisplaySize(bytes)} bytes")
               StoreFileResult(
                 bytes = bytes
               )

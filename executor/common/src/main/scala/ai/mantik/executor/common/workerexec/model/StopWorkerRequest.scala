@@ -19,26 +19,28 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.planner.pipelines
-
-import ai.mantik.ds.DataType
-import io.circe.generic.JsonCodec
+package ai.mantik.executor.common.workerexec.model
 
 /**
-  * Runtime definition of pipelines.
-  * Must be compatible with the Golang Pipeline controller definition.
+  * Request for stopping workers.
+  *
+  * @param nameFilter if set, only remove workers of a given node name
+  * @param idFilter if set, only remove workers of a given user id
+  * @param remove if true, remove the workers completely
   */
-@JsonCodec
-case class PipelineRuntimeDefinition(
-    name: String,
-    steps: Seq[PipelineRuntimeDefinition.Step],
-    inputType: DataType
+case class StopWorkerRequest(
+    nameFilter: Option[String] = None,
+    idFilter: Option[String] = None,
+    remove: Boolean = true
 )
 
-object PipelineRuntimeDefinition {
-  @JsonCodec
-  case class Step(
-      url: String,
-      outputType: DataType
-  )
-}
+/** Response for stopping workers. */
+case class StopWorkerResponse(
+    removed: Seq[StopWorkerResponseElement]
+)
+
+/** Element for removing workers. */
+case class StopWorkerResponseElement(
+    id: String,
+    name: String
+)

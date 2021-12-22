@@ -37,6 +37,10 @@ export default {
         {
           label: "Version",
           to: '/version'
+        },
+        {
+          label: "Website",
+          url: "https://mantik.ai"
         }
       ]
     }

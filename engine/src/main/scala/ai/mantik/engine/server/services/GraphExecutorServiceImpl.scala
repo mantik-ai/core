@@ -35,10 +35,10 @@ import ai.mantik.engine.protos.graph_executor.{
 }
 import ai.mantik.engine.protos.graph_executor.GraphExecutorServiceGrpc.GraphExecutorService
 import ai.mantik.engine.session.{EngineErrors, Session, SessionManager}
-import ai.mantik.planner.{ApplicableMantikItem, DataSet}
+import ai.mantik.planner.{ApplicableMantikItem, DataSet, Pipeline}
 import akka.stream.Materializer
-import javax.inject.Inject
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implicit akkaRuntime: AkkaRuntime)
@@ -85,7 +85,7 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
   override def deployItem(request: DeployItemRequest): Future[DeployItemResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
-      item = session.getItemAs[ApplicableMantikItem](request.itemId)
+      item = session.getItemAs[Pipeline](request.itemId)
       action = item.deploy(
         ingressName = optionalString(request.ingressName),
         nameHint = optionalString(request.nameHint)
@@ -95,7 +95,7 @@ class GraphExecutorServiceImpl @Inject() (sessionManager: SessionManager)(implic
       result <- session.components.planExecutor.execute(plan)
     } yield {
       DeployItemResponse(
-        name = result.name,
+        name = result.evaluationId,
         internalUrl = result.internalUrl,
         externalUrl = result.externalUrl.getOrElse("")
       )

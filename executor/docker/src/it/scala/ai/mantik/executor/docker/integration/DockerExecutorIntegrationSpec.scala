@@ -21,31 +21,19 @@
  */
 package ai.mantik.executor.docker.integration
 
-import java.util.Base64
-
-import ai.mantik.executor.Errors
 import ai.mantik.executor.common.LabelConstants
 import ai.mantik.executor.common.test.integration.TestData
+import ai.mantik.executor.common.workerexec.model._
 import ai.mantik.executor.docker.api.structures.ListContainerRequestFilter
-import ai.mantik.executor.docker.{DockerConstants, DockerExecutor, DockerExecutorConfig}
+import ai.mantik.executor.docker.{DockerConstants, DockerWorkerExecutorBackend, DockerExecutorConfig}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.model.{
-  ListWorkerRequest,
-  MnpWorkerDefinition,
-  StartWorkerRequest,
-  StartWorkerResponse,
-  StopWorkerRequest,
-  WorkerState,
-  WorkerType
-}
-import akka.util.ByteString
 import io.circe.syntax._
 
 class DockerExecutorIntegrationSpec extends IntegrationTestBase {
 
   trait Env {
     val config = DockerExecutorConfig.fromTypesafeConfig(typesafeConfig)
-    val dockerExecutor = new DockerExecutor(dockerClient, config)
+    val dockerExecutor = new DockerWorkerExecutorBackend(dockerClient, config)
   }
 
   trait EnvForWorkers extends Env {

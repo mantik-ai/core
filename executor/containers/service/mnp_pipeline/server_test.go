@@ -45,6 +45,7 @@ func TestAcceptImage(t *testing.T) {
 	pipe := MnpPipeline{
 		nil, // no steps, it's just about accepting
 		ds.Ref(inputType),
+		ds.Ref(inputType),
 		"pipe",
 	}
 	server, err := CreateServer(&pipe, 0)

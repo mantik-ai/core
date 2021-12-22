@@ -123,15 +123,10 @@ func PrintItem(a *engine.MantikArtifact, withDeployment bool, withMantikHeader b
 	if withDeployment {
 		fmt.Printf("Deployment: %s\n", formatDeployment(a))
 		if a.DeploymentInfo != nil {
-			fmt.Printf("  Name:         %s\n", formatOptionalString(a.DeploymentInfo.Name))
+			fmt.Printf("  EvaluationId: %s\n", formatOptionalString(a.DeploymentInfo.EvaluationId))
 			fmt.Printf("  Internal Url: %s\n", formatOptionalString(a.DeploymentInfo.InternalUrl))
 			fmt.Printf("  External Url: %s\n", formatOptionalString(a.DeploymentInfo.ExternalUrl))
-			fmt.Printf("  Timestamp: %s\n", a.DeploymentInfo.Timestamp.String())
-			for s, sub := range a.DeploymentInfo.Sub {
-				fmt.Printf("    Sub Deployment %s\n", s)
-				fmt.Printf("      Name: %s\n", sub.Name)
-				fmt.Printf("      Internal Url: %s\n", sub.InternalUrl)
-			}
+			fmt.Printf("  Timestamp:    %s\n", a.DeploymentInfo.Timestamp.String())
 		}
 	}
 	if withMantikHeader {

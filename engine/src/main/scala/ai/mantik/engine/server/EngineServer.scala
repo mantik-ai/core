@@ -39,7 +39,6 @@ import ai.mantik.engine.protos.remote_registry.RemoteRegistryServiceGrpc
 import ai.mantik.engine.protos.remote_registry.RemoteRegistryServiceGrpc.RemoteRegistryService
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc
 import ai.mantik.engine.protos.sessions.SessionServiceGrpc.SessionService
-import ai.mantik.executor.Executor
 import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.PlanningContextService
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
@@ -55,8 +54,7 @@ class EngineServer @Inject() (
     debugService: DebugService,
     localRegistryService: LocalRegistryService,
     remoteRegistryService: RemoteRegistryService,
-    remotePlanningContext: PlanningContextService,
-    executor: Executor
+    remotePlanningContext: PlanningContextService
 )(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase {
 

@@ -28,11 +28,23 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
+import ai.mantik.executor.common.workerexec.model.{
+  ListWorkerRequest,
+  ListWorkerResponse,
+  ListWorkerResponseElement,
+  StartWorkerRequest,
+  StartWorkerResponse,
+  StopWorkerRequest,
+  StopWorkerResponse,
+  StopWorkerResponseElement,
+  WorkerState
+}
+import ai.mantik.executor.common.workerexec.{WorkerExecutorBackend, WorkerBasedExecutor, WorkerMetrics, model}
 import ai.mantik.executor.common.{GrpcProxy, LabelConstants}
 import ai.mantik.executor.kubernetes.buildinfo.BuildInfo
 import ai.mantik.executor.model._
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.executor.{Errors, Executor}
+import ai.mantik.executor.{Errors, Executor, PayloadProvider}
 import ai.mantik.mnp.MnpClient
 import akka.actor.Cancellable
 import com.google.common.net.InetAddresses
@@ -47,11 +59,11 @@ import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
 
-/** Kubennetes implementation of [[Executor]]. */
-class KubernetesExecutor(config: Config, ops: K8sOperations)(
+/** Kubernetes implementation of [[WorkerExecutorBackend]]. */
+class KubernetesWorkerExecutorBackend(config: Config, ops: K8sOperations)(
     implicit akkaRuntime: AkkaRuntime
 ) extends ComponentBase
-    with Executor {
+    with WorkerExecutorBackend {
   val kubernetesHost = ops.clusterServer.authority.host.address()
   logger.info(s"Initializing with kubernetes at address ${kubernetesHost}")
   logger.info(s"Docker Default Tag:  ${config.dockerConfig.defaultImageTag.getOrElse("<empty>")}")
@@ -212,25 +224,54 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
 
       val t0 = System.currentTimeMillis()
       namespaceFuture.flatMap { _ =>
-        converted.create(Some(namespace), ops).map { created =>
+        converted.create(Some(namespace), ops).flatMap { created =>
           val t1 = System.currentTimeMillis()
           val ingressUrl = created.ingressUrl(config, kubernetesHost)
           logger.info(
             s"Created Worker ${created.service.name} within ${t1 - t0}ms (ingress=${ingressUrl}, userId=${startWorkerRequest.id}, internalId=${internalId})"
           )
-          StartWorkerResponse(
-            nodeName = created.service.name,
-            internalUrl = created.internalUrl,
-            externalUrl = ingressUrl
-          )
+          waitWorkerAlive(internalId).map { _ =>
+            StartWorkerResponse(
+              nodeName = created.service.name,
+              internalUrl = created.internalUrl,
+              externalUrl = ingressUrl
+            )
+          }
         }
       }
     }
 
+  private def waitWorkerAlive(internalId: String): Future[Unit] = {
+    FutureHelper.tryMultipleTimes(
+      config.kubernetes.defaultTimeout,
+      config.kubernetes.defaultRetryInterval
+    ) {
+      listWorkersImpl(
+        nameFilter = None,
+        userIdFilter = None,
+        internalIdFilter = Some(internalId)
+      ).transform {
+        case Failure(e)                        => Failure(e)
+        case Success(values) if values.isEmpty => Failure(new Errors.InternalException(s"Workload is missing"))
+        case Success(values) if values.exists(_.workerState.isFailure) =>
+          val error = values.map(_.workerState).collect { case WorkerState.Failed(_, Some(error)) =>
+            error
+          }
+          Failure(new Errors.CouldNotExecutePayload(s"Worker failed: ${error.mkString}"))
+        case Success(values) if values.exists(_.workerState == WorkerState.Running) => Success(Some(()))
+        case Success(values) if values.exists(_.workerState == WorkerState.Succeeded) =>
+          Failure(new Errors.InternalException(s"Container directly succeeded?"))
+        case Success(values) =>
+          logger.info(s"Worker ${internalId} not yet ready: ${values.map(_.workerState)}")
+          Success(None)
+      }
+    }
+  }
+
   override def listWorkers(listWorkerRequest: ListWorkerRequest): Future[ListWorkerResponse] =
     logErrors(s"ListWorkers") {
       listWorkersImpl(listWorkerRequest.nameFilter, listWorkerRequest.idFilter).map { workloads =>
-        ListWorkerResponse(
+        model.ListWorkerResponse(
           workloads.map { workload =>
             generateListWorkerResponseElement(workload)
           }
@@ -240,19 +281,22 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
 
   private def listWorkersImpl(
       nameFilter: Option[String],
-      userIdFilter: Option[String]
+      userIdFilter: Option[String],
+      internalIdFilter: Option[String] = None
   ): Future[Vector[Workload]] = {
     val labels = Seq(
       LabelConstants.ManagedByLabelName -> LabelConstants.ManagedByLabelValue
     ) ++ userIdFilter.map { id =>
       LabelConstants.UserIdLabelName -> KubernetesNamer.encodeLabelValue(id)
+    } ++ internalIdFilter.map { id =>
+      LabelConstants.InternalIdLabelName -> id /* Internal ids are not encoded */
     }
     Workload.list(Some(namespace), nameFilter, labels, ops)
   }
 
   private def generateListWorkerResponseElement(workload: Workload): ListWorkerResponseElement = {
     val ingressUrl = workload.ingressUrl(config, kubernetesHost)
-    ListWorkerResponseElement(
+    model.ListWorkerResponseElement(
       nodeName = workload.service.name,
       id = KubernetesNamer.decodeLabelValue(
         workload.service.metadata.labels.getOrElse(LabelConstants.UserIdLabelName, "unknown")
@@ -292,7 +336,7 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
       }
 
       Future.sequence(subFutures).map { _ =>
-        StopWorkerResponse(
+        model.StopWorkerResponse(
           responses
         )
       }
@@ -311,14 +355,16 @@ class KubernetesExecutor(config: Config, ops: K8sOperations)(
   }
 }
 
-class KubernetesExecutorProvider @Inject() (implicit akkaRuntime: AkkaRuntime) extends Provider[KubernetesExecutor] {
+class KubernetesExecutorProvider @Inject() (metrics: WorkerMetrics, payloadProvider: PayloadProvider)(
+    implicit akkaRuntime: AkkaRuntime
+) extends Provider[Executor] {
 
-  override def get(): KubernetesExecutor = {
+  override def get(): Executor = {
     import ai.mantik.componently.AkkaHelper._
     val config = Config.fromTypesafeConfig(akkaRuntime.config)
     val kubernetesClient = skuber.k8sInit
     val k8sOperations = new K8sOperations(config, kubernetesClient)
-    val executor = new KubernetesExecutor(config, k8sOperations)
-    executor
+    val backend = new KubernetesWorkerExecutorBackend(config, k8sOperations)
+    new WorkerBasedExecutor(backend, metrics, payloadProvider)
   }
 }
