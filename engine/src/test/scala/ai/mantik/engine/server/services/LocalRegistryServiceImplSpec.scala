@@ -82,16 +82,10 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
     val item3 = item.copy(
       deploymentInfo = Some(
         DeploymentInfo(
-          name = "abcd",
+          evaluationId = "abcd",
           internalUrl = "internal1",
           externalUrl = Some("external1"),
-          timestamp = Instant.parse("2019-09-19T11:18:24.123Z"), // Note: database has only milliseconds precision
-          sub = Map(
-            "a" -> SubDeploymentInfo(
-              name = "subA",
-              internalUrl = "subAInternal"
-            )
-          )
+          timestamp = Instant.parse("2019-09-19T11:18:24.123Z") // Note: database has only milliseconds precision
         )
       ),
       itemId = ItemId.generate(),
@@ -139,7 +133,7 @@ class LocalRegistryServiceImplSpec extends TestBaseWithSessions {
       )
     ).artifact.get.deploymentInfo.get
 
-    back.name shouldBe "abcd"
+    back.evaluationId shouldBe "abcd"
     back.internalUrl shouldBe "internal1"
     back.externalUrl shouldBe "external1"
     RpcConversions.decodeInstant(Timestamp.toJavaProto(back.timestamp.get)) shouldBe

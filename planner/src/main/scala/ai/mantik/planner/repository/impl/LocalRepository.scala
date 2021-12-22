@@ -67,8 +67,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
   case class DbArtifact(
       name: Option[DbMantikName],
       item: DbMantikItem,
-      depl: Option[DbDeploymentInfo],
-      subd: Vector[DbSubDeploymentInfo]
+      depl: Option[DbDeploymentInfo]
   )
 
   override def get(id: MantikId): Future[MantikArtifact] = {
@@ -96,8 +95,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
         depl <- db.deployments.leftJoin(_.itemId == item.itemId)
       } yield (name, item, depl)
     }.headOption.map { case (name, item, depl) =>
-      val subDeployments = getSubDeployments(item.itemId)
-      DbArtifact(Some(name), item, depl, subDeployments)
+      DbArtifact(Some(name), item, depl)
     }
   }
 
@@ -108,15 +106,8 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
         depl <- db.deployments.leftJoin(_.itemId == item.itemId)
       } yield (item, depl)
     }.headOption.map { case (item, depl) =>
-      val subDeployments = getSubDeployments(item.itemId)
-      DbArtifact(None, item, depl, subDeployments)
+      DbArtifact(None, item, depl)
     }
-  }
-
-  private def getSubDeployments(itemId: String): Vector[DbSubDeploymentInfo] = {
-    run {
-      db.subDeployments.filter(_.itemId == lift(itemId))
-    }.toVector
   }
 
   override def store(mantikArtifact: MantikArtifact): Future[Unit] = {
@@ -218,15 +209,12 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
         val deleted = run {
           db.deployments.filter(_.itemId == lift(itemId.toString)).delete
         }
-        run {
-          db.subDeployments.filter(_.itemId == lift(itemId.toString)).delete
-        }
         deleted > 0
       case Some(info) =>
         val itemIdString = itemId.toString
         val converted = DbDeploymentInfo(
           itemId = itemIdString,
-          name = info.name,
+          evaluationId = info.evaluationId,
           internalUrl = info.internalUrl,
           externalUrl = info.externalUrl,
           timestamp = new Timestamp(info.timestamp.toEpochMilli)
@@ -249,22 +237,6 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
               false
           }
 
-        }
-
-        val convertedSubDeployments = info.sub.map { case (key, value) =>
-          DbSubDeploymentInfo(
-            itemId = itemIdString,
-            subId = key,
-            name = value.name,
-            internalUrl = value.internalUrl
-          )
-        }
-
-        run(db.subDeployments.filter(_.itemId == lift(itemIdString)).delete)
-        run {
-          liftQuery(convertedSubDeployments).foreach { s =>
-            db.subDeployments.insert(s)
-          }
         }
 
         updateResponse
@@ -294,10 +266,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
             val existingDeployments = run {
               db.deployments.filter(_.itemId == lift(i.toString))
             }
-            val existingSubDeployments = run {
-              db.subDeployments.filter(_.itemId == lift(i.toString))
-            }
-            if (existingDeployments.nonEmpty || existingSubDeployments.nonEmpty) {
+            if (existingDeployments.nonEmpty) {
               ErrorCodes.MantikItemConflict.throwIt("There are existing deployments for this item")
             }
             run {
@@ -333,16 +302,10 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
       executorStorageId = dbArtifact.item.executorStorageId,
       deploymentInfo = dbArtifact.depl.map { depl =>
         DeploymentInfo(
-          name = depl.name,
+          evaluationId = depl.evaluationId,
           internalUrl = depl.internalUrl,
           externalUrl = depl.externalUrl,
-          timestamp = depl.timestamp.toInstant,
-          sub = dbArtifact.subd.map { dbSubDeployment =>
-            dbSubDeployment.subId -> SubDeploymentInfo(
-              name = dbSubDeployment.name,
-              internalUrl = dbSubDeployment.internalUrl
-            )
-          }.toMap
+          timestamp = depl.timestamp.toInstant
         )
       }
     )
@@ -403,8 +366,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
         // TODO: This filtering should be done on database side
         // but getquill makes it really complicated to push that down without writing multiple database calls
         case (item, name, depl) if !deployedOnly || depl.isDefined =>
-          val subDeployments = getSubDeployments(item.itemId)
-          decodeDbArtifact(DbArtifact(name, item, depl, subDeployments))
+          decodeDbArtifact(DbArtifact(name, item, depl))
       }
 
       artifacts.toIndexedSeq
@@ -426,8 +388,7 @@ class LocalRepository(val directory: Path)(implicit akkaRuntime: AkkaRuntime) ex
         (item, name, depl)
       }
       artifacts.map { case (item, name, depl) =>
-        val subDeployments = getSubDeployments(item.itemId)
-        decodeDbArtifact(DbArtifact(name, item, depl, subDeployments))
+        decodeDbArtifact(DbArtifact(name, item, depl))
       }
     }
   }

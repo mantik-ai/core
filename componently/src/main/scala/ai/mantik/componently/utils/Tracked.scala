@@ -22,6 +22,8 @@
 package ai.mantik.componently.utils
 
 import ai.mantik.componently.utils.Tracked.EndOfLiveException
+import akka.actor.Cancellable
+import akka.stream.scaladsl.Source
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,9 +37,6 @@ class Tracked[T](
 
   def get(): (T, Long) = {
     lock.synchronized {
-      if (endOfLife) {
-        throw new EndOfLiveException(s"Object is marked end of live")
-      }
       (_value, _version)
     }
   }
@@ -54,11 +53,19 @@ class Tracked[T](
     }
   }
 
+  /** The object is not alive anymore, no changes anymore */
   def markEndOfLive(): Unit = {
     lock.synchronized {
       endOfLife = true
     }
     trackingContext.onUpdate(this)
+  }
+
+  /** Returns true if the elemenent is EndOfLive */
+  def isEndOfLive: Boolean = {
+    lock.synchronized {
+      endOfLife
+    }
   }
 
   def update(f: T => T): (T, Long) = {
@@ -72,16 +79,27 @@ class Tracked[T](
     result
   }
 
+  /** Monitor for changes, begins at current version. */
   def monitor(version: Long)(implicit ec: ExecutionContext): Future[(T, Long)] = {
     lock.synchronized {
       if (this._version > version) {
         // Fast path
         return Future.successful(this._value -> this._version)
       }
+      if (endOfLife) {
+        return Future.failed(new EndOfLiveException(s"Object is end of live"))
+      }
     }
     trackingContext.add(this).map { _ =>
       get()
     }
+  }
+
+  /** Track for changes, using a source.
+    * Note: there is no guarantee, that all state changes are transferred.
+    */
+  def trackAsSource(): Source[T, Cancellable] = {
+    Source.fromGraph(new TrackingSource[T](this)((trackingContext.ec)))
   }
 
   /** Convenience function, monitor a value if maybeVersion is set. */

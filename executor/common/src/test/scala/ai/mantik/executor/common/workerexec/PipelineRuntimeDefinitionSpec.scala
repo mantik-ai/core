@@ -19,12 +19,10 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.planner.pipelines
+package ai.mantik.executor.common.workerexec
 
-import ai.mantik.ds.FundamentalType
-import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.testutils.TestBase
-
+import io.circe.{Json, parser}
 import io.circe.syntax._
 
 class PipelineRuntimeDefinitionSpec extends TestBase {
@@ -34,32 +32,30 @@ class PipelineRuntimeDefinitionSpec extends TestBase {
       |{
       |  "name": "My nice pipeline",
       |  "inputType": "int32",
+      |  "outputType": "string",
       |  "steps": [
       |    {
-      |      "url": "http://service1",
-      |      "outputType": "float32"
+      |      "url": "http://service1"
       |    },
       |    {
-      |      "url": "http://service2",
-      |      "outputType": "string"
+      |      "url": "http://service2"
       |    }
       |  ]
       |}
     """.stripMargin
 
   it should "be compatible with golangs data type" in {
-    val parsed = CirceJson.forceParseJson(sample).as[PipelineRuntimeDefinition].forceRight
+    val parsed = parser.parse(sample).forceRight.as[PipelineRuntimeDefinition].forceRight
     parsed shouldBe PipelineRuntimeDefinition(
       name = "My nice pipeline",
-      inputType = FundamentalType.Int32,
+      inputType = Json.fromString("int32"),
+      outputType = Json.fromString("string"),
       steps = Seq(
         PipelineRuntimeDefinition.Step(
-          "http://service1",
-          FundamentalType.Float32
+          "http://service1"
         ),
         PipelineRuntimeDefinition.Step(
-          "http://service2",
-          FundamentalType.StringType
+          "http://service2"
         )
       )
     )

@@ -19,26 +19,23 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.planner.integration
+package ai.mantik.executor.docker.integration
 
-import ai.mantik.executor.model.{MnpWorkerDefinition, StartWorkerRequest}
+import ai.mantik.executor.common.workerexec.model.{MnpWorkerDefinition, StartWorkerRequest}
 import ai.mantik.executor.model.docker.Container
-import ai.mantik.mnp.{MnpClient, MnpUrl}
-import ai.mantik.planner.BuiltInItems
+import ai.mantik.mnp.MnpUrl
 
 /** Test that we can communicate with an MNP Bridge. */
 class HelloMnpBridgeSpec extends IntegrationTestBase {
 
-  private def executor = embeddedExecutor.executor
-
-  it should "initialize" in {
+  it should "initialize" in withBackend { executor =>
     val startResponse = await(
       executor.startWorker(
         StartWorkerRequest(
           "id1",
           MnpWorkerDefinition(
             Container(
-              BuiltInItems.SelectBridge.mantikHeader.definition.dockerImage
+              "mantikai/bridge.select"
             )
           )
         )

@@ -92,7 +92,7 @@ Available Calls:
 
 func (s *Server) typeHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
-	ft := serving.AlgorithmType{s.pipeline.InputType, s.pipeline.OutputType()}
+	ft := serving.AlgorithmType{s.pipeline.InputType, s.pipeline.OutputType}
 	serialized, _ := json.Marshal(ft)
 	w.Write(serialized)
 }

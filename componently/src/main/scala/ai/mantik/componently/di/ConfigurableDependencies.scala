@@ -66,13 +66,16 @@ abstract class ConfigurableDependencies(implicit akkaRuntime: AkkaRuntime) exten
     )
   }
 
+  /** Automatically converts a Class-Instanze into a ProviderLike instance. */
   import scala.language.implicitConversions
   protected implicit def classToClassProvider(x: Class[_ <: AnyRef]): ProviderLike = ClassProvider(
     x.asInstanceOf[Class[AnyRef]]
   )
 
+  /** Automatically converts a Class Name into a ProviderLike instance. */
   protected implicit def classNameToClassProvider(name: String): ProviderLike = ClassName(name)
 
+  /** Converts the class name of a [[javax.inject.Provider]]-Instance into a ProviderLike instance. */
   def provider(fullClassName: String, asSingleton: Boolean = false): ProviderLike =
     LookupProvider(fullClassName, asSingleton)
 

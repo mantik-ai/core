@@ -21,27 +21,22 @@
  */
 package ai.mantik.planner.integration
 
+import ai.mantik.componently.MetricRegistry
 import ai.mantik.componently.utils.GlobalLocalAkkaRuntime
 import ai.mantik.elements.errors.ConfigurationException
-import ai.mantik.executor.{ExecutorFileStorage, ExecutorForIntegrationTest}
+import ai.mantik.executor.ExecutorForIntegrationTest
 import ai.mantik.executor.docker.DockerExecutorForIntegrationTest
 import ai.mantik.executor.kubernetes.KubernetesExecutorForIntegrationTests
-import ai.mantik.executor.s3storage.S3Storage
 import ai.mantik.planner.PlanningContext
-import ai.mantik.planner.impl.PlanningContextImpl
-import ai.mantik.planner.impl.exec.{
-  ExecutionPayloadProvider,
-  ExecutorStorageExecutionPayloadProvider,
-  LocalServerExecutionPayloadProvider
+import ai.mantik.planner.impl.exec.{ExecutionCleanup, PlanExecutorImpl, UiStateService}
+import ai.mantik.planner.impl.{MantikItemStateManager, PlanningContextImpl}
+import ai.mantik.planner.repository.impl.{
+  LocalMantikRegistryImpl,
+  MantikArtifactRetrieverImpl,
+  TempFileRepository,
+  TempRepository
 }
-import ai.mantik.planner.repository.impl.{TempFileRepository, TempRepository}
-import ai.mantik.planner.repository.{
-  FileRepository,
-  FileRepositoryServer,
-  MantikArtifactRetriever,
-  RemoteMantikRegistry,
-  Repository
-}
+import ai.mantik.planner.repository.{FileRepository, MantikArtifactRetriever, RemoteMantikRegistry}
 import ai.mantik.testutils.{AkkaSupport, TestBase}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.time.{Millis, Span}
@@ -78,14 +73,27 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with Global
     val repository = new TempRepository()
     _fileRepo = new TempFileRepository()
     val registry = RemoteMantikRegistry.empty
-    val payloadProvider = makeExecutionPayloadProviderForIntegrationTest(_fileRepo, repository)
+    val localRegistry = new LocalMantikRegistryImpl(fileRepository, repository)
+    val retriever = new MantikArtifactRetrieverImpl(localRegistry, registry)
+    val mantikItemStateManager = new MantikItemStateManager()
+    val metrics = new MetricRegistry()
+    val uiStateService = new UiStateService(embeddedExecutor.executor, metrics)
+    val executionCleanup = new ExecutionCleanup(embeddedExecutor.executor, repository)
+
+    val planExecutor = new PlanExecutorImpl(
+      _fileRepo,
+      repository,
+      retriever,
+      mantikItemStateManager,
+      uiStateService,
+      embeddedExecutor.executor,
+      executionCleanup
+    )
 
     _context = PlanningContextImpl.constructWithComponents(
-      repository,
-      _fileRepo,
-      embeddedExecutor.executor,
-      registry,
-      payloadProvider
+      mantikItemStateManager,
+      retriever,
+      planExecutor
     )
   }
 
@@ -95,22 +103,6 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with Global
       case "docker"     => return new DockerExecutorForIntegrationTest(typesafeConfig)
       case "kubernetes" => return new KubernetesExecutorForIntegrationTests(typesafeConfig)
       case _            => throw new ConfigurationException("Bad executor type")
-    }
-  }
-
-  private def makeExecutionPayloadProviderForIntegrationTest(
-      fileRepository: FileRepository,
-      repo: Repository
-  ): ExecutionPayloadProvider = {
-    val executorType = typesafeConfig.getString("mantik.executor.type")
-    executorType match {
-      case "docker" =>
-        new LocalServerExecutionPayloadProvider(fileRepository, repo)
-      case "kubernetes" =>
-        val storage = new S3Storage()
-        await(storage.deleteAllManaged())
-        new ExecutorStorageExecutionPayloadProvider(fileRepository, repo, storage)
-      case _ => throw new ConfigurationException("Bad executor type")
     }
   }
 

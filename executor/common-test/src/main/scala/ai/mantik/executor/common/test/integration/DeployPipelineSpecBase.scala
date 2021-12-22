@@ -21,7 +21,12 @@
  */
 package ai.mantik.executor.common.test.integration
 
-import ai.mantik.executor.model.{ListWorkerRequest, MnpPipelineDefinition, StartWorkerRequest, WorkerType}
+import ai.mantik.executor.common.workerexec.model.{
+  ListWorkerRequest,
+  MnpPipelineDefinition,
+  StartWorkerRequest,
+  WorkerType
+}
 import ai.mantik.testutils.{HttpSupport, TestBase}
 import akka.util.ByteString
 
@@ -33,11 +38,12 @@ trait DeployPipelineSpecBase {
       |{
       |  "name": "my_pipeline",
       |  "steps": [],
-      |  "inputType": "int32"
+      |  "inputType": "int32",
+      |  "outputType": "int32"
       |}
     """.stripMargin
 
-  it should "allow deploying a pipeline" in withExecutor { executor =>
+  it should "allow deploying a pipeline" in withBackend { executor =>
     // we deploy an empty pipeline here, as this tests do not have a docker container with real
     // bridge images here, only fake ones.
     // and the pipelines checks types.

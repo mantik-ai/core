@@ -54,6 +54,13 @@ case class Pipeline private[planner] (
   /** Returns the number of steps. */
   def stepCount: Int = resolved.steps.size
 
+  /** Deploy the pipeline */
+  def deploy(ingressName: Option[String] = None, nameHint: Option[String] = None): Action.Deploy = Action.Deploy(
+    this,
+    nameHint = nameHint,
+    ingressName = ingressName
+  )
+
   override protected def withCore(updated: MantikItemCore[PipelineDefinition]): Pipeline = {
     if (updated.mantikHeader == core.mantikHeader) {
       return copy(core = updated)

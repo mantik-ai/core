@@ -62,6 +62,9 @@ export default {
     updateJob(){
       api.job(this.jobId).then((response) => {
         this.onResponse(response);
+      }).catch( (error) =>{
+        console.log("Error on Loading job " + error);
+        this.$router.push({path: "/jobs", params: {"warning": "Could not load Job"}});
       })
     },
     onResponse(response) {

@@ -94,7 +94,7 @@ class UiTranslationSpec extends TestBase {
 
   "translateOperations" should "translate operations" in {
     val ops = UiTranslation.translateOperations(samplePlan)
-    ops.size shouldBe 4 // 2x preparation, push and run graph
+    ops.size shouldBe 3 // 1x preparation, push and run graph
   }
 
   "translateRunGraphs" should "translate run graphs" in {

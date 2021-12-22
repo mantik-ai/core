@@ -41,4 +41,7 @@ object Errors {
 
   /** There was a problem with the payload. */
   class CouldNotExecutePayload(msg: String) extends ExecutorException(msg)
+
+  /** The Executor doesn't support this call. */
+  class NotSupportedException(msg: String) extends ExecutorException(msg)
 }

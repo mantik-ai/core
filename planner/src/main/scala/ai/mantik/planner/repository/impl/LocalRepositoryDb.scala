@@ -54,20 +54,10 @@ private[impl] class LocalRepositoryDb(dbFile: Path) {
     querySchema[DbDeploymentInfo](
       ("mantik_deployment_info"),
       _.itemId -> "item_id",
-      _.name -> "name",
+      _.evaluationId -> "evaluation_id",
       _.internalUrl -> "internal_url",
       _.externalUrl -> "external_url",
       _.timestamp -> "timestamp"
-    )
-  }
-
-  val subDeployments = quote {
-    querySchema[DbSubDeploymentInfo](
-      "mantik_sub_deployment_info",
-      _.itemId -> "item_id",
-      _.subId -> "sub_id",
-      _.name -> "name",
-      _.internalUrl -> "internal_url"
     )
   }
 
@@ -110,16 +100,9 @@ private[impl] object LocalRepositoryDb {
 
   case class DbDeploymentInfo(
       itemId: String,
-      name: String,
+      evaluationId: String,
       internalUrl: String,
       externalUrl: Option[String],
       timestamp: java.util.Date
-  )
-
-  case class DbSubDeploymentInfo(
-      itemId: String,
-      subId: String,
-      name: String,
-      internalUrl: String
   )
 }

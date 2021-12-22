@@ -115,6 +115,7 @@ func TestEmptyPipeline(t *testing.T) {
 	pipe := MnpPipeline{
 		nil,
 		ds.Ref(ds.Int32),
+		ds.Ref(ds.Int32),
 		"Empty Pipeline",
 	}
 	runner, err := CreateRequestRunner(&pipe)
@@ -133,6 +134,7 @@ func TestEmptyPipelineTabular(t *testing.T) {
 
 	pipe := MnpPipeline{
 		nil,
+		ds.Ref(type1),
 		ds.Ref(type1),
 		"Empty Pipeline",
 	}
@@ -165,7 +167,8 @@ func TestSingleNode(t *testing.T) {
 	)
 
 	pipe := MnpPipeline{
-		[]MnpPipelineStep{{url1, ds.Ref(ds.Int32)}},
+		[]MnpPipelineStep{{url1}},
+		ds.Ref(ds.Int32),
 		ds.Ref(ds.Int32),
 		"Simple Pipeline",
 	}
@@ -198,9 +201,10 @@ func TestSingleNodeTabular(t *testing.T) {
 
 	pipe := MnpPipeline{
 		[]MnpPipelineStep{
-			{url1, ds.Ref(type2)},
+			{url1},
 		},
 		ds.Ref(type1),
+		ds.Ref(type2),
 		"Double Pipeline",
 	}
 
@@ -246,10 +250,11 @@ func TestDoubleNode(t *testing.T) {
 
 	pipe := MnpPipeline{
 		[]MnpPipelineStep{
-			{url1, ds.Ref(ds.Float32)},
-			{url2, ds.Ref(ds.Float64)},
+			{url1},
+			{url2},
 		},
 		ds.Ref(ds.Int32),
+		ds.Ref(ds.Float64),
 		"Two Pipeline",
 	}
 
@@ -304,35 +309,35 @@ func TestThreeNodeTabular(t *testing.T) {
 
 	pipe := MnpPipeline{
 		[]MnpPipelineStep{
-			{url1, ds.Ref(type2)},
-			{url2, ds.Ref(type3)},
-			{url3, ds.Ref(type4)},
+			{url1},
+			{url2},
+			{url3},
 		},
 		ds.Ref(type1),
+		ds.Ref(type4),
 		"Three Tabular Pipeline",
 	}
 
 	runner, err := CreateRequestRunner(&pipe)
 	assert.NoError(t, err)
 
-	/*
-		in := builder.RowsAsElements(
-			builder.PrimitiveRow(int32(3), int32(4)),
-			builder.PrimitiveRow(int32(2), int32(3)),
-			builder.PrimitiveRow(int32(-2), int32(101)),
-		)
-		expected := builder.RowsAsElements(
-			builder.PrimitiveRow("7", int32(1)),
-			builder.PrimitiveRow("5", int32(1)),
-			builder.PrimitiveRow("99", int32(2)),
-		)
+	in := builder.RowsAsElements(
+		builder.PrimitiveRow(int32(3), int32(4)),
+		builder.PrimitiveRow(int32(2), int32(3)),
+		builder.PrimitiveRow(int32(-2), int32(101)),
+	)
+	expected := builder.RowsAsElements(
+		builder.PrimitiveRow("7", int32(1)),
+		builder.PrimitiveRow("5", int32(1)),
+		builder.PrimitiveRow("99", int32(2)),
+	)
 
-		got, err := runner.Execute(in)
-		assert.NoError(t, err)
-		assert.Equal(t, expected, got)
-	*/
+	got, err := runner.Execute(in)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, got)
+
 	// Empty test
-	got, err := runner.Execute([]element.Element{})
+	got, err = runner.Execute([]element.Element{})
 	assert.NoError(t, err)
 	assert.Equal(t, []element.Element(nil), got)
 }

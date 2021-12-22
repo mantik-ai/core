@@ -19,11 +19,10 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.executor.model
+package ai.mantik.executor.common.workerexec.model
 
 import ai.mantik.executor.model.docker.Container
 import akka.util.ByteString
-import io.circe.generic.JsonCodec
 import io.circe.Json
 
 /**

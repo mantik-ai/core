@@ -21,12 +21,27 @@
  */
 package ai.mantik.executor.common.test.integration
 
-import ai.mantik.executor.Executor
-import ai.mantik.testutils.TestBase
+import ai.mantik.componently.{AkkaRuntime, MetricRegistry}
+import ai.mantik.executor.common.workerexec.{WorkerExecutorBackend, WorkerBasedExecutor, WorkerMetrics}
+import ai.mantik.executor.{Executor, PayloadProvider}
+import ai.mantik.testutils.{AkkaSupport, TestBase}
 
 trait IntegrationBase {
   self: TestBase =>
 
-  def withExecutor[T](f: Executor => T): Unit
+  implicit protected def akkaRuntime: AkkaRuntime
 
+  def withBackend[T](f: WorkerExecutorBackend => T): T
+
+  def withExecutor[T](f: Executor => T): T = {
+    withBackend { executor =>
+      withPayloadProvider { payloadProvider =>
+        val workerMetrics = new WorkerMetrics(new MetricRegistry)
+        val workerBasedExecutor = new WorkerBasedExecutor(executor, workerMetrics, payloadProvider)(akkaRuntime)
+        f(workerBasedExecutor)
+      }
+    }
+  }
+
+  def withPayloadProvider[T](f: PayloadProvider => T): T
 }

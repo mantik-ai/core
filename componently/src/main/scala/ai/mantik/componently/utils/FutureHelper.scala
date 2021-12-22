@@ -23,14 +23,13 @@ package ai.mantik.componently.utils
 
 import java.time.Clock
 import java.time.temporal.ChronoUnit
-
 import ai.mantik.componently.AkkaRuntime
 import akka.actor.ActorSystem
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object FutureHelper {
 
@@ -139,5 +138,17 @@ object FutureHelper {
     }
     tryAgain()
     result.future
+  }
+
+  /** Call g after f is finished (successful or not). It will wait for g, but not propagate the result value.
+    * For cleanup operations
+    */
+  def andThenAsync[T, U](f: Future[T])(g: Try[T] => Future[U])(implicit ec: ExecutionContext): Future[T] = {
+    val promise = Promise[T]()
+    f.andThen { result =>
+      g(result).andThen { _ =>
+        promise.tryComplete(result)
+      }
+    }
   }
 }

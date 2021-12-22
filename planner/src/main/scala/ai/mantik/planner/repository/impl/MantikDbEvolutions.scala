@@ -32,7 +32,7 @@ import io.getquill.Escape
 object MantikDbEvolutions {
   val CompleteResource = "/ai.mantik.planner.repository/local_repo_schema.sql"
   val EvolutionResources = "/ai.mantik.planner.repository/evolution"
-  val CurrentVersion = 6
+  val CurrentVersion = 7
 }
 
 /** Mantiks Database Evolution. */

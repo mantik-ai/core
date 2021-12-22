@@ -23,16 +23,15 @@ package ai.mantik.planner.impl
 
 import ai.mantik.bridge.scalafn.ScalaFnDefinition
 import ai.mantik.ds.Errors.FeatureNotSupported
-import ai.mantik.ds.sql.{MultiQuery, Query, Select}
-import ai.mantik.executor.model.docker.{Container}
+import ai.mantik.ds.sql.MultiQuery
+import ai.mantik.executor.model.docker.Container
 import ai.mantik.planner
-import ai.mantik.planner.Operation.ScalaFnOperation
-import ai.mantik.planner.Planner.{InconsistencyException, PlannerException}
+import ai.mantik.planner.Planner.InconsistencyException
 import ai.mantik.planner._
 import ai.mantik.planner.graph._
 import ai.mantik.planner.repository.{Bridge, ContentTypes}
 import ai.mantik.planner.select.SelectMantikHeaderBuilder
-import cats.data.{IRWST, State}
+import cats.data.State
 import com.typesafe.config.Config
 
 /**

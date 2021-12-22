@@ -44,8 +44,8 @@ $DOCKER_CALL run --rm \
   -Dmantik.executor.docker.defaultImageTag=""  `# Do not load from a specific tag` \
   -Dmantik.executor.behaviour.disablePull=true `# Do not pull images (they are already there)` \
   -Dmantik.executor.type="docker"              `# Use docker` \
-  -Dmantik.planner.payloadProvider="executor"  `# We are Executor Provider` \
-  -Dmantik.fileRepositoryServer.interface=$DOCKER_HOST_IP `# Bind the FileRepo Server to an IP where it's reachable by Docker` \
+  -Dmantik.executor.payloadProvider="executor"  `# We are Executor Provider` \
+  -Dmantik.executor.localPayloadProvider.interface=$DOCKER_HOST_IP `# Bind the FileRepo Server to an IP where it's reachable by Docker` \
   -Dmantik.executor.docker.dockerCertPath="/data/docker_certs" \
   -Dmantik.executor.docker.url=$DOCKER_HOST
 

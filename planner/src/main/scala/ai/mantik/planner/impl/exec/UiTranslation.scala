@@ -47,7 +47,6 @@ object UiTranslation {
     }
 
     val alwaysPresent = Seq(
-      make(Left(UiStateService.PrepareContainerName), OperationDefinition.PrepareContainers()),
       make(Left(UiStateService.PrepareFilesName), OperationDefinition.PrepareFiles(plan.files.size))
     )
 
@@ -87,16 +86,6 @@ object UiTranslation {
           "push",
           p.item.itemId,
           nameOf(p.item.mantikId)
-        )
-      case d: PlanOp.DeployAlgorithm =>
-        OperationDefinition.UpdateDeployState(
-          d.item.itemId,
-          deploy = true
-        )
-      case d: PlanOp.DeployPipeline =>
-        OperationDefinition.UpdateDeployState(
-          d.item.itemId,
-          deploy = true
         )
       case other => OperationDefinition.Other(other.getClass.getSimpleName)
     }

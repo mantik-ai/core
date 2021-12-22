@@ -19,19 +19,24 @@
  * You can be released from the requirements of the license by purchasing
  * a commercial license.
  */
-package ai.mantik.executor
+package ai.mantik.executor.model
 
-import ai.mantik.componently.AkkaRuntime
-import ai.mantik.componently.di.ConfigurableDependencies
+/** Response for listing of current evaluations / deployments. */
+case class ListResponse(
+    elements: Seq[ListElement]
+)
 
-class ExecutorFileStorageModule(implicit akkaRuntime: AkkaRuntime) extends ConfigurableDependencies {
-  override protected val configKey: String = "mantik.executor.storageType"
+/** Kind of an [[ListElement]] */
+sealed trait ListElementKind
 
-  private val s3Type = "s3"
-
-  override protected def variants: Seq[Classes] = Seq(
-    variation[ExecutorFileStorage](
-      s3Type -> "ai.mantik.executor.s3storage.S3Storage"
-    )
-  )
+object ListElementKind {
+  case object Evaluation extends ListElementKind
+  case object Deployment extends ListElementKind
 }
+
+/** Element within [[ListResponse]] */
+case class ListElement(
+    id: String,
+    kind: ListElementKind,
+    status: WorkloadStatus
+)

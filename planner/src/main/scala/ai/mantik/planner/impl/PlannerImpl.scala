@@ -21,13 +21,10 @@
  */
 package ai.mantik.planner.impl
 
-import ai.mantik.ds.sql.SingleQuery
-import ai.mantik.elements.{ItemId, MantikId, NamedMantikId, PipelineStep}
-import ai.mantik.planner.PlanOp.DeployPipelineSubItem
+import ai.mantik.elements.{ItemId, NamedMantikId}
 import ai.mantik.planner.Planner.{InconsistencyException, PlannerException}
 import ai.mantik.planner._
 import ai.mantik.planner.pipelines.ResolvedPipelineStep
-import ai.mantik.planner.repository.ContentTypes
 import cats.data.State
 import cats.implicits._
 import com.typesafe.config.Config
@@ -73,12 +70,10 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
         }
       case d: Action.Deploy =>
         d.item match {
-          case a: Algorithm =>
-            deployAlgorithm(a, d.nameHint)
           case p: Pipeline =>
             deployPipeline(p, d.nameHint, d.ingressName)
           case other =>
-            throw new InconsistencyException(s"Can only deploy algorithms, got ${other.getClass.getSimpleName}")
+            throw new InconsistencyException(s"Can only deploy pipelines, got ${other.getClass.getSimpleName}")
         }
     }
   }
@@ -218,52 +213,57 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
     }
   }
 
-  private def deployAlgorithm(
-      algorithm: Algorithm,
-      nameHint: Option[String]
-  ): State[PlanningState, PlanOp[DeploymentState]] = {
-    PlanningState.flat { state =>
-      state.overrideState(algorithm, mantikItemStateManager).deployed match {
-        case Some(Left(existing)) =>
-          // already deployed before the planner ran
-          PlanningState.pure(PlanOp.Const(existing))
-        case Some(Right(memory)) =>
-          // already deployed withing planner
-          PlanningState.pure(PlanOp.MemoryReader[DeploymentState](memory))
-        case None =>
-          // not yet deployed
-          for {
-            filePlan <- ensureItemStored(algorithm)
-            memoryId <- PlanningState.apply(_.withNextMemoryId)
-            _ <- PlanningState.modify {
-              _.withOverrideFunc(algorithm, mantikItemStateManager, _.copy(deployed = Some(Right(memoryId))))
-            }
-          } yield {
-            val file = filePlan.files.headOption
-            val node = elements.algorithmNode(algorithm, file.map(_.ref))
-            val serviceId = algorithm.itemId.toString
-            val op = PlanOp.DeployAlgorithm(
-              node,
-              serviceId,
-              nameHint,
-              algorithm
-            )
-            val combined = PlanOp.seq(
-              filePlan.preOp,
-              op,
-              PlanOp.MemoryWriter[DeploymentState](memoryId)
-            )
-            combined
-          }
-      }
-    }
-  }
-
-  /** Deploy a pipeline. */
+  /** Deploy a pipeline */
   def deployPipeline(
       pipeline: Pipeline,
       nameHint: Option[String],
       ingress: Option[String]
+  ): State[PlanningState, PlanOp[DeploymentState]] = {
+    /*
+    Steps:
+    - 0. Check if pipeline is already deployed
+    - 1. Pipeline must be in database
+    - 2. All Items must be manifested (payload must be available)
+     */
+    ifNotDeployed(pipeline) {
+      for {
+        stored <- ensureItemStored(pipeline)
+        plan <- resourcePlanBuilder.manifestPipeline(pipeline)
+        deploymentOp = PlanOp.DeployPipeline(
+          itemId = pipeline.itemId,
+          graph = plan.graph,
+          input = plan.inputs.head,
+          inputDataType = pipeline.functionType.input,
+          output = plan.outputs.head,
+          outputDataType = pipeline.functionType.output,
+          serviceId = pipeline.itemId.toString,
+          serviceNameHint = nameHint,
+          ingress = ingress
+        )
+        memoryId <- PlanningState.apply(_.withNextMemoryId)
+        _ <- PlanningState.modify(
+          _.withOverrideFunc(
+            pipeline,
+            mantikItemStateManager,
+            _.copy(
+              deployed = Some(Right(memoryId))
+            )
+          )
+        )
+      } yield {
+        PlanOp.seq(
+          stored.preOp,
+          plan.pre,
+          deploymentOp,
+          PlanOp.MemoryWriter[DeploymentState](memoryId)
+        )
+      }
+    }
+  }
+
+  /** Run f if the pipeline is not yet deployed */
+  private def ifNotDeployed(pipeline: Pipeline)(
+      otherwise: State[PlanningState, PlanOp[DeploymentState]]
   ): State[PlanningState, PlanOp[DeploymentState]] = {
     PlanningState.flat { state =>
       state.overrideState(pipeline, mantikItemStateManager).deployed match {
@@ -274,84 +274,7 @@ private[mantik] class PlannerImpl @Inject() (config: Config, mantikItemStateMana
           // already deployed withing planner
           PlanningState.pure(PlanOp.MemoryReader(memory))
         case None =>
-          for {
-            stepDeployment <- ensureIndependentStepsDeployed(pipeline)
-            pipelineStorage <- ensureItemStored(pipeline)
-            pipeDeployment <- buildPipelineDeployment(pipeline, nameHint, ingress)
-          } yield {
-            PlanOp.seq(
-              stepDeployment,
-              pipelineStorage.preOp,
-              pipeDeployment
-            )
-          }
-      }
-    }
-  }
-
-  private def buildPipelineDeployment(
-      pipeline: Pipeline,
-      nameHint: Option[String],
-      ingress: Option[String]
-  ): State[PlanningState, PlanOp[DeploymentState]] = {
-    for {
-      memoryId <- PlanningState.apply(_.withNextMemoryId)
-      _ <- PlanningState.modify(
-        _.withOverrideFunc(
-          pipeline,
-          mantikItemStateManager,
-          _.copy(
-            deployed = Some(Right(memoryId))
-          )
-        )
-      )
-    } yield {
-      val serviceId = pipeline.itemId.toString
-      val subDeployments = dependentStepsDeployment(pipeline)
-      val op1 = PlanOp.DeployPipeline(
-        item = pipeline,
-        sub = subDeployments,
-        serviceId = serviceId,
-        serviceNameHint = nameHint,
-        ingress = ingress
-      )
-      val op2 = PlanOp.MemoryWriter[DeploymentState](memoryId)
-      PlanOp.seq(op1, op2)
-    }
-  }
-
-  /** Ensure that independent steps of a pipeline are deployed. */
-  private def ensureIndependentStepsDeployed(pipeline: Pipeline): State[PlanningState, PlanOp[Unit]] = {
-    val steps = pipeline.resolved.steps
-    steps
-      .collect { case ResolvedPipelineStep.AlgorithmStep(algorithm) =>
-        ensureAlgorithmDeployed(algorithm)
-      }
-      .sequence
-      .map { ops =>
-        PlanOp.Sequential(ops, PlanOp.Empty)
-      }
-  }
-
-  private def dependentStepsDeployment(pipeline: Pipeline): Map[String, DeployPipelineSubItem] = {
-    val steps = pipeline.resolved.steps.zipWithIndex
-    steps.collect { case (ResolvedPipelineStep.SelectStep(select), idx) =>
-      val node = elements.queryNode(SingleQuery(select))
-      idx.toString -> DeployPipelineSubItem(node)
-    }.toMap
-  }
-
-  /** Ensure that an algorithm is deployed. */
-  def ensureAlgorithmDeployed(algorithm: Algorithm): State[PlanningState, PlanOp[DeploymentState]] = {
-    PlanningState.flat { state =>
-      state.overrideState(algorithm, mantikItemStateManager).deployed match {
-        case Some(Left(deploymentState)) =>
-          // already deployed
-          PlanningState.pure(PlanOp.Const(deploymentState))
-        case Some(Right(memoryId)) =>
-          PlanningState.pure(PlanOp.MemoryReader[DeploymentState](memoryId))
-        case None =>
-          deployAlgorithm(algorithm, None)
+          otherwise
       }
     }
   }
