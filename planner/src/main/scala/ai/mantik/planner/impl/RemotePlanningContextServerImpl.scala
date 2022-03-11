@@ -30,6 +30,7 @@ import ai.mantik.planner.repository.MantikArtifactRetriever
 import ai.mantik.planner.repository.rpc.Conversions
 import ai.mantik.planner.{Action, ActionMeta, MantikItem, PlanningContext}
 import akka.stream.scaladsl.Source
+import akka.NotUsed
 import akka.util.ByteString
 import io.circe.syntax._
 import io.circe.{Encoder, Json, Printer}
@@ -125,7 +126,7 @@ class RemotePlanningContextServerImpl @Inject() (
       responseObserver: StreamObserver[AddLocalMantikItemResponse]
   ): StreamObserver[AddLocalMantikItemRequest] = {
     StreamConversions.respondMultiInSingleOutWithHeader[AddLocalMantikItemRequest, AddLocalMantikItemResponse](
-      Conversions.decodeErrors,
+      Conversions.encodeErrors,
       responseObserver
     ) { case (header, source) =>
       Conversions.encodeErrorsIn {
@@ -141,6 +142,28 @@ class RemotePlanningContextServerImpl @Inject() (
             id = Conversions.encodeMantikId(artifact.mantikId)
           )
         }
+      }
+    }
+  }
+
+  override def storeFile(responseObserver: StreamObserver[StoreFileResponse]): StreamObserver[StoreFileRequest] = {
+    StreamConversions.respondMultiInSingleOutWithHeader[StoreFileRequest, StoreFileResponse](
+      Conversions.encodeErrors,
+      responseObserver
+    ) { case (header, source) =>
+      val adaptedSource = source
+        .map { req =>
+          RpcConversions.decodeByteString(req.data)
+        }
+        .mapMaterializedValue(_ => NotUsed)
+      Future {
+        val (fileId, length) = context.storeFile(
+          contentType = header.contentType,
+          source = adaptedSource,
+          temporary = header.temporary,
+          contentLength = Option(header.contentLength).filter(_ >= 0L)
+        )
+        StoreFileResponse(fileId, length)
       }
     }
   }

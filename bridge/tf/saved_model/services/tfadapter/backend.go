@@ -29,11 +29,11 @@ import (
 type TensorflowBackend struct {
 }
 
-func (t *TensorflowBackend) LoadModel(payloadDir *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
-	if payloadDir == nil {
+func (t *TensorflowBackend) LoadModel(payload *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
+	if payload == nil {
 		return nil, errors.New("Payload required")
 	}
-	model, err := LoadModel(*payloadDir)
+	model, err := LoadModel(*payload)
 	if err != nil {
 		return nil, err
 	}

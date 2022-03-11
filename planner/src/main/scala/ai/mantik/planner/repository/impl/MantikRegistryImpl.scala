@@ -24,12 +24,14 @@ package ai.mantik.planner.repository.impl
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.{ErrorCodes, RemoteRegistryException}
 import ai.mantik.elements.registry.api._
-import ai.mantik.elements.{ItemId, MantikId, MantikHeader, NamedMantikId}
+import ai.mantik.elements.{ItemId, MantikHeader, MantikId, NamedMantikId}
 import ai.mantik.planner.repository.MantikRegistry.PayloadSource
 import ai.mantik.planner.repository.{CustomLoginToken, MantikArtifact, MantikRegistry, RemoteMantikRegistry}
 import akka.http.scaladsl.Http
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import com.typesafe.scalalogging.Logger
+
 import javax.inject.Inject
 import net.reactivecore.fhttp.akka.ApiClient
 
@@ -181,6 +183,8 @@ private[mantik] class MantikRegistryImpl @Inject() (implicit akkaRuntime: AkkaRu
     }
 
     override implicit protected def akkaRuntime: AkkaRuntime = MantikRegistryImpl.this.akkaRuntime
+
+    override protected def logger: Logger = MantikRegistryImpl.this.logger
   }
 
   /**

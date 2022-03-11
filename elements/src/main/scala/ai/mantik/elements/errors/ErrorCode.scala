@@ -59,6 +59,10 @@ class ErrorCode(
     code.hashCode
   }
 
+  override def toString: String = {
+    s"ErrorCode(${code})"
+  }
+
   def isA(errorCode: ErrorCode): Boolean = {
     codePath.startsWith(errorCode.codePath)
   }

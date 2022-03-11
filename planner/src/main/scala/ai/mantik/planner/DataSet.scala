@@ -40,6 +40,7 @@ import ai.mantik.ds.sql.{
 }
 import ai.mantik.elements
 import ai.mantik.elements.{DataSetDefinition, ItemId, MantikHeader, NamedMantikId}
+import ai.mantik.planner.csv.CsvLoader
 import ai.mantik.planner.repository.Bridge
 import io.circe.{Decoder, Encoder}
 
@@ -263,6 +264,9 @@ object DataSet {
   def apply(source: Source, mantikHeader: MantikHeader[DataSetDefinition], bridge: Bridge): DataSet = {
     DataSet(MantikItemCore(source, mantikHeader, bridge = bridge))
   }
+
+  /** Returns the CSV Loader, convenience function */
+  def csv: CsvLoader.type = CsvLoader
 
   /**
     * Execute an SQL Query on Datasets.

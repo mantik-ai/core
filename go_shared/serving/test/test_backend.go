@@ -32,7 +32,7 @@ type TestBackend struct {
 
 type TestBackendInstatiation struct {
 	MantikHeader serving.MantikHeader
-	PayloadDir   *string
+	Payload      *string
 }
 
 func NewTestBackend(executable serving.Executable) *TestBackend {
@@ -45,10 +45,10 @@ func (t *TestBackend) Shutdown() {
 	t.Closed = true
 }
 
-func (t *TestBackend) LoadModel(payloadDir *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
+func (t *TestBackend) LoadModel(payload *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
 	t.Instantiations = append(t.Instantiations, TestBackendInstatiation{
 		MantikHeader: mantikHeader,
-		PayloadDir:   payloadDir,
+		Payload:      payload,
 	})
 	return t.Executable, nil
 }

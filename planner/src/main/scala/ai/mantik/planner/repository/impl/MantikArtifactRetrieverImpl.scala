@@ -23,18 +23,27 @@ package ai.mantik.planner.repository.impl
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
-
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.utils.FutureHelper
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.ds.helper.ZipUtils
 import ai.mantik.elements.errors.{ErrorCodes, MantikException}
-import ai.mantik.elements.{ItemId, MantikDefinition, MantikId, MantikHeader, NamedMantikId}
+import ai.mantik.elements.{
+  BridgeDefinition,
+  ItemId,
+  MantikDefinition,
+  MantikDefinitionWithBridge,
+  MantikDefinitionWithoutBridge,
+  MantikHeader,
+  MantikId,
+  NamedMantikId
+}
 import ai.mantik.planner.BuiltInItems
 import ai.mantik.planner.impl.ReferencingItemLoader
 import ai.mantik.planner.repository._
 import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
+
 import javax.inject.{Inject, Singleton}
 import org.apache.commons.io.FileUtils
 import cats.implicits._
@@ -59,12 +68,12 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
   private class ReferencingMantikArtifactLoader(loader: MantikId => Future[MantikArtifact])
       extends ReferencingItemLoader[MantikId, MantikArtifact](
         loader,
-        dependencyExtractor
+        item => dependencyExtractor(item.parsedMantikHeader)
       )
 
   /** Figures out dependencies to load from Artifacts, skips Built Ins. */
-  private def dependencyExtractor(i: MantikArtifact): Seq[MantikId] = {
-    i.parsedMantikHeader.definition.referencedItems.filter {
+  private def dependencyExtractor(header: MantikHeader[_ <: MantikDefinition]): Seq[MantikId] = {
+    header.definition.referencedItems.filter {
       case n: NamedMantikId => n.account != BuiltInItems.BuiltInAccount
       case _                => true
     }
@@ -122,6 +131,10 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     }
   }
 
+  override def getHull(many: Seq[MantikId]): Future[Seq[MantikArtifact]] = {
+    localOrRemoteLoader.loadHull(many)
+  }
+
   override def getLocal(id: MantikId): Future[MantikArtifactWithHull] = {
     repositoryLoader.loadWithHull(id).map { items =>
       items.head -> items.tail
@@ -143,21 +156,56 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
     val file = dir.resolve("MantikHeader")
     val mantikHeaderContent = FileUtils.readFileToString(file.toFile, StandardCharsets.UTF_8)
 
-    val payloadDir = dir.resolve("payload")
-    val tempFile = Files.createTempFile("mantik_context", ".zip")
-    val payloadSource: Option[(String, Source[ByteString, _])] = if (Files.isDirectory(payloadDir)) {
-
-      ZipUtils.zipDirectory(payloadDir, tempFile)
-      val source = FileIO.fromPath(tempFile)
-      Some(ContentTypes.ZipFileContentType -> source)
-    } else {
-      logger.info("No payload directory found, assuming no payload")
-      None
+    val parsed = MantikHeader.fromYaml(mantikHeaderContent) match {
+      case Left(value)  => return Future.failed(value)
+      case Right(value) => value
     }
 
-    addMantikItemToRepository(mantikHeaderContent, id, payloadSource).andThen { case _ =>
-      tempFile.toFile.delete()
+    payloadContentType(parsed).flatMap { expectedContentType =>
+      logger.debug(s"Expected content type for ${dir}: ${expectedContentType}")
+      // Note: some bridges have no expected content type, where we expect zip.
+      val contentType = expectedContentType.getOrElse(ContentTypes.ZipFileContentType)
+
+      val payloadFile = dir.resolve("payload")
+      val payloadSource: Option[(String, Source[ByteString, _])] = contentType match {
+        case ContentTypes.ZipFileContentType if Files.isDirectory(payloadFile) =>
+          logger.debug(s"Compressing directory ${payloadFile}")
+          val tempFile = Files.createTempFile("mantik_context", ".zip")
+          ZipUtils.zipDirectory(payloadFile, tempFile)
+          val source = FileIO
+            .fromPath(tempFile)
+            .mapMaterializedValue(_.andThen { _ =>
+              tempFile.toFile.delete()
+            })
+          Some(ContentTypes.ZipFileContentType -> source)
+        case _ if Files.isDirectory(payloadFile) =>
+          throw new IllegalArgumentException(
+            s"Expected content type ${contentType} but found directory in ${payloadFile}"
+          )
+        case ct if Files.isRegularFile(payloadFile) =>
+          logger.debug(s"Handling ${payloadFile} as ${ct}")
+          val source = FileIO.fromPath(payloadFile)
+          Some(ct -> source)
+        case _ =>
+          None
+      }
+
+      addMantikItemToRepository(mantikHeaderContent, id, payloadSource)
     }
+  }
+
+  /** Figures out expected content type for a header */
+  private def payloadContentType(mantikHeader: MantikHeader[_ <: MantikDefinition]): Future[Option[String]] = {
+    val bridgeId = mantikHeader.definition match {
+      case bridge: MantikDefinitionWithBridge => bridge.bridge
+      case _: MantikDefinitionWithoutBridge   =>
+        // Only items with bridges do have payload
+        return Future.successful(None)
+    }
+    for {
+      bridgeArtifact <- localOrRemoteGet(bridgeId)
+      casted <- bridgeArtifact.parsedMantikHeader.cast[BridgeDefinition].fold(Future.failed, Future.successful)
+    } yield Some(casted.definition.assumedContentType)
   }
 
   override def addMantikItemToRepository(
@@ -173,7 +221,6 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
 
     val mantikId = id.orElse(mantikHeader.header.id)
     val itemId = ItemId.generate()
-
     ensureDependencies(mantikId.getOrElse(itemId), mantikHeader).flatMap { _ =>
       val artifact = MantikArtifact(mantikHeaderContent, None, mantikId, itemId)
       val timeout = if (payload.isDefined) {
@@ -196,8 +243,9 @@ private[mantik] class MantikArtifactRetrieverImpl @Inject() (
 
   private def ensureDependencies(id: MantikId, mantikHeader: MantikHeader[_ <: MantikDefinition]): Future[Unit] = {
     logger.debug(s"Ensuring Dependencies of ${id}")
-    val references = mantikHeader.definition.referencedItems
+    val references = dependencyExtractor(mantikHeader)
     val futures = references.map { referenceId =>
+      logger.debug(s"Ensuring dependency ${referenceId} of ${id}")
       get(referenceId)
     }
     Future.sequence(futures).map(_ => ())

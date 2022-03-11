@@ -39,6 +39,9 @@ object BuiltInItems {
   /** Name of the ScalaFn Bridge */
   val ScalaFnBridgeName = NamedMantikId(account = BuiltInAccount, name = "scalafn")
 
+  /** Name of the CSV Bridge */
+  val CsvBridgeName = NamedMantikId(account = BuiltInAccount, name = "csv")
+
   /**
     * Look for a Built In Item
     * @return the item if it was found.
@@ -47,6 +50,7 @@ object BuiltInItems {
     mantikId match {
       case NaturalBridgeName => Some(NaturalBridge)
       case SelectBridgeName  => Some(SelectBridge)
+      case CsvBridgeName     => Some(CsvBridge)
       case _                 => None
     }
   }
@@ -90,7 +94,7 @@ object BuiltInItems {
   val ScalaFnBridge = Bridge(
     MantikItemCore(
       Source(
-        DefinitionSource.Loaded(Some(ScalaFnBridgeName), ItemId("@2")),
+        DefinitionSource.Loaded(Some(ScalaFnBridgeName), ItemId("@3")),
         PayloadSource.Empty
       ),
       MantikHeader.pure(
@@ -99,6 +103,24 @@ object BuiltInItems {
           suitable = Seq(MantikDefinition.CombinerKind),
           protocol = 2,
           payloadContentType = None
+        )
+      )
+    )
+  )
+
+  /** The CSV Bridge */
+  val CsvBridge = Bridge(
+    MantikItemCore(
+      Source(
+        DefinitionSource.Loaded(Some(CsvBridgeName), ItemId("@4")),
+        PayloadSource.Empty
+      ),
+      MantikHeader.pure(
+        BridgeDefinition(
+          dockerImage = "mantikai/bridge.csv",
+          suitable = Seq(MantikDefinition.DataSetKind),
+          protocol = 2,
+          payloadContentType = Some(ContentTypes.Csv)
         )
       )
     )

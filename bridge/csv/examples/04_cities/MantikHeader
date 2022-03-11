@@ -1,0 +1,17 @@
+kind: dataset
+bridge: builtin/csv
+type:
+  columns:
+    latd: int32
+    latm: int32
+    lats: int32
+    ns: string
+    lond: int32
+    lonm: int32
+    lons: int32
+    ew: string
+    city: string
+    state: string
+options:
+  skipHeader: true
+  comment: "#"

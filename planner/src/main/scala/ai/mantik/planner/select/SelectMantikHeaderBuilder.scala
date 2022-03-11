@@ -35,7 +35,7 @@ import io.circe.syntax._
   * @param program the compiled program
   * @param query human readable query
   */
-case class SelectMantikHeaderBuilder(
+private[planner] case class SelectMantikHeaderBuilder(
     program: TableGeneratorProgram,
     inputs: Vector[TabularData],
     query: String
@@ -63,7 +63,7 @@ case class SelectMantikHeaderBuilder(
   }
 }
 
-object SelectMantikHeaderBuilder {
+private[planner] object SelectMantikHeaderBuilder {
 
   /**
     * Compile Query to a select mantikHeader.

@@ -127,7 +127,7 @@ func (t *simpleTestEnv) init(
 	instantiation := t.backend.Instantiations[0]
 	assert.Equal(t.t, mantikHeaderParsed, instantiation.MantikHeader)
 	if len(payloadContentType) == 0 {
-		assert.Nil(t.t, instantiation.PayloadDir)
+		assert.Nil(t.t, instantiation.Payload)
 	}
 	return sessionHandler
 }
@@ -244,12 +244,12 @@ func TestSessionWithDownload(t *testing.T) {
 	)
 
 	instantiation := env.backend.Instantiations[0]
-	assert.NotNil(t, instantiation.PayloadDir)
-	assert.DirExists(t, *instantiation.PayloadDir)
+	assert.NotNil(t, instantiation.Payload)
+	assert.DirExists(t, *instantiation.Payload)
 
 	err = sessionHandler.Quit()
 	assert.NoError(t, err)
-	assert.False(t, osext.IsDirectory(*instantiation.PayloadDir))
+	assert.False(t, osext.IsDirectory(*instantiation.Payload))
 
 	httpServer.Close()
 }
@@ -281,12 +281,12 @@ func TestSessionPayloadEmbedded(t *testing.T) {
 	)
 
 	instantiation := env.backend.Instantiations[0]
-	assert.NotNil(t, instantiation.PayloadDir)
-	assert.DirExists(t, *instantiation.PayloadDir)
+	assert.NotNil(t, instantiation.Payload)
+	assert.DirExists(t, *instantiation.Payload)
 
 	err = sessionHandler.Quit()
 	assert.NoError(t, err)
-	assert.False(t, osext.IsDirectory(*instantiation.PayloadDir))
+	assert.False(t, osext.IsDirectory(*instantiation.Payload))
 }
 
 func TestSessionTrainable(t *testing.T) {

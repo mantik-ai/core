@@ -42,6 +42,9 @@ trait MantikArtifactRetriever extends Component {
   /** Tries to load an item from local repository, and if not available from a remote repository. */
   def get(id: MantikId): Future[MantikArtifactWithHull]
 
+  /** Load the hull of many mantik Ids */
+  def getHull(many: Seq[MantikId]): Future[Seq[MantikArtifact]]
+
   /** Loads an item locally. */
   def getLocal(id: MantikId): Future[MantikArtifactWithHull]
 

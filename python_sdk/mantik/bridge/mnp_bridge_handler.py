@@ -35,8 +35,8 @@ import mantik.util
 
 import mantik.types
 import mantik.bridge._stubs.mantik.bridge.bridge_pb2 as stubs
-from . import kinds
-from . import mnp_session_handlers
+import mantik.bridge.kinds as kinds
+import mantik.bridge.mnp_session_handlers as mnp_session_handlers
 
 logger = logging.getLogger(__name__)
 

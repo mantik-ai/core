@@ -56,10 +56,10 @@ func InitSession(
 		return nil, errors.Wrap(err, "Could not decode Mantik Header")
 	}
 
-	var payloadDir *string
+	var payload *string
 	if configuration.Payload != nil {
 		callback(mnp.SessionState_SS_DOWNLOADING)
-		payloadDir, err = initPayload(configuration, configuration.PayloadContentType)
+		payload, err = initPayload(configuration, configuration.PayloadContentType)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not init payload")
 		}
@@ -67,31 +67,27 @@ func InitSession(
 
 	callback(mnp.SessionState_SS_STARTING_UP)
 
-	executable, err := backend.LoadModel(payloadDir, header)
+	executable, err := backend.LoadModel(payload, header)
 	if err != nil {
-		removePayload(payloadDir)
+		removePayload(payload)
 		return nil, errors.Wrap(err, "Loading model failed")
 	}
 
 	adapted, err := serving.AutoAdapt(executable, header)
 	if err != nil {
-		removePayload(payloadDir)
+		removePayload(payload)
 		return nil, errors.Wrap(err, "Could not adapt model")
 	}
 
-	return SessionFromExecutable(sessionId, adapted, portConfiguration, payloadDir)
+	return SessionFromExecutable(sessionId, adapted, portConfiguration, payload)
 }
 
-// Downloads and initializes payload. Returns unpacked payload directory.
+// Downloads and initializes payload. Returns unpacked payload file/directory.
 func initPayload(configuration *bridge.MantikInitConfiguration, contentType string) (*string, error) {
-	tempDir, err := ioutil.TempDir("", "bridge")
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not create temporary tempPayloadDirectory")
-	}
-	logrus.Debug("Created temporary tempPayloadDirectory", tempDir)
-
 	tempFile, err := ioutil.TempFile("", "payloadfile")
-	defer os.Remove(tempFile.Name())
+	if needsUnpacking(contentType) {
+		defer os.Remove(tempFile.Name())
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create temporary file")
 	}
@@ -115,21 +111,40 @@ func initPayload(configuration *bridge.MantikInitConfiguration, contentType stri
 		return nil, errors.New("Could not close file")
 	}
 
-	err = unpackFile(tempFile.Name(), tempDir, contentType)
+	if !needsUnpacking(contentType) {
+		name := tempFile.Name()
+		return &name, nil
+	}
+
+	directory, err := unpackFile(tempFile.Name(), contentType)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not unpack payload file")
 	}
-	return &tempDir, nil
+	return &directory, nil
 }
 
-func unpackFile(tempFile string, target string, contentType string) error {
+func needsUnpacking(contentType string) bool {
+	if contentType == "" {
+		// compatibility reasons
+		return true
+	}
+	return contentType == server.MimeZip
+}
+
+func unpackFile(tempFile string, contentType string) (string, error) {
+	target, err := ioutil.TempDir("", "bridge")
+	if err != nil {
+		return "", errors.Wrap(err, "Could not create temporary tempPayloadDirectory")
+	}
+	logrus.Debug("Created temporary tempPayloadDirectory", target)
+
 	if contentType == server.MimeZip || (len(contentType) == 0) {
 		if len(contentType) == 0 {
 			logrus.Warn("No content type specified, trying unzipping")
 		}
-		return dirzip.UnzipDiectory(tempFile, target, false)
+		return target, dirzip.UnzipDiectory(tempFile, target, false)
 	} else {
-		return errors.Errorf("Unsupported payload content type %s", contentType)
+		return "", errors.Errorf("Unsupported payload content type %s", contentType)
 	}
 }
 

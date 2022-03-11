@@ -21,7 +21,8 @@
  */
 package ai.mantik.engine.server.services
 
-import ai.mantik.ds.element.Bundle
+import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
+import ai.mantik.ds.element.{Bundle, TabularBundle}
 import ai.mantik.ds.functional.FunctionType
 import ai.mantik.ds.helper.circe.CirceJson
 import ai.mantik.ds.sql.Split
@@ -47,9 +48,11 @@ import ai.mantik.engine.protos.graph_builder.{
   BuildPipelineRequest,
   BuildPipelineStep,
   CacheRequest,
+  ConstructRequest,
   GetRequest,
   LiteralRequest,
   MetaVariableValue,
+  NodeResponse,
   QueryRequest,
   SelectRequest,
   SetMetaVariableRequest,
@@ -60,9 +63,19 @@ import ai.mantik.engine.protos.graph_builder.{
 import ai.mantik.engine.protos.items.ObjectKind
 import ai.mantik.engine.session.{EngineErrors, Session, SessionManager}
 import ai.mantik.engine.testutil.{DummyComponents, TestArtifacts, TestBaseWithSessions}
+import ai.mantik.planner.csv.CsvMantikHeaderBuilder
 import ai.mantik.planner.impl.MantikItemStateManager
-import ai.mantik.planner.repository.MantikArtifact
-import ai.mantik.planner.{Algorithm, BuiltInItems, DataSet, MantikItem, Operation, PayloadSource, Pipeline}
+import ai.mantik.planner.repository.{ContentTypes, MantikArtifact}
+import ai.mantik.planner.{
+  Algorithm,
+  BuiltInItems,
+  DataSet,
+  DefinitionSource,
+  MantikItem,
+  Operation,
+  PayloadSource,
+  Pipeline
+}
 import io.grpc.StatusRuntimeException
 
 class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
@@ -669,5 +682,60 @@ class GraphBuilderServiceImplSpec extends TestBaseWithSessions {
         bothChanged.item.get.mantikHeaderJson
       ) shouldBe bothChangedBack.core.mantikHeader.toJsonValue
     }
+  }
+
+  "construct" should "work" in new PlainEnv {
+    // Let's construct a simple dataset
+    val data = TabularBundle.buildColumnWise.withPrimitives("x", "Hello", "World").result
+
+    val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[NodeResponse]()
+    val requestObserver = graphBuilder.construct(resultObserver)
+    val header = MantikHeader.pure(
+      elements.DataSetDefinition(
+        bridge = BuiltInItems.NaturalBridgeName,
+        `type` = data.model
+      )
+    )
+    requestObserver.onNext(
+      ConstructRequest(
+        mantikHeaderJson = header.toJson,
+        payloadPresent = true,
+        sessionId = session1.id
+      )
+    )
+    requestObserver.onNext(
+      ConstructRequest(
+        payload = RpcConversions.encodeByteString(data.encodeAsByteString(true))
+      )
+    )
+    requestObserver.onCompleted()
+    val result = await(resultFuture)
+    val dataSet = session1.getItemAs[DataSet](result.itemId)
+    dataSet.source.definition shouldBe an[DefinitionSource.Constructed]
+    val payloadSource = dataSet.payloadSource.asInstanceOf[PayloadSource.Loaded]
+    payloadSource.fileId shouldNot be(empty)
+    payloadSource.contentType shouldBe ContentTypes.MantikBundleContentType // required by the bridge
+  }
+
+  it should "work without payload" in new PlainEnv {
+    val header = CsvMantikHeaderBuilder(
+      url = Some("http://example.com/foo.csv"),
+      dataType = TabularData("x" -> FundamentalType.StringType)
+    ).convert
+
+    val (resultObserver, resultFuture) = StreamConversions.singleStreamObserverFuture[NodeResponse]()
+    val requestObserver = graphBuilder.construct(resultObserver)
+
+    requestObserver.onNext(
+      ConstructRequest(
+        mantikHeaderJson = header.toJson,
+        sessionId = session1.id
+      )
+    )
+    requestObserver.onCompleted()
+    val result = await(resultFuture)
+    val dataSet = session1.getItemAs[DataSet](result.itemId)
+    dataSet.source.definition shouldBe an[DefinitionSource.Constructed]
+    dataSet.payloadSource shouldBe PayloadSource.Empty
   }
 }

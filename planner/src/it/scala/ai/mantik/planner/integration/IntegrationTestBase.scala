@@ -93,7 +93,8 @@ abstract class IntegrationTestBase extends TestBase with AkkaSupport with Global
     _context = PlanningContextImpl.constructWithComponents(
       mantikItemStateManager,
       retriever,
-      planExecutor
+      planExecutor,
+      _fileRepo
     )
   }
 

@@ -1,0 +1,9 @@
+kind: dataset
+bridge: builtin/csv
+type:
+  columns:
+    name: string
+    age: int32
+options:
+  skipHeader: false
+  comma: "k"

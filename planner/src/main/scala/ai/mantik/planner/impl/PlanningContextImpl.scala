@@ -23,10 +23,14 @@ package ai.mantik.planner.impl
 
 import ai.mantik.componently.utils.ConfigExtensions._
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
-import ai.mantik.elements.errors.MantikAsyncException
+import ai.mantik.elements.errors.{ErrorCodes, MantikAsyncException, MantikException}
 import ai.mantik.elements.{MantikId, NamedMantikId}
 import ai.mantik.planner._
 import ai.mantik.planner.repository._
+import akka.NotUsed
+import akka.stream.scaladsl
+import akka.stream.scaladsl.Sink
+import akka.util.ByteString
 
 import java.nio.file.Path
 import javax.inject.Inject
@@ -38,7 +42,8 @@ private[planner] class PlanningContextImpl @Inject() (
     val planner: Planner,
     val planExecutor: PlanExecutor,
     val retriever: MantikArtifactRetriever,
-    val mantikItemStateManager: MantikItemStateManager
+    val mantikItemStateManager: MantikItemStateManager,
+    fileRepo: FileRepository
 )(implicit akkaRuntime: AkkaRuntime)
     extends ComponentBase
     with PlanningContext {
@@ -75,6 +80,15 @@ private[planner] class PlanningContextImpl @Inject() (
   override def state(item: MantikItem): MantikItemState = {
     mantikItemStateManager.getOrDefault(item)
   }
+
+  override def storeFile(
+      contentType: String,
+      source: scaladsl.Source[ByteString, NotUsed],
+      temporary: Boolean,
+      contentLength: Option[Long]
+  ): (String, Long) = {
+    await(fileRepo.uploadNewFile(contentType, source, temporary, contentLength))
+  }
 }
 
 private[mantik] object PlanningContextImpl {
@@ -86,7 +100,8 @@ private[mantik] object PlanningContextImpl {
   def constructWithComponents(
       mantikItemStateManager: MantikItemStateManager,
       retriever: MantikArtifactRetriever,
-      planExecutor: PlanExecutor
+      planExecutor: PlanExecutor,
+      fileRepo: FileRepository
   )(implicit akkaRuntime: AkkaRuntime): PlanningContextImpl = {
 
     val planner = new PlannerImpl(akkaRuntime.config, mantikItemStateManager)
@@ -96,7 +111,8 @@ private[mantik] object PlanningContextImpl {
         planner,
         planExecutor,
         retriever,
-        mantikItemStateManager
+        mantikItemStateManager,
+        fileRepo
       )
     context
   }

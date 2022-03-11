@@ -52,7 +52,7 @@ type TestBackend struct {
 	algorithm serving.ExecutableAlgorithm
 }
 
-func (t *TestBackend) LoadModel(payloadDir *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
+func (t *TestBackend) LoadModel(payload *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
 	return t.algorithm, nil
 }
 

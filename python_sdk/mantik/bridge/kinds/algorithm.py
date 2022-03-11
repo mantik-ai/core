@@ -21,9 +21,9 @@
 #
 
 import abc
-import mantik.types
 
-from . import bridge
+import mantik.types
+import mantik.bridge.kinds.bridge as bridge
 
 
 class Algorithm(bridge.Bridge):

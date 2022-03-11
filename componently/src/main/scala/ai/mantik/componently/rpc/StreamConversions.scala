@@ -283,7 +283,7 @@ object StreamConversions {
       errorHandler: PartialFunction[Throwable, Throwable],
       responseObserver: StreamObserver[Output]
   )(
-      f: (Input, Source[Input, _]) => Future[Output]
+      f: (Input, Source[Input, NotUsed]) => Future[Output]
   )(implicit materializer: Materializer, ec: ExecutionContext): StreamObserver[Input] = {
 
     def encodeError(e: Throwable): Throwable = {

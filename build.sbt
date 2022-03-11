@@ -24,7 +24,7 @@ Test / fork := false
 IntegrationTest / parallelExecution := false
 IntegrationTest / fork := true
 
-concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
+Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
 
 val akkaVersion = "2.6.14"
 val akkaHttpVersion = "10.2.4"
@@ -79,8 +79,8 @@ ThisBuild / credentials ++= sys.env
     )
   }
   .toSeq
-ThisBuild / test in publish := {}
-ThisBuild / test in publishLocal := {}
+ThisBuild / publish / test := {}
+ThisBuild / publishLocal / test := {}
 
 usePgpKeyHex("77FA82E915CD5FFB8DF62639B2796C7D542C30FF")
 
@@ -110,11 +110,11 @@ def enableProtocolBuffer = Seq(
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
   ),
-  PB.targets in Compile := Seq(
+  Compile / PB.targets := Seq(
     scalapb
       .gen(
         lenses = false
-      ) -> (sourceManaged in Compile).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
+      ) -> (Compile / sourceManaged).value / "protobuf" // see https://github.com/thesamet/sbt-protoc/issues/6
   )
 )
 
@@ -198,7 +198,7 @@ lazy val mnpScala = makeProject("mnp/mnpscala")
       "io.grpc" % "grpc-api" % scalapb.compiler.Version.grpcJavaVersion
     ),
     enableProtocolBuffer,
-    PB.protoSources in Compile := Seq(baseDirectory.value / "../protocol/protobuf")
+    Compile / PB.protoSources := Seq(baseDirectory.value / "../protocol/protobuf")
   )
 
 lazy val elements = makeProject("elements")
@@ -314,7 +314,7 @@ lazy val bridgeProtocol = makeProject("bridge/protocol", "bridgeProtocol")
   .settings(
     name := "bridge-protocol",
     enableProtocolBuffer,
-    PB.protoSources in Compile += baseDirectory.value / "protobuf"
+    Compile / PB.protoSources += baseDirectory.value / "protobuf"
   )
 
 lazy val planner = makeProject("planner")
@@ -449,5 +449,5 @@ lazy val root = (project in file("."))
   .enablePlugins(ScalaUnidocPlugin)
   .settings(
     // Exclude examples from Documentation
-    unidocProjectFilter in (ScalaUnidoc, unidoc) := inAnyProject -- inProjects(examples, testutils)
+    ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(examples, testutils)
   )
