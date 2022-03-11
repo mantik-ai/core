@@ -32,7 +32,7 @@ import shutil
 import mnp
 import mantik.util
 import mantik.types
-from . import kinds
+import mantik.bridge.kinds as kinds
 
 logger = logging.getLogger(__name__)
 

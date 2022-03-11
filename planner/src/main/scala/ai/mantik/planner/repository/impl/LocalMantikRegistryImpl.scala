@@ -24,11 +24,12 @@ package ai.mantik.planner.repository.impl
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.elements.errors.{ErrorCodes, MantikException}
 import ai.mantik.elements.{ItemId, MantikId, NamedMantikId}
+import ai.mantik.planner.BuiltInItems
 import ai.mantik.planner.repository.{FileRepository, LocalMantikRegistry, MantikArtifact, Repository}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import javax.inject.Inject
 
+import javax.inject.Inject
 import scala.concurrent.Future
 
 class LocalMantikRegistryImpl @Inject() (
@@ -40,7 +41,23 @@ class LocalMantikRegistryImpl @Inject() (
     with LocalMantikRegistry {
 
   override def get(mantikId: MantikId): Future[MantikArtifact] = {
-    repository.get(mantikId)
+    getBuiltIn(mantikId).map(Future.successful).getOrElse {
+      repository.get(mantikId)
+    }
+  }
+
+  /** Resolve a reference to a built in item, if it exists */
+  private def getBuiltIn(mantikId: MantikId): Option[MantikArtifact] = {
+    BuiltInItems.readBuiltInItem(mantikId).map { item =>
+      MantikArtifact(
+        mantikHeader = item.mantikHeader.toJson,
+        fileId = None,
+        namedId = item.source.definition.name,
+        itemId = item.itemId,
+        deploymentInfo = None,
+        executorStorageId = None
+      )
+    }
   }
 
   override def getPayload(fileId: String): Future[(String, Source[ByteString, _])] = {

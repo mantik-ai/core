@@ -72,6 +72,13 @@ case class BridgeDefinition(
     payloadContentType: Option[String] = Some("application/zip")
 ) extends MantikDefinitionWithoutBridge {
   override def kind: String = MantikDefinition.BridgeKind
+
+  /** Content type to be assumed (some bridges do not explicitly set them.)
+    * Bridges may still be started without a Payload, but when its there, it will be assumed of this type.
+    */
+  def assumedContentType: String = {
+    payloadContentType.getOrElse("application/zip")
+  }
 }
 
 object BridgeDefinition {

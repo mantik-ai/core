@@ -21,17 +21,30 @@
  */
 package ai.mantik.engine.server.services
 
+import ai.mantik.componently.rpc.{RpcConversions, StreamConversions}
 import ai.mantik.componently.{AkkaRuntime, ComponentBase}
 import ai.mantik.ds.element.{Bundle, SingleElementBundle}
 import ai.mantik.ds.formats.json.JsonFormat
 import ai.mantik.ds.helper.circe.CirceJson
-import ai.mantik.elements.NamedMantikId
+import ai.mantik.elements.errors.ErrorCodes
+import ai.mantik.elements.{
+  AlgorithmDefinition,
+  DataSetDefinition,
+  ItemId,
+  MantikDefinition,
+  MantikDefinitionWithBridge,
+  MantikDefinitionWithoutBridge,
+  MantikHeader,
+  MantikId,
+  NamedMantikId
+}
 import ai.mantik.engine.protos.graph_builder.BuildPipelineStep.Step
 import ai.mantik.engine.protos.graph_builder.{
   ApplyRequest,
   AutoUnionRequest,
   BuildPipelineRequest,
   CacheRequest,
+  ConstructRequest,
   GetRequest,
   LiteralRequest,
   MetaVariableValue,
@@ -48,18 +61,24 @@ import ai.mantik.engine.protos.graph_builder.{
 import ai.mantik.engine.protos.graph_builder.GraphBuilderServiceGrpc.GraphBuilderService
 import ai.mantik.engine.session.{Session, SessionManager}
 import ai.mantik.planner.impl.MantikItemStateManager
+import ai.mantik.planner.repository.{Bridge, ContentTypes, MantikArtifact}
 import ai.mantik.planner.{
   Algorithm,
   ApplicableMantikItem,
   BuiltInItems,
   DataSet,
   MantikItem,
+  MantikItemCore,
   MantikItemState,
+  PayloadSource,
   Pipeline,
+  Source,
   TrainableAlgorithm
 }
-import akka.http.scaladsl.util.FastFuture
-import akka.stream.Materializer
+import akka.NotUsed
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Source => AkkaSource}
+import io.grpc.stub.StreamObserver
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -79,11 +98,11 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
     }
   }
 
-  private def retrieve(session: Session, name: String): Future[MantikItem] = {
-    BuiltInItems.readBuiltInItem(name) match {
+  private def retrieve(session: Session, mantikId: MantikId): Future[MantikItem] = {
+    BuiltInItems.readBuiltInItem(mantikId) match {
       case Some(builtIn) => Future.successful(builtIn)
       case None =>
-        session.components.retriever.get(name).map { case (artifact, hull) =>
+        session.components.retriever.get(mantikId).map { case (artifact, hull) =>
           MantikItem.fromMantikArtifact(artifact, stateManager, hull)
         }
     }
@@ -229,7 +248,7 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
     }
   }
 
-  override def setMetaVariables(request: SetMetaVariableRequest): Future[NodeResponse] = {
+  override def setMetaVariables(request: SetMetaVariableRequest): Future[NodeResponse] = handleErrors {
     for {
       session <- sessionManager.get(request.sessionId)
       item = session.getItemAs[MantikItem](request.itemId)
@@ -269,5 +288,74 @@ class GraphBuilderServiceImpl @Inject() (sessionManager: SessionManager, stateMa
       metaVariable.name -> decodedValue
     }
     decodeRequests
+  }
+
+  override def construct(responseObserver: StreamObserver[NodeResponse]): StreamObserver[ConstructRequest] = {
+    StreamConversions.respondMultiInSingleOutWithHeader[ConstructRequest, NodeResponse](
+      translateError,
+      responseObserver
+    ) { case (header, source) =>
+      for {
+        session <- sessionManager.get(header.sessionId)
+        parsedHeader <- MantikHeader.fromYaml(header.mantikHeaderJson).fold(Future.failed, Future.successful)
+        hull <- session.components.retriever.getHull(parsedHeader.definition.referencedItems)
+        maybeBridge = findBridge(parsedHeader, hull)
+        maybeFileAndContentType <- handleUpload(session, header, source, maybeBridge)
+      } yield {
+        val itemSource = Source.constructed(
+          maybeFileAndContentType
+            .map { case (fileId, contentType) =>
+              PayloadSource.Loaded(fileId, contentType)
+            }
+            .getOrElse(PayloadSource.Empty)
+        )
+        val mantikItem = MantikItem.construct(itemSource, parsedHeader, stateManager, hull)
+        placeInGraph(session, mantikItem)
+      }
+    }
+  }
+
+  /** Handle the payload part of an contruct request.
+    * @return file id and content type
+    */
+  private def handleUpload(
+      session: Session,
+      header: ConstructRequest,
+      source: AkkaSource[ConstructRequest, NotUsed],
+      maybeBridge: Option[Bridge]
+  ): Future[Option[(String, String)]] = {
+    if (header.payloadPresent) {
+      val contentType = maybeBridge.map(_.mantikHeader.definition.assumedContentType).getOrElse {
+        logger.error(s"There is payload, but we do not expect one, assuming zip?!") // can this happen?
+        ContentTypes.ZipFileContentType
+      }
+      val byteSource = source.map(s => RpcConversions.decodeByteString(s.payload))
+      session.components.fileRepository
+        .uploadNewFile(
+          contentType,
+          byteSource,
+          temporary = true
+        )
+        .map { case (fileId, _) =>
+          Some(fileId -> contentType)
+        }
+    } else {
+      // We still consume the source, some sources do not like to be not consumed.
+      source.runWith(Sink.ignore).map { _ =>
+        None
+      }
+    }
+  }
+
+  private def findBridge(
+      header: MantikHeader[_ <: MantikDefinition],
+      hull: Seq[MantikArtifact]
+  ): Option[Bridge] = {
+    header.definition match {
+      case defWithBridge: MantikDefinitionWithBridge =>
+        val bridgeId = defWithBridge.bridge
+        Some(Bridge.fromMantikArtifacts(bridgeId, hull, header.definition.kind))
+      case _ => None
+    }
   }
 }

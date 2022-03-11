@@ -46,6 +46,11 @@ class ReferencingItemLoader[I, T](
     iterative(Seq(id), Set.empty, Vector.empty)
   }
 
+  /** Load the hull of ids. */
+  def loadHull(ids: Seq[I]): Future[Seq[T]] = {
+    iterative(ids, Set.empty, Vector.empty)
+  }
+
   /**
     * Iterative resolves a new group of unknown elements.
     * @param border current unknown elements (border of the graph)

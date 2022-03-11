@@ -31,7 +31,11 @@ import ai.mantik.planner.protos.planning_context.PlanningContextServiceGrpc.{
   PlanningContextService,
   PlanningContextServiceStub
 }
+import ai.mantik.planner.repository.ContentTypes
 import ai.mantik.planner.{DataSet, MantikItem, PlanningContext}
+import akka.NotUsed
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import io.grpc.netty.NettyServerBuilder
 
@@ -143,6 +147,66 @@ abstract class PlanningContextSpecBase extends IntegrationTestBase {
     withClue("No exception expected") {
       planningContext.loadDataSet("foo")
     }
+  }
+
+  trait EnvForFiles {
+    val sampleBytes = Seq(ByteString("Hello"), ByteString(" World"))
+    val sampleSource = Source(sampleBytes)
+    val expectedLength = sampleBytes.map(_.length).sum
+  }
+
+  "storeFile" should "store a file in repo" in new EnvForFiles {
+    val (fileId, size) = planningContext.storeFile(
+      ContentTypes.Csv,
+      sampleSource,
+      temporary = false
+    )
+    fileId shouldNot be(empty)
+    size shouldBe expectedLength
+    val file = await(fileRepository.requestFileGet(fileId))
+    file.fileId shouldBe fileId
+    file.fileSize shouldBe Some(expectedLength)
+    file.contentType shouldBe ContentTypes.Csv
+    file.isTemporary shouldBe false
+  }
+
+  it should "work with temporary files" in new EnvForFiles {
+    val (fileId, size) = planningContext.storeFile(
+      ContentTypes.Csv,
+      sampleSource,
+      temporary = true
+    )
+    fileId shouldNot be(empty)
+    size shouldBe expectedLength
+    val file = await(fileRepository.requestFileGet(fileId))
+    file.fileId shouldBe fileId
+    file.fileSize shouldBe Some(expectedLength)
+    file.contentType shouldBe ContentTypes.Csv
+    file.isTemporary shouldBe true
+  }
+
+  it should "work with known file size" in new EnvForFiles {
+    val (fileId, size) = planningContext.storeFile(
+      ContentTypes.Csv,
+      sampleSource,
+      temporary = false,
+      contentLength = Some(expectedLength)
+    )
+    size shouldBe expectedLength
+    val file = await(fileRepository.requestFileGet(fileId))
+    file.fileId shouldBe fileId
+    file.fileSize shouldBe Some(expectedLength)
+  }
+
+  it should "fail if the expected size doesn't match" in new EnvForFiles {
+    intercept[MantikException] {
+      planningContext.storeFile(
+        ContentTypes.Csv,
+        sampleSource,
+        temporary = false,
+        contentLength = Some(123)
+      )
+    }.code shouldBe ErrorCodes.BadFileSize
   }
 }
 

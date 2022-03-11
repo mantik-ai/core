@@ -22,19 +22,20 @@
 
 from __future__ import annotations
 
-import abc
 import contextlib
+import io
 import json
 import logging
 import typing as t
+import itertools
 
 import google.protobuf.empty_pb2 as protobuf
 
 import mantik.types
 import mantik.util
-from . import compat as stubs
-from . import convert
-from . import objects
+import mantik.engine.compat as stubs
+import mantik.engine.convert as convert
+import mantik.engine.objects as objects
 
 logger = logging.getLogger(__name__)
 
@@ -405,6 +406,34 @@ class Client:
         return {
             item_id: _set(item_id, variables) for item_id, variables in meta.items()
         }
+
+    def construct_item(self, mantik_header_json: str, payload: t.Optional[t.BinaryIO] = None) -> objects.MantikItem:
+        """Construct a MantikItem from raw mantik header and payload. This method is very low level and assumes
+        that the MantikItem and the payload fits each other.
+
+        :param mantik_header_json: The JSON Code of the Mantik Header
+        :param payload:  The content of the payload, if there is one
+        :return:  a Mantik Item
+        """
+        first = stubs.ConstructRequest(
+            session_id=self.session.session_id,
+            mantik_header_json=mantik_header_json,
+            payload_present=payload is not None
+        )
+
+        response: stubs.NodeResponse
+        if payload is None:
+            response = self._graph_builder.Construct(iter([first]))
+        else:
+            def create_payload_iterator() -> t.Iterator[stubs.ConstructRequest]:
+                block = payload.read(io.DEFAULT_BUFFER_SIZE)
+                element = stubs.ConstructRequest(
+                    payload = block
+                )
+                yield element
+            combined = itertools.chain(iter([first]), create_payload_iterator())
+            response = self._graph_builder.Construct(combined)
+        return objects.MantikItem(response)
 
 
 def _create_request_iterator(

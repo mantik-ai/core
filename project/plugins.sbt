@@ -2,10 +2,12 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.9.0")
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.4")
 
+evictionErrorLevel := Level.Warn
+
 // https://scalapb.github.io/sbt-settings.html
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.3")
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.5")
 libraryDependencies ++= Seq(
-  "com.thesamet.scalapb" %% "compilerplugin" % "0.10.11"
+  "com.thesamet.scalapb" %% "compilerplugin" % "0.11.8"
 )
 
 addSbtPlugin("au.com.onegeek" %% "sbt-dotenv" % "2.0.117")

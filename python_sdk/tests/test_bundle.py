@@ -188,3 +188,36 @@ def test_null_handling():
     packed_msgpack = parsed.encode_msgpack_bundle()
     unpacked_msgpack = mantik.types.Bundle.decode_msgpack_bundle(io.BytesIO(packed_msgpack))
     assert unpacked_msgpack == parsed
+
+
+def test_table_rendering():
+    json = """
+        {
+            "type": { 
+                "columns":{
+                    "a": "int32",
+                    "b": "string"
+                }
+            },
+            "value": [[1,2],[3,4]]
+        }     
+        """
+    got = mantik.types.Bundle.decode_json_bundle(json)
+    rendered = got.render().strip()
+    expected = """
+a           b           
+1           2           
+3           4          
+    """.strip()
+    assert rendered == expected
+
+def test_value_rendering():
+    json = """
+            {
+                "type": "int32",
+                "value": 1
+            }     
+            """
+    got = mantik.types.Bundle.decode_json_bundle(json)
+    rendered = got.render()
+    assert rendered == "1"

@@ -6,7 +6,9 @@ authors = ["Thomas Seidler <thomas.seidler@ambrosys.de>"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.8"
-mantik = { version = "^0.3.1rc1", allow-prereleases = true}
+# mantik = { version = "^0.5.0rc1", allow-prereleases = true} # Not yet released
+mantik = { path = "../../python_sdk", develop = true  }
+mnp = { path = "../../mnp/mnppython", develop = true }
 numpy = "^1.21.2"
 scikit-learn = "^0.24.2"
 
