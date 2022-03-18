@@ -21,8 +21,9 @@
  */
 package ai.mantik.planner
 
-import ai.mantik.planner.repository.{LocalMantikRegistry, MantikArtifactRetriever}
+import ai.mantik.planner.repository.{FileRepository, LocalMantikRegistry, MantikArtifactRetriever}
 import com.google.inject.ImplementedBy
+
 import javax.inject.Inject
 
 /** Encapsulates access to the core components of Mantik. */
@@ -38,6 +39,9 @@ trait CoreComponents {
   /** Access to the planner. */
   def planner: Planner
 
+  /** Access to the file repository */
+  def fileRepository: FileRepository
+
   /** Access to the plan executor. */
   def planExecutor: PlanExecutor
 }
@@ -47,6 +51,7 @@ object CoreComponents {
       val localRegistry: LocalMantikRegistry,
       val retriever: MantikArtifactRetriever,
       val planner: Planner,
-      val planExecutor: PlanExecutor
+      val planExecutor: PlanExecutor,
+      val fileRepository: FileRepository
   ) extends CoreComponents
 }

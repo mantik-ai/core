@@ -28,7 +28,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import io.grpc.Status.Code
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Responsible for File Storage. */
 private[mantik] trait FileRepository extends Component {
@@ -56,6 +56,41 @@ private[mantik] trait FileRepository extends Component {
 
   /** Request copying a file. */
   def copy(from: String, to: String): Future[Unit]
+
+  /**
+    * Upload a file to a new ID.
+    * @param contentType the file content type
+    * @param temporary if true, the file will be temporary
+    * @param source the file content
+    * @param contentLength if true, the content length will be validated.
+    * @return file id and file length
+    */
+  def uploadNewFile(
+      contentType: String,
+      source: Source[ByteString, NotUsed],
+      temporary: Boolean,
+      contentLength: Option[Long] = None
+  ): Future[(String, Long)] = {
+    import ai.mantik.componently.AkkaHelper._
+    for {
+      storageResult <- requestFileStorage(contentType, temporary)
+      sink <- storeFile(storageResult.fileId)
+      bytesWritten <- source.runWith(sink)
+      _ <-
+        if (contentLength.exists(_ != bytesWritten)) {
+          logger.warn(
+            s"Expected ${contentLength.get} bytes, but got ${bytesWritten}. Deleting file ${storageResult.fileId} again"
+          )
+          deleteFile(storageResult.fileId).flatMap { _ =>
+            Future.failed(ErrorCodes.BadFileSize.toException(s"Expected ${contentLength.get}, got ${bytesWritten}"))
+          }
+        } else {
+          Future.successful(())
+        }
+    } yield {
+      (storageResult.fileId, bytesWritten)
+    }
+  }
 }
 
 object FileRepository {

@@ -25,7 +25,7 @@ from __future__ import annotations
 import functools
 
 import mantik.types
-from . import compat as stubs
+import mantik.engine.compat as stubs
 
 
 @functools.singledispatch

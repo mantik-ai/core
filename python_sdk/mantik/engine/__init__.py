@@ -24,3 +24,5 @@ from . import compat as stubs
 from .engine import Client
 from .objects import MantikArtifact
 from .objects import MantikItem
+from .csv import load_csv_from_file
+from .csv import load_csv_from_url

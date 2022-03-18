@@ -32,6 +32,8 @@ service GraphBuilderService {
     rpc Tag(TagRequest) returns(NodeResponse) {}
     /* Set Meta Variables of an Item. */
     rpc SetMetaVariables(SetMetaVariableRequest) returns (NodeResponse){}
+    /* Construct a MantikItem. Note: very low level. */
+    rpc Construct(stream ConstructRequest) returns(NodeResponse){}
 }
 
 message GetRequest {
@@ -166,4 +168,18 @@ message MetaVariableValue {
         // Value to be set as Bundle (automatic conversion will be done, if possible)
         Bundle bundle = 3;
     }
+}
+
+// Construct a MantikItem.
+// The header must fit a bridge's requirements
+message ConstructRequest {
+    // The session id
+    string session_id = 1;
+    // The mantik header
+    string mantik_header_json = 2;
+    // If true, there is payload.
+    bool  payload_present = 3;
+    // Payload, if there is any. Can be repeated in multiple requests
+    // The content type will be derived from a bridge's content type, if present.
+    bytes payload = 4;
 }

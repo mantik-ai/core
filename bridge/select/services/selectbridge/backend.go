@@ -33,7 +33,7 @@ import (
 type SelectBackend struct {
 }
 
-func (s *SelectBackend) LoadModel(payloadDirectory *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
+func (s *SelectBackend) LoadModel(payload *string, mantikHeader serving.MantikHeader) (serving.Executable, error) {
 	return LoadModelFromMantikHeader(mantikHeader)
 }
 

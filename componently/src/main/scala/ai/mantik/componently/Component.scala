@@ -31,6 +31,9 @@ import scala.concurrent.Future
   */
 trait Component {
   implicit protected def akkaRuntime: AkkaRuntime
+
+  /** Typesafe logger. */
+  protected def logger: Logger
 }
 
 /** Base class for Components. */

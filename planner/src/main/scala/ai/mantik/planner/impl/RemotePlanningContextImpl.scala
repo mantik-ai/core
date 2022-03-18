@@ -35,11 +35,13 @@ import ai.mantik.planner.protos.planning_context.{
   ExecuteActionRequest,
   ExecuteActionResponse,
   LoadItemRequest,
-  StateRequest
+  StateRequest,
+  StoreFileRequest
 }
 import ai.mantik.planner.repository.rpc.Conversions
 import ai.mantik.planner._
 import ai.mantik.planner.repository.ContentTypes
+import akka.NotUsed
 import akka.stream.scaladsl.{FileIO, Sink, Source}
 import akka.util.ByteString
 import io.circe.{Decoder, Json}
@@ -52,6 +54,7 @@ import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, Future}
+import scala.util.Failure
 import scala.util.control.NonFatal
 
 /** Implements a [[PlanningContext]] on top of the gRpc Service */
@@ -174,11 +177,39 @@ class RemotePlanningContextImpl @Inject() (planningContext: PlanningContextServi
     }
   }
 
+  override def storeFile(
+      contentType: String,
+      source: Source[ByteString, NotUsed],
+      temporary: Boolean,
+      contentLength: Option[Long]
+  ): (String, Long) = {
+    call {
+      val firstRequest = StoreFileRequest(
+        contentType = contentType,
+        contentLength = contentLength.getOrElse(-1),
+        temporary = temporary
+      )
+      val dataStream = source.map { byteString =>
+        StoreFileRequest(
+          data = RpcConversions.encodeByteString(byteString)
+        )
+      }
+      val sink = StreamConversions.callMultiInSingleOutWithHeader(planningContext.storeFile, firstRequest)
+      dataStream.runWith(sink).map { result =>
+        (result.fileId, result.contentLength)
+      }
+    }
+  }
+
   private def call[T](f: => Future[T]): T = {
     await(
-      Conversions.decodeErrorsIn(
-        f
-      )
+      Conversions
+        .decodeErrorsIn(
+          f
+        )
+        .andThen { case Failure(e) =>
+          logger.warn(s"RPC Call failed", e)
+        }
     )
   }
 

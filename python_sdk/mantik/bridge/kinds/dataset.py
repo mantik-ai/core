@@ -23,7 +23,7 @@
 import abc
 import mantik.types
 
-from . import bridge
+import mantik.bridge.kinds.bridge as bridge
 
 
 class DataSet(bridge.Bridge):

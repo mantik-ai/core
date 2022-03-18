@@ -236,13 +236,11 @@ object MantikItem {
 
   /**
     * Convert a (loaded) [[MantikArtifact]] to a [[MantikItem]].
-    * @param defaultItemLookup if true, default items are favorized.
     */
   private[mantik] def fromMantikArtifact(
       artifact: MantikArtifact,
       mantikItemStateManager: MantikItemStateManager,
-      hull: Seq[MantikArtifact] = Seq.empty,
-      defaultItemLookup: Boolean = true
+      hull: Seq[MantikArtifact] = Seq.empty
   ): MantikItem = {
     val payloadSource = artifact.fileId
       .map { fileId =>
@@ -255,22 +253,49 @@ object MantikItem {
       payloadSource
     )
 
+    val item = construct(source, artifact.parsedMantikHeader, mantikItemStateManager, hull)
+
+    artifact.deploymentInfo.foreach { deploymentInfo =>
+      mantikItemStateManager.upsert(
+        item,
+        _.copy(
+          deployment = Some(
+            DeploymentState(
+              evaluationId = deploymentInfo.evaluationId,
+              internalUrl = deploymentInfo.internalUrl,
+              externalUrl = deploymentInfo.externalUrl
+            )
+          )
+        )
+      )
+    }
+
+    item
+  }
+
+  /** Construct a single item from it's parts. */
+  private[mantik] def construct(
+      source: Source,
+      header: MantikHeader[_ <: MantikDefinition],
+      mantikItemStateManager: MantikItemStateManager,
+      hull: Seq[MantikArtifact] = Seq.empty
+  ): MantikItem = {
     def forceBridge(name: MantikId, forKind: String): Bridge = {
       Bridge.fromMantikArtifacts(name, hull, forKind)
     }
 
-    val bridge = artifact.parsedMantikHeader.definition match {
+    val bridge = header.definition match {
       case d: MantikDefinitionWithBridge =>
-        Some(forceBridge(d.bridge, artifact.parsedMantikHeader.definition.kind))
+        Some(forceBridge(d.bridge, header.definition.kind))
       case _ => None
     }
 
     def forceExtract[T <: MantikDefinition: ClassTag]: MantikItemCore[T] = {
-      val mantikHeader = artifact.parsedMantikHeader.cast[T].fold(e => throw e, identity)
-      MantikItemCore(source, mantikHeader, bridge, MantikItemCore.generateItemId(source))
+      val casted = header.cast[T].fold(e => throw e, identity)
+      MantikItemCore(source, casted, bridge, MantikItemCore.generateItemId(source))
     }
 
-    val item = artifact.parsedMantikHeader.definition match {
+    val result = header.definition match {
       case _: AlgorithmDefinition => Algorithm(forceExtract)
       case _: DataSetDefinition   => DataSet(forceExtract)
       case _: TrainableAlgorithmDefinition =>
@@ -296,21 +321,6 @@ object MantikItem {
         Bridge(forceExtract)
     }
 
-    artifact.deploymentInfo.foreach { deploymentInfo =>
-      mantikItemStateManager.upsert(
-        item,
-        _.copy(
-          deployment = Some(
-            DeploymentState(
-              evaluationId = deploymentInfo.evaluationId,
-              internalUrl = deploymentInfo.internalUrl,
-              externalUrl = deploymentInfo.externalUrl
-            )
-          )
-        )
-      )
-    }
-
-    item
+    result
   }
 }

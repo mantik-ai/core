@@ -71,6 +71,9 @@ object ErrorCodes {
 
   val InternalError = addCode("Internal", Code.INTERNAL)
 
+  /** Expected file size doesn't match */
+  val BadFileSize = addCode("BadFileSize", Code.FAILED_PRECONDITION)
+
   /** Return a list of default error codes. */
   lazy val defaultErrorCodes: Seq[ErrorCode] = defaultCodeBuilder.result()
 }

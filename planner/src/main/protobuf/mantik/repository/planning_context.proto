@@ -14,6 +14,9 @@ service PlanningContextService {
 
     // Add Mantik Item directly to the local repository
     rpc AddLocalMantikItem(stream AddLocalMantikItemRequest) returns (AddLocalMantikItemResponse);
+
+    // Store a file within the engine's file repository.
+    rpc StoreFile(stream StoreFileRequest) returns (StoreFileResponse);
 }
 
 message LoadItemRequest {
@@ -64,4 +67,22 @@ message AddLocalMantikItemRequest {
 message AddLocalMantikItemResponse {
     // Mantik Item Id under which the item is stored
     string id = 1;
+}
+
+message StoreFileRequest {
+    // File Content Type
+    string content_type = 1;
+    // File Content length, maybe negative to indicate unknown size
+    int64 content_length = 2;
+    // File is temporary
+    bool temporary = 3;
+    // Data Stram
+    bytes data = 4;
+}
+
+message StoreFileResponse {
+    // Generated File Id
+    string file_id = 1;
+    // Content Length
+    int64 content_length = 2;
 }

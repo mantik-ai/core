@@ -22,10 +22,11 @@
 package ai.mantik.planner
 
 import java.nio.file.Path
-
 import ai.mantik.elements.errors.ErrorCodes
 import ai.mantik.elements.{MantikId, NamedMantikId}
-
+import akka.NotUsed
+import akka.util.ByteString
+import akka.stream.scaladsl.{Source => AkkaSource}
 import scala.reflect.ClassTag
 
 /** Main Interface for interacting and evaluating with MantikItems */
@@ -70,4 +71,19 @@ trait PlanningContext {
 
   /** Returns the internal state of a MantikItem */
   def state(item: MantikItem): MantikItemState
+
+  /**
+    * Store a file on Mantik Site (e.g. to use it an Item.)
+    * @param contentType content type
+    * @param contentLength content length, if known
+    * @param temporary if true, file is marked as being temporary
+    * @param source data source
+    * @return
+    */
+  def storeFile(
+      contentType: String,
+      source: AkkaSource[ByteString, NotUsed],
+      temporary: Boolean,
+      contentLength: Option[Long] = None
+  ): (String, Long)
 }

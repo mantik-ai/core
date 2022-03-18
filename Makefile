@@ -14,6 +14,7 @@ SUB_PROJECTS=\
 	go_shared\
 	python_sdk \
 	bridge/binary\
+	bridge/csv\
 	bridge/select\
 	bridge/sklearn/simple_learn \
 	bridge/tf/saved_model \

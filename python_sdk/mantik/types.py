@@ -25,6 +25,7 @@ from __future__ import annotations
 import abc
 import copy
 import dataclasses
+import io
 import json
 import os
 import typing as t
@@ -448,6 +449,25 @@ class Bundle:
         """
         column_id = self.type.column_id(column_name)
         return [x[column_id] for x in self.value]
+
+    def render(self) -> str:
+        if self.type is None:
+            return str(self.value)
+        if self.type.is_tabular:
+            return self._render_tabular()
+        else:
+            return str(self.value)
+
+    def _render_tabular(self) -> str:
+        columns = self.type.column_names
+        fmt = "".join("{:<12}" for _ in columns)
+        buf = io.StringIO()
+        buf.write(fmt.format(*columns))
+        buf.write("\n")
+        for row in self.value:
+            buf.write(fmt.format(*row))
+            buf.write("\n")
+        return buf.getvalue()
 
     def set_type(self, data_type: DataType) -> Bundle:
         """Add a type if it's missing, returns a copy."""

@@ -26,11 +26,9 @@ import typing as t
 
 import mnp
 
-import mantik.types
 from . import kinds
-from . import mnp_bridge_handler
 import logging
-from . import mnp_bridge_handler
+import mantik.bridge.mnp_bridge_handler as mnp_bridge_handler
 import mantik.types
 
 BridgeProvider = t.Callable[[mantik.types.MantikHeader], kinds.Bridge]
