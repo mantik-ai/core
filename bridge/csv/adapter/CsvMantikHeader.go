@@ -21,7 +21,7 @@
  */
 package adapter
 
-import "gl.ambrosys.de/mantik/go_shared/serving"
+import "github.com/mantik-ai/core/go_shared/serving"
 
 type CsvMantikHeader struct {
 	serving.DataSetMantikHeader

@@ -22,8 +22,8 @@
 package builder
 
 import (
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
 )
 
 func Bundle(dataType ds.DataType, tabularRows ...element.Element) element.Bundle {

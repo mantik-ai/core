@@ -22,7 +22,7 @@
 package mnp_pipeline
 
 import (
-	"gl.ambrosys.de/mantik/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds"
 )
 
 type MnpPipeline struct {

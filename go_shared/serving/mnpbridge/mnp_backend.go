@@ -24,11 +24,11 @@ package mnpbridge
 import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/mantik-ai/core/go_shared/protos/mantik/bridge"
+	"github.com/mantik-ai/core/go_shared/serving"
+	"github.com/mantik-ai/core/mnp/mnpgo"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"gl.ambrosys.de/mantik/go_shared/protos/mantik/bridge"
-	"gl.ambrosys.de/mantik/go_shared/serving"
 )
 
 // Wraps the old backend into an MnpHandler

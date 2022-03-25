@@ -22,10 +22,10 @@
 package server
 
 import (
+	"github.com/mantik-ai/core/mnp/mnpgo"
+	"github.com/mantik-ai/core/mnp/mnpgo/protos/mantik/mnp"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"google.golang.org/grpc"
 	"net"
 )

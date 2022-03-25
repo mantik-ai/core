@@ -21,7 +21,7 @@
  */
 package runner
 
-import "gl.ambrosys.de/mantik/go_shared/ds/element"
+import "github.com/mantik-ai/core/go_shared/ds/element"
 
 // An element stack, create using CreateStack
 // Elements are growing to the right.

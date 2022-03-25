@@ -23,8 +23,8 @@ package serving
 
 import (
 	"encoding/json"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
 )
 
 /* Defines input and output of an algorithm. */

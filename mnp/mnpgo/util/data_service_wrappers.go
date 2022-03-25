@@ -24,8 +24,8 @@ package util
 import (
 	"bytes"
 	"context"
+	"github.com/mantik-ai/core/mnp/mnpgo/protos/mantik/mnp"
 	"github.com/sirupsen/logrus"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"io"
 )
 

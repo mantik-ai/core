@@ -63,7 +63,7 @@ docker: | build docker-unchecked
 .PHONY: docker-unchecked
 docker-unchecked: $(DOCKER_TARGETS)
 
-.PHONY: api-doc publish
+.PHONY: api-doc generated publish
 
 # Payload preparer has it's own dockerfile
 target/payload_preparer_docker_image.make:

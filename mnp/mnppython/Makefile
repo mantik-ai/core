@@ -5,7 +5,7 @@ ifdef CACHE_DIR
   export POETRY_CACHE_DIR_PATH=$(CACHE_DIR)/poetry
 endif
 
-build: protobuf
+build:
 
 clean::
 	rm -rf target

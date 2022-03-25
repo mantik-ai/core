@@ -23,8 +23,8 @@ package runner
 
 import (
 	"encoding/json"
+	"github.com/mantik-ai/core/go_shared/ds"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
 )
 
 // A Program which can be executed by the select bridge

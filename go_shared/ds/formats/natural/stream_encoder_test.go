@@ -23,10 +23,10 @@ package natural
 
 import (
 	"bytes"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds/util/serializer"
+	"github.com/mantik-ai/core/mnp/mnpgo/util"
 	"github.com/stretchr/testify/assert"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/util"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
 	"testing"
 )
 

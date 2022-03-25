@@ -4,8 +4,8 @@ package adapt
 // Any changes will be overwritten
 
 import (
+	"github.com/mantik-ai/core/go_shared/ds"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
 )
 
 func LookupRawAdapter(from *ds.FundamentalType, to *ds.FundamentalType) (RawAdapter, error) {

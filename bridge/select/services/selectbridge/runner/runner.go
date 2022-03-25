@@ -22,10 +22,10 @@
 package runner
 
 import (
+	"github.com/mantik-ai/core/go_shared/ds/adapt"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds/operations"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds/adapt"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/ds/operations"
 	"math"
 	"reflect"
 	"select/services/selectbridge/ops"

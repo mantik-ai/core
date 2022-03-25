@@ -22,6 +22,8 @@ build: target/build.make
 .PHONY: api-doc
 api-doc: target/api-doc.make
 
+.PHONY: generated
+
 
 DOCKER_IMAGE_NAME=engine
 DOCKER_EXTRA_ARGS=--build-arg MANTIK_VERSION_TAG=$(CI_COMMIT_TAG)

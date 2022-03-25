@@ -34,6 +34,7 @@ help:
 	@echo ""
 	@echo "build             Build the code"
 	@echo "test              Run all unittests"
+	@echo "generated         Update static generated files"
 	@echo "clean             Remove results"
 	@echo "api-doc           Build API Documentation"
 	@echo "local-install     Install non-docker artifacts locally"
@@ -47,6 +48,8 @@ help:
 	@echo "integration-test  Run integration tests on minikube"
 
 test: test-subprojects
+
+generated: generated-subprojects
 
 docker: docker-subprojects
 

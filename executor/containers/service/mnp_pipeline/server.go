@@ -24,12 +24,12 @@ package mnp_pipeline
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/serving"
+	"github.com/mantik-ai/core/go_shared/serving/server"
+	"github.com/mantik-ai/core/go_shared/util/httpext"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/serving"
-	"gl.ambrosys.de/mantik/go_shared/serving/server"
-	"gl.ambrosys.de/mantik/go_shared/util/httpext"
 	"net/http"
 )
 

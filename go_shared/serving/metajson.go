@@ -24,11 +24,11 @@ package serving
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds/formats/natural"
+	"github.com/mantik-ai/core/go_shared/ds/util/serializer"
+	"github.com/mantik-ai/core/go_shared/util/yaml"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
-	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
-	"gl.ambrosys.de/mantik/go_shared/util/yaml"
 	"io"
 	"strings"
 )
