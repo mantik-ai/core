@@ -23,8 +23,8 @@ package binaryadapter
 
 import (
 	"encoding/json"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/serving"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/serving"
 )
 
 type FileEntry struct {

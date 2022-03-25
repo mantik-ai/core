@@ -21,7 +21,7 @@
  */
 package test
 
-import "gl.ambrosys.de/mantik/go_shared/serving"
+import "github.com/mantik-ai/core/go_shared/serving"
 
 /* A Backend for testing. */
 type TestBackend struct {

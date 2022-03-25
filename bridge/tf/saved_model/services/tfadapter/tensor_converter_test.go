@@ -22,11 +22,11 @@
 package tfadapter
 
 import (
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds/element/builder"
 	"github.com/stretchr/testify/assert"
 	"github.com/tensorflow/tensorflow/tensorflow/go"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"testing"
 )
 

@@ -25,9 +25,9 @@ import (
 	"bytes"
 	"context"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/mantik-ai/core/mnp/mnpgo/protos/mantik/mnp"
+	"github.com/mantik-ai/core/mnp/mnpgo/util"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/util"
 	"io"
 )
 

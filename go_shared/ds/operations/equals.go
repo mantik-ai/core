@@ -23,8 +23,8 @@ package operations
 
 import (
 	"bytes"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
 )
 
 /* Compares two elements and returns true, if they are equal. */

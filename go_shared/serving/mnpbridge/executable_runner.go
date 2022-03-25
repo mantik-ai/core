@@ -22,13 +22,13 @@
 package mnpbridge
 
 import (
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds/formats/natural"
+	"github.com/mantik-ai/core/go_shared/serving"
+	"github.com/mantik-ai/core/go_shared/serving/server"
+	"github.com/mantik-ai/core/go_shared/util/dirzip"
+	"github.com/mantik-ai/core/mnp/mnpgo"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
-	"gl.ambrosys.de/mantik/go_shared/serving"
-	"gl.ambrosys.de/mantik/go_shared/serving/server"
-	"gl.ambrosys.de/mantik/go_shared/util/dirzip"
 	"io"
 )
 

@@ -23,11 +23,11 @@ package server
 
 import (
 	"fmt"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/formats/natural"
+	"github.com/mantik-ai/core/go_shared/ds/util/serializer"
+	"github.com/mantik-ai/core/go_shared/serving/test"
 	"github.com/stretchr/testify/assert"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
-	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
-	"gl.ambrosys.de/mantik/go_shared/serving/test"
 	"io/ioutil"
 	"net/http"
 	"testing"

@@ -24,11 +24,11 @@ package server
 import (
 	"context"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/mantik-ai/core/mnp/mnpgo"
+	"github.com/mantik-ai/core/mnp/mnpgo/protos/mantik/mnp"
+	"github.com/mantik-ai/core/mnp/mnpgo/server/internal"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/server/internal"
 	"io"
 	"sync"
 )

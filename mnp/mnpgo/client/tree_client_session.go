@@ -23,9 +23,9 @@ package client
 
 import (
 	"context"
+	"github.com/mantik-ai/core/mnp/mnpgo/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/util"
 	"golang.org/x/sync/errgroup"
 	"io"
 )

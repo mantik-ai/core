@@ -23,12 +23,12 @@ package ops
 
 import (
 	"encoding/json"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds/element/builder"
+	"github.com/mantik-ai/core/go_shared/ds/formats/natural"
+	"github.com/mantik-ai/core/go_shared/ds/operations"
 	"github.com/stretchr/testify/assert"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
-	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
-	"gl.ambrosys.de/mantik/go_shared/ds/operations"
 	"testing"
 )
 

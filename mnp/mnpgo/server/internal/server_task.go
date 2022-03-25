@@ -23,8 +23,8 @@ package internal
 
 import (
 	"context"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
+	"github.com/mantik-ai/core/mnp/mnpgo"
+	"github.com/mantik-ai/core/mnp/mnpgo/protos/mantik/mnp"
 	"golang.org/x/sync/errgroup"
 )
 

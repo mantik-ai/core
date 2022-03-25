@@ -24,11 +24,11 @@ package client
 import (
 	"context"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/mantik-ai/core/mnp/mnpgo"
+	"github.com/mantik-ai/core/mnp/mnpgo/client/internal"
+	"github.com/mantik-ai/core/mnp/mnpgo/protos/mantik/mnp"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/client/internal"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
 	"golang.org/x/sync/errgroup"
 	"sync"
 )

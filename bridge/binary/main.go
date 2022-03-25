@@ -23,7 +23,7 @@ package main
 
 import (
 	"binary/services/binaryadapter"
-	"gl.ambrosys.de/mantik/go_shared/serving/cli"
+	"github.com/mantik-ai/core/go_shared/serving/cli"
 	"os"
 )
 

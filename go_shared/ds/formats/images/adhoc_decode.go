@@ -24,10 +24,10 @@ package images
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"image"
 	"image/color"
 	"image/jpeg"

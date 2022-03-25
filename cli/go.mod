@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli v1.22.5
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	gl.ambrosys.de/mantik/go_shared v0.0.0
+	github.com/mantik-ai/core/go_shared v0.0.0
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -21,8 +21,8 @@ require (
 	google.golang.org/protobuf v1.26.0
 )
 
-replace gl.ambrosys.de/mantik/go_shared => ../go_shared
+replace github.com/mantik-ai/core/go_shared => ../go_shared
 
-replace gl.ambrosys.de/mantik/core/mnp/mnpgo => ../mnp/mnpgo
+replace github.com/mantik-ai/core/mnp/mnpgo => ../mnp/mnpgo
 
 go 1.16

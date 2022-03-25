@@ -24,11 +24,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/mantik-ai/core/mnp/mnpgo/client"
+	"github.com/mantik-ai/core/mnp/mnpgo/debug/echo"
+	"github.com/mantik-ai/core/mnp/mnpgo/grpchttpproxy"
+	server2 "github.com/mantik-ai/core/mnp/mnpgo/server"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/client"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/debug/echo"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/grpchttpproxy"
-	server2 "gl.ambrosys.de/mantik/core/mnp/mnpgo/server"
 	"os"
 )
 

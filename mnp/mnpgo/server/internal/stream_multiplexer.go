@@ -23,7 +23,7 @@ package internal
 
 import (
 	"bufio"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/protos/mantik/mnp"
+	"github.com/mantik-ai/core/mnp/mnpgo/protos/mantik/mnp"
 	"io"
 	"sync"
 )

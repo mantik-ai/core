@@ -23,9 +23,9 @@ package tfadapter
 
 import (
 	"encoding/json"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/serving"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/serving"
 	"log"
 	"sort"
 	"strconv"

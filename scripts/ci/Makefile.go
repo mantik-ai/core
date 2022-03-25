@@ -23,12 +23,6 @@ ifdef CACHE_DIR
   export GOPATH=$(CACHE_DIR)/go
 endif
 
-# Can be set, and then protobuf files will be built
-ifdef PROTOBUF_DIR
-  EXTRA_DEPS:=$(EXTRA_DEPS) protos
-endif
-
-
 build: target/${NAME} $(LINUX_DEPENDENCY)
 
 .PHONY: clean
@@ -43,6 +37,10 @@ test: target/${NAME}
 # Empty
 api-doc::
 
+# Empty
+.PHONY: generated
+generated::
+
 # There is no publish for go projects yet
 .PHONY: publish
 
@@ -56,15 +54,10 @@ target/${NAME}_linux: target/${NAME} $(EXTRA_DEPS)
 # If a protobuf_dir is set, it will be build extra
 ifdef PROTOBUF_DIR
 
-clean::
+generated::  $(shell find $(PROTOBUF_DIR) -name "*.proto")
 	rm -rf protos
-
-protos: protos/proto.make
-
-protos/proto.make: $(shell find $(PROTOBUF_DIR) -name "*.proto")
 	# Pinning go protoc gen
 	go get github.com/golang/protobuf/protoc-gen-go@v1.5.2
 	@mkdir -p protos
 	PATH=$(GOPATH)/bin:$(PATH); protoc -I $(PROTOBUF_DIR) $^ --go_out=plugins=grpc:protos
-	@touch $@
 endif

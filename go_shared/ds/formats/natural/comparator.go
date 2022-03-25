@@ -23,9 +23,9 @@ package natural
 
 import (
 	"bytes"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
 )
 
 type Comparator interface {

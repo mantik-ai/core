@@ -21,7 +21,7 @@
  */
 package element
 
-import "gl.ambrosys.de/mantik/go_shared/ds"
+import "github.com/mantik-ai/core/go_shared/ds"
 
 // Tabular DataRows together with their type.
 type Bundle struct {

@@ -22,10 +22,10 @@
 package selectbridge
 
 import (
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/serving"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/serving"
 	"path"
 	"select/services/selectbridge/runner"
 )

@@ -23,9 +23,9 @@ package binreader
 
 import (
 	"fmt"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
 	"github.com/stretchr/testify/assert"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
 	"testing"
 )
 
