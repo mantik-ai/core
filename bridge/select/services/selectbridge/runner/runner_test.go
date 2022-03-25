@@ -22,8 +22,8 @@
 package runner
 
 import (
+	"github.com/mantik-ai/core/go_shared/ds/element/builder"
 	"github.com/stretchr/testify/assert"
-	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
 	"select/services/selectbridge/ops"
 	"testing"
 )

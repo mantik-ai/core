@@ -24,13 +24,13 @@ package server
 import (
 	"bytes"
 	"context"
+	"github.com/mantik-ai/core/mnp/mnpgo"
+	"github.com/mantik-ai/core/mnp/mnpgo/client"
+	"github.com/mantik-ai/core/mnp/mnpgo/server/internal"
+	"github.com/mantik-ai/core/mnp/mnpgo/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/client"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/server/internal"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo/util"
 	"io"
 	"testing"
 )

@@ -23,8 +23,8 @@ package images
 
 import (
 	"bytes"
+	"github.com/mantik-ai/core/go_shared/ds"
 	"github.com/stretchr/testify/assert"
-	"gl.ambrosys.de/mantik/go_shared/ds"
 	"io/ioutil"
 	"math"
 	"testing"

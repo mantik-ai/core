@@ -22,10 +22,10 @@
 package tfadapter
 
 import (
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
 	"github.com/pkg/errors"
 	"github.com/tensorflow/tensorflow/tensorflow/go"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
 )
 
 func ExecuteData(model *LoadedModel, inputRows element.TabularLikeElement) (element.TabularLikeElement, error) {

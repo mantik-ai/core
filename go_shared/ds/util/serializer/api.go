@@ -23,9 +23,9 @@ package serializer
 
 import (
 	"bytes"
+	"github.com/mantik-ai/core/go_shared/ds"
 	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack"
-	"gl.ambrosys.de/mantik/go_shared/ds"
 	"io"
 )
 

@@ -1,4 +1,4 @@
-module gl.ambrosys.de/mantik/core/mnp/mnpgo
+module github.com/mantik-ai/core/mnp/mnpgo
 
 require (
 	github.com/golang/protobuf v1.5.2

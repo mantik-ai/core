@@ -23,10 +23,10 @@ package adapter
 
 import (
 	"encoding/json"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/serving"
+	"github.com/mantik-ai/core/go_shared/util/osext"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/serving"
-	"gl.ambrosys.de/mantik/go_shared/util/osext"
 	"path"
 )
 

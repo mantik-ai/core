@@ -23,9 +23,9 @@ package runner
 
 import (
 	"bytes"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds/formats/natural"
 )
 
 // A Special set of elements which are all from the same type

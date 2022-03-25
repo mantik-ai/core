@@ -22,10 +22,10 @@
 package server
 
 import (
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/serving"
-	"gl.ambrosys.de/mantik/go_shared/util/async"
-	"gl.ambrosys.de/mantik/go_shared/util/dirzip"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/serving"
+	"github.com/mantik-ai/core/go_shared/util/async"
+	"github.com/mantik-ai/core/go_shared/util/dirzip"
 	"log"
 	"net/http"
 	"time"

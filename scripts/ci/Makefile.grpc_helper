@@ -12,7 +12,8 @@ endif
 
 define python_grpc
 
-$2/.done.make: $(shell find $1 -name "*.proto")
+generated:: $(shell find $1 -name "*.proto")
+	rm -rf $2
 	# Updates gRPC/Protobuf generators
     # See https://grpc.io/docs/tutorials/basic/python/
 
@@ -30,14 +31,6 @@ $2/.done.make: $(shell find $1 -name "*.proto")
         $(shell find $1 -name "*.proto")
 	# make imports relative
 	find $2 -name "*.py" -exec sed -i -E 's/from $(3)/from ./g' {} +
-	touch $2/.done.make
-
-# Add it to the protobuf goal
-protobuf:: $2/.done.make
-
-# Add it to the clean goal
-clean::
-	rm -rf $2
 
 endef
 

@@ -46,7 +46,7 @@ import scala.concurrent.Future
 
 class MantikRegistryImplSpec extends TestBaseWithAkkaRuntime {
 
-  private val dummyPort = 9002
+  private val dummyPort = 9005
 
   override protected lazy val typesafeConfig: Config = ConfigFactory
     .load()

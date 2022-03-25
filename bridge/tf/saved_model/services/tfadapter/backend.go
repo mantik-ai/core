@@ -22,8 +22,8 @@
 package tfadapter
 
 import (
+	"github.com/mantik-ai/core/go_shared/serving"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/serving"
 )
 
 type TensorflowBackend struct {

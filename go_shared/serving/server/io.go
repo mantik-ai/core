@@ -22,14 +22,14 @@
 package server
 
 import (
+	"github.com/mantik-ai/core/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds/adapt"
+	"github.com/mantik-ai/core/go_shared/ds/element"
+	"github.com/mantik-ai/core/go_shared/ds/element/builder"
+	"github.com/mantik-ai/core/go_shared/ds/formats/images"
+	"github.com/mantik-ai/core/go_shared/ds/formats/natural"
+	"github.com/mantik-ai/core/go_shared/ds/util/serializer"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
-	"gl.ambrosys.de/mantik/go_shared/ds/adapt"
-	"gl.ambrosys.de/mantik/go_shared/ds/element"
-	"gl.ambrosys.de/mantik/go_shared/ds/element/builder"
-	"gl.ambrosys.de/mantik/go_shared/ds/formats/images"
-	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
-	"gl.ambrosys.de/mantik/go_shared/ds/util/serializer"
 	"io"
 	"log"
 	"mime/multipart"

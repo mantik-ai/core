@@ -105,7 +105,7 @@ var header = `package adapt
 
 import (
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
+	"github.com/mantik-ai/core/go_shared/ds"
 )
 
 `

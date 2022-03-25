@@ -120,6 +120,12 @@ In order to do that, there are some alternatives:
    
       This creates all docker images on a running minikube instance. You can use that in order start integration tests.
 
+Generated Files
+---------------
+
+Starting with `v0.5` protobuf-generated files are are tracked in Git for Python and Golang, to make distribution of packages easier.
+
+When you change `.proto`-Files, you have to call `make generated` in order to update generated files.
 
 Running Unit Tests
 ------------------

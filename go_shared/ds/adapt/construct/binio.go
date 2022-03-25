@@ -23,8 +23,8 @@ package construct
 
 import (
 	"encoding/binary"
+	"github.com/mantik-ai/core/go_shared/ds"
 	"github.com/pkg/errors"
-	"gl.ambrosys.de/mantik/go_shared/ds"
 	"io"
 	"math"
 )

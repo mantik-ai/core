@@ -9,7 +9,7 @@ TEMPLATE_DIRECTORY="scripts/ci/filetemplates"
 FILES=`git ls-files`
 
 EXCLUDE_DIRS="scripts/ci doc/"
-EXCLUDE_PATTERNS="*.pb.go *generated.go"
+EXCLUDE_PATTERNS="*.pb.go *generated.go *pb2.py *pb2_grpc.py"
 
 if [ "$#" -ne 1 ]; then
     echo "Expected command"

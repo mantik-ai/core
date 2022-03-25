@@ -24,7 +24,7 @@ package internal
 import (
 	"context"
 	"github.com/golang/protobuf/ptypes/any"
-	"gl.ambrosys.de/mantik/core/mnp/mnpgo"
+	"github.com/mantik-ai/core/mnp/mnpgo"
 	"io"
 	"io/ioutil"
 )

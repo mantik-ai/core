@@ -24,8 +24,8 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"gl.ambrosys.de/mantik/go_shared/ds/formats/natural"
-	"gl.ambrosys.de/mantik/go_shared/serving"
+	"github.com/mantik-ai/core/go_shared/ds/formats/natural"
+	"github.com/mantik-ai/core/go_shared/serving"
 	"net"
 	"net/http"
 	"time"
